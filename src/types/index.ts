@@ -1,0 +1,58 @@
+export type EventCategory =
+  | "conference"
+  | "workshop"
+  | "seminar"
+  | "concert"
+  | "sports"
+  | "networking"
+  | "webinar"
+  | "hackathon"
+  | "other"
+
+export type EventStatus = "draft" | "published" | "ongoing" | "completed" | "cancelled"
+
+export interface AppEvent {
+  id: string
+  title: string
+  description: string
+  startDate: string
+  endDate: string
+  location: string
+  category: EventCategory
+  status: EventStatus
+  capacity: number
+  attendees: number
+  organizer: string
+  coverColor: string
+  price: number
+  currency: string
+  tags: string[]
+}
+
+export interface StatItem {
+  label: string
+  value: string
+  change: number
+  changeType: "increase" | "decrease"
+  iconBg: string
+}
+
+export interface ChartDataPoint {
+  month: string
+  events: number
+  attendees: number
+}
+
+export interface CategoryDataPoint {
+  name: string
+  value: number
+  color: string
+}
+
+export interface AuthUser {
+  id: string
+  name: string
+  email: string
+  role: string
+  avatar?: string
+}
