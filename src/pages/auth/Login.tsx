@@ -1,18 +1,19 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import {
   Badge,
   Box,
   Button,
-  Checkbox,
   Field,
   Flex,
   Grid,
   Heading,
   Input,
+  Skeleton,
+  SkeletonText,
   Separator,
   Text,
 } from "@chakra-ui/react"
@@ -31,11 +32,14 @@ import {
   Users,
   Zap,
 } from "lucide-react"
+import { auth } from "@/lib/auth"
+import { loginUser } from "@/api/auth"
+import { useAuthSession } from "@/hooks/useAuthSession"
+import { extractApiError } from "@/utils/errors"
 
 const loginSchema = z.object({
   email: z.string().min(1, "Email is required").email("Enter a valid email address"),
   password: z.string().min(1, "Password is required"),
-  rememberMe: z.boolean(),
 })
 
 type LoginFormValues = z.infer<typeof loginSchema>
@@ -53,6 +57,37 @@ const TRUST_MARKERS = [
 ]
 
 const CONTROL_HEIGHT = "52px"
+
+function AuthLoadingState() {
+  return (
+    <Flex
+      minH="100vh"
+      align="center"
+      justify="center"
+      px={6}
+      bg="linear-gradient(180deg, #F7F9FC 0%, #EEF2FF 45%, #F8FAFC 100%)"
+    >
+      <Box
+        w="full"
+        maxW="460px"
+        bg="white"
+        borderRadius="24px"
+        border="1px solid"
+        borderColor="gray.200"
+        boxShadow="0 24px 60px rgba(15, 23, 42, 0.12)"
+        p={{ base: 6, md: 8 }}
+      >
+        <Skeleton height="42px" width="42px" borderRadius="14px" mb={8} />
+        <Skeleton height="28px" width="220px" mb={3} />
+        <SkeletonText noOfLines={2} mb={8} />
+        <Skeleton height="52px" borderRadius="14px" mb={3} />
+        <Skeleton height="52px" borderRadius="14px" mb={3} />
+        <Skeleton height="52px" borderRadius="14px" mb={6} />
+        <Skeleton height="52px" borderRadius="14px" />
+      </Box>
+    </Flex>
+  )
+}
 
 function BrandMark() {
   return (
@@ -125,10 +160,11 @@ function TrustBadge({ icon, label }: { icon: ReactNode; label: string }) {
 export function Login() {
   const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const sessionQuery = useAuthSession()
 
   const {
     register,
-    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
@@ -136,13 +172,40 @@ export function Login() {
     defaultValues: {
       email: "",
       password: "",
-      rememberMe: false,
     },
   })
 
-  async function onSubmit(_data: LoginFormValues) {
-    await new Promise((resolve) => setTimeout(resolve, 900))
-    navigate("/dashboard")
+  useEffect(() => {
+    if (auth.isAuthenticated() || sessionQuery.data) {
+      navigate("/dashboard", { replace: true })
+    }
+  }, [navigate, sessionQuery.data])
+
+  if (sessionQuery.isLoading && !auth.isAuthenticated()) {
+    return <AuthLoadingState />
+  }
+
+  async function onSubmit(data: LoginFormValues) {
+    setSubmitError(null)
+
+    try {
+      const result = await loginUser({
+        userName: data.email,
+        password: data.password,
+      })
+
+      if ("requiresTwoFactor" in result) {
+        navigate(`/auth/2fa/${result.twoFaToken}`, {
+          state: { email: data.email },
+        })
+        return
+      }
+
+      auth.setSession(result)
+      navigate("/dashboard", { replace: true })
+    } catch (error) {
+      setSubmitError(extractApiError(error))
+    }
   }
 
   const inputStyles = {
@@ -343,6 +406,22 @@ export function Login() {
             Sign in to your workspace to manage events, analytics, and your team.
           </Text>
 
+          {submitError && (
+            <Box
+              mt={6}
+              borderRadius="14px"
+              border="1px solid"
+              borderColor="red.200"
+              bg="red.50"
+              px={4}
+              py={3}
+            >
+              <Text fontSize="sm" color="red.700" fontWeight="600">
+                {submitError}
+              </Text>
+            </Box>
+          )}
+
           <Flex direction="column" gap={3} mt={8} mb={6}>
             <Button
               type="button"
@@ -360,7 +439,7 @@ export function Login() {
               justifyContent="flex-start"
               _hover={{ bg: "gray.50", borderColor: "gray.300" }}
               transition="all 0.15s ease"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => setSubmitError("Social sign-in is not wired yet. Use email and password instead.")}
             >
               <GoogleIcon />
               Continue with Google
@@ -382,7 +461,7 @@ export function Login() {
               justifyContent="flex-start"
               _hover={{ bg: "gray.50", borderColor: "gray.300" }}
               transition="all 0.15s ease"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => setSubmitError("Social sign-in is not wired yet. Use email and password instead.")}
             >
               <MicrosoftIcon />
               Continue with Microsoft
@@ -404,6 +483,7 @@ export function Login() {
               justifyContent="flex-start"
               _hover={{ bg: "gray.100", borderColor: "gray.300" }}
               transition="all 0.15s ease"
+              onClick={() => setSubmitError("SSO / SAML is not wired yet. Use email and password instead.")}
             >
               <Building2 size={18} />
               SSO / SAML
@@ -515,35 +595,6 @@ export function Login() {
               )}
             </Field.Root>
 
-            <Flex justify="space-between" align="center" gap={4} mb={6}>
-              <Controller
-                name="rememberMe"
-                control={control}
-                render={({ field }) => (
-                <Checkbox.Root
-                    checked={field.value}
-                    onCheckedChange={(details) => field.onChange(Boolean(details.checked))}
-                    gap={2.5}
-                  >
-                    <Checkbox.HiddenInput />
-                    <Checkbox.Control
-                      w="18px"
-                      h="18px"
-                      borderRadius="6px"
-                      borderColor="gray.300"
-                      bg="white"
-                      _checked={{ bg: "brand.500", borderColor: "brand.500" }}
-                    >
-                      <Checkbox.Indicator />
-                    </Checkbox.Control>
-                    <Checkbox.Label fontSize="sm" color="gray.700" fontWeight="500" cursor="pointer">
-                      Keep me signed in for 30 days
-                    </Checkbox.Label>
-                  </Checkbox.Root>
-                )}
-              />
-            </Flex>
-
             <Button
               type="submit"
               w="full"
@@ -551,6 +602,7 @@ export function Login() {
               borderRadius="14px"
               fontWeight="800"
               fontSize="sm"
+              disabled={isSubmitting}
               loading={isSubmitting}
               loadingText="Signing in..."
               color="white"

@@ -1,4 +1,4 @@
-import type { AxiosError } from "axios"
+import { isAxiosError } from "axios"
 
 interface ProblemDetails {
   title: string
@@ -7,6 +7,11 @@ interface ProblemDetails {
 }
 
 export function extractApiError(err: unknown): string {
-  const axiosErr = err as AxiosError<ProblemDetails>
-  return axiosErr.response?.data?.title ?? "An unexpected error occurred."
+  if (!isAxiosError(err)) return "An unexpected error occurred."
+
+  const responseData = err.response?.data as
+    | (ProblemDetails & { message?: string })
+    | undefined
+
+  return responseData?.title ?? responseData?.message ?? "An unexpected error occurred."
 }

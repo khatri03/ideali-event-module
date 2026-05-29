@@ -3,6 +3,7 @@ import { AppLayout } from "./components/layout/AppLayout"
 import { Login } from "./pages/auth/Login"
 import { Register } from "./pages/auth/Register"
 import { ForgotPassword } from "./pages/auth/ForgotPassword"
+import { TwoFactor } from "./pages/auth/TwoFactor"
 import { Dashboard } from "./pages/Dashboard"
 import { Events } from "./pages/Events"
 import { CalendarPage } from "./pages/CalendarPage"
@@ -14,6 +15,7 @@ export default function App() {
       <Routes>
         {/* Auth */}
         <Route path="/auth/login" element={<Login />} />
+        <Route path="/auth/2fa/:twoFaToken" element={<TwoFactor />} />
         <Route path="/auth/register" element={<Register />} />
         <Route path="/auth/forgot-password" element={<ForgotPassword />} />
 
@@ -29,8 +31,8 @@ export default function App() {
         </Route>
 
         {/* Redirect root */}
-        <Route path="/" element={<Navigate to="/auth/login" replace />} />
-        <Route path="*" element={<Navigate to="/auth/login" replace />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   )

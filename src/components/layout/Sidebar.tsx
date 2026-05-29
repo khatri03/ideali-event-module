@@ -1,5 +1,5 @@
 import { Box, Flex, Text, VStack } from "@chakra-ui/react"
-import { NavLink, useLocation } from "react-router-dom"
+import { NavLink, useLocation, useNavigate } from "react-router-dom"
 import {
   LayoutDashboard,
   CalendarDays,
@@ -11,6 +11,9 @@ import {
   HelpCircle,
 } from "lucide-react"
 import { mockUser } from "../../data/mock"
+import { logoutUser } from "@/api/auth"
+import { auth } from "@/lib/auth"
+import { queryClient } from "@/lib/queryClient"
 
 const SIDEBAR_W = "260px"
 const GRADIENT = "linear-gradient(160deg, #7551FF 0%, #5A3FCC 45%, #422AFB 100%)"
@@ -120,6 +123,19 @@ function NavSection({ label, items }: { label: string; items: NavItem[] }) {
 }
 
 export function Sidebar() {
+  const navigate = useNavigate()
+  const currentUser = auth.getUser() ?? mockUser
+
+  async function handleSignOut() {
+    try {
+      await logoutUser()
+    } finally {
+      auth.clear()
+      queryClient.removeQueries({ queryKey: ["auth"] })
+      navigate("/auth/login", { replace: true })
+    }
+  }
+
   return (
     <Box
       w={SIDEBAR_W}
@@ -214,15 +230,15 @@ export function Sidebar() {
             flexShrink={0}
           >
             <Text fontSize="sm" fontWeight="800" color="white">
-              {mockUser.name.split(" ").map((n) => n[0]).join("")}
+              {currentUser.name.split(" ").map((n) => n[0]).join("")}
             </Text>
           </Flex>
           <Box flex={1} overflow="hidden">
             <Text fontSize="sm" fontWeight="700" color="white" lineClamp={1}>
-              {mockUser.name}
+              {currentUser.name}
             </Text>
             <Text fontSize="xs" color="rgba(255,255,255,0.5)" lineClamp={1}>
-              {mockUser.role}
+              {currentUser.role}
             </Text>
           </Box>
           <Box
@@ -233,6 +249,7 @@ export function Sidebar() {
             p={1}
             borderRadius="6px"
             aria-label="Sign out"
+            onClick={handleSignOut}
           >
             <LogOut size={15} />
           </Box>

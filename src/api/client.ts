@@ -6,52 +6,56 @@ export const client = axios.create({
   withCredentials: true,
 })
 
-client.interceptors.request.use((config) => {
-  const token = auth.getToken()
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
+const AUTH_FLOW_PATHS = [
+  "/api/identity/account/authenticate",
+  "/api/identity/account/authenticate/external-login",
+  "/api/identity/account/2fa/",
+  "/api/identity/account/forgot-password",
+  "/api/identity/account/reset-password",
+  "/api/identity/account/password-verify-link",
+  "/api/identity/account/logout",
+  "/api/identity/account/refresh-token",
+  "/api/identity/account/session",
+]
 
-let isRefreshing = false
-let refreshQueue: Array<(token: string) => void> = []
+function shouldSkipRefresh(url?: string) {
+  return AUTH_FLOW_PATHS.some((path) => url?.includes(path))
+}
+
+async function requestRefreshToken() {
+  await axios.post(
+    `${client.defaults.baseURL}/api/identity/account/refresh-token`,
+    undefined,
+    {
+      withCredentials: true,
+    }
+  )
+}
 
 client.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config
 
-    if (error.response?.status !== 401 || original._retry) {
+    if (
+      error.response?.status !== 401 ||
+      original._retry ||
+      shouldSkipRefresh(original.url)
+    ) {
       return Promise.reject(error)
-    }
-
-    if (isRefreshing) {
-      return new Promise((resolve) => {
-        refreshQueue.push((token) => {
-          original.headers.Authorization = `Bearer ${token}`
-          resolve(client(original))
-        })
-      })
     }
 
     original._retry = true
-    isRefreshing = true
 
     try {
-      const { data } = await client.post<{ accessToken: string }>("/auth/refresh")
-      auth.setToken(data.accessToken)
-      refreshQueue.forEach((cb) => cb(data.accessToken))
-      refreshQueue = []
-      original.headers.Authorization = `Bearer ${data.accessToken}`
+      await requestRefreshToken()
       return client(original)
     } catch {
       auth.clear()
-      refreshQueue = []
-      window.location.href = "/auth/login"
+      if (!window.location.pathname.startsWith("/auth")) {
+        window.location.href = "/auth/login"
+      }
       return Promise.reject(error)
-    } finally {
-      isRefreshing = false
     }
   }
 )
