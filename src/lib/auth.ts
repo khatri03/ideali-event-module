@@ -23,6 +23,10 @@ function mapUser(userDetail: AuthUserDetail): AuthUser {
   }
 }
 
+export function sessionDataToUser(data: AuthSessionData): AuthUser {
+  return mapUser(data.userDetail)
+}
+
 export const auth = {
   setSession: (data: AuthSessionData) => {
     session = {

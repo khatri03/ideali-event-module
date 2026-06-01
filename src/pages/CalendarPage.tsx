@@ -4,7 +4,7 @@ import FullCalendar from "@fullcalendar/react"
 import dayGridPlugin from "@fullcalendar/daygrid"
 import timeGridPlugin from "@fullcalendar/timegrid"
 import interactionPlugin from "@fullcalendar/interaction"
-import type { EventClickArg, DateSelectArg } from "@fullcalendar/core"
+import type { EventClickArg } from "@fullcalendar/core"
 import { mockEvents } from "../data/mock"
 import { EventFormModal } from "../components/events/EventFormModal"
 import type { AppEvent } from "../types"
@@ -32,7 +32,6 @@ const LEGEND = [
 
 export function CalendarPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [_selectedDate, setSelectedDate] = useState("")
   const [selectedEvent, setSelectedEvent] = useState<AppEvent | null>(null)
 
   const calendarEvents = mockEvents.map((e) => ({
@@ -45,8 +44,7 @@ export function CalendarPage() {
     extendedProps: { event: e },
   }))
 
-  function handleDateSelect(info: DateSelectArg) {
-    setSelectedDate(info.startStr)
+  function handleDateSelect() {
     setSelectedEvent(null)
     setIsModalOpen(true)
   }
@@ -57,7 +55,7 @@ export function CalendarPage() {
     setIsModalOpen(true)
   }
 
-  function handleSave(_data: Partial<AppEvent>) {
+  function handleSave() {
     setIsModalOpen(false)
     setSelectedEvent(null)
   }

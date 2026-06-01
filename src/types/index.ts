@@ -11,6 +11,12 @@ export type EventCategory =
 
 export type EventStatus = "draft" | "published" | "ongoing" | "completed" | "cancelled"
 
+export interface EventSession {
+  title: string
+  startsAt: string
+  endsAt: string
+}
+
 export interface AppEvent {
   id: string
   title: string
@@ -27,6 +33,10 @@ export interface AppEvent {
   price: number
   currency: string
   tags: string[]
+  timeZone?: string
+  paymentAccountId?: string
+  purchaseTimeLimitHours?: number | null
+  sessions?: EventSession[]
 }
 
 export interface StatItem {

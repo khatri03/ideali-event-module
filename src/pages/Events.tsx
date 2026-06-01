@@ -9,12 +9,14 @@ import {
   Text,
   Badge,
 } from "@chakra-ui/react"
+import { useNavigate } from "react-router-dom"
 import { Plus, Search, LayoutGrid, List, Filter } from "lucide-react"
 import { EventCard } from "../components/events/EventCard"
 import { EventFormModal } from "../components/events/EventFormModal"
 import { StyledSelect } from "../components/common/StyledSelect"
 import { mockEvents } from "../data/mock"
 import type { AppEvent } from "../types"
+import { APP_ROUTES } from "@/utils/routes"
 
 const CATEGORIES: { value: string; label: string }[] = [
   { value: "", label: "All Categories" },
@@ -40,6 +42,7 @@ const STATUSES: { value: string; label: string }[] = [
 
 
 export function Events() {
+  const navigate = useNavigate()
   const [events, setEvents] = useState<AppEvent[]>(mockEvents)
   const [search, setSearch] = useState("")
   const [category, setCategory] = useState("")
@@ -85,11 +88,6 @@ export function Events() {
     setIsModalOpen(true)
   }
 
-  function openCreate() {
-    setEditingEvent(null)
-    setIsModalOpen(true)
-  }
-
   const activeFilterCount = [category, status].filter(Boolean).length
 
   return (
@@ -110,7 +108,7 @@ export function Events() {
           fontSize="sm"
           h="42px"
           px={5}
-          onClick={openCreate}
+          onClick={() => navigate(APP_ROUTES.eventWizard.createBase)}
           style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)", color: "white" }}
           _hover={{ opacity: 0.9, transform: "translateY(-1px)" }}
           transition="all 0.2s ease"

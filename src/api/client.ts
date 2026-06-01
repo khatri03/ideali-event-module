@@ -1,5 +1,6 @@
 import axios from "axios"
 import { auth } from "@/lib/auth"
+import { API_AUTH_ROUTES, APP_ROUTES } from "@/utils/routes"
 
 export const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5000",
@@ -7,15 +8,15 @@ export const client = axios.create({
 })
 
 const AUTH_FLOW_PATHS = [
-  "/api/identity/account/authenticate",
-  "/api/identity/account/authenticate/external-login",
-  "/api/identity/account/2fa/",
-  "/api/identity/account/forgot-password",
-  "/api/identity/account/reset-password",
-  "/api/identity/account/password-verify-link",
-  "/api/identity/account/logout",
-  "/api/identity/account/refresh-token",
-  "/api/identity/account/session",
+  API_AUTH_ROUTES.authenticate,
+  API_AUTH_ROUTES.authenticateExternal,
+  API_AUTH_ROUTES.twoFactorPrefix,
+  API_AUTH_ROUTES.forgotPassword,
+  API_AUTH_ROUTES.resetPassword,
+  API_AUTH_ROUTES.passwordVerifyLink,
+  API_AUTH_ROUTES.logout,
+  API_AUTH_ROUTES.refreshToken,
+  API_AUTH_ROUTES.session,
 ]
 
 function shouldSkipRefresh(url?: string) {
@@ -24,7 +25,7 @@ function shouldSkipRefresh(url?: string) {
 
 async function requestRefreshToken() {
   await axios.post(
-    `${client.defaults.baseURL}/api/identity/account/refresh-token`,
+    `${client.defaults.baseURL}${API_AUTH_ROUTES.refreshToken}`,
     undefined,
     {
       withCredentials: true,
@@ -52,8 +53,8 @@ client.interceptors.response.use(
       return client(original)
     } catch {
       auth.clear()
-      if (!window.location.pathname.startsWith("/auth")) {
-        window.location.href = "/auth/login"
+      if (!window.location.pathname.startsWith(APP_ROUTES.auth.base)) {
+        window.location.href = APP_ROUTES.auth.login
       }
       return Promise.reject(error)
     }

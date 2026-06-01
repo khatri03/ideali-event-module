@@ -11,6 +11,7 @@ import {
 } from "@chakra-ui/react"
 import { Link, useNavigate } from "react-router-dom"
 import { Mail, Lock, User, Building2, Zap } from "lucide-react"
+import { APP_ROUTES } from "@/utils/routes"
 
 export function Register() {
   const navigate = useNavigate()
@@ -22,7 +23,7 @@ export function Register() {
     setLoading(true)
     await new Promise((r) => setTimeout(r, 1000))
     setLoading(false)
-    navigate("/dashboard")
+    navigate(APP_ROUTES.dashboard)
   }
 
   const inputStyles = {
@@ -187,7 +188,7 @@ export function Register() {
 
         <Text fontSize="sm" color="navy.400" textAlign="center" mt={6}>
           Already have an account?{" "}
-          <Link to="/auth/login">
+          <Link to={APP_ROUTES.auth.login}>
             <Text as="span" color="brand.400" fontWeight="700" _hover={{ color: "brand.300" }}>
               Sign in
             </Text>

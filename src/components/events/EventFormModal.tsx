@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import {
   Box,
   Button,
@@ -76,6 +76,28 @@ const INPUT_BASE = {
   _dark: { borderColor: "navy.600" },
 }
 
+function getFormFromEvent(event?: AppEvent | null) {
+  if (!event) {
+    return defaultForm
+  }
+
+  return {
+    title: event.title,
+    description: event.description,
+    startDate: event.startDate.slice(0, 16),
+    endDate: event.endDate.slice(0, 16),
+    location: event.location,
+    category: event.category,
+    status: event.status,
+    capacity: event.capacity,
+    price: event.price,
+    currency: event.currency,
+    organizer: event.organizer,
+    tags: event.tags.join(", "),
+    coverColor: event.coverColor ?? "#7551FF",
+  }
+}
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <Text
@@ -107,30 +129,8 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 }
 
 export function EventFormModal({ isOpen, onClose, event, onSave }: EventFormModalProps) {
-  const [form, setForm] = useState(defaultForm)
+  const [form, setForm] = useState(() => getFormFromEvent(event))
   const isEditing = !!event
-
-  useEffect(() => {
-    if (event) {
-      setForm({
-        title: event.title,
-        description: event.description,
-        startDate: event.startDate.slice(0, 16),
-        endDate: event.endDate.slice(0, 16),
-        location: event.location,
-        category: event.category,
-        status: event.status,
-        capacity: event.capacity,
-        price: event.price,
-        currency: event.currency,
-        organizer: event.organizer,
-        tags: event.tags.join(", "),
-        coverColor: event.coverColor ?? "#7551FF",
-      })
-    } else {
-      setForm(defaultForm)
-    }
-  }, [event, isOpen])
 
   function handleChange(field: string, value: string | number) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -146,7 +146,18 @@ export function EventFormModal({ isOpen, onClose, event, onSave }: EventFormModa
   }
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(e) => !e.open && onClose()} size="xl">
+    <Dialog.Root
+      open={isOpen}
+      onOpenChange={(details) => {
+        if (details.open) {
+          setForm(getFormFromEvent(event))
+          return
+        }
+
+        onClose()
+      }}
+      size="xl"
+    >
       <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
       <Dialog.Positioner>
         <Dialog.Content

@@ -6,15 +6,16 @@ import { auth } from "@/lib/auth"
 import { logoutUser } from "@/api/auth"
 import { queryClient } from "@/lib/queryClient"
 import { mockUser } from "../../data/mock"
+import { APP_ROUTES } from "@/utils/routes"
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
-  "/dashboard": { title: "Dashboard", subtitle: "Welcome back!" },
-  "/events": { title: "Events", subtitle: "Manage and track all your events" },
-  "/calendar": { title: "Calendar", subtitle: "Your event schedule at a glance" },
-  "/settings": { title: "Settings", subtitle: "Configure your workspace" },
-  "/team": { title: "Team", subtitle: "Manage your team members" },
-  "/analytics": { title: "Analytics", subtitle: "Insights and performance metrics" },
-  "/help": { title: "Help Center", subtitle: "Documentation and support" },
+  [APP_ROUTES.dashboard]: { title: "Dashboard", subtitle: "Welcome back!" },
+  [APP_ROUTES.events]: { title: "Events", subtitle: "Manage and track all your events" },
+  [APP_ROUTES.calendar]: { title: "Calendar", subtitle: "Your event schedule at a glance" },
+  [APP_ROUTES.settings]: { title: "Settings", subtitle: "Configure your workspace" },
+  [APP_ROUTES.team]: { title: "Team", subtitle: "Manage your team members" },
+  [APP_ROUTES.analytics]: { title: "Analytics", subtitle: "Insights and performance metrics" },
+  [APP_ROUTES.help]: { title: "Help Center", subtitle: "Documentation and support" },
 }
 
 export function TopBar() {
@@ -22,7 +23,7 @@ export function TopBar() {
   const navigate = useNavigate()
   const user = auth.getUser() ?? mockUser
   const pageInfo =
-    pathname === "/dashboard"
+    pathname === APP_ROUTES.dashboard
       ? { title: "Dashboard", subtitle: `Welcome back, ${user.name.split(" ")[0]}!` }
       : PAGE_TITLES[pathname] ?? { title: "Ideali Events", subtitle: "" }
 
@@ -32,7 +33,7 @@ export function TopBar() {
     } finally {
       auth.clear()
       queryClient.removeQueries({ queryKey: ["auth"] })
-      navigate("/auth/login", { replace: true })
+      navigate(APP_ROUTES.auth.login, { replace: true })
     }
   }
 
@@ -182,7 +183,7 @@ export function TopBar() {
                   py={2}
                   mt={1}
                   gap={2.5}
-                  onClick={() => navigate("/settings")}
+                  onClick={() => navigate(APP_ROUTES.settings)}
                 >
                   <User size={14} />
                   Profile &amp; Settings

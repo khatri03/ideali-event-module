@@ -36,6 +36,8 @@ import { auth } from "@/lib/auth"
 import { loginUser } from "@/api/auth"
 import { useAuthSession } from "@/hooks/useAuthSession"
 import { extractApiError } from "@/utils/errors"
+import { APP_ROUTES } from "@/utils/routes"
+import { sessionDataToUser } from "@/lib/auth"
 
 const loginSchema = z.object({
   email: z.string().min(1, "Email is required").email("Enter a valid email address"),
@@ -162,6 +164,7 @@ export function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const sessionQuery = useAuthSession()
+  const currentUser = auth.getUser() ?? (sessionQuery.data ? sessionDataToUser(sessionQuery.data) : null)
 
   const {
     register,
@@ -176,12 +179,12 @@ export function Login() {
   })
 
   useEffect(() => {
-    if (auth.isAuthenticated() || sessionQuery.data) {
-      navigate("/dashboard", { replace: true })
+    if (currentUser) {
+      navigate(APP_ROUTES.dashboard, { replace: true })
     }
-  }, [navigate, sessionQuery.data])
+  }, [currentUser, navigate])
 
-  if (sessionQuery.isLoading && !auth.isAuthenticated()) {
+  if (sessionQuery.isLoading && !currentUser) {
     return <AuthLoadingState />
   }
 
@@ -195,14 +198,14 @@ export function Login() {
       })
 
       if ("requiresTwoFactor" in result) {
-        navigate(`/auth/2fa/${result.twoFaToken}`, {
+        navigate(APP_ROUTES.auth.twoFactor(result.twoFaToken), {
           state: { email: data.email },
         })
         return
       }
 
       auth.setSession(result)
-      navigate("/dashboard", { replace: true })
+      navigate(APP_ROUTES.dashboard, { replace: true })
     } catch (error) {
       setSubmitError(extractApiError(error))
     }
@@ -537,7 +540,7 @@ export function Login() {
                 <Field.Label fontSize="xs" fontWeight="800" color="gray.700" textTransform="uppercase" letterSpacing="0.08em">
                   Password
                 </Field.Label>
-                <Link to="/auth/forgot-password">
+                <Link to={APP_ROUTES.auth.forgotPassword}>
                   <Text
                     fontSize="xs"
                     color="brand.500"
@@ -619,7 +622,7 @@ export function Login() {
 
           <Text fontSize="sm" color="gray.600" textAlign="center" mt={6}>
             New to Ideali?{" "}
-            <Link to="/auth/register">
+            <Link to={APP_ROUTES.auth.register}>
               <Text as="span" color="brand.500" fontWeight="800" _hover={{ textDecoration: "underline", color: "brand.600" }}>
                 Start your free trial
               </Text>

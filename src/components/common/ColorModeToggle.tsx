@@ -6,7 +6,9 @@ function getInitial(): "light" | "dark" {
   try {
     const stored = localStorage.getItem("ideali-color-mode") as "light" | "dark" | null
     if (stored) return stored
-  } catch {}
+  } catch (error) {
+    void error
+  }
   return "light"
 }
 

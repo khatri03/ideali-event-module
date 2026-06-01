@@ -19,6 +19,7 @@ import { verifyTwoFactor } from "@/api/auth"
 import { auth } from "@/lib/auth"
 import { useAuthSession } from "@/hooks/useAuthSession"
 import { extractApiError } from "@/utils/errors"
+import { APP_ROUTES } from "@/utils/routes"
 
 const twoFactorSchema = z.object({
   emailCode: z
@@ -81,7 +82,7 @@ export function TwoFactor() {
 
   useEffect(() => {
     if (auth.isAuthenticated() || sessionQuery.data) {
-      navigate("/dashboard", { replace: true })
+      navigate(APP_ROUTES.dashboard, { replace: true })
     }
   }, [navigate, sessionQuery.data])
 
@@ -100,7 +101,7 @@ export function TwoFactor() {
     try {
       const result = await verifyTwoFactor(twoFaToken, data.emailCode)
       auth.setSession(result)
-      navigate("/dashboard", { replace: true })
+      navigate(APP_ROUTES.dashboard, { replace: true })
     } catch (error) {
       setSubmitError(extractApiError(error))
     }

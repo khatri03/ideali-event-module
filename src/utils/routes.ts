@@ -1,0 +1,58 @@
+export const APP_ROUTES = {
+  root: "/",
+  dashboard: "/dashboard",
+  events: "/events",
+  calendar: "/calendar",
+  settings: "/settings",
+  team: "/team",
+  analytics: "/analytics",
+  help: "/help",
+  auth: {
+    login: "/auth/login",
+    register: "/auth/register",
+    forgotPassword: "/auth/forgot-password",
+    twoFactorRoute: "/auth/2fa/:twoFaToken",
+    twoFactor: (twoFaToken: string) => `/auth/2fa/${twoFaToken}`,
+    base: "/auth",
+  },
+  eventWizard: {
+    createBase: "/events/create",
+    create: {
+      description: "/events/create/description",
+      themeColor: "/events/create/theme-color",
+      paymentAccount: "/events/create/payment-account",
+      timeZone: "/events/create/time-zone",
+      sessions: "/events/create/sessions",
+      advancedSettings: "/events/create/purchase-time-limit",
+      review: "/events/create/review",
+    },
+    slugs: {
+      description: "description",
+      themeColor: "theme-color",
+      paymentAccount: "payment-account",
+      timeZone: "time-zone",
+      sessions: "sessions",
+      advancedSettings: "purchase-time-limit",
+      review: "review",
+    },
+    edit: (eventId: string) => `/events/${eventId}`,
+    editStep: (eventId: string, step: string) => `/events/${eventId}/${step}`,
+  },
+} as const
+
+export const API_ROUTES = {
+  events: "/events",
+  eventById: (id: string) => `/events/${id}`,
+} as const
+
+export const API_AUTH_ROUTES = {
+  authenticate: "/api/identity/account/authenticate",
+  authenticateExternal: "/api/identity/account/authenticate/external-login",
+  twoFactorPrefix: "/api/identity/account/2fa/",
+  forgotPassword: "/api/identity/account/forgot-password",
+  resetPassword: "/api/identity/account/reset-password",
+  passwordVerifyLink: "/api/identity/account/password-verify-link",
+  logout: "/api/identity/account/logout",
+  refreshToken: "/api/identity/account/refresh-token",
+  session: "/api/identity/account/session",
+} as const

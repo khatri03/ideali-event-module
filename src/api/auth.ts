@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { client } from "@/api/client"
+import { API_AUTH_ROUTES } from "@/utils/routes"
 import type {
   AuthSessionData,
   LoginRequest,
@@ -94,7 +95,7 @@ function withCookieFlag(path: string) {
 }
 
 export async function loginUser(payload: LoginRequest): Promise<AuthOutcome> {
-  const response = await postForm(withCookieFlag("/api/identity/account/authenticate"), {
+  const response = await postForm(withCookieFlag(API_AUTH_ROUTES.authenticate), {
     userName: payload.userName,
     password: payload.password,
   })
@@ -102,17 +103,17 @@ export async function loginUser(payload: LoginRequest): Promise<AuthOutcome> {
 }
 
 export async function refreshSession(): Promise<void> {
-  await client.post(withCookieFlag("/api/identity/account/refresh-token"))
+  await client.post(withCookieFlag(API_AUTH_ROUTES.refreshToken))
 }
 
 export async function fetchCurrentSession(): Promise<AuthSessionData> {
-  const response = await client.get<unknown>("/api/identity/account/session")
+  const response = await client.get<unknown>(API_AUTH_ROUTES.session)
   return parseAuthSession(response.data)
 }
 
 export async function verifyTwoFactor(twoFaToken: string, emailCode: string): Promise<AuthSessionData> {
   const response = await client.post<unknown>(
-    withCookieFlag(`/api/identity/account/2fa/${twoFaToken}/verify`),
+    withCookieFlag(`${API_AUTH_ROUTES.twoFactorPrefix}${twoFaToken}/verify`),
     { emailCode }
   )
 
@@ -120,5 +121,5 @@ export async function verifyTwoFactor(twoFaToken: string, emailCode: string): Pr
 }
 
 export async function logoutUser(): Promise<void> {
-  await client.post("/api/identity/account/logout")
+  await client.post(API_AUTH_ROUTES.logout)
 }

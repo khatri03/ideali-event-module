@@ -3,7 +3,8 @@ import { Navigate, Outlet } from "react-router-dom"
 import { Sidebar } from "./Sidebar"
 import { TopBar } from "./TopBar"
 import { useAuthSession } from "@/hooks/useAuthSession"
-import { auth } from "@/lib/auth"
+import { auth, sessionDataToUser } from "@/lib/auth"
+import { APP_ROUTES } from "@/utils/routes"
 
 function AppLayoutSkeleton() {
   return (
@@ -35,14 +36,14 @@ function AppLayoutSkeleton() {
 
 export function AppLayout() {
   const sessionQuery = useAuthSession()
-  const currentUser = auth.getUser()
+  const currentUser = auth.getUser() ?? (sessionQuery.data ? sessionDataToUser(sessionQuery.data) : null)
 
   if (sessionQuery.isLoading && !currentUser) {
     return <AppLayoutSkeleton />
   }
 
   if (!currentUser) {
-    return <Navigate to="/auth/login" replace />
+    return <Navigate to={APP_ROUTES.auth.login} replace />
   }
 
   return (

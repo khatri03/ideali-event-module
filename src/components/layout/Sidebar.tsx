@@ -14,6 +14,7 @@ import { mockUser } from "../../data/mock"
 import { logoutUser } from "@/api/auth"
 import { auth } from "@/lib/auth"
 import { queryClient } from "@/lib/queryClient"
+import { APP_ROUTES } from "@/utils/routes"
 
 const SIDEBAR_W = "260px"
 const GRADIENT = "linear-gradient(160deg, #7551FF 0%, #5A3FCC 45%, #422AFB 100%)"
@@ -26,19 +27,19 @@ interface NavItem {
 }
 
 const mainNav: NavItem[] = [
-  { label: "Dashboard", icon: <LayoutDashboard size={17} />, path: "/dashboard" },
-  { label: "Events", icon: <Zap size={17} />, path: "/events", badge: "12" },
-  { label: "Calendar", icon: <CalendarDays size={17} />, path: "/calendar" },
+  { label: "Dashboard", icon: <LayoutDashboard size={17} />, path: APP_ROUTES.dashboard },
+  { label: "Events", icon: <Zap size={17} />, path: APP_ROUTES.events, badge: "12" },
+  { label: "Calendar", icon: <CalendarDays size={17} />, path: APP_ROUTES.calendar },
 ]
 
 const managementNav: NavItem[] = [
-  { label: "Team", icon: <Users size={17} />, path: "/team" },
-  { label: "Analytics", icon: <BarChart3 size={17} />, path: "/analytics" },
-  { label: "Settings", icon: <Settings size={17} />, path: "/settings" },
+  { label: "Team", icon: <Users size={17} />, path: APP_ROUTES.team },
+  { label: "Analytics", icon: <BarChart3 size={17} />, path: APP_ROUTES.analytics },
+  { label: "Settings", icon: <Settings size={17} />, path: APP_ROUTES.settings },
 ]
 
 const systemNav: NavItem[] = [
-  { label: "Help Center", icon: <HelpCircle size={17} />, path: "/help" },
+  { label: "Help Center", icon: <HelpCircle size={17} />, path: APP_ROUTES.help },
 ]
 
 function NavSection({ label, items }: { label: string; items: NavItem[] }) {
@@ -132,7 +133,7 @@ export function Sidebar() {
     } finally {
       auth.clear()
       queryClient.removeQueries({ queryKey: ["auth"] })
-      navigate("/auth/login", { replace: true })
+      navigate(APP_ROUTES.auth.login, { replace: true })
     }
   }
 

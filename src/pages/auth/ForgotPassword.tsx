@@ -10,6 +10,7 @@ import {
 } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import { Mail, Zap, ArrowLeft, CheckCircle } from "lucide-react"
+import { APP_ROUTES } from "@/utils/routes"
 
 export function ForgotPassword() {
   const [email, setEmail] = useState("")
@@ -126,7 +127,7 @@ export function ForgotPassword() {
           </Box>
         )}
 
-        <Link to="/auth/login">
+        <Link to={APP_ROUTES.auth.login}>
           <Flex align="center" gap={2} mt={8} color="navy.400" _hover={{ color: "brand.400" }} transition="color 0.15s">
             <ArrowLeft size={14} />
             <Text fontSize="sm" fontWeight="600">Back to sign in</Text>
