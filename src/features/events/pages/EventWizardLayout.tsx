@@ -38,7 +38,7 @@ const PREVIEW_DEVICE_SPECS: Record<PreviewMode, DeviceFrameSpec> = {
   laptop: {
     width: 960,
     height: 600,
-    scale: 0.36,
+    scale: 0.48,
   },
 }
 
@@ -550,7 +550,9 @@ export function EventWizardLayout() {
                     >
                       Preview
                     </Text>
-                    <PreviewModeToggle mode={previewMode} onChange={setPreviewMode} />
+                    <Box mb={3}>
+                      <PreviewModeToggle mode={previewMode} onChange={setPreviewMode} />
+                    </Box>
                     <PreviewFrame mode={previewMode} />
                   </Stack>
                 </Box>
