@@ -1,8 +1,7 @@
 import { Field, Stack, Text } from "@chakra-ui/react"
 import { useFormContext } from "react-hook-form"
 import { StyledSelect } from "@/components/common"
-import { EventWizardActions } from "../components/EventWizardActions"
-import { useEventWizardNavigation } from "../hooks/useEventWizard"
+import { StepFieldLabel } from "../components/StepFieldLabel"
 import type { EventWizardValues } from "../schemas/eventWizard.schemas"
 
 const TIME_ZONE_OPTIONS = [
@@ -24,14 +23,13 @@ const TIME_ZONE_OPTIONS = [
 
 export function EventTimeZoneStepPage() {
   const { setValue, watch } = useFormContext<EventWizardValues>()
-  const { goBack, goNext } = useEventWizardNavigation()
   const timeZone = watch("timeZone")
 
   return (
     <Stack h="full" gap={4}>
       <Stack flex="1" gap={4}>
         <Field.Root>
-          <Field.Label>Time zone</Field.Label>
+          <StepFieldLabel label="Time zone" isRequired />
           <StyledSelect
             options={TIME_ZONE_OPTIONS}
             value={timeZone}
@@ -45,13 +43,6 @@ export function EventTimeZoneStepPage() {
           We prefill your browser time zone at first load so you do not need to choose it manually every time.
         </Text>
       </Stack>
-
-      <EventWizardActions
-        backLabel="Back"
-        nextLabel="Continue"
-        onBack={goBack}
-        onNext={goNext}
-      />
     </Stack>
   )
 }

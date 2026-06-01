@@ -1,41 +1,14 @@
-import { Badge, Box, Field, Flex, Stack, Text } from "@chakra-ui/react"
-import { useMutation } from "@tanstack/react-query"
+import { Badge, Box, Flex, Stack, Text } from "@chakra-ui/react"
 import { format } from "date-fns"
-import { useNavigate } from "react-router-dom"
 import type { ReactNode } from "react"
-import { useFormContext, useWatch } from "react-hook-form"
-import { createEvent } from "@/api/events"
+import { useWatch } from "react-hook-form"
 import { auth } from "@/lib/auth"
-import { queryClient } from "@/lib/queryClient"
-import { APP_ROUTES } from "@/utils/routes"
-import { EventWizardActions } from "../components/EventWizardActions"
-import { buildCreateEventPayload, useEventWizardNavigation } from "../hooks/useEventWizard"
 import { defaultEventWizardValues, type EventWizardValues } from "../schemas/eventWizard.schemas"
 
 export function EventReviewStepPage() {
-  const navigate = useNavigate()
-  const { handleSubmit } = useFormContext<EventWizardValues>()
   const values = useWatch({ defaultValue: defaultEventWizardValues }) as EventWizardValues
-  const { goBack } = useEventWizardNavigation()
   const organizer = auth.getOrganizer()
   const paymentAccount = organizer?.paymentAccounts?.find((account) => account.uniqueId === values.paymentAccountId)
-
-  const createEventMutation = useMutation({
-    mutationFn: createEvent,
-    onSuccess: () => {
-      navigate(APP_ROUTES.events, { replace: true })
-    },
-    onError: () => {
-      // handled inline for the user on this screen
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["events"] })
-    },
-  })
-
-  async function handleCreate(formValues: EventWizardValues) {
-    await createEventMutation.mutateAsync(buildCreateEventPayload(formValues))
-  }
 
   return (
     <Stack h="full" gap={5}>
@@ -47,13 +20,13 @@ export function EventReviewStepPage() {
         <Stack gap={4}>
           <ReviewRow label="Name" value={values.name} />
           <ReviewRow label="Description" value={values.description || "No description provided"} />
-          <ReviewRow label="Theme color" value={<ColorPill color={values.themeColor} />} />
-          <ReviewRow label="Payment account" value={paymentAccount?.name || "Not selected"} />
+          <ReviewRow label="Theme color" value={<ColorPill color={values.themeColor} />} isRequired />
+          <ReviewRow label="Payment account" value={paymentAccount?.name || "Not selected"} isRequired />
           <ReviewRow
             label="Advanced settings"
             value={values.purchaseTimeLimitHours ? `${values.purchaseTimeLimitHours} hours before start` : "Not set"}
           />
-          <ReviewRow label="Time zone" value={values.timeZone} />
+          <ReviewRow label="Time zone" value={values.timeZone} isRequired />
           <ReviewRow
             label="Sessions"
             value={
@@ -74,20 +47,7 @@ export function EventReviewStepPage() {
           />
         </Stack>
 
-        {createEventMutation.isError && (
-          <Field.Root invalid>
-            <Field.ErrorText>We could not create the event. Please try again.</Field.ErrorText>
-          </Field.Root>
-        )}
       </Stack>
-
-      <EventWizardActions
-        backLabel="Back"
-        nextLabel="Create Event"
-        isLoading={createEventMutation.isPending}
-        onBack={goBack}
-        onNext={handleSubmit(handleCreate)}
-      />
     </Stack>
   )
 }
@@ -95,9 +55,11 @@ export function EventReviewStepPage() {
 function ReviewRow({
   label,
   value,
+  isRequired = false,
 }: {
   label: string
   value: ReactNode
+  isRequired?: boolean
 }) {
   return (
     <Flex
@@ -112,7 +74,14 @@ function ReviewRow({
       justify="space-between"
     >
       <Text fontSize="sm" fontWeight="700" color="text.primary" minW={{ md: "180px" }}>
-        {label}
+        <Flex as="span" align="center" gap={2} wrap="wrap">
+          <Text as="span">{label}</Text>
+          {isRequired ? (
+            <Text as="span" color="red.500" fontWeight="800" aria-hidden="true">
+              *
+            </Text>
+          ) : null}
+        </Flex>
       </Text>
       <Box flex={1} textAlign={{ md: "right" }}>
         {value}

@@ -1,18 +1,16 @@
 import { Field, Stack, Textarea, Text } from "@chakra-ui/react"
 import { useFormContext } from "react-hook-form"
-import { EventWizardActions } from "../components/EventWizardActions"
-import { useEventWizardNavigation } from "../hooks/useEventWizard"
+import { StepFieldLabel } from "../components/StepFieldLabel"
 import type { EventWizardValues } from "../schemas/eventWizard.schemas"
 
 export function EventDescriptionStepPage() {
   const { register } = useFormContext<EventWizardValues>()
-  const { goBack, goNext } = useEventWizardNavigation()
 
   return (
     <Stack h="full" gap={4}>
       <Stack flex="1" gap={4}>
         <Field.Root>
-          <Field.Label>Description</Field.Label>
+          <StepFieldLabel label="Description" />
           <Textarea
             placeholder="Add a concise description for attendees, sponsors, and internal teams."
             minH="180px"
@@ -26,13 +24,6 @@ export function EventDescriptionStepPage() {
           This field can stay empty for now. You can come back and expand it later if you need richer copy.
         </Text>
       </Stack>
-
-      <EventWizardActions
-        backLabel="Back"
-        nextLabel="Continue"
-        onBack={goBack}
-        onNext={goNext}
-      />
     </Stack>
   )
 }

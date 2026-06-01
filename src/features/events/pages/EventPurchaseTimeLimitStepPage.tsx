@@ -1,18 +1,16 @@
 import { Field, Input, Stack, Text } from "@chakra-ui/react"
 import { useFormContext } from "react-hook-form"
-import { EventWizardActions } from "../components/EventWizardActions"
-import { useEventWizardNavigation } from "../hooks/useEventWizard"
+import { StepFieldLabel } from "../components/StepFieldLabel"
 import type { EventWizardValues } from "../schemas/eventWizard.schemas"
 
 export function EventPurchaseTimeLimitStepPage() {
   const { register } = useFormContext<EventWizardValues>()
-  const { goBack, goNext } = useEventWizardNavigation()
 
   return (
     <Stack h="full" gap={4}>
       <Stack flex="1" gap={4}>
         <Field.Root>
-          <Field.Label>Advanced settings</Field.Label>
+          <StepFieldLabel label="Advanced settings" />
           <Input
             type="number"
             placeholder="e.g. 24"
@@ -36,13 +34,6 @@ export function EventPurchaseTimeLimitStepPage() {
           Leave this blank if you want sales to stay open until the event rules are defined later.
         </Text>
       </Stack>
-
-      <EventWizardActions
-        backLabel="Back"
-        nextLabel="Continue"
-        onBack={goBack}
-        onNext={goNext}
-      />
     </Stack>
   )
 }

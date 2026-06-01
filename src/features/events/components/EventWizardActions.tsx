@@ -1,51 +1,103 @@
-import { Button, Flex } from "@chakra-ui/react"
+import { Button, Flex, Stack } from "@chakra-ui/react"
 
 interface EventWizardActionsProps {
   backLabel?: string
-  nextLabel?: string
+  primaryLabel?: string
+  secondaryLabel?: string
+  skipLabel?: string
+  showBack?: boolean
+  showSkip?: boolean
   isBackDisabled?: boolean
-  isNextDisabled?: boolean
-  isLoading?: boolean
+  isPrimaryDisabled?: boolean
+  isSecondaryDisabled?: boolean
+  isSkipDisabled?: boolean
+  isPrimaryLoading?: boolean
+  isSecondaryLoading?: boolean
   onBack?: () => void
-  onNext?: () => void
+  onPrimary?: () => void
+  onSecondary?: () => void
+  onSkip?: () => void
 }
 
 export function EventWizardActions({
   backLabel = "Back",
-  nextLabel = "Next",
+  primaryLabel = "Save & Continue",
+  secondaryLabel = "Save & Exit",
+  skipLabel = "Skip",
+  showBack = true,
+  showSkip = false,
   isBackDisabled,
-  isNextDisabled,
-  isLoading,
+  isPrimaryDisabled,
+  isSecondaryDisabled,
+  isSkipDisabled,
+  isPrimaryLoading,
+  isSecondaryLoading,
   onBack,
-  onNext,
+  onPrimary,
+  onSecondary,
+  onSkip,
 }: EventWizardActionsProps) {
   return (
-    <Flex gap={3} justify="space-between" flexWrap="wrap">
-      <Button
-        variant="outline"
-        borderRadius="14px"
-        h="44px"
-        px={6}
-        onClick={onBack}
-        disabled={isBackDisabled}
-        minW={{ base: "full", md: "auto" }}
-      >
-        {backLabel}
-      </Button>
-      <Button
-        borderRadius="14px"
-        h="44px"
-        px={6}
-        onClick={onNext}
-        loading={isLoading}
-        disabled={isNextDisabled}
-        loadingText={nextLabel}
-        minW={{ base: "full", md: "auto" }}
-        color="white"
-        style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
-      >
-        {nextLabel}
-      </Button>
-    </Flex>
+    <Stack gap={3}>
+      {showBack ? (
+        <Button
+          variant="outline"
+          borderRadius="14px"
+          h="44px"
+          px={6}
+          onClick={onBack}
+          disabled={isBackDisabled}
+          minW={{ base: "full", md: "auto" }}
+          alignSelf="flex-start"
+        >
+          {backLabel}
+        </Button>
+      ) : null}
+
+      <Flex gap={3} justify="flex-end" flexWrap="wrap">
+        {showSkip ? (
+          <Button
+            variant="ghost"
+            borderRadius="14px"
+            h="44px"
+            px={6}
+            onClick={onSkip}
+            disabled={isSkipDisabled}
+            minW={{ base: "full", md: "auto" }}
+          >
+            {skipLabel}
+          </Button>
+        ) : null}
+
+        <Button
+          variant="outline"
+          borderRadius="14px"
+          h="44px"
+          px={6}
+          onClick={onSecondary}
+          loading={isSecondaryLoading}
+          disabled={isSecondaryDisabled}
+          loadingText={secondaryLabel}
+          minW={{ base: "full", md: "auto" }}
+        >
+          {secondaryLabel}
+        </Button>
+
+        <Button
+          borderRadius="14px"
+          h="44px"
+          px={6}
+          onClick={onPrimary}
+          loading={isPrimaryLoading}
+          disabled={isPrimaryDisabled}
+          loadingText={primaryLabel}
+          minW={{ base: "full", md: "auto" }}
+          color="white"
+          style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+        >
+          {primaryLabel}
+        </Button>
+      </Flex>
+    </Stack>
   )
 }

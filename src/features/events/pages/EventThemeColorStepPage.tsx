@@ -1,7 +1,6 @@
 import { Box, Field, Flex, Input, Stack, Text } from "@chakra-ui/react"
 import { useFormContext } from "react-hook-form"
-import { EventWizardActions } from "../components/EventWizardActions"
-import { useEventWizardNavigation } from "../hooks/useEventWizard"
+import { StepFieldLabel } from "../components/StepFieldLabel"
 import type { EventWizardValues } from "../schemas/eventWizard.schemas"
 
 const THEME_COLOR_PRESETS = ["#7551FF", "#422AFB", "#2196F3", "#01B574", "#FFB547", "#EE5D50"]
@@ -9,13 +8,12 @@ const THEME_COLOR_PRESETS = ["#7551FF", "#422AFB", "#2196F3", "#01B574", "#FFB54
 export function EventThemeColorStepPage() {
   const { register, setValue, watch } = useFormContext<EventWizardValues>()
   const themeColor = watch("themeColor") ?? "#7551FF"
-  const { goBack, goNext } = useEventWizardNavigation()
 
   return (
     <Stack h="full" gap={4}>
       <Stack flex="1" gap={4}>
         <Field.Root>
-          <Field.Label>Theme color</Field.Label>
+          <StepFieldLabel label="Theme color" isRequired />
           <Flex align="center" gap={4} wrap="wrap">
             <Box
               w="52px"
@@ -55,13 +53,6 @@ export function EventThemeColorStepPage() {
           Pick the accent that will represent this event in lists, cards, and review screens.
         </Text>
       </Stack>
-
-      <EventWizardActions
-        backLabel="Back"
-        nextLabel="Continue"
-        onBack={goBack}
-        onNext={goNext}
-      />
     </Stack>
   )
 }

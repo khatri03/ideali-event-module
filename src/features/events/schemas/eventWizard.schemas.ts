@@ -20,11 +20,13 @@ export type EventWizardValues = z.infer<typeof eventWizardSchema>
 export type EventWizardSessionValues = z.infer<typeof eventSessionSchema>
 
 export const eventWizardFieldGroups = {
-  identity: ["name", "description"] as const,
+  name: ["name"] as const,
+  description: ["description"] as const,
   theme: ["themeColor"] as const,
   paymentAccount: ["paymentAccountId"] as const,
-  timing: ["purchaseTimeLimitHours", "timeZone"] as const,
+  timeZone: ["timeZone"] as const,
   sessions: ["sessions"] as const,
+  advancedSettings: ["purchaseTimeLimitHours"] as const,
 }
 
 export const defaultEventWizardValues: EventWizardValues = {

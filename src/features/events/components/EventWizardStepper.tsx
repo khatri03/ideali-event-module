@@ -13,7 +13,6 @@ export function EventWizardStepper({ activeStepIndex, onStepClick, steps }: Even
       {steps.map((step, index) => {
         const isActive = index === activeStepIndex
         const isComplete = index < activeStepIndex
-        const statusLabel = isComplete ? "DONE" : isActive ? "CURRENT" : "NEXT"
         const isClickable = Boolean(onStepClick)
 
         return (
@@ -31,7 +30,7 @@ export function EventWizardStepper({ activeStepIndex, onStepClick, steps }: Even
             borderColor={isActive ? "green.200" : isComplete ? "green.100" : "gray.200"}
             bg={isActive ? "green.100" : isComplete ? "green.50" : "white"}
             boxShadow={isActive ? "0 12px 28px rgba(1, 181, 116, 0.10)" : "none"}
-            justifyContent="space-between"
+            justifyContent="flex-start"
             alignItems="center"
             textAlign="left"
             onClick={onStepClick ? () => onStepClick(step.slug) : undefined}
@@ -73,21 +72,6 @@ export function EventWizardStepper({ activeStepIndex, onStepClick, steps }: Even
                 </Text>
               </Box>
             </Flex>
-
-            <Box
-              flexShrink={0}
-              px={4}
-              py={1.5}
-              borderRadius="999px"
-              bg={isActive || isComplete ? "green.500" : "gray.200"}
-              color={isActive || isComplete ? "white" : "gray.600"}
-              fontSize="xs"
-              fontWeight="800"
-              letterSpacing="0.08em"
-              textTransform="uppercase"
-            >
-              {statusLabel}
-            </Box>
           </Button>
         )
       })}

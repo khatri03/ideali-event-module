@@ -1,19 +1,23 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Box, Button, Flex, Grid, Heading, Skeleton, SkeletonText, Text, useBreakpointValue } from "@chakra-ui/react"
-import { FormProvider, useForm } from "react-hook-form"
+import { Box, Button, Field, Flex, Grid, Heading, Skeleton, SkeletonText, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
+import { useMutation } from "@tanstack/react-query"
+import { FormProvider, useForm, useWatch } from "react-hook-form"
 import { Navigate, Outlet, useNavigate, useParams } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { ArrowLeft, ChevronLeft, ChevronRight, Sparkles } from "lucide-react"
+import { createEvent } from "@/api/events"
 import { useAuthSession } from "@/hooks/useAuthSession"
-import { auth } from "@/lib/auth"
+import { auth, sessionDataToUser } from "@/lib/auth"
+import { queryClient } from "@/lib/queryClient"
 import { APP_ROUTES } from "@/utils/routes"
 import { useEventWizardDraft } from "../hooks/useEventWizardDraft"
 import { useEventWizardNavigation, type EventWizardStep } from "../hooks/useEventWizard"
-import { defaultEventWizardValues, eventWizardSchema, type EventWizardValues } from "../schemas/eventWizard.schemas"
+import { defaultEventWizardValues, eventWizardFieldGroups, eventWizardSchema, type EventWizardValues } from "../schemas/eventWizard.schemas"
 import { EventWizardStepper } from "../components/EventWizardStepper"
 import { EventWizardStepSkeleton } from "../components/EventWizardStepSkeleton"
+import { EventWizardActions } from "../components/EventWizardActions"
 import { eventToWizardValues } from "../utils/eventWizardMappers"
-import { sessionDataToUser } from "@/lib/auth"
+import { buildCreateEventPayload } from "../hooks/useEventWizard"
 
 function WizardLoadingState() {
   return (
@@ -139,7 +143,7 @@ export function EventWizardLayout() {
   const sessionQuery = useAuthSession()
   const currentUser = auth.getUser() ?? (sessionQuery.data ? sessionDataToUser(sessionQuery.data) : null)
   const organizer = auth.getOrganizer()
-  const { steps, activeStepIndex, activeStep, goToStep } = useEventWizardNavigation()
+  const { steps, activeStepIndex, activeStep, goToStep, goBack, goNext, isFirstStep, isLastStep } = useEventWizardNavigation()
   const wizardDraftQuery = useEventWizardDraft(eventId)
   const isMobile = useBreakpointValue({ base: true, lg: false }) ?? true
   const [isStepsCollapsedOverride, setIsStepsCollapsedOverride] = useState<boolean | null>(null)
@@ -153,12 +157,79 @@ export function EventWizardLayout() {
     resolver: zodResolver(eventWizardSchema),
     mode: "onSubmit",
   })
+  const paymentAccountId = useWatch({ control: form.control, name: "paymentAccountId" })
+  const isReviewStep = activeStep.slug === "review"
+  const isOptionalStep = activeStep.slug === "description" || activeStep.slug === "purchase-time-limit"
+  const isPaymentAccountStep = activeStep.slug === "payment-account"
+  const isLastWizardStep = isLastStep
+
+  const createEventMutation = useMutation({
+    mutationFn: createEvent,
+    onSuccess: () => {
+      navigate(APP_ROUTES.events, { replace: true })
+    },
+    onError: () => {
+      // handled inline below
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["events"] })
+    },
+  })
 
   useEffect(() => {
     if (wizardDraftQuery.data) {
       form.reset(eventToWizardValues(wizardDraftQuery.data))
     }
   }, [form, wizardDraftQuery.data])
+
+  function getStepValidationFields() {
+    switch (activeStep.slug) {
+      case "name":
+        return eventWizardFieldGroups.name
+      case "description":
+        return eventWizardFieldGroups.description
+      case "theme-color":
+        return eventWizardFieldGroups.theme
+      case "payment-account":
+        return eventWizardFieldGroups.paymentAccount
+      case "time-zone":
+        return eventWizardFieldGroups.timeZone
+      case "sessions":
+        return eventWizardFieldGroups.sessions
+      case "purchase-time-limit":
+        return eventWizardFieldGroups.advancedSettings
+      case "review":
+        return []
+    }
+  }
+
+  async function handleSaveContinue() {
+    if (isReviewStep) {
+      await createEventMutation.mutateAsync(buildCreateEventPayload(form.getValues()))
+      return
+    }
+
+    const isValid = await form.trigger(getStepValidationFields())
+    if (isValid) {
+      goNext()
+    }
+  }
+
+  async function handleSaveExit() {
+    if (isReviewStep) {
+      await createEventMutation.mutateAsync(buildCreateEventPayload(form.getValues()))
+      return
+    }
+
+    const isValid = await form.trigger(getStepValidationFields())
+    if (isValid) {
+      navigate(APP_ROUTES.events)
+    }
+  }
+
+  async function handleSkip() {
+    goNext()
+  }
 
   if (sessionQuery.isLoading && !currentUser) {
     return <WizardLoadingState />
@@ -227,6 +298,9 @@ export function EventWizardLayout() {
         <Text mt={2} color="gray.600" fontSize={{ base: "sm", md: "md" }}>
           This wizard is route-driven and each step persists independently through its own endpoint.
         </Text>
+        <Text mt={2} color="gray.600" fontSize="sm">
+          Fields marked with * are required before you continue. Optional fields can be skipped when available.
+        </Text>
 
         <FormProvider {...form}>
           <Grid
@@ -260,11 +334,89 @@ export function EventWizardLayout() {
               display="flex"
               flexDirection="column"
             >
-              {wizardDraftQuery.isLoading && eventId ? (
-                <EventWizardStepSkeleton step={activeStep.slug} />
-              ) : (
-                <Outlet />
-              )}
+              <Grid
+                templateColumns={{ base: "1fr", lg: "minmax(0, 1fr) 1px minmax(0, 1fr)" }}
+                gap={0}
+                flex={1}
+                minH={0}
+                w="full"
+              >
+                <Box
+                  pr={{ base: 0, lg: 8 }}
+                  pb={{ base: 6, lg: 0 }}
+                  minW={0}
+                  display="flex"
+                  flexDirection="column"
+                  minH={0}
+                >
+                  {wizardDraftQuery.isLoading && eventId ? (
+                    <EventWizardStepSkeleton step={activeStep.slug} />
+                  ) : (
+                    <Outlet />
+                  )}
+                </Box>
+
+                <Box
+                  display={{ base: "none", lg: "block" }}
+                  bg="linear-gradient(180deg, rgba(117,81,255,0.15) 0%, rgba(66,42,251,0.35) 50%, rgba(117,81,255,0.15) 100%)"
+                  w="2px"
+                  minH="full"
+                  borderRadius="full"
+                  boxShadow="0 0 0 1px rgba(117,81,255,0.08)"
+                />
+
+                <Box
+                  pl={{ base: 0, lg: 8 }}
+                  pt={{ base: 6, lg: 0 }}
+                  borderTop={{ base: "1px solid", lg: "none" }}
+                  borderColor={{ base: "gray.200", lg: "transparent" }}
+                  minW={0}
+                  minH={0}
+                >
+                  <Stack gap={4} h="full" minH="240px" align="center">
+                    <Text
+                      fontSize="xs"
+                      fontWeight="800"
+                      color="gray.500"
+                      textTransform="uppercase"
+                      letterSpacing="0.1em"
+                      textAlign="center"
+                    >
+                      Preview
+                    </Text>
+                  </Stack>
+                </Box>
+              </Grid>
+
+              <Box
+                mt={6}
+                pt={5}
+                borderTop="1px solid"
+                borderColor="gray.200"
+              >
+                <Stack gap={3}>
+                  {createEventMutation.isError ? (
+                    <Field.Root invalid>
+                      <Field.ErrorText>We could not create the event. Please try again.</Field.ErrorText>
+                    </Field.Root>
+                  ) : null}
+
+                  <EventWizardActions
+                    showBack={!isFirstStep}
+                    showSkip={isOptionalStep && !isLastWizardStep}
+                    isPrimaryDisabled={isPaymentAccountStep && (!paymentAccountId || !organizer?.paymentAccounts?.length)}
+                    isSecondaryDisabled={isPaymentAccountStep && !organizer?.paymentAccounts?.length}
+                    isPrimaryLoading={createEventMutation.isPending && isReviewStep}
+                    isSecondaryLoading={createEventMutation.isPending && isReviewStep}
+                    primaryLabel={isReviewStep ? "Create Event" : "Save & Continue"}
+                    secondaryLabel="Save & Exit"
+                    onBack={goBack}
+                    onPrimary={handleSaveContinue}
+                    onSecondary={handleSaveExit}
+                    onSkip={handleSkip}
+                  />
+                </Stack>
+              </Box>
             </Box>
           </Grid>
         </FormProvider>

@@ -2,13 +2,11 @@ import { Field, Stack, Text } from "@chakra-ui/react"
 import { useFormContext } from "react-hook-form"
 import { StyledSelect } from "@/components/common"
 import { auth } from "@/lib/auth"
-import { EventWizardActions } from "../components/EventWizardActions"
-import { useEventWizardNavigation } from "../hooks/useEventWizard"
-import { eventWizardFieldGroups, type EventWizardValues } from "../schemas/eventWizard.schemas"
+import { StepFieldLabel } from "../components/StepFieldLabel"
+import type { EventWizardValues } from "../schemas/eventWizard.schemas"
 
 export function EventPaymentAccountStepPage() {
-  const { setValue, trigger, watch } = useFormContext<EventWizardValues>()
-  const { goBack, goNext } = useEventWizardNavigation()
+  const { setValue, watch } = useFormContext<EventWizardValues>()
   const organizer = auth.getOrganizer()
   const paymentAccounts = organizer?.paymentAccounts ?? []
   const paymentAccountOptions = paymentAccounts.map((account) => ({
@@ -18,18 +16,11 @@ export function EventPaymentAccountStepPage() {
   const paymentAccountId = watch("paymentAccountId")
   const hasPaymentAccounts = paymentAccountOptions.length > 0
 
-  async function handleNext() {
-    const isValid = await trigger(eventWizardFieldGroups.paymentAccount)
-    if (isValid) {
-      goNext()
-    }
-  }
-
   return (
     <Stack h="full" gap={4}>
       <Stack flex="1" gap={4}>
         <Field.Root invalid={!hasPaymentAccounts}>
-          <Field.Label>Payment account</Field.Label>
+          <StepFieldLabel label="Payment account" isRequired />
           <StyledSelect
             options={paymentAccountOptions}
             value={paymentAccountId}
@@ -48,14 +39,6 @@ export function EventPaymentAccountStepPage() {
           This selection stays attached to the event so every later step can reuse the same billing target.
         </Text>
       </Stack>
-
-      <EventWizardActions
-        backLabel="Back"
-        nextLabel="Continue"
-        isNextDisabled={!hasPaymentAccounts || !paymentAccountId}
-        onBack={goBack}
-        onNext={handleNext}
-      />
     </Stack>
   )
 }
