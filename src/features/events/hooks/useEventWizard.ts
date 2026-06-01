@@ -5,7 +5,18 @@ import { APP_ROUTES } from "@/utils/routes"
 import type { EventWizardValues } from "../schemas/eventWizard.schemas"
 
 export interface EventWizardStep {
-  slug: "name" | "description" | "theme-color" | "payment-account" | "purchase-time-limit" | "time-zone" | "sessions" | "review"
+  slug:
+    | "name"
+    | "description"
+    | "theme-color"
+    | "payment-account"
+    | "purchase-time-limit"
+    | "time-zone"
+    | "sessions"
+    | "discount-coupon"
+    | "questions"
+    | "thank-you-email"
+    | "review"
   label: string
   path: string
 }
@@ -17,6 +28,9 @@ const EVENT_WIZARD_STEP_DEFINITIONS: Array<Omit<EventWizardStep, "path">> = [
   { slug: "payment-account", label: "Payment Account" },
   { slug: "time-zone", label: "Time Zone" },
   { slug: "sessions", label: "Sessions" },
+  { slug: "discount-coupon", label: "Discount Coupon" },
+  { slug: "questions", label: "Questions" },
+  { slug: "thank-you-email", label: "Thank you Email" },
   { slug: "purchase-time-limit", label: "Advanced Settings" },
   { slug: "review", label: "Review" },
 ]

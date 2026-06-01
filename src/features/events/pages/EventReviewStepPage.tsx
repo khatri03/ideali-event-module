@@ -22,6 +22,9 @@ export function EventReviewStepPage() {
           <ReviewRow label="Description" value={values.description || "No description provided"} />
           <ReviewRow label="Theme color" value={<ColorPill color={values.themeColor} />} isRequired />
           <ReviewRow label="Payment account" value={paymentAccount?.name || "Not selected"} isRequired />
+          <ReviewRow label="Discount coupon" value="Not configured" />
+          <ReviewRow label="Questions" value="Not configured" />
+          <ReviewRow label="Thank you Email" value="Not configured" />
           <ReviewRow
             label="Advanced settings"
             value={values.purchaseTimeLimitHours ? `${values.purchaseTimeLimitHours} hours before start` : "Not set"}

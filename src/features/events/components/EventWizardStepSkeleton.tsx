@@ -22,6 +22,12 @@ export function EventWizardStepSkeleton({ step }: EventWizardStepSkeletonProps) 
       return <TimeZoneSkeleton />
     case "sessions":
       return <SessionsSkeleton />
+    case "discount-coupon":
+      return <InfoSkeleton titleWidth="160px" />
+    case "questions":
+      return <InfoSkeleton titleWidth="120px" />
+    case "thank-you-email":
+      return <InfoSkeleton titleWidth="180px" />
     case "review":
       return <ReviewSkeleton />
     default:
@@ -171,5 +177,17 @@ function ReviewSkeleton() {
         <Skeleton height="44px" flex={1} borderRadius="14px" minW={{ base: "full", md: "160px" }} />
       </Flex>
     </Stack>
+  )
+}
+
+function InfoSkeleton({ titleWidth }: { titleWidth: string }) {
+  return (
+    <PanelSkeleton>
+      <Stack gap={3}>
+        <Skeleton height="18px" width={titleWidth} />
+        <SkeletonText noOfLines={2} width="80%" />
+      </Stack>
+      <SkeletonText noOfLines={2} width="70%" />
+    </PanelSkeleton>
   )
 }

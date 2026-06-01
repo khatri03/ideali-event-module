@@ -9,7 +9,7 @@ interface EventWizardStepperProps {
 
 export function EventWizardStepper({ activeStepIndex, onStepClick, steps }: EventWizardStepperProps) {
   return (
-    <Stack gap={3} align="stretch">
+    <Stack gap={2} align="stretch">
       {steps.map((step, index) => {
         const isActive = index === activeStepIndex
         const isComplete = index < activeStepIndex
@@ -22,14 +22,14 @@ export function EventWizardStepper({ activeStepIndex, onStepClick, steps }: Even
             variant="ghost"
             w="full"
             h="auto"
-            minH="72px"
-            px={4}
-            py={4}
-            borderRadius="20px"
+            minH="60px"
+            px={3}
+            py={3}
+            borderRadius="16px"
             border="1px solid"
             borderColor={isActive ? "green.200" : isComplete ? "green.100" : "gray.200"}
             bg={isActive ? "green.100" : isComplete ? "green.50" : "white"}
-            boxShadow={isActive ? "0 12px 28px rgba(1, 181, 116, 0.10)" : "none"}
+            boxShadow={isActive ? "0 10px 20px rgba(1, 181, 116, 0.10)" : "none"}
             justifyContent="flex-start"
             alignItems="center"
             textAlign="left"
@@ -41,10 +41,10 @@ export function EventWizardStepper({ activeStepIndex, onStepClick, steps }: Even
             }}
             _active={{ transform: isClickable ? "translateY(0)" : undefined }}
           >
-            <Flex align="center" gap={4} minW={0}>
+            <Flex align="center" gap={3} minW={0}>
               <Flex
-                w="42px"
-                h="42px"
+                w="34px"
+                h="34px"
                 borderRadius="full"
                 align="center"
                 justify="center"
@@ -53,7 +53,7 @@ export function EventWizardStepper({ activeStepIndex, onStepClick, steps }: Even
                 color={isComplete || isActive ? "white" : "green.700"}
                 border="1px solid"
                 borderColor={isComplete || isActive ? "green.500" : "green.200"}
-                boxShadow={isActive ? "0 8px 18px rgba(1, 181, 116, 0.18)" : "none"}
+                boxShadow={isActive ? "0 6px 14px rgba(1, 181, 116, 0.18)" : "none"}
               >
                 {isComplete ? "✓" : <Text fontSize="sm" fontWeight="800">{index + 1}</Text>}
               </Flex>
@@ -63,7 +63,7 @@ export function EventWizardStepper({ activeStepIndex, onStepClick, steps }: Even
                   fontSize="sm"
                   fontWeight={isActive ? "800" : "700"}
                   color="gray.900"
-                  lineHeight={1.2}
+                  lineHeight={1.15}
                   whiteSpace="nowrap"
                   overflow="hidden"
                   textOverflow="ellipsis"

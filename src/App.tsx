@@ -10,11 +10,14 @@ import { CalendarPage } from "./pages/CalendarPage"
 import { Settings } from "./pages/Settings"
 import {
   EventDescriptionStepPage,
+  EventDiscountCouponStepPage,
   EventNameStepPage,
   EventPaymentAccountStepPage,
   EventPurchaseTimeLimitStepPage,
+  EventQuestionsStepPage,
   EventReviewStepPage,
   EventSessionsStepPage,
+  EventThankYouEmailStepPage,
   EventThemeColorStepPage,
   EventTimeZoneStepPage,
   EventWizardLayout,
@@ -38,6 +41,9 @@ export default function App() {
           <Route path={APP_ROUTES.eventWizard.slugs.paymentAccount} element={<EventPaymentAccountStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.timeZone} element={<EventTimeZoneStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.sessions} element={<EventSessionsStepPage />} />
+          <Route path={APP_ROUTES.eventWizard.slugs.discountCoupon} element={<EventDiscountCouponStepPage />} />
+          <Route path={APP_ROUTES.eventWizard.slugs.questions} element={<EventQuestionsStepPage />} />
+          <Route path={APP_ROUTES.eventWizard.slugs.thankYouEmail} element={<EventThankYouEmailStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.advancedSettings} element={<EventPurchaseTimeLimitStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.review} element={<EventReviewStepPage />} />
         </Route>
@@ -48,6 +54,9 @@ export default function App() {
           <Route path={APP_ROUTES.eventWizard.slugs.paymentAccount} element={<EventPaymentAccountStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.timeZone} element={<EventTimeZoneStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.sessions} element={<EventSessionsStepPage />} />
+          <Route path={APP_ROUTES.eventWizard.slugs.discountCoupon} element={<EventDiscountCouponStepPage />} />
+          <Route path={APP_ROUTES.eventWizard.slugs.questions} element={<EventQuestionsStepPage />} />
+          <Route path={APP_ROUTES.eventWizard.slugs.thankYouEmail} element={<EventThankYouEmailStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.advancedSettings} element={<EventPurchaseTimeLimitStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.review} element={<EventReviewStepPage />} />
         </Route>

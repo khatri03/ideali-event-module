@@ -80,9 +80,9 @@ function WizardStepsRail({
       border="1px solid"
       borderColor="gray.200"
       boxShadow="0 16px 40px rgba(15, 23, 42, 0.06)"
-      p={{ base: 5, md: 6 }}
-      pt={{ base: 8, md: 8 }}
-      pr={{ base: 5, md: 6 }}
+      p={{ base: 4, md: 5 }}
+      pt={{ base: 7, md: 7 }}
+      pr={{ base: 4, md: 5 }}
       position="relative"
       overflow="visible"
       minW={0}
@@ -123,7 +123,7 @@ function WizardStepsRail({
 
       <Box position="relative" minH={isCollapsed ? "48px" : "auto"}>
         {!isCollapsed ? (
-          <Flex align="center" justify="space-between" gap={3} mb={3}>
+          <Flex align="center" justify="space-between" gap={3} mb={2}>
             <Text fontSize="xs" fontWeight="800" color="gray.500" textTransform="uppercase" letterSpacing="0.1em">
               Steps
             </Text>
@@ -159,7 +159,12 @@ export function EventWizardLayout() {
   })
   const paymentAccountId = useWatch({ control: form.control, name: "paymentAccountId" })
   const isReviewStep = activeStep.slug === "review"
-  const isOptionalStep = activeStep.slug === "description" || activeStep.slug === "purchase-time-limit"
+  const isOptionalStep =
+    activeStep.slug === "description" ||
+    activeStep.slug === "discount-coupon" ||
+    activeStep.slug === "questions" ||
+    activeStep.slug === "thank-you-email" ||
+    activeStep.slug === "purchase-time-limit"
   const isPaymentAccountStep = activeStep.slug === "payment-account"
   const isLastWizardStep = isLastStep
 
@@ -196,6 +201,10 @@ export function EventWizardLayout() {
         return eventWizardFieldGroups.timeZone
       case "sessions":
         return eventWizardFieldGroups.sessions
+      case "discount-coupon":
+      case "questions":
+      case "thank-you-email":
+        return []
       case "purchase-time-limit":
         return eventWizardFieldGroups.advancedSettings
       case "review":
