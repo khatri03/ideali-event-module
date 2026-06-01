@@ -76,7 +76,7 @@ export function useEventWizardNavigation() {
     nextStep,
     goToStep: (step: EventWizardStepSlug) => {
       const target = steps.find((item) => item.slug === step)
-      if (target) {
+      if (target && steps.indexOf(target) <= activeStepIndex) {
         navigate(target.path)
       }
     },
