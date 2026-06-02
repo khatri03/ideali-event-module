@@ -57,10 +57,14 @@ export function EventPaymentAccountStepPage() {
   const paymentAccountError = errors.paymentAccountId?.message
   const paymentMethodsError = errors.paymentMethods?.message
 
+  if (!hasPaymentAccounts) {
+    return <PaymentAccountEmpty />
+  }
+
   return (
     <Stack h="full" gap={5}>
       <Stack flex="1" gap={5}>
-        <Field.Root invalid={Boolean(paymentAccountError) || !hasPaymentAccounts}>
+        <Field.Root invalid={Boolean(paymentAccountError)}>
           <StepFieldLabel label="Payment account" isRequired />
           <StyledSelect
             options={paymentAccounts.map((account) => ({
@@ -70,17 +74,10 @@ export function EventPaymentAccountStepPage() {
             value={selectedPaymentAccountUniqueId}
             onChange={selectPaymentAccount}
             placeholder="Select a payment account"
-            disabled={!hasPaymentAccounts}
           />
-          {hasPaymentAccounts ? (
-            <Field.HelperText>
-              Select the organizer payment account that will receive funds for this event.
-            </Field.HelperText>
-          ) : (
-            <Field.ErrorText>
-              No payment accounts are connected yet. Add one in your organizer settings before continuing.
-            </Field.ErrorText>
-          )}
+          <Field.HelperText>
+            Select the organizer payment account that will receive funds for this event.
+          </Field.HelperText>
           {paymentAccountError ? <Field.ErrorText>{paymentAccountError}</Field.ErrorText> : null}
         </Field.Root>
 
@@ -194,6 +191,19 @@ export function EventPaymentAccountStepPage() {
         </Text>
       </Stack>
     </Stack>
+  )
+}
+
+function PaymentAccountEmpty() {
+  return (
+    <Box borderRadius="18px" border="1px dashed" borderColor="gray.200" bg="gray.50" p={5}>
+      <Text fontSize="sm" fontWeight="700" color="gray.900">
+        No payment accounts available
+      </Text>
+      <Text mt={1} fontSize="sm" color="gray.600">
+        Create a payment account in organizer settings before continuing this step.
+      </Text>
+    </Box>
   )
 }
 

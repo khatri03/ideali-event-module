@@ -42,7 +42,7 @@ export function useEventPaymentAccountStep(): EventPaymentAccountStepState {
   const paymentMethodsQuery = useQuery({
     queryKey: ["organizer-payment-methods", { paymentAccountUniqueId: selectedPaymentAccountUniqueId }],
     queryFn: () => fetchOrganizerPaymentMethods(selectedPaymentAccountUniqueId),
-    enabled: Boolean(selectedPaymentAccountUniqueId),
+    enabled: Boolean(selectedPaymentAccountUniqueId.trim()),
     retry: false,
   })
 
@@ -118,7 +118,7 @@ export function useEventPaymentAccountStep(): EventPaymentAccountStepState {
       void Promise.all([
         paymentAccountStepQuery.refetch(),
         organizerPaymentAccountsQuery.refetch(),
-        paymentMethodsQuery.refetch(),
+        selectedPaymentAccountUniqueId.trim() ? paymentMethodsQuery.refetch() : Promise.resolve(),
       ])
     },
     selectPaymentAccount: (paymentAccountUniqueId: string) => {
