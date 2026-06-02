@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
 import {
-  fetchEvent,
   fetchEventWizardAdvancedSettings,
   fetchEventWizardDescription,
   fetchEventWizardName,
@@ -9,13 +8,18 @@ import {
 import type { EventWizardStepSlug } from "./useEventWizard"
 
 export type EventWizardDraftData =
-  | Awaited<ReturnType<typeof fetchEvent>>
   | Awaited<ReturnType<typeof fetchEventWizardName>>
   | Awaited<ReturnType<typeof fetchEventWizardDescription>>
   | Awaited<ReturnType<typeof fetchEventWizardThemeColor>>
   | Awaited<ReturnType<typeof fetchEventWizardAdvancedSettings>>
 
 export function useEventWizardDraft(eventId?: string, stepSlug?: EventWizardStepSlug) {
+  const isSupportedStep =
+    stepSlug === "name" ||
+    stepSlug === "description" ||
+    stepSlug === "theme-color" ||
+    stepSlug === "advanced-settings"
+
   return useQuery<EventWizardDraftData>({
     queryKey: ["events", "wizard-draft", eventId, stepSlug],
     queryFn: () => {
@@ -39,9 +43,9 @@ export function useEventWizardDraft(eventId?: string, stepSlug?: EventWizardStep
         return fetchEventWizardAdvancedSettings(eventId)
       }
 
-      return fetchEvent(eventId)
+      throw new Error("Draft loading is not implemented for this step yet.")
     },
-    enabled: !!eventId,
+    enabled: !!eventId && isSupportedStep,
     retry: false,
   })
 }

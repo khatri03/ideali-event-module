@@ -24,15 +24,25 @@ export function EventWizardStepper({
         const isFutureStep = index > maxUnlockedStepIndex
         const isNavigable = Boolean(onStepClick) && index <= maxUnlockedStepIndex && index !== activeStepIndex
         const isDisabled = isFutureStep
-        const itemBg = isComplete
-          ? "green.200"
-          : isActive
-            ? "green.50"
+        const itemBg = isActive
+          ? isComplete
+            ? "green.300"
+            : "green.100"
+          : isComplete
+            ? "green.300"
             : isDisabled
               ? "gray.50"
               : "white"
-        const itemBorderColor = isComplete ? "green.300" : isActive ? "green.500" : isDisabled ? "gray.300" : "gray.200"
-        const itemHoverBg = isNavigable ? (isComplete ? "green.300" : "green.100") : itemBg
+        const itemBorderColor = isActive
+          ? isComplete
+            ? "green.900"
+            : "green.700"
+          : isComplete
+            ? "green.300"
+            : isDisabled
+              ? "gray.300"
+              : "gray.200"
+        const itemHoverBg = isNavigable ? (isComplete ? "green.400" : "green.200") : itemBg
         const itemHoverBorderColor = isNavigable ? "green.300" : itemBorderColor
 
         return (
@@ -54,7 +64,7 @@ export function EventWizardStepper({
               border="2px solid"
               borderColor={itemBorderColor}
               bg={itemBg}
-              boxShadow={isActive ? "0 18px 34px rgba(1, 181, 116, 0.26)" : "none"}
+              boxShadow={isActive ? "0 0 0 2px rgba(1, 181, 116, 0.22), 0 18px 34px rgba(1, 181, 116, 0.24)" : "none"}
               justifyContent="flex-start"
               alignItems="center"
               textAlign="left"
@@ -94,11 +104,11 @@ export function EventWizardStepper({
                   align="center"
                   justify="center"
                   flexShrink={0}
-                  bg={isComplete ? "green.700" : isActive ? "green.500" : isDisabled ? "gray.200" : "white"}
+                  bg={isActive ? (isComplete ? "green.800" : "green.600") : isComplete ? "green.800" : isDisabled ? "gray.200" : "white"}
                   color={isComplete || isActive ? "white" : isDisabled ? "gray.500" : "green.700"}
                   border="2px solid"
-                  borderColor={isComplete || isActive ? "green.700" : isDisabled ? "gray.300" : "green.200"}
-                  boxShadow={isActive ? "0 10px 20px rgba(1, 181, 116, 0.20)" : "none"}
+                  borderColor={isActive ? "green.900" : isComplete ? "green.800" : isDisabled ? "gray.300" : "green.200"}
+                  boxShadow={isActive ? "0 0 0 2px rgba(1, 181, 116, 0.30), 0 10px 20px rgba(1, 181, 116, 0.20)" : "none"}
                 >
                   {isComplete ? "✓" : <Text fontSize="sm" fontWeight="800">{index + 1}</Text>}
                 </Flex>
@@ -107,7 +117,7 @@ export function EventWizardStepper({
                   <Text
                     fontSize="sm"
                     fontWeight={isActive ? "900" : "700"}
-                    color={isDisabled ? "gray.500" : isActive ? "green.900" : "gray.900"}
+                    color={isDisabled ? "gray.500" : isActive ? "green.950" : "gray.900"}
                     lineHeight={1.1}
                     whiteSpace="nowrap"
                     overflow="hidden"

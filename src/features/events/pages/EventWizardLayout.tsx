@@ -26,7 +26,6 @@ import { defaultEventWizardValues, eventWizardFieldGroups, eventWizardSchema, ty
 import { EventWizardStepper } from "../components/EventWizardStepper"
 import { EventWizardStepSkeleton } from "../components/EventWizardStepSkeleton"
 import { EventWizardActions } from "../components/EventWizardActions"
-import { eventToWizardValues } from "../utils/eventWizardMappers"
 import { buildCreateEventPayload } from "../hooks/useEventWizard"
 
 type PreviewMode = "mobile" | "laptop"
@@ -348,6 +347,14 @@ export function EventWizardLayout() {
     },
   })
 
+  function setWizardStepCache(step: "name" | "description" | "theme-color" | "advanced-settings", value: unknown) {
+    if (!eventId) {
+      return
+    }
+
+    queryClient.setQueryData(["events", "wizard-draft", eventId, step], value)
+  }
+
   const form = useForm<EventWizardValues>({
     defaultValues: {
       ...defaultEventWizardValues,
@@ -377,9 +384,7 @@ export function EventWizardLayout() {
   useEffect(() => {
     const draftData = wizardDraftQuery.data
     if (draftData) {
-      if ("title" in draftData) {
-        form.reset(eventToWizardValues(draftData))
-      } else if ("name" in draftData) {
+      if ("name" in draftData) {
         form.setValue("name", draftData.name, { shouldDirty: false, shouldTouch: false, shouldValidate: false })
       } else if ("description" in draftData) {
         form.setValue("description", draftData.description ?? "", { shouldDirty: false, shouldTouch: false, shouldValidate: false })
@@ -451,13 +456,17 @@ export function EventWizardLayout() {
     if (isValid) {
       if (eventId) {
         if (activeStep.slug === "name") {
-          await updateEventWizardName(eventId, { name }, 1)
+          const result = await updateEventWizardName(eventId, { name }, 1)
+          setWizardStepCache("name", result)
         } else if (activeStep.slug === "description") {
-          await updateEventWizardDescription(eventId, { description }, 2)
+          const result = await updateEventWizardDescription(eventId, { description }, 2)
+          setWizardStepCache("description", result)
         } else if (activeStep.slug === "theme-color") {
-          await updateEventWizardThemeColor(eventId, { themeColor }, 3)
+          const result = await updateEventWizardThemeColor(eventId, { themeColor }, 3)
+          setWizardStepCache("theme-color", result)
         } else if (activeStep.slug === "advanced-settings") {
-          await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 10)
+          const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 10)
+          setWizardStepCache("advanced-settings", result)
         } else if (activeStep.slug === "time-zone") {
           // Time zone is still backed by the event table, but the UI is not yet wired to a numeric TimeZoneId selector.
           // Keep the current value in form state for now and move on.
@@ -497,13 +506,17 @@ export function EventWizardLayout() {
     if (isValid) {
       if (eventId) {
         if (activeStep.slug === "name") {
-          await updateEventWizardName(eventId, { name }, 1)
+          const result = await updateEventWizardName(eventId, { name }, 1)
+          setWizardStepCache("name", result)
         } else if (activeStep.slug === "description") {
-          await updateEventWizardDescription(eventId, { description }, 2)
+          const result = await updateEventWizardDescription(eventId, { description }, 2)
+          setWizardStepCache("description", result)
         } else if (activeStep.slug === "theme-color") {
-          await updateEventWizardThemeColor(eventId, { themeColor }, 3)
+          const result = await updateEventWizardThemeColor(eventId, { themeColor }, 3)
+          setWizardStepCache("theme-color", result)
         } else if (activeStep.slug === "advanced-settings") {
-          await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 10)
+          const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 10)
+          setWizardStepCache("advanced-settings", result)
         } else if (activeStep.slug === "time-zone") {
           void timeZone
         }

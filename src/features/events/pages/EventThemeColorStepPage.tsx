@@ -1,4 +1,5 @@
 import { Box, Field, Flex, Input, Stack, Text } from "@chakra-ui/react"
+import { Check } from "lucide-react"
 import { useFormContext } from "react-hook-form"
 import { StepFieldLabel } from "../components/StepFieldLabel"
 import type { EventWizardValues } from "../schemas/eventWizard.schemas"
@@ -35,16 +36,34 @@ export function EventThemeColorStepPage() {
               <Box
                 key={color}
                 as="button"
+                position="relative"
                 w="36px"
                 h="36px"
                 borderRadius="12px"
                 bg={color}
                 border="1px solid"
                 borderColor={themeColor === color ? "white" : "transparent"}
-                boxShadow={themeColor === color ? `0 0 0 3px ${color}40` : "sm"}
+                boxShadow={themeColor === color ? `0 0 0 3px ${color}40, 0 10px 20px rgba(15, 23, 42, 0.12)` : "sm"}
                 onClick={() => setValue("themeColor", color, { shouldValidate: true })}
                 aria-label={`Use theme color ${color}`}
-              />
+                transition="transform 0.15s ease, box-shadow 0.15s ease"
+                _hover={{ transform: "translateY(-1px)" }}
+                _focusVisible={{ boxShadow: `0 0 0 3px ${color}40, 0 0 0 2px white` }}
+              >
+                {themeColor === color ? (
+                  <Box
+                    position="absolute"
+                    inset={0}
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    borderRadius="12px"
+                    bg="rgba(15, 23, 42, 0.22)"
+                  >
+                    <Check size={18} strokeWidth={3} color="white" />
+                  </Box>
+                ) : null}
+              </Box>
             ))}
           </Flex>
         </Field.Root>
