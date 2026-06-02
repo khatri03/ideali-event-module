@@ -1,6 +1,4 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { DeviceFrameset } from "react-device-frameset"
-import "react-device-frameset/styles/marvel-devices.min.css"
 import { Box, Button, Field, Flex, Grid, Heading, Skeleton, SkeletonText, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
 import { useMutation } from "@tanstack/react-query"
 import { FormProvider, useForm, useWatch } from "react-hook-form"
@@ -29,27 +27,6 @@ import { EventWizardStepper } from "../components/EventWizardStepper"
 import { EventWizardStepSkeleton } from "../components/EventWizardStepSkeleton"
 import { EventWizardActions } from "../components/EventWizardActions"
 import { buildCreateEventPayload } from "../hooks/useEventWizard"
-
-type PreviewMode = "mobile" | "laptop"
-
-interface DeviceFrameSpec {
-  width: number
-  height: number
-  scale: number
-}
-
-const PREVIEW_DEVICE_SPECS: Record<PreviewMode, DeviceFrameSpec> = {
-  mobile: {
-    width: 375,
-    height: 720,
-    scale: 0.7,
-  },
-  laptop: {
-    width: 960,
-    height: 600,
-    scale: 0.48,
-  },
-}
 
 function WizardLoadingState() {
   return (
@@ -92,135 +69,32 @@ function WizardLoadingState() {
   )
 }
 
-function PreviewModeToggle({
-  mode,
-  onChange,
-}: {
-  mode: PreviewMode
-  onChange: (mode: PreviewMode) => void
-}) {
+function PreviewFrame() {
   return (
-    <Flex
-      w="auto"
-      minW={{ base: "280px", md: "320px" }}
-      borderRadius="999px"
-      border="1px solid"
+    <Box
+      w="full"
+      minH={{ base: "240px", md: "320px" }}
+      borderRadius="24px"
+      border="1px dashed"
       borderColor="gray.200"
       bg="gray.50"
-      p={1}
-      mx="auto"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      px={6}
+      py={8}
     >
-      <Button
-        flex={1}
-        h="36px"
-        px={6}
-        borderRadius="999px"
-        variant="ghost"
-        bg={mode === "mobile" ? "white" : "transparent"}
-        boxShadow={mode === "mobile" ? "sm" : "none"}
-        onClick={() => onChange("mobile")}
-      >
-        Mobile
-      </Button>
-      <Button
-        flex={1}
-        h="36px"
-        px={6}
-        borderRadius="999px"
-        variant="ghost"
-        bg={mode === "laptop" ? "white" : "transparent"}
-        boxShadow={mode === "laptop" ? "sm" : "none"}
-        onClick={() => onChange("laptop")}
-      >
-        Laptop
-      </Button>
-    </Flex>
-  )
-}
-
-function PreviewContent({ mode }: { mode: PreviewMode }) {
-  return (
-    <Flex direction="column" gap={4} p={{ base: 4, md: 5 }} pt={mode === "mobile" ? { base: 9, md: 10 } : { base: 5, md: 6 }} h="full" position="relative">
-      {mode === "mobile" ? (
-        <Box
-          position="absolute"
-          top={3}
-          left="50%"
-          transform="translateX(-50%)"
-          w="96px"
-          h="6px"
-          borderRadius="999px"
-          bg="gray.200"
-        />
-      ) : null}
-
-      <Box
-        borderRadius="16px"
-        bg="gray.50"
-        border="1px solid"
-        borderColor="gray.200"
-        p={4}
-      >
+      <Stack gap={2} align="center" textAlign="center" maxW="280px">
         <Text fontSize="xs" fontWeight="800" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
-          Event preview
+          Preview
         </Text>
-        <Text mt={2} fontSize={{ base: "lg", md: "xl" }} fontWeight="800" color="gray.900" lineHeight={1.05}>
-          Ideali Summit 2026
+        <Text fontSize={{ base: "sm", md: "md" }} fontWeight="700" color="gray.700">
+          Preview container only
         </Text>
-        <Text mt={2} fontSize={{ base: "sm", md: "md" }} color="gray.600">
-          Clean preview with the lightest possible bezel treatment.
+        <Text fontSize="sm" color="gray.500">
+          Device mockups are hidden for now.
         </Text>
-      </Box>
-
-      <Box borderRadius="16px" bg="green.50" border="1px solid" borderColor="green.100" p={4}>
-        <Flex align="center" justify="space-between" gap={3}>
-          <Box minW={0}>
-            <Text fontSize="xs" fontWeight="800" color="green.700" textTransform="uppercase" letterSpacing="0.08em">
-              Sessions
-            </Text>
-            <Text mt={1} fontSize={{ base: "sm", md: "md" }} fontWeight="700" color="gray.900">
-              3 sessions scheduled
-            </Text>
-          </Box>
-          <Box borderRadius="999px" bg="white" px={3} py={1}>
-            <Text fontSize="xs" fontWeight="800" color="green.700">
-              Draft
-            </Text>
-          </Box>
-        </Flex>
-      </Box>
-    </Flex>
-  )
-}
-
-function PreviewFrame({ mode }: { mode: PreviewMode }) {
-  const spec = PREVIEW_DEVICE_SPECS[mode]
-  const frameWidth = Math.round(spec.width * spec.scale)
-  const frameHeight = Math.round(spec.height * spec.scale)
-
-  if (mode === "mobile") {
-    return (
-      <Box display="flex" justifyContent="center" w="full" overflow="visible">
-        <Box position="relative" w="full" maxW={`${frameWidth}px`} h={`${frameHeight}px`} overflow="visible">
-          <Box position="absolute" top={0} left="50%" transform="translateX(-50%) scale(0.74)" transformOrigin="top center">
-            <DeviceFrameset device="iPhone X" width={spec.width} height={spec.height}>
-              <PreviewContent mode="mobile" />
-            </DeviceFrameset>
-          </Box>
-        </Box>
-      </Box>
-    )
-  }
-
-  return (
-    <Box display="flex" justifyContent="center" w="full" overflow="visible">
-      <Box position="relative" w="full" maxW={`${frameWidth}px`} h={`${frameHeight}px`} overflow="visible">
-        <Box position="absolute" top={0} left="50%" transform="translateX(-50%) scale(0.36)" transformOrigin="top center">
-          <DeviceFrameset device="MacBook Pro" width={spec.width} height={spec.height}>
-            <PreviewContent mode="laptop" />
-          </DeviceFrameset>
-        </Box>
-      </Box>
+      </Stack>
     </Box>
   )
 }
@@ -328,7 +202,6 @@ export function EventWizardLayout() {
   const wizardDraftQuery = useEventWizardDraft(eventId, activeStep.slug)
   const isMobile = useBreakpointValue({ base: true, lg: false }) ?? true
   const [isStepsCollapsedOverride, setIsStepsCollapsedOverride] = useState<boolean | null>(null)
-  const [previewMode, setPreviewMode] = useState<PreviewMode>("mobile")
   const isStepsCollapsed = isStepsCollapsedOverride ?? isMobile
   const createEventDraftMutation = useCreateEventDraft()
   const finalSaveMutation = useMutation({
@@ -698,7 +571,7 @@ export function EventWizardLayout() {
               flexDirection="column"
             >
               <Grid
-                templateColumns={{ base: "1fr", lg: "minmax(0, 1fr) 1px minmax(0, 1fr)" }}
+                templateColumns={{ base: "1fr", lg: "minmax(0, 7fr) 1px minmax(0, 3fr)" }}
                 gap={0}
                 flex={1}
                 minH={0}
@@ -747,10 +620,7 @@ export function EventWizardLayout() {
                     >
                       Preview
                     </Text>
-                    <Box mb={3}>
-                      <PreviewModeToggle mode={previewMode} onChange={setPreviewMode} />
-                    </Box>
-                    <PreviewFrame mode={previewMode} />
+                    <PreviewFrame />
                   </Stack>
                 </Box>
               </Grid>
