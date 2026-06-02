@@ -49,6 +49,9 @@ export const APP_ROUTES = {
 export const API_ROUTES = {
   events: "/events",
   eventById: (id: string) => `/events/${id}`,
+  eventWizardProgress: (id: string) => `/events/${id}/wizard-progress`,
+  eventWizardNameCreate: "/api/organizer/events/wizard/name",
+  eventWizardName: (id: string) => `/api/organizer/events/${id}/name`,
 } as const
 
 export const API_AUTH_ROUTES = {

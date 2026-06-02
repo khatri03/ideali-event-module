@@ -7,13 +7,13 @@ import { FormProvider, useForm, useWatch } from "react-hook-form"
 import { Navigate, Outlet, useNavigate, useParams } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { ArrowLeft, ChevronLeft, ChevronRight, Sparkles } from "lucide-react"
-import { createEvent } from "@/api/events"
+import { createEvent, updateEvent } from "@/api/events"
 import { useAuthSession } from "@/hooks/useAuthSession"
 import { auth, sessionDataToUser } from "@/lib/auth"
 import { queryClient } from "@/lib/queryClient"
 import { APP_ROUTES } from "@/utils/routes"
 import { useEventWizardDraft } from "../hooks/useEventWizardDraft"
-import { useEventWizardNavigation, type EventWizardStep } from "../hooks/useEventWizard"
+import { useCreateEventDraft, useEventWizardNavigation, type EventWizardStep } from "../hooks/useEventWizard"
 import { defaultEventWizardValues, eventWizardFieldGroups, eventWizardSchema, type EventWizardValues } from "../schemas/eventWizard.schemas"
 import { EventWizardStepper } from "../components/EventWizardStepper"
 import { EventWizardStepSkeleton } from "../components/EventWizardStepSkeleton"
@@ -305,6 +305,23 @@ export function EventWizardLayout() {
   const [isStepsCollapsedOverride, setIsStepsCollapsedOverride] = useState<boolean | null>(null)
   const [previewMode, setPreviewMode] = useState<PreviewMode>("mobile")
   const isStepsCollapsed = isStepsCollapsedOverride ?? isMobile
+  const createEventDraftMutation = useCreateEventDraft()
+  const finalSaveMutation = useMutation({
+    mutationFn: async () => {
+      const payload = buildCreateEventPayload(form.getValues())
+      if (eventId) {
+        return updateEvent(eventId, payload)
+      }
+
+      return createEvent(payload)
+    },
+    onError: () => {
+      // handled inline below
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["events"] })
+    },
+  })
 
   const form = useForm<EventWizardValues>({
     defaultValues: {
@@ -324,19 +341,6 @@ export function EventWizardLayout() {
     activeStep.slug === "purchase-time-limit"
   const isPaymentAccountStep = activeStep.slug === "payment-account"
   const isLastWizardStep = isLastStep
-
-  const createEventMutation = useMutation({
-    mutationFn: createEvent,
-    onSuccess: () => {
-      navigate(APP_ROUTES.events, { replace: true })
-    },
-    onError: () => {
-      // handled inline below
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["events"] })
-    },
-  })
 
   useEffect(() => {
     if (wizardDraftQuery.data) {
@@ -370,25 +374,61 @@ export function EventWizardLayout() {
   }
 
   async function handleSaveContinue() {
+    const name = form.getValues("name").trim()
+
+    if (activeStep.slug === "name") {
+      const isNameValid = await form.trigger(eventWizardFieldGroups.name)
+      if (!isNameValid) {
+        return
+      }
+    }
+
+    if (!eventId && activeStep.slug === "name") {
+      const result = await createEventDraftMutation.mutateAsync({ name, stepNo: 1 })
+      navigate(APP_ROUTES.eventWizard.edit(result.uniqueId), { replace: true })
+      return
+    }
+
     if (isReviewStep) {
-      await createEventMutation.mutateAsync(buildCreateEventPayload(form.getValues()))
+      await finalSaveMutation.mutateAsync()
       return
     }
 
     const isValid = await form.trigger(getStepValidationFields())
     if (isValid) {
+      if (eventId && activeStep.slug === "name") {
+        await updateEvent(eventId, { title: name })
+      }
       goNext()
     }
   }
 
   async function handleSaveExit() {
+    const name = form.getValues("name").trim()
+
+    if (activeStep.slug === "name") {
+      const isNameValid = await form.trigger(eventWizardFieldGroups.name)
+      if (!isNameValid) {
+        return
+      }
+    }
+
+    if (!eventId && activeStep.slug === "name") {
+      await createEventDraftMutation.mutateAsync({ name, stepNo: 1 })
+      navigate(APP_ROUTES.events, { replace: true })
+      return
+    }
+
     if (isReviewStep) {
-      await createEventMutation.mutateAsync(buildCreateEventPayload(form.getValues()))
+      await finalSaveMutation.mutateAsync()
       return
     }
 
     const isValid = await form.trigger(getStepValidationFields())
     if (isValid) {
+      if (eventId && activeStep.slug === "name") {
+        await updateEvent(eventId, { title: name })
+      }
       navigate(APP_ROUTES.events)
     }
   }
@@ -565,7 +605,7 @@ export function EventWizardLayout() {
                 borderColor="gray.200"
               >
                 <Stack gap={3}>
-                  {createEventMutation.isError ? (
+                  {createEventDraftMutation.isError || finalSaveMutation.isError ? (
                     <Field.Root invalid>
                       <Field.ErrorText>We could not create the event. Please try again.</Field.ErrorText>
                     </Field.Root>
@@ -576,9 +616,9 @@ export function EventWizardLayout() {
                     showSkip={isOptionalStep && !isLastWizardStep}
                     isPrimaryDisabled={isPaymentAccountStep && (!paymentAccountId || !organizer?.paymentAccounts?.length)}
                     isSecondaryDisabled={isPaymentAccountStep && !organizer?.paymentAccounts?.length}
-                    isPrimaryLoading={createEventMutation.isPending && isReviewStep}
-                    isSecondaryLoading={createEventMutation.isPending && isReviewStep}
-                    primaryLabel={isReviewStep ? "Create Event" : "Save & Continue"}
+                    isPrimaryLoading={createEventDraftMutation.isPending || finalSaveMutation.isPending}
+                    isSecondaryLoading={createEventDraftMutation.isPending || finalSaveMutation.isPending}
+                    primaryLabel={!eventId && activeStep.slug === "name" ? "Create Event" : isReviewStep ? "Save Changes" : "Save & Continue"}
                     secondaryLabel="Save & Exit"
                     onBack={goBack}
                     onPrimary={handleSaveContinue}

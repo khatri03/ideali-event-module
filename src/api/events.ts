@@ -40,6 +40,19 @@ const appEventSchema = z.object({
     .optional(),
 })
 
+const eventWizardCreateResponseSchema = z.object({
+  uniqueId: z.string().min(1),
+})
+
+const eventWizardCreateEnvelopeSchema = z.object({
+  data: z.union([eventWizardCreateResponseSchema, z.string().min(1)]).nullable().optional(),
+  success: z.boolean().optional(),
+})
+
+const eventWizardNameResponseSchema = z.object({
+  name: z.string(),
+})
+
 export async function fetchEvents(
   filters?: EventFilters & { page?: number; pageSize?: number }
 ): Promise<PaginatedResponse<AppEvent>> {
@@ -56,6 +69,60 @@ export async function fetchEvent(id: string): Promise<AppEvent> {
 export async function createEvent(payload: Omit<AppEvent, "id">): Promise<AppEvent> {
   const res = await client.post<AppEvent>(API_ROUTES.events, payload)
   return appEventSchema.parse(res.data)
+}
+
+export interface EventWizardCreateDraftRequest {
+  name: string
+}
+
+export interface EventWizardCreateDraftResponse {
+  uniqueId: string
+}
+
+export async function createEventDraft(
+  payload: EventWizardCreateDraftRequest,
+  stepNo = 1
+): Promise<EventWizardCreateDraftResponse> {
+  const res = await client.post<unknown>(API_ROUTES.eventWizardNameCreate, payload, {
+    params: { stepNo },
+  })
+
+  const directResult = eventWizardCreateResponseSchema.safeParse(res.data)
+  if (directResult.success) {
+    return directResult.data
+  }
+
+  const envelopeResult = eventWizardCreateEnvelopeSchema.safeParse(res.data)
+  if (envelopeResult.success && envelopeResult.data.data) {
+    if (typeof envelopeResult.data.data === "string") {
+      return { uniqueId: envelopeResult.data.data }
+    }
+
+    return envelopeResult.data.data
+  }
+
+  throw new Error("Invalid event draft response.")
+}
+
+export interface EventWizardNameResponse {
+  name: string
+}
+
+export async function fetchEventWizardName(uniqueId: string): Promise<EventWizardNameResponse> {
+  const res = await client.get<unknown>(API_ROUTES.eventWizardName(uniqueId))
+  return eventWizardNameResponseSchema.parse(res.data)
+}
+
+export async function updateEventWizardName(
+  uniqueId: string,
+  payload: EventWizardCreateDraftRequest,
+  stepNo = 1
+): Promise<EventWizardNameResponse> {
+  const res = await client.post<unknown>(API_ROUTES.eventWizardName(uniqueId), payload, {
+    params: { stepNo },
+  })
+
+  return eventWizardNameResponseSchema.parse(res.data)
 }
 
 export async function updateEvent(id: string, payload: Partial<Omit<AppEvent, "id">>): Promise<AppEvent> {

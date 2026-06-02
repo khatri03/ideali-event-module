@@ -1,5 +1,7 @@
 import { useMemo } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { createEventDraft } from "@/api/events"
 import type { AppEvent } from "@/types"
 import { APP_ROUTES } from "@/utils/routes"
 import type { EventWizardValues } from "../schemas/eventWizard.schemas"
@@ -117,4 +119,19 @@ export function buildCreateEventPayload(values: EventWizardValues): Omit<AppEven
     purchaseTimeLimitHours: values.purchaseTimeLimitHours ?? null,
     sessions: values.sessions,
   }
+}
+
+export function useCreateEventDraft() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: { name: string; stepNo?: number }) =>
+      createEventDraft({ name: payload.name }, payload.stepNo ?? 1),
+    onError: () => {
+      // handled by caller
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["events"] })
+    },
+  })
 }
