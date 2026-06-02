@@ -9,6 +9,7 @@ import { useEffect, useState } from "react"
 import { ArrowLeft, ChevronLeft, ChevronRight, Sparkles } from "lucide-react"
 import {
   createEvent,
+  skipEventWizardStep,
   updateEvent,
   updateEventWizardAdvancedSettings,
   updateEventWizardDescription,
@@ -22,7 +23,7 @@ import { queryClient } from "@/lib/queryClient"
 import { APP_ROUTES } from "@/utils/routes"
 import { useEventWizardProgress } from "../hooks/useEventWizardProgress"
 import { useEventWizardDraft } from "../hooks/useEventWizardDraft"
-import { useCreateEventDraft, useEventWizardNavigation, type EventWizardStep } from "../hooks/useEventWizard"
+import { getEventWizardStepNumber, useCreateEventDraft, useEventWizardNavigation, type EventWizardStep } from "../hooks/useEventWizard"
 import { defaultEventWizardValues, eventWizardFieldGroups, eventWizardSchema, type EventWizardValues } from "../schemas/eventWizard.schemas"
 import { EventWizardStepper } from "../components/EventWizardStepper"
 import { EventWizardStepSkeleton } from "../components/EventWizardStepSkeleton"
@@ -40,8 +41,8 @@ interface DeviceFrameSpec {
 const PREVIEW_DEVICE_SPECS: Record<PreviewMode, DeviceFrameSpec> = {
   mobile: {
     width: 375,
-    height: 812,
-    scale: 0.74,
+    height: 720,
+    scale: 0.7,
   },
   laptop: {
     width: 960,
@@ -376,6 +377,7 @@ export function EventWizardLayout() {
   const isReviewStep = activeStep.slug === "review"
   const isOptionalStep =
     activeStep.slug === "description" ||
+    activeStep.slug === "time-zone" ||
     activeStep.slug === "discount-coupon" ||
     activeStep.slug === "questions" ||
     activeStep.slug === "thank-you-email" ||
@@ -422,6 +424,16 @@ export function EventWizardLayout() {
     }
   }, [navigate, resolvedStepPath, shouldRedirectToResolvedStep])
 
+  async function persistSkippedStep(stepSlug: EventWizardStep["slug"]) {
+    if (!eventId) {
+      return
+    }
+
+    const stepNo = getEventWizardStepNumber(stepSlug)
+    const result = await skipEventWizardStep(eventId, stepNo)
+    queryClient.setQueryData(["events", "wizard-progress", eventId], { stepNo: result.stepNo })
+  }
+
   function getStepValidationFields() {
     switch (activeStep.slug) {
       case "name":
@@ -452,7 +464,6 @@ export function EventWizardLayout() {
     const description = form.getValues("description").trim()
     const themeColor = form.getValues("themeColor").trim()
     const purchaseTimeLimitHours = form.getValues("purchaseTimeLimitHours") ?? null
-    const timeZone = form.getValues("timeZone").trim()
 
     if (activeStep.slug === "name") {
       const isNameValid = await form.trigger(eventWizardFieldGroups.name)
@@ -497,10 +508,13 @@ export function EventWizardLayout() {
         } else if (activeStep.slug === "advanced-settings") {
           const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 10)
           setWizardStepCache("advanced-settings", result)
-        } else if (activeStep.slug === "time-zone") {
-          // Time zone is still backed by the event table, but the UI is not yet wired to a numeric TimeZoneId selector.
-          // Keep the current value in form state for now and move on.
-          void timeZone
+        } else if (
+          activeStep.slug === "time-zone" ||
+          activeStep.slug === "discount-coupon" ||
+          activeStep.slug === "questions" ||
+          activeStep.slug === "thank-you-email"
+        ) {
+          await persistSkippedStep(activeStep.slug)
         }
       }
       goNext()
@@ -512,7 +526,6 @@ export function EventWizardLayout() {
     const description = form.getValues("description").trim()
     const themeColor = form.getValues("themeColor").trim()
     const purchaseTimeLimitHours = form.getValues("purchaseTimeLimitHours") ?? null
-    const timeZone = form.getValues("timeZone").trim()
 
     if (activeStep.slug === "name") {
       const isNameValid = await form.trigger(eventWizardFieldGroups.name)
@@ -557,8 +570,13 @@ export function EventWizardLayout() {
         } else if (activeStep.slug === "advanced-settings") {
           const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 10)
           setWizardStepCache("advanced-settings", result)
-        } else if (activeStep.slug === "time-zone") {
-          void timeZone
+        } else if (
+          activeStep.slug === "time-zone" ||
+          activeStep.slug === "discount-coupon" ||
+          activeStep.slug === "questions" ||
+          activeStep.slug === "thank-you-email"
+        ) {
+          await persistSkippedStep(activeStep.slug)
         }
       }
       navigate(APP_ROUTES.events)
@@ -566,6 +584,7 @@ export function EventWizardLayout() {
   }
 
   async function handleSkip() {
+    await persistSkippedStep(activeStep.slug)
     goNext()
   }
 

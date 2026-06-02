@@ -240,6 +240,14 @@ export async function fetchEventWizardProgress(uniqueId: string): Promise<EventW
   return eventWizardProgressResponseSchema.parse(res.data)
 }
 
+export async function skipEventWizardStep(uniqueId: string, stepNo: number): Promise<EventWizardProgressResponse> {
+  const res = await client.post<unknown>(API_ROUTES.eventWizardSkip(uniqueId), null, {
+    params: { stepNo },
+  })
+
+  return eventWizardProgressResponseSchema.parse(res.data)
+}
+
 export async function updateEvent(id: string, payload: Partial<Omit<AppEvent, "id">>): Promise<AppEvent> {
   const res = await client.patch<AppEvent>(API_ROUTES.eventById(id), payload)
   return appEventSchema.parse(res.data)

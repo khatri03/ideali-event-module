@@ -39,6 +39,33 @@ const EVENT_WIZARD_STEP_DEFINITIONS: Array<Omit<EventWizardStep, "path">> = [
 
 export type EventWizardStepSlug = EventWizardStep["slug"]
 
+export function getEventWizardStepNumber(stepSlug: EventWizardStepSlug) {
+  switch (stepSlug) {
+    case "name":
+      return 1
+    case "description":
+      return 2
+    case "theme-color":
+      return 3
+    case "payment-account":
+      return 4
+    case "time-zone":
+      return 5
+    case "sessions":
+      return 6
+    case "discount-coupon":
+      return 7
+    case "questions":
+      return 8
+    case "thank-you-email":
+      return 9
+    case "advanced-settings":
+      return 10
+    case "review":
+      return 11
+  }
+}
+
 export function buildEventWizardSteps(eventId?: string): EventWizardStep[] {
   if (!eventId) {
     return EVENT_WIZARD_STEP_DEFINITIONS.map((step, index) => ({
@@ -123,7 +150,7 @@ export function buildCreateEventPayload(values: EventWizardValues): Omit<AppEven
     price: 0,
     currency: "USD",
     tags: [],
-    timeZone: values.timeZone,
+    timeZone: values.timeZone?.trim() || undefined,
     paymentAccountId: values.paymentAccountId,
     purchaseTimeLimitHours: values.purchaseTimeLimitHours ?? null,
     sessions: values.sessions,

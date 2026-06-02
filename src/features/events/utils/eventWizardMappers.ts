@@ -13,7 +13,7 @@ export function eventToWizardValues(event: AppEvent): EventWizardValues {
     paymentAccountId: event.paymentAccountId ?? defaultPaymentAccountId,
     paymentMethods: [],
     purchaseTimeLimitHours: event.purchaseTimeLimitHours ?? undefined,
-    timeZone: event.timeZone ?? (Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"),
+    timeZone: event.timeZone ?? "",
     sessions: event.sessions?.length
       ? event.sessions
       : [

@@ -1,4 +1,4 @@
-import { Button, Stack, Text } from "@chakra-ui/react"
+import { Button, Field, Stack, Text } from "@chakra-ui/react"
 import { Plus } from "lucide-react"
 import { useFieldArray, useFormContext } from "react-hook-form"
 import { EventSessionRow } from "../components/EventSessionRow"
@@ -15,10 +15,12 @@ export function EventSessionsStepPage() {
   return (
     <Stack h="full" gap={4}>
       <Stack flex="1" gap={4}>
-        <StepFieldLabel label="Sessions" isRequired />
-        <Text fontSize="sm" color="text.secondary">
-          Add at least one session. Each session can represent a keynote, workshop, or any other time-boxed part of the event.
-        </Text>
+        <Field.Root>
+          <StepFieldLabel label="Sessions" isRequired />
+          <Text fontSize="sm" color="text.secondary">
+            Add at least one session. Each session can represent a keynote, workshop, or any other time-boxed part of the event.
+          </Text>
+        </Field.Root>
 
         <Stack gap={4}>
           {fields.map((field, index) => (

@@ -57,13 +57,15 @@ export function EventWizardActions({
       <Flex gap={3} justify="flex-end" flexWrap="wrap">
         {showSkip ? (
           <Button
-            variant="ghost"
+            variant="outline"
+            colorPalette="orange"
             borderRadius="14px"
             h="44px"
             px={6}
             onClick={onSkip}
             disabled={isSkipDisabled}
             minW={{ base: "full", md: "auto" }}
+            _hover={{ bg: "orange.50", borderColor: "orange.300" }}
           >
             {skipLabel}
           </Button>

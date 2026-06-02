@@ -29,18 +29,18 @@ export function EventTimeZoneStepPage() {
     <Stack h="full" gap={4}>
       <Stack flex="1" gap={4}>
         <Field.Root>
-          <StepFieldLabel label="Time zone" isRequired />
+          <StepFieldLabel label="Time zone" />
           <StyledSelect
             options={TIME_ZONE_OPTIONS}
-            value={timeZone}
+            value={timeZone ?? ""}
             onChange={(value) => setValue("timeZone", value, { shouldValidate: true })}
             placeholder="Select a time zone"
           />
-          <Field.HelperText>This will anchor your schedule and review steps to a single regional context.</Field.HelperText>
+          <Field.HelperText>This is optional. You can skip it and set it later if needed.</Field.HelperText>
         </Field.Root>
 
         <Text fontSize="sm" color="text.secondary">
-          We prefill your browser time zone at first load so you do not need to choose it manually every time.
+          We still prefill your browser time zone at first load for convenience.
         </Text>
       </Stack>
     </Stack>

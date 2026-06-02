@@ -35,7 +35,7 @@ export function EventReviewStepPage() {
             label="Advanced settings"
             value={values.purchaseTimeLimitHours ? `${values.purchaseTimeLimitHours} hours before start` : "Not set"}
           />
-          <ReviewRow label="Time zone" value={values.timeZone} isRequired />
+          <ReviewRow label="Time zone" value={values.timeZone || "Not set"} />
           <ReviewRow
             label="Sessions"
             value={

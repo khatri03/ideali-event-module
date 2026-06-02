@@ -13,7 +13,7 @@ export const eventWizardSchema = z.object({
   paymentAccountId: z.string().trim().min(1, "Payment account is required"),
   paymentMethods: z.array(z.number().int().positive()).min(1, "Select at least one payment method"),
   purchaseTimeLimitHours: z.number().int().positive().max(8760, "Use a reasonable number of hours").optional(),
-  timeZone: z.string().trim().min(1, "Time zone is required"),
+  timeZone: z.string().trim().optional(),
   sessions: z.array(eventSessionSchema).min(1, "Add at least one session"),
 })
 
