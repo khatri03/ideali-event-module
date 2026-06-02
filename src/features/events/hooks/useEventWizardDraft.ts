@@ -3,6 +3,7 @@ import {
   fetchEventWizardAdvancedSettings,
   fetchEventWizardDescription,
   fetchEventWizardName,
+  fetchEventWizardPaymentAccount,
   fetchEventWizardThemeColor,
 } from "@/api/events"
 import type { EventWizardStepSlug } from "./useEventWizard"
@@ -12,12 +13,14 @@ export type EventWizardDraftData =
   | Awaited<ReturnType<typeof fetchEventWizardDescription>>
   | Awaited<ReturnType<typeof fetchEventWizardThemeColor>>
   | Awaited<ReturnType<typeof fetchEventWizardAdvancedSettings>>
+  | Awaited<ReturnType<typeof fetchEventWizardPaymentAccount>>
 
 export function useEventWizardDraft(eventId?: string, stepSlug?: EventWizardStepSlug) {
   const isSupportedStep =
     stepSlug === "name" ||
     stepSlug === "description" ||
     stepSlug === "theme-color" ||
+    stepSlug === "payment-account" ||
     stepSlug === "advanced-settings"
 
   return useQuery<EventWizardDraftData>({
@@ -37,6 +40,10 @@ export function useEventWizardDraft(eventId?: string, stepSlug?: EventWizardStep
 
       if (stepSlug === "theme-color") {
         return fetchEventWizardThemeColor(eventId)
+      }
+
+      if (stepSlug === "payment-account") {
+        return fetchEventWizardPaymentAccount(eventId)
       }
 
       if (stepSlug === "advanced-settings") {

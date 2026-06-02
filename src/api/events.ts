@@ -65,6 +65,11 @@ const eventWizardAdvancedSettingsResponseSchema = z.object({
   purchaseTimeLimit: z.number().int().positive().nullable().optional(),
 })
 
+const eventWizardPaymentAccountResponseSchema = z.object({
+  paymentAccountUniqueId: z.string().nullable().optional(),
+  paymentMethods: z.array(z.number().int().positive()).nullable().optional(),
+})
+
 const eventWizardProgressResponseSchema = z.object({
   stepNo: z.number().int().min(0),
 })
@@ -202,6 +207,28 @@ export async function updateEventWizardAdvancedSettings(
   })
 
   return eventWizardAdvancedSettingsResponseSchema.parse(res.data)
+}
+
+export interface EventWizardPaymentAccountResponse {
+  paymentAccountUniqueId?: string | null
+  paymentMethods?: number[] | null
+}
+
+export async function fetchEventWizardPaymentAccount(uniqueId: string): Promise<EventWizardPaymentAccountResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "payment-account")}`)
+  return eventWizardPaymentAccountResponseSchema.parse(res.data)
+}
+
+export async function updateEventWizardPaymentAccount(
+  uniqueId: string,
+  payload: { paymentAccountUniqueId: string; paymentMethods: number[] },
+  stepNo = 4
+): Promise<EventWizardPaymentAccountResponse> {
+  const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "payment-account")}`, payload, {
+    params: { stepNo },
+  })
+
+  return eventWizardPaymentAccountResponseSchema.parse(res.data)
 }
 
 export interface EventWizardProgressResponse {

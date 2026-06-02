@@ -13,6 +13,7 @@ import {
   updateEventWizardAdvancedSettings,
   updateEventWizardDescription,
   updateEventWizardName,
+  updateEventWizardPaymentAccount,
   updateEventWizardThemeColor,
 } from "@/api/events"
 import { useAuthSession } from "@/hooks/useAuthSession"
@@ -318,7 +319,6 @@ export function EventWizardLayout() {
   const { eventId } = useParams<{ eventId?: string }>()
   const sessionQuery = useAuthSession()
   const currentUser = auth.getUser() ?? (sessionQuery.data ? sessionDataToUser(sessionQuery.data) : null)
-  const organizer = auth.getOrganizer()
   const wizardProgressQuery = useEventWizardProgress(eventId)
   const lastCompletedStepNo = eventId ? wizardProgressQuery.data?.stepNo ?? 0 : 0
   const completedStepCount = eventId ? Math.min(lastCompletedStepNo, 10) : 0
@@ -355,15 +355,24 @@ export function EventWizardLayout() {
     queryClient.setQueryData(["events", "wizard-draft", eventId, step], value)
   }
 
+  function setPaymentAccountStepCache(value: unknown) {
+    if (!eventId) {
+      return
+    }
+
+    queryClient.setQueryData(["events", "wizard-draft", eventId, "payment-account"], value)
+  }
+
   const form = useForm<EventWizardValues>({
     defaultValues: {
       ...defaultEventWizardValues,
-      paymentAccountId: organizer?.paymentAccounts?.[0]?.uniqueId ?? "",
+      paymentAccountId: "",
     },
     resolver: zodResolver(eventWizardSchema),
     mode: "onSubmit",
   })
   const paymentAccountId = useWatch({ control: form.control, name: "paymentAccountId" })
+  const paymentMethods = useWatch({ control: form.control, name: "paymentMethods" })
   const isReviewStep = activeStep.slug === "review"
   const isOptionalStep =
     activeStep.slug === "description" ||
@@ -390,6 +399,17 @@ export function EventWizardLayout() {
         form.setValue("description", draftData.description ?? "", { shouldDirty: false, shouldTouch: false, shouldValidate: false })
       } else if ("themeColor" in draftData) {
         form.setValue("themeColor", draftData.themeColor ?? "", { shouldDirty: false, shouldTouch: false, shouldValidate: false })
+      } else if ("paymentAccountUniqueId" in draftData) {
+        form.setValue("paymentAccountId", draftData.paymentAccountUniqueId ?? "", {
+          shouldDirty: false,
+          shouldTouch: false,
+          shouldValidate: false,
+        })
+        form.setValue("paymentMethods", draftData.paymentMethods ?? [], {
+          shouldDirty: false,
+          shouldTouch: false,
+          shouldValidate: false,
+        })
       } else if ("purchaseTimeLimit" in draftData) {
         form.setValue("purchaseTimeLimitHours", draftData.purchaseTimeLimit ?? undefined, { shouldDirty: false, shouldTouch: false, shouldValidate: false })
       }
@@ -464,6 +484,16 @@ export function EventWizardLayout() {
         } else if (activeStep.slug === "theme-color") {
           const result = await updateEventWizardThemeColor(eventId, { themeColor }, 3)
           setWizardStepCache("theme-color", result)
+        } else if (activeStep.slug === "payment-account") {
+          const result = await updateEventWizardPaymentAccount(
+            eventId,
+            {
+              paymentAccountUniqueId: paymentAccountId,
+              paymentMethods: paymentMethods ?? [],
+            },
+            4,
+          )
+          setPaymentAccountStepCache(result)
         } else if (activeStep.slug === "advanced-settings") {
           const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 10)
           setWizardStepCache("advanced-settings", result)
@@ -514,6 +544,16 @@ export function EventWizardLayout() {
         } else if (activeStep.slug === "theme-color") {
           const result = await updateEventWizardThemeColor(eventId, { themeColor }, 3)
           setWizardStepCache("theme-color", result)
+        } else if (activeStep.slug === "payment-account") {
+          const result = await updateEventWizardPaymentAccount(
+            eventId,
+            {
+              paymentAccountUniqueId: paymentAccountId,
+              paymentMethods: paymentMethods ?? [],
+            },
+            4,
+          )
+          setPaymentAccountStepCache(result)
         } else if (activeStep.slug === "advanced-settings") {
           const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 10)
           setWizardStepCache("advanced-settings", result)
@@ -712,8 +752,8 @@ export function EventWizardLayout() {
                   <EventWizardActions
                     showBack={!isFirstStep}
                     showSkip={isOptionalStep && !isLastWizardStep}
-                    isPrimaryDisabled={isPaymentAccountStep && (!paymentAccountId || !organizer?.paymentAccounts?.length)}
-                    isSecondaryDisabled={isPaymentAccountStep && !organizer?.paymentAccounts?.length}
+                    isPrimaryDisabled={isPaymentAccountStep && (!paymentAccountId || (paymentMethods?.length ?? 0) === 0)}
+                    isSecondaryDisabled={isPaymentAccountStep && (!paymentAccountId || (paymentMethods?.length ?? 0) === 0)}
                     isPrimaryLoading={createEventDraftMutation.isPending || finalSaveMutation.isPending}
                     isSecondaryLoading={createEventDraftMutation.isPending || finalSaveMutation.isPending}
                     primaryLabel={!eventId && activeStep.slug === "name" ? "Create Event" : isReviewStep ? "Save Changes" : "Save & Continue"}

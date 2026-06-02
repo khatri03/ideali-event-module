@@ -1,4 +1,4 @@
-import { Box, Flex, Skeleton, SkeletonText, Stack } from "@chakra-ui/react"
+import { Box, Flex, SimpleGrid, Skeleton, SkeletonText, Stack } from "@chakra-ui/react"
 import type { ReactNode } from "react"
 import type { EventWizardStepSlug } from "../hooks/useEventWizard"
 
@@ -97,8 +97,21 @@ function PaymentAccountSkeleton() {
       <Stack gap={3}>
         <Skeleton height="18px" width="180px" />
         <Skeleton height="44px" borderRadius="14px" />
+        <SkeletonText noOfLines={2} width="74%" />
       </Stack>
-      <SkeletonText noOfLines={2} width="74%" />
+      <Stack gap={3}>
+        <Skeleton height="18px" width="150px" />
+        <Flex gap={2} wrap="wrap">
+          <Skeleton height="28px" width="96px" borderRadius="999px" />
+          <Skeleton height="28px" width="96px" borderRadius="999px" />
+          <Skeleton height="28px" width="96px" borderRadius="999px" />
+        </Flex>
+        <SimpleGrid columns={{ base: 1, sm: 2, xl: 3 }} gap={3}>
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton key={index} height="84px" borderRadius="20px" />
+          ))}
+        </SimpleGrid>
+      </Stack>
     </PanelSkeleton>
   )
 }
