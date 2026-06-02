@@ -9,7 +9,7 @@ interface EventWizardStepperProps {
 
 export function EventWizardStepper({ activeStepIndex, onStepClick, steps }: EventWizardStepperProps) {
   return (
-    <Stack gap={2} align="stretch">
+    <Stack gap={1.5} align="stretch">
       {steps.map((step, index) => {
         const isActive = index === activeStepIndex
         const isComplete = index < activeStepIndex
@@ -37,10 +37,10 @@ export function EventWizardStepper({ activeStepIndex, onStepClick, steps }: Even
               variant="ghost"
               w="full"
               h="auto"
-              minH="60px"
-              px={3}
-              py={3}
-              borderRadius="16px"
+              minH="48px"
+              px={2.5}
+              py={2}
+              borderRadius="14px"
               border="2px solid"
               borderColor={itemBorderColor}
               bg={itemBg}
@@ -65,21 +65,21 @@ export function EventWizardStepper({ activeStepIndex, onStepClick, steps }: Even
             >
               {isActive ? (
                 <Box
-                  position="absolute"
-                  left={0}
-                  top={0}
-                  bottom={0}
-                  w="5px"
+                position="absolute"
+                left={0}
+                top={0}
+                bottom={0}
+                  w="4px"
                   bg="green.700"
-                  borderTopLeftRadius="14px"
-                  borderBottomLeftRadius="14px"
+                  borderTopLeftRadius="12px"
+                  borderBottomLeftRadius="12px"
                 />
               ) : null}
 
-              <Flex align="center" gap={3} minW={0}>
+              <Flex align="center" gap={2.5} minW={0}>
                 <Flex
-                  w={isActive ? "38px" : "34px"}
-                  h={isActive ? "38px" : "34px"}
+                  w={isActive ? "34px" : "30px"}
+                  h={isActive ? "34px" : "30px"}
                   borderRadius="full"
                   align="center"
                   justify="center"
@@ -98,7 +98,7 @@ export function EventWizardStepper({ activeStepIndex, onStepClick, steps }: Even
                     fontSize="sm"
                     fontWeight={isActive ? "900" : "700"}
                     color={isDisabled ? "gray.500" : isActive ? "green.900" : "gray.900"}
-                    lineHeight={1.15}
+                    lineHeight={1.1}
                     whiteSpace="nowrap"
                     overflow="hidden"
                     textOverflow="ellipsis"

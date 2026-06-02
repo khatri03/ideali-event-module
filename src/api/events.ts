@@ -53,6 +53,18 @@ const eventWizardNameResponseSchema = z.object({
   name: z.string(),
 })
 
+const eventWizardDescriptionResponseSchema = z.object({
+  description: z.string().nullable().optional(),
+})
+
+const eventWizardThemeColorResponseSchema = z.object({
+  themeColor: z.string().nullable().optional(),
+})
+
+const eventWizardAdvancedSettingsResponseSchema = z.object({
+  purchaseTimeLimit: z.number().int().positive().nullable().optional(),
+})
+
 export async function fetchEvents(
   filters?: EventFilters & { page?: number; pageSize?: number }
 ): Promise<PaginatedResponse<AppEvent>> {
@@ -123,6 +135,69 @@ export async function updateEventWizardName(
   })
 
   return eventWizardNameResponseSchema.parse(res.data)
+}
+
+export interface EventWizardDescriptionResponse {
+  description?: string | null
+}
+
+export async function fetchEventWizardDescription(uniqueId: string): Promise<EventWizardDescriptionResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "description")}`)
+  return eventWizardDescriptionResponseSchema.parse(res.data)
+}
+
+export async function updateEventWizardDescription(
+  uniqueId: string,
+  payload: { description: string },
+  stepNo = 2
+): Promise<EventWizardDescriptionResponse> {
+  const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "description")}`, payload, {
+    params: { stepNo },
+  })
+
+  return eventWizardDescriptionResponseSchema.parse(res.data)
+}
+
+export interface EventWizardThemeColorResponse {
+  themeColor?: string | null
+}
+
+export async function fetchEventWizardThemeColor(uniqueId: string): Promise<EventWizardThemeColorResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "theme-color")}`)
+  return eventWizardThemeColorResponseSchema.parse(res.data)
+}
+
+export async function updateEventWizardThemeColor(
+  uniqueId: string,
+  payload: { themeColor: string | null },
+  stepNo = 3
+): Promise<EventWizardThemeColorResponse> {
+  const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "theme-color")}`, payload, {
+    params: { stepNo },
+  })
+
+  return eventWizardThemeColorResponseSchema.parse(res.data)
+}
+
+export interface EventWizardAdvancedSettingsResponse {
+  purchaseTimeLimit?: number | null
+}
+
+export async function fetchEventWizardAdvancedSettings(uniqueId: string): Promise<EventWizardAdvancedSettingsResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "advanced-settings")}`)
+  return eventWizardAdvancedSettingsResponseSchema.parse(res.data)
+}
+
+export async function updateEventWizardAdvancedSettings(
+  uniqueId: string,
+  payload: { purchaseTimeLimit: number | null },
+  stepNo = 10
+): Promise<EventWizardAdvancedSettingsResponse> {
+  const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "advanced-settings")}`, payload, {
+    params: { stepNo },
+  })
+
+  return eventWizardAdvancedSettingsResponseSchema.parse(res.data)
 }
 
 export async function updateEvent(id: string, payload: Partial<Omit<AppEvent, "id">>): Promise<AppEvent> {

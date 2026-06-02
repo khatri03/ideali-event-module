@@ -7,7 +7,14 @@ import { FormProvider, useForm, useWatch } from "react-hook-form"
 import { Navigate, Outlet, useNavigate, useParams } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { ArrowLeft, ChevronLeft, ChevronRight, Sparkles } from "lucide-react"
-import { createEvent, updateEvent } from "@/api/events"
+import {
+  createEvent,
+  updateEvent,
+  updateEventWizardAdvancedSettings,
+  updateEventWizardDescription,
+  updateEventWizardName,
+  updateEventWizardThemeColor,
+} from "@/api/events"
 import { useAuthSession } from "@/hooks/useAuthSession"
 import { auth, sessionDataToUser } from "@/lib/auth"
 import { queryClient } from "@/lib/queryClient"
@@ -236,9 +243,9 @@ function WizardStepsRail({
       border="1px solid"
       borderColor="gray.200"
       boxShadow="0 16px 40px rgba(15, 23, 42, 0.06)"
-      p={{ base: 4, md: 5 }}
-      pt={{ base: 7, md: 7 }}
-      pr={{ base: 4, md: 5 }}
+      p={{ base: 3, md: 4 }}
+      pt={{ base: 6, md: 6 }}
+      pr={{ base: 3, md: 4 }}
       position="relative"
       overflow="visible"
       minW={0}
@@ -254,9 +261,9 @@ function WizardStepsRail({
         aria-label={isCollapsed ? "Show steps" : "Hide steps"}
         variant="solid"
         borderRadius="full"
-        h={{ base: "36px", md: "40px" }}
-        w={{ base: "36px", md: "40px" }}
-        minW={{ base: "36px", md: "40px" }}
+        h={{ base: "34px", md: "38px" }}
+        w={{ base: "34px", md: "38px" }}
+        minW={{ base: "34px", md: "38px" }}
         p={0}
         flexShrink={0}
         onClick={onToggle}
@@ -300,7 +307,7 @@ export function EventWizardLayout() {
   const currentUser = auth.getUser() ?? (sessionQuery.data ? sessionDataToUser(sessionQuery.data) : null)
   const organizer = auth.getOrganizer()
   const { steps, activeStepIndex, activeStep, goToStep, goBack, goNext, isFirstStep, isLastStep } = useEventWizardNavigation()
-  const wizardDraftQuery = useEventWizardDraft(eventId)
+  const wizardDraftQuery = useEventWizardDraft(eventId, activeStep.slug)
   const isMobile = useBreakpointValue({ base: true, lg: false }) ?? true
   const [isStepsCollapsedOverride, setIsStepsCollapsedOverride] = useState<boolean | null>(null)
   const [previewMode, setPreviewMode] = useState<PreviewMode>("mobile")
@@ -338,13 +345,18 @@ export function EventWizardLayout() {
     activeStep.slug === "discount-coupon" ||
     activeStep.slug === "questions" ||
     activeStep.slug === "thank-you-email" ||
-    activeStep.slug === "purchase-time-limit"
+    activeStep.slug === "advanced-settings"
   const isPaymentAccountStep = activeStep.slug === "payment-account"
   const isLastWizardStep = isLastStep
 
   useEffect(() => {
-    if (wizardDraftQuery.data) {
-      form.reset(eventToWizardValues(wizardDraftQuery.data))
+    const draftData = wizardDraftQuery.data
+    if (draftData) {
+      if ("title" in draftData) {
+        form.reset(eventToWizardValues(draftData))
+      } else if ("name" in draftData) {
+        form.setValue("name", draftData.name, { shouldDirty: false, shouldTouch: false, shouldValidate: false })
+      }
     }
   }, [form, wizardDraftQuery.data])
 
@@ -366,7 +378,7 @@ export function EventWizardLayout() {
       case "questions":
       case "thank-you-email":
         return []
-      case "purchase-time-limit":
+      case "advanced-settings":
         return eventWizardFieldGroups.advancedSettings
       case "review":
         return []
@@ -375,6 +387,10 @@ export function EventWizardLayout() {
 
   async function handleSaveContinue() {
     const name = form.getValues("name").trim()
+    const description = form.getValues("description").trim()
+    const themeColor = form.getValues("themeColor").trim()
+    const purchaseTimeLimitHours = form.getValues("purchaseTimeLimitHours") ?? null
+    const timeZone = form.getValues("timeZone").trim()
 
     if (activeStep.slug === "name") {
       const isNameValid = await form.trigger(eventWizardFieldGroups.name)
@@ -385,7 +401,7 @@ export function EventWizardLayout() {
 
     if (!eventId && activeStep.slug === "name") {
       const result = await createEventDraftMutation.mutateAsync({ name, stepNo: 1 })
-      navigate(APP_ROUTES.eventWizard.edit(result.uniqueId), { replace: true })
+      navigate(APP_ROUTES.eventWizard.editStep(result.uniqueId, "name"), { replace: true })
       return
     }
 
@@ -396,8 +412,20 @@ export function EventWizardLayout() {
 
     const isValid = await form.trigger(getStepValidationFields())
     if (isValid) {
-      if (eventId && activeStep.slug === "name") {
-        await updateEvent(eventId, { title: name })
+      if (eventId) {
+        if (activeStep.slug === "name") {
+          await updateEventWizardName(eventId, { name }, 1)
+        } else if (activeStep.slug === "description") {
+          await updateEventWizardDescription(eventId, { description }, 2)
+        } else if (activeStep.slug === "theme-color") {
+          await updateEventWizardThemeColor(eventId, { themeColor }, 3)
+        } else if (activeStep.slug === "advanced-settings") {
+          await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 10)
+        } else if (activeStep.slug === "time-zone") {
+          // Time zone is still backed by the event table, but the UI is not yet wired to a numeric TimeZoneId selector.
+          // Keep the current value in form state for now and move on.
+          void timeZone
+        }
       }
       goNext()
     }
@@ -405,6 +433,10 @@ export function EventWizardLayout() {
 
   async function handleSaveExit() {
     const name = form.getValues("name").trim()
+    const description = form.getValues("description").trim()
+    const themeColor = form.getValues("themeColor").trim()
+    const purchaseTimeLimitHours = form.getValues("purchaseTimeLimitHours") ?? null
+    const timeZone = form.getValues("timeZone").trim()
 
     if (activeStep.slug === "name") {
       const isNameValid = await form.trigger(eventWizardFieldGroups.name)
@@ -426,8 +458,18 @@ export function EventWizardLayout() {
 
     const isValid = await form.trigger(getStepValidationFields())
     if (isValid) {
-      if (eventId && activeStep.slug === "name") {
-        await updateEvent(eventId, { title: name })
+      if (eventId) {
+        if (activeStep.slug === "name") {
+          await updateEventWizardName(eventId, { name }, 1)
+        } else if (activeStep.slug === "description") {
+          await updateEventWizardDescription(eventId, { description }, 2)
+        } else if (activeStep.slug === "theme-color") {
+          await updateEventWizardThemeColor(eventId, { themeColor }, 3)
+        } else if (activeStep.slug === "advanced-settings") {
+          await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 10)
+        } else if (activeStep.slug === "time-zone") {
+          void timeZone
+        }
       }
       navigate(APP_ROUTES.events)
     }

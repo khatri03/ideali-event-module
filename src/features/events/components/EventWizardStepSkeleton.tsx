@@ -16,7 +16,7 @@ export function EventWizardStepSkeleton({ step }: EventWizardStepSkeletonProps) 
       return <ThemeColorSkeleton />
     case "payment-account":
       return <PaymentAccountSkeleton />
-    case "purchase-time-limit":
+    case "advanced-settings":
       return <PurchaseLimitSkeleton />
     case "time-zone":
       return <TimeZoneSkeleton />

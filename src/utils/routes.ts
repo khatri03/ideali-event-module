@@ -16,20 +16,9 @@ export const APP_ROUTES = {
     base: "/auth",
   },
   eventWizard: {
-    createBase: "/events/create",
-    create: {
-      description: "/events/create/description",
-      themeColor: "/events/create/theme-color",
-      paymentAccount: "/events/create/payment-account",
-      timeZone: "/events/create/time-zone",
-      sessions: "/events/create/sessions",
-      discountCoupon: "/events/create/discount-coupon",
-      questions: "/events/create/questions",
-      thankYouEmail: "/events/create/thank-you-email",
-      advancedSettings: "/events/create/purchase-time-limit",
-      review: "/events/create/review",
-    },
+    createBase: "/organizer/events/name",
     slugs: {
+      name: "name",
       description: "description",
       themeColor: "theme-color",
       paymentAccount: "payment-account",
@@ -38,19 +27,20 @@ export const APP_ROUTES = {
       discountCoupon: "discount-coupon",
       questions: "questions",
       thankYouEmail: "thank-you-email",
-      advancedSettings: "purchase-time-limit",
+      advancedSettings: "advanced-settings",
       review: "review",
     },
-    edit: (eventId: string) => `/events/${eventId}`,
-    editStep: (eventId: string, step: string) => `/events/${eventId}/${step}`,
+    edit: (eventId: string) => `/organizer/events/${eventId}`,
+    editStep: (eventId: string, step: string) => `/organizer/events/${eventId}/${step}`,
   },
 } as const
 
 export const API_ROUTES = {
   events: "/events",
   eventById: (id: string) => `/events/${id}`,
-  eventWizardProgress: (id: string) => `/events/${id}/wizard-progress`,
-  eventWizardNameCreate: "/api/organizer/events/wizard/name",
+  eventWizardProgress: (id: string) => `/api/organizer/events/${id}/wizard-progress`,
+  eventWizardNameCreate: "/api/organizer/events/name",
+  eventWizardStep: (id: string, step: string) => `/api/organizer/events/${id}/${step}`,
   eventWizardName: (id: string) => `/api/organizer/events/${id}/name`,
 } as const
 

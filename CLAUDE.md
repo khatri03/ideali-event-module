@@ -70,6 +70,12 @@ npm install -D vitest @testing-library/react @testing-library/user-event @testin
 npm install -D playwright @playwright/test
 ```
 
+## Routing Rule
+
+- Browser-visible frontend routes must mirror backend routes exactly, excluding the `/api` prefix.
+- Keep the same path segments and route params on the frontend when a backend route already exists.
+- UI-only routes are allowed only when there is no backend route to mirror.
+
 ---
 
 ## Project Structure

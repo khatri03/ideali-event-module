@@ -48,7 +48,8 @@ export default function App() {
           <Route path={APP_ROUTES.eventWizard.slugs.review} element={<EventReviewStepPage />} />
         </Route>
         <Route path={APP_ROUTES.eventWizard.edit(":eventId")} element={<EventWizardLayout />}>
-          <Route index element={<EventNameStepPage />} />
+          <Route index element={<Navigate to={APP_ROUTES.eventWizard.slugs.name} replace />} />
+          <Route path={APP_ROUTES.eventWizard.slugs.name} element={<EventNameStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.description} element={<EventDescriptionStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.themeColor} element={<EventThemeColorStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.paymentAccount} element={<EventPaymentAccountStepPage />} />

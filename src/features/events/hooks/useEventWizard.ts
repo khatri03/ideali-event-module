@@ -12,7 +12,7 @@ export interface EventWizardStep {
     | "description"
     | "theme-color"
     | "payment-account"
-    | "purchase-time-limit"
+    | "advanced-settings"
     | "time-zone"
     | "sessions"
     | "discount-coupon"
@@ -33,18 +33,25 @@ const EVENT_WIZARD_STEP_DEFINITIONS: Array<Omit<EventWizardStep, "path">> = [
   { slug: "discount-coupon", label: "Discount Coupon" },
   { slug: "questions", label: "Questions" },
   { slug: "thank-you-email", label: "Thank you Email" },
-  { slug: "purchase-time-limit", label: "Advanced Settings" },
+  { slug: "advanced-settings", label: "Advanced Settings" },
   { slug: "review", label: "Review" },
 ]
 
 export type EventWizardStepSlug = EventWizardStep["slug"]
 
 export function buildEventWizardSteps(eventId?: string): EventWizardStep[] {
-  const basePath = eventId ? APP_ROUTES.eventWizard.edit(eventId) : APP_ROUTES.eventWizard.createBase
+  if (!eventId) {
+    return EVENT_WIZARD_STEP_DEFINITIONS.map((step, index) => ({
+      ...step,
+      path: index === 0 ? APP_ROUTES.eventWizard.createBase : `${APP_ROUTES.eventWizard.createBase}/${step.slug}`,
+    }))
+  }
+
+  const basePath = APP_ROUTES.eventWizard.edit(eventId)
 
   return EVENT_WIZARD_STEP_DEFINITIONS.map((step, index) => ({
     ...step,
-    path: index === 0 ? basePath : `${basePath}/${step.slug}`,
+    path: index === 0 ? `${basePath}/name` : `${basePath}/${step.slug}`,
   }))
 }
 
