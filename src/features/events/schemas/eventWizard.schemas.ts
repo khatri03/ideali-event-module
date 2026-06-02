@@ -8,7 +8,7 @@ const eventSessionSchema = z.object({
 
 export const eventWizardSchema = z.object({
   name: z.string().trim().min(1, "Event name is required").max(120, "Keep the event name under 120 characters"),
-  description: z.string().trim().max(1000, "Keep the description under 1000 characters"),
+  description: z.string().trim().max(5000, "Keep the description under 5000 characters"),
   themeColor: z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Enter a valid hex color"),
   paymentAccountId: z.string().trim().min(1, "Payment account is required"),
   purchaseTimeLimitHours: z.number().int().positive().max(8760, "Use a reasonable number of hours").optional(),

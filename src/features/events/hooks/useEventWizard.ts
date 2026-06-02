@@ -60,7 +60,7 @@ export function getEventWizardStepIndex(pathname: string, eventId?: string) {
   return steps.findIndex((step) => pathname === step.path)
 }
 
-export function useEventWizardNavigation() {
+export function useEventWizardNavigation(maxUnlockedStepIndex?: number) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { eventId } = useParams<{ eventId?: string }>()
@@ -85,7 +85,9 @@ export function useEventWizardNavigation() {
     nextStep,
     goToStep: (step: EventWizardStepSlug) => {
       const target = steps.find((item) => item.slug === step)
-      if (target && steps.indexOf(target) <= activeStepIndex) {
+      const targetIndex = target ? steps.indexOf(target) : -1
+      const maxIndex = maxUnlockedStepIndex ?? activeStepIndex
+      if (target && targetIndex >= 0 && targetIndex <= maxIndex) {
         navigate(target.path)
       }
     },

@@ -3,27 +3,37 @@ import type { EventWizardStep } from "../hooks/useEventWizard"
 
 interface EventWizardStepperProps {
   activeStepIndex: number
+  completedStepCount?: number
+  maxUnlockedStepIndex?: number
   onStepClick?: (step: EventWizardStep["slug"]) => void
   steps: EventWizardStep[]
 }
 
-export function EventWizardStepper({ activeStepIndex, onStepClick, steps }: EventWizardStepperProps) {
+export function EventWizardStepper({
+  activeStepIndex,
+  completedStepCount = activeStepIndex,
+  maxUnlockedStepIndex = activeStepIndex,
+  onStepClick,
+  steps,
+}: EventWizardStepperProps) {
   return (
     <Stack gap={1.5} align="stretch">
       {steps.map((step, index) => {
         const isActive = index === activeStepIndex
-        const isComplete = index < activeStepIndex
-        const isFutureStep = index > activeStepIndex
-        const isNavigable = Boolean(onStepClick) && isComplete
+        const isComplete = index < completedStepCount
+        const isFutureStep = index > maxUnlockedStepIndex
+        const isNavigable = Boolean(onStepClick) && index <= maxUnlockedStepIndex && index !== activeStepIndex
         const isDisabled = isFutureStep
         const itemBg = isComplete
-          ? "green.50"
+          ? "green.200"
           : isActive
-            ? "linear-gradient(135deg, rgba(1, 181, 116, 0.36) 0%, rgba(1, 181, 116, 0.22) 100%)"
-            : "gray.50"
-        const itemBorderColor = isComplete ? "green.200" : isActive ? "green.600" : "gray.300"
-        const itemHoverBg = isNavigable ? (isActive ? "linear-gradient(135deg, rgba(1, 181, 116, 0.42) 0%, rgba(1, 181, 116, 0.26) 100%)" : "green.50") : "gray.50"
-        const itemHoverBorderColor = isNavigable ? (isActive ? "green.700" : "green.200") : "gray.200"
+            ? "green.50"
+            : isDisabled
+              ? "gray.50"
+              : "white"
+        const itemBorderColor = isComplete ? "green.300" : isActive ? "green.500" : isDisabled ? "gray.300" : "gray.200"
+        const itemHoverBg = isNavigable ? (isComplete ? "green.300" : "green.100") : itemBg
+        const itemHoverBorderColor = isNavigable ? "green.300" : itemBorderColor
 
         return (
           <Box
@@ -84,11 +94,11 @@ export function EventWizardStepper({ activeStepIndex, onStepClick, steps }: Even
                   align="center"
                   justify="center"
                   flexShrink={0}
-                  bg={isComplete ? "green.500" : isActive ? "green.700" : "gray.200"}
-                  color={isComplete || isActive ? "white" : "gray.500"}
+                  bg={isComplete ? "green.700" : isActive ? "green.500" : isDisabled ? "gray.200" : "white"}
+                  color={isComplete || isActive ? "white" : isDisabled ? "gray.500" : "green.700"}
                   border="2px solid"
-                  borderColor={isComplete || isActive ? "green.700" : "gray.300"}
-                  boxShadow={isActive ? "0 10px 20px rgba(1, 181, 116, 0.30)" : "none"}
+                  borderColor={isComplete || isActive ? "green.700" : isDisabled ? "gray.300" : "green.200"}
+                  boxShadow={isActive ? "0 10px 20px rgba(1, 181, 116, 0.20)" : "none"}
                 >
                   {isComplete ? "✓" : <Text fontSize="sm" fontWeight="800">{index + 1}</Text>}
                 </Flex>

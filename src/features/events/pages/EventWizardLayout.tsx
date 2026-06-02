@@ -4,7 +4,7 @@ import "react-device-frameset/styles/marvel-devices.min.css"
 import { Box, Button, Field, Flex, Grid, Heading, Skeleton, SkeletonText, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
 import { useMutation } from "@tanstack/react-query"
 import { FormProvider, useForm, useWatch } from "react-hook-form"
-import { Navigate, Outlet, useNavigate, useParams } from "react-router-dom"
+import { Navigate, Outlet, useLocation, useNavigate, useParams } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { ArrowLeft, ChevronLeft, ChevronRight, Sparkles } from "lucide-react"
 import {
@@ -19,6 +19,7 @@ import { useAuthSession } from "@/hooks/useAuthSession"
 import { auth, sessionDataToUser } from "@/lib/auth"
 import { queryClient } from "@/lib/queryClient"
 import { APP_ROUTES } from "@/utils/routes"
+import { useEventWizardProgress } from "../hooks/useEventWizardProgress"
 import { useEventWizardDraft } from "../hooks/useEventWizardDraft"
 import { useCreateEventDraft, useEventWizardNavigation, type EventWizardStep } from "../hooks/useEventWizard"
 import { defaultEventWizardValues, eventWizardFieldGroups, eventWizardSchema, type EventWizardValues } from "../schemas/eventWizard.schemas"
@@ -225,13 +226,17 @@ function PreviewFrame({ mode }: { mode: PreviewMode }) {
 
 function WizardStepsRail({
   activeStepIndex,
+  completedStepCount,
   isCollapsed,
+  maxUnlockedStepIndex,
   onToggle,
   onStepClick,
   steps,
 }: {
   activeStepIndex: number
+  completedStepCount: number
   isCollapsed: boolean
+  maxUnlockedStepIndex: number
   onToggle: () => void
   onStepClick: (step: EventWizardStep["slug"]) => void
   steps: ReturnType<typeof useEventWizardNavigation>["steps"]
@@ -294,7 +299,15 @@ function WizardStepsRail({
           </Flex>
         ) : null}
 
-        {!isCollapsed ? <EventWizardStepper steps={steps} activeStepIndex={activeStepIndex} onStepClick={onStepClick} /> : null}
+        {!isCollapsed ? (
+          <EventWizardStepper
+            steps={steps}
+            activeStepIndex={activeStepIndex}
+            completedStepCount={completedStepCount}
+            maxUnlockedStepIndex={maxUnlockedStepIndex}
+            onStepClick={onStepClick}
+          />
+        ) : null}
       </Box>
     </Box>
   )
@@ -302,11 +315,16 @@ function WizardStepsRail({
 
 export function EventWizardLayout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { eventId } = useParams<{ eventId?: string }>()
   const sessionQuery = useAuthSession()
   const currentUser = auth.getUser() ?? (sessionQuery.data ? sessionDataToUser(sessionQuery.data) : null)
   const organizer = auth.getOrganizer()
-  const { steps, activeStepIndex, activeStep, goToStep, goBack, goNext, isFirstStep, isLastStep } = useEventWizardNavigation()
+  const wizardProgressQuery = useEventWizardProgress(eventId)
+  const lastCompletedStepNo = eventId ? wizardProgressQuery.data?.stepNo ?? 0 : 0
+  const completedStepCount = eventId ? Math.min(lastCompletedStepNo, 10) : 0
+  const maxUnlockedStepIndex = eventId ? Math.min(lastCompletedStepNo, 10) : 0
+  const { steps, activeStepIndex, activeStep, goToStep, goBack, goNext, isFirstStep, isLastStep } = useEventWizardNavigation(maxUnlockedStepIndex)
   const wizardDraftQuery = useEventWizardDraft(eventId, activeStep.slug)
   const isMobile = useBreakpointValue({ base: true, lg: false }) ?? true
   const [isStepsCollapsedOverride, setIsStepsCollapsedOverride] = useState<boolean | null>(null)
@@ -348,6 +366,13 @@ export function EventWizardLayout() {
     activeStep.slug === "advanced-settings"
   const isPaymentAccountStep = activeStep.slug === "payment-account"
   const isLastWizardStep = isLastStep
+  const resolvedStepIndex = eventId ? Math.min(lastCompletedStepNo, steps.length - 1) : -1
+  const resolvedStepPath = eventId ? steps[resolvedStepIndex]?.path : undefined
+  const currentStepIndex = eventId ? steps.findIndex((step) => step.path === location.pathname) : -1
+  const shouldRedirectToResolvedStep =
+    Boolean(eventId) &&
+    wizardProgressQuery.isSuccess &&
+    (currentStepIndex === -1 || currentStepIndex > resolvedStepIndex)
 
   useEffect(() => {
     const draftData = wizardDraftQuery.data
@@ -356,9 +381,21 @@ export function EventWizardLayout() {
         form.reset(eventToWizardValues(draftData))
       } else if ("name" in draftData) {
         form.setValue("name", draftData.name, { shouldDirty: false, shouldTouch: false, shouldValidate: false })
+      } else if ("description" in draftData) {
+        form.setValue("description", draftData.description ?? "", { shouldDirty: false, shouldTouch: false, shouldValidate: false })
+      } else if ("themeColor" in draftData) {
+        form.setValue("themeColor", draftData.themeColor ?? "", { shouldDirty: false, shouldTouch: false, shouldValidate: false })
+      } else if ("purchaseTimeLimit" in draftData) {
+        form.setValue("purchaseTimeLimitHours", draftData.purchaseTimeLimit ?? undefined, { shouldDirty: false, shouldTouch: false, shouldValidate: false })
       }
     }
   }, [form, wizardDraftQuery.data])
+
+  useEffect(() => {
+    if (shouldRedirectToResolvedStep && resolvedStepPath) {
+      navigate(resolvedStepPath, { replace: true })
+    }
+  }, [navigate, resolvedStepPath, shouldRedirectToResolvedStep])
 
   function getStepValidationFields() {
     switch (activeStep.slug) {
@@ -487,6 +524,10 @@ export function EventWizardLayout() {
     return <Navigate to={APP_ROUTES.auth.login} replace />
   }
 
+  if (eventId && (wizardProgressQuery.isLoading || (currentStepIndex === -1 && wizardProgressQuery.isSuccess))) {
+    return <WizardLoadingState />
+  }
+
   return (
     <Flex
       minH="100dvh"
@@ -561,8 +602,10 @@ export function EventWizardLayout() {
             <Box display="block" position="relative">
               <WizardStepsRail
                 activeStepIndex={activeStepIndex}
+                completedStepCount={completedStepCount}
                 steps={steps}
                 isCollapsed={isStepsCollapsed}
+                maxUnlockedStepIndex={maxUnlockedStepIndex}
                 onToggle={() => setIsStepsCollapsedOverride((current) => !(current ?? isMobile))}
                 onStepClick={goToStep}
               />

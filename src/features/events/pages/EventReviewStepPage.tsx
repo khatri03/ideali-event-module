@@ -3,6 +3,7 @@ import { format } from "date-fns"
 import type { ReactNode } from "react"
 import { useWatch } from "react-hook-form"
 import { auth } from "@/lib/auth"
+import { htmlToPlainText } from "@/utils/html"
 import { defaultEventWizardValues, type EventWizardValues } from "../schemas/eventWizard.schemas"
 
 export function EventReviewStepPage() {
@@ -19,7 +20,7 @@ export function EventReviewStepPage() {
 
         <Stack gap={4}>
           <ReviewRow label="Name" value={values.name} />
-          <ReviewRow label="Description" value={values.description || "No description provided"} />
+          <ReviewRow label="Description" value={htmlToPlainText(values.description) || "No description provided"} />
           <ReviewRow label="Theme color" value={<ColorPill color={values.themeColor} />} isRequired />
           <ReviewRow label="Payment account" value={paymentAccount?.name || "Not selected"} isRequired />
           <ReviewRow label="Discount coupon" value="Not configured" />

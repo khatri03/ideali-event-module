@@ -65,6 +65,10 @@ const eventWizardAdvancedSettingsResponseSchema = z.object({
   purchaseTimeLimit: z.number().int().positive().nullable().optional(),
 })
 
+const eventWizardProgressResponseSchema = z.object({
+  stepNo: z.number().int().min(0),
+})
+
 export async function fetchEvents(
   filters?: EventFilters & { page?: number; pageSize?: number }
 ): Promise<PaginatedResponse<AppEvent>> {
@@ -198,6 +202,15 @@ export async function updateEventWizardAdvancedSettings(
   })
 
   return eventWizardAdvancedSettingsResponseSchema.parse(res.data)
+}
+
+export interface EventWizardProgressResponse {
+  stepNo: number
+}
+
+export async function fetchEventWizardProgress(uniqueId: string): Promise<EventWizardProgressResponse> {
+  const res = await client.get<unknown>(API_ROUTES.eventWizardProgress(uniqueId))
+  return eventWizardProgressResponseSchema.parse(res.data)
 }
 
 export async function updateEvent(id: string, payload: Partial<Omit<AppEvent, "id">>): Promise<AppEvent> {
