@@ -11,11 +11,11 @@ import {
   Skeleton,
   Stack,
   Text,
-  Textarea,
   Tooltip,
 } from "@chakra-ui/react"
 import { Plus } from "lucide-react"
 import { useParams } from "react-router-dom"
+import { EventDescriptionEditor } from "@/features/events"
 import { createOrganizerVenue, fetchOrganizerVenues, type OrganizerVenueOption } from "@/api/organizer"
 import {
   fetchSessionWizardDescription,
@@ -271,31 +271,17 @@ function SessionDescriptionEditor({ sessionId, initialDescription }: { sessionId
       <Text fontSize="lg" fontWeight="800" color="gray.900">
         Description
       </Text>
-      <Box>
+      <Box maxW="720px">
         <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
           Session description
         </Text>
-        <Textarea
+        <EventDescriptionEditor
           value={description}
-          onChange={(event) => {
-            setDescription(event.target.value)
+          onChange={(value) => {
+            setDescription(value)
             if (error) {
               setError("")
             }
-          }}
-          placeholder="Add a short summary for speakers, attendees, or internal use..."
-          border="1px solid"
-          borderColor="secondaryGray.100"
-          borderRadius="14px"
-          minH="160px"
-          px={4}
-          py={3}
-          w="full"
-          maxW="720px"
-          _focusVisible={{
-            borderColor: "brand.400",
-            boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
-            outline: "none",
           }}
         />
         {error ? (
