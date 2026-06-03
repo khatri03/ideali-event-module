@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   Box,
   Button,
@@ -16,16 +16,30 @@ import { PencilLine, Plus, Sparkles, Settings2 } from "lucide-react"
 import { useParams } from "react-router-dom"
 import { useCreateEventWizardSession, useEventWizardSessions } from "../hooks/useEventWizardSessions"
 import { extractApiError } from "@/utils/errors"
+import { APP_ROUTES } from "@/utils/routes"
 
 export function EventSessionsStepPage() {
   const { eventId } = useParams<{ eventId?: string }>()
   const [isOpen, setIsOpen] = useState(false)
   const [sessionName, setSessionName] = useState("")
   const [sessionNameError, setSessionNameError] = useState("")
+  const sessionNameInputRef = useRef<HTMLInputElement>(null)
   const { sessions, isLoading, isError, error, refetch } = useEventWizardSessions(eventId)
   const createSessionMutation = useCreateEventWizardSession(eventId)
 
-  async function handleCreateSession() {
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      sessionNameInputRef.current?.focus()
+    })
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [isOpen])
+
+  async function handleCreateSession(navigateToWizard = false) {
     const trimmedName = sessionName.trim()
     if (!trimmedName) {
       setSessionNameError("Session name is required.")
@@ -34,10 +48,20 @@ export function EventSessionsStepPage() {
 
     setSessionNameError("")
     try {
-      await createSessionMutation.mutateAsync({ name: trimmedName })
+      const createdSession = await createSessionMutation.mutateAsync({ name: trimmedName })
       await refetch()
       setSessionName("")
       setIsOpen(false)
+      if (navigateToWizard) {
+        window.open(
+          APP_ROUTES.sessionWizard.editStep(
+            createdSession.uniqueId,
+            APP_ROUTES.sessionWizard.slugs.description,
+          ),
+          "_blank",
+          "noopener,noreferrer",
+        )
+      }
     } catch (mutationError: unknown) {
       setSessionNameError(extractApiError(mutationError))
     }
@@ -50,7 +74,7 @@ export function EventSessionsStepPage() {
           Sessions
         </Text>
         <Text fontSize="sm" color="text.secondary">
-          Quick Add creates a session and refreshes the list. Edit is not wired yet.
+          Quick Add creates a session and refreshes the list. Edit opens the session wizard.
         </Text>
 
         <Tooltip.Root openDelay={300} closeDelay={100}>
@@ -120,7 +144,9 @@ export function EventSessionsStepPage() {
                         px={0}
                         borderColor="border.subtle"
                         bg="white"
-                        onClick={() => window.alert(session.uniqueId)}
+                        onClick={() => {
+                          window.open(APP_ROUTES.sessionWizard.edit(session.uniqueId), "_blank", "noopener,noreferrer")
+                        }}
                       >
                         <PencilLine size={16} />
                       </Button>
@@ -208,6 +234,7 @@ export function EventSessionsStepPage() {
                     Session name
                   </Text>
                   <Input
+                    ref={sessionNameInputRef}
                     value={sessionName}
                     onChange={(event) => {
                       setSessionName(event.target.value)
@@ -266,7 +293,7 @@ export function EventSessionsStepPage() {
                       h="44px"
                       px={6}
                       minW={{ base: "full", md: "140px" }}
-                      onClick={handleCreateSession}
+                      onClick={() => handleCreateSession(false)}
                       loading={createSessionMutation.isPending}
                     >
                       <Sparkles size={16} />
@@ -278,7 +305,7 @@ export function EventSessionsStepPage() {
                       h="44px"
                       px={6}
                       minW={{ base: "full", md: "140px" }}
-                      onClick={handleCreateSession}
+                      onClick={() => handleCreateSession(true)}
                       loading={createSessionMutation.isPending}
                       color="white"
                       style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}

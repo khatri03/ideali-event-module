@@ -34,6 +34,20 @@ export const APP_ROUTES = {
     edit: (eventId: string) => `/organizer/events/${eventId}`,
     editStep: (eventId: string, step: string) => `/organizer/events/${eventId}/${step}`,
   },
+  sessionWizard: {
+    edit: (sessionId: string) => `/organizer/sessions/${sessionId}`,
+    editStep: (sessionId: string, step: string) => `/organizer/sessions/${sessionId}/${step}`,
+    slugs: {
+      name: "name",
+      description: "description",
+      venue: "venue",
+      booking: "booking",
+      startEnd: "start-end",
+      schedule: "schedule",
+      ticket: "ticket",
+      review: "review",
+    },
+  },
 } as const
 
 export const API_ROUTES = {

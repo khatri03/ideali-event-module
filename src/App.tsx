@@ -23,6 +23,7 @@ import {
   EventTimeZoneStepPage,
   EventWizardLayout,
 } from "./features/events"
+import { SessionWizardLayout, SessionWizardStepPage } from "./features/sessions"
 import { APP_ROUTES } from "@/utils/routes"
 
 export default function App() {
@@ -63,6 +64,17 @@ export default function App() {
           <Route path={APP_ROUTES.eventWizard.slugs.thankYouEmail} element={<EventThankYouEmailStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.advancedSettings} element={<EventPurchaseTimeLimitStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.review} element={<EventReviewStepPage />} />
+        </Route>
+        <Route path={APP_ROUTES.sessionWizard.edit(":sessionId")} element={<SessionWizardLayout />}>
+          <Route index element={<Navigate to={APP_ROUTES.sessionWizard.slugs.name} replace />} />
+          <Route path={APP_ROUTES.sessionWizard.slugs.name} element={<SessionWizardStepPage />} />
+          <Route path={APP_ROUTES.sessionWizard.slugs.description} element={<SessionWizardStepPage />} />
+          <Route path={APP_ROUTES.sessionWizard.slugs.venue} element={<SessionWizardStepPage />} />
+          <Route path={APP_ROUTES.sessionWizard.slugs.booking} element={<SessionWizardStepPage />} />
+          <Route path={APP_ROUTES.sessionWizard.slugs.startEnd} element={<SessionWizardStepPage />} />
+          <Route path={APP_ROUTES.sessionWizard.slugs.schedule} element={<SessionWizardStepPage />} />
+          <Route path={APP_ROUTES.sessionWizard.slugs.ticket} element={<SessionWizardStepPage />} />
+          <Route path={APP_ROUTES.sessionWizard.slugs.review} element={<SessionWizardStepPage />} />
         </Route>
 
         {/* App */}

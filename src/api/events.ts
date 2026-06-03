@@ -263,12 +263,9 @@ export async function fetchEventWizardSessions(uniqueId: string): Promise<EventW
 
 export async function createEventWizardSession(
   uniqueId: string,
-  payload: EventWizardSessionCreateRequest,
-  stepNo = 7
+  payload: EventWizardSessionCreateRequest
 ): Promise<EventWizardSessionItem> {
-  const res = await client.post<unknown>(API_ROUTES.eventWizardSessions(uniqueId), payload, {
-    params: { stepNo },
-  })
+  const res = await client.post<unknown>(API_ROUTES.eventWizardSessions(uniqueId), payload)
 
   return eventWizardSessionItemSchema.parse(res.data)
 }
