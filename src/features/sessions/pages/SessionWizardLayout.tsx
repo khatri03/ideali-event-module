@@ -4,6 +4,7 @@ import { Navigate, Outlet, useLocation, useNavigate, useParams } from "react-rou
 import { ArrowLeft, ChevronLeft, ChevronRight, Sparkles } from "lucide-react"
 import { APP_ROUTES } from "@/utils/routes"
 import { SessionWizardStepper } from "../components/SessionWizardStepper"
+import { SessionWizardActionsProvider, useSessionWizardActions } from "../hooks/useSessionWizardActions"
 import { useSessionWizardNavigation } from "../hooks/useSessionWizard"
 
 function WizardLoadingState() {
@@ -78,6 +79,14 @@ function PreviewFrame() {
 }
 
 export function SessionWizardLayout() {
+  return (
+    <SessionWizardActionsProvider>
+      <SessionWizardLayoutContent />
+    </SessionWizardActionsProvider>
+  )
+}
+
+function SessionWizardLayoutContent() {
   const navigate = useNavigate()
   const location = useLocation()
   const { sessionId } = useParams<{ sessionId?: string }>()
@@ -85,6 +94,7 @@ export function SessionWizardLayout() {
   const [isStepsCollapsedOverride, setIsStepsCollapsedOverride] = useState<boolean | null>(null)
   const isStepsCollapsed = isStepsCollapsedOverride ?? isMobile
   const { steps, activeStepIndex, goToStep, goBack, goNext, isFirstStep, isLastStep } = useSessionWizardNavigation()
+  const { runPrimaryAction } = useSessionWizardActions()
   const currentStepIndex = sessionId ? steps.findIndex((step) => step.path === location.pathname) : -1
   const shouldRedirectToStep = Boolean(sessionId) && currentStepIndex === -1
 
@@ -334,7 +344,14 @@ export function SessionWizardLayout() {
                     h="44px"
                     px={6}
                     minW={{ base: "full", md: "140px" }}
-                    onClick={goNext}
+                    onClick={async () => {
+                      try {
+                        await runPrimaryAction()
+                        goNext()
+                      } catch {
+                        // Step component handles inline validation/state.
+                      }
+                    }}
                     disabled={isLastStep}
                     color="white"
                     style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
