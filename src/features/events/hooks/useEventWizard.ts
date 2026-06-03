@@ -156,6 +156,7 @@ export function buildCreateEventPayload(values: EventWizardValues): Omit<AppEven
     tags: [],
     timeZone: values.timeZone?.trim() || undefined,
     paymentAccountId: values.paymentAccountId,
+    venueUniqueId: values.venueUniqueId?.trim() || undefined,
     purchaseTimeLimitHours: values.purchaseTimeLimitHours ?? null,
     sessions: values.sessions ?? [],
   }

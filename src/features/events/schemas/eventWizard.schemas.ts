@@ -12,9 +12,10 @@ export const eventWizardSchema = z.object({
   themeColor: z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Enter a valid hex color"),
   paymentAccountId: z.string().trim().min(1, "Payment account is required"),
   paymentMethods: z.array(z.number().int().positive()).min(1, "Select at least one payment method"),
+  venueUniqueId: z.string().trim().optional(),
   purchaseTimeLimitHours: z.number().int().positive().max(8760, "Use a reasonable number of hours").optional(),
   timeZone: z.string().trim().optional(),
-  sessions: z.array(eventSessionSchema).default([]),
+  sessions: z.array(eventSessionSchema),
 })
 
 export type EventWizardValues = z.infer<typeof eventWizardSchema>
@@ -25,6 +26,7 @@ export const eventWizardFieldGroups = {
   description: ["description"] as const,
   theme: ["themeColor"] as const,
   paymentAccount: ["paymentAccountId", "paymentMethods"] as const,
+  venue: ["venueUniqueId"] as const,
   timeZone: ["timeZone"] as const,
   sessions: ["sessions"] as const,
   advancedSettings: ["purchaseTimeLimitHours"] as const,
@@ -36,6 +38,7 @@ export const defaultEventWizardValues: EventWizardValues = {
   themeColor: "#7551FF",
   paymentAccountId: "",
   paymentMethods: [],
+  venueUniqueId: "",
   timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
   sessions: [],
 }

@@ -1,20 +1,21 @@
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { useMutation } from "@tanstack/react-query"
-import { Box, Button, CloseButton, Dialog, Flex, Input, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, CloseButton, Dialog, Flex, Input, Stack, Text, Tooltip } from "@chakra-ui/react"
 import { Plus } from "lucide-react"
 import { createOrganizerVenue } from "@/api/organizer"
 import { StyledSelect } from "@/components/common/StyledSelect"
 import { extractApiError } from "@/utils/errors"
 import { useOrganizerVenues } from "../hooks/useOrganizerVenues"
+import { useFormContext, useWatch } from "react-hook-form"
+import type { EventWizardValues } from "../schemas/eventWizard.schemas"
 
 export function EventVenueStepPage() {
+  const { control, setValue } = useFormContext<EventWizardValues>()
+  const venueUniqueId = useWatch({ control, name: "venueUniqueId" }) ?? ""
   const [isOpen, setIsOpen] = useState(false)
-  const [selectedVenueId, setSelectedVenueId] = useState("")
   const [venueName, setVenueName] = useState("")
   const [venueNameError, setVenueNameError] = useState("")
   const { venues, isLoading, refetch, isError, error } = useOrganizerVenues()
-
-  const venueOptions = useMemo(() => venues, [venues])
 
   const createVenueMutation = useMutation({
     mutationFn: createOrganizerVenue,
@@ -31,7 +32,11 @@ export function EventVenueStepPage() {
     try {
       const createdVenue = await createVenueMutation.mutateAsync({ name: trimmedName })
       await refetch()
-      setSelectedVenueId(createdVenue.uniqueId)
+      setValue("venueUniqueId", createdVenue.uniqueId, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      })
       setVenueName("")
       setIsOpen(false)
     } catch (error: unknown) {
@@ -52,44 +57,46 @@ export function EventVenueStepPage() {
         <Stack gap={2}>
           <Flex align="center" justify="space-between" gap={3}>
             <Text fontSize="sm" fontWeight="600" color="navy.700">
-              Venue <Text as="span" color="red.500" fontWeight="800" aria-hidden="true">*</Text>
+              Venue
             </Text>
-            <Button
-              variant="outline"
-              aria-label="Add venue"
-              borderRadius="999px"
-              h="44px"
-              w="44px"
-              minW="44px"
-              p={0}
-              onClick={() => setIsOpen(true)}
-            >
-              <Plus size={18} />
-            </Button>
+            <Tooltip.Root openDelay={300} closeDelay={100}>
+              <Tooltip.Trigger asChild>
+                <Button
+                  variant="outline"
+                  aria-label="Add venue"
+                  borderRadius="999px"
+                  h="44px"
+                  w="44px"
+                  minW="44px"
+                  p={0}
+                  onClick={() => setIsOpen(true)}
+                >
+                  <Plus size={18} />
+                </Button>
+              </Tooltip.Trigger>
+              <Tooltip.Positioner>
+                <Tooltip.Content>Quick add venue</Tooltip.Content>
+              </Tooltip.Positioner>
+            </Tooltip.Root>
           </Flex>
 
           <StyledSelect
-            options={venueOptions.map((venue) => ({
+            options={venues.map((venue) => ({
               label: venue.name,
               value: venue.uniqueId,
             }))}
-            value={selectedVenueId}
-            onChange={setSelectedVenueId}
+            value={venueUniqueId}
+            onChange={(value) =>
+              setValue("venueUniqueId", value, {
+                shouldDirty: true,
+                shouldTouch: true,
+                shouldValidate: true,
+              })
+            }
             placeholder={isLoading ? "Loading venues..." : "Select venue"}
             disabled={isLoading || isError}
           />
         </Stack>
-
-        {selectedVenueId ? (
-          <Box border="1px solid" borderColor="gray.200" borderRadius="16px" bg="white" px={4} py={3}>
-            <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.08em" mb={1}>
-              Selected venue
-            </Text>
-            <Text fontSize="sm" fontWeight="600" color="gray.800">
-              {venueOptions.find((venue) => venue.uniqueId === selectedVenueId)?.name ?? "Selected venue"}
-            </Text>
-          </Box>
-        ) : null}
 
         {isError ? (
           <Text fontSize="sm" color="red.500">
@@ -138,7 +145,7 @@ export function EventVenueStepPage() {
               <Stack gap={4}>
                 <Stack gap={2}>
                   <Text fontSize="sm" fontWeight="600" color="navy.700">
-                    Venue <Text as="span" color="red.500" fontWeight="800" aria-hidden="true">*</Text>
+                    Venue
                   </Text>
                   <Text fontSize="sm" color="gray.600">
                     Enter a venue name to add it to the list.

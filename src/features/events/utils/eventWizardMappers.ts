@@ -12,6 +12,7 @@ export function eventToWizardValues(event: AppEvent): EventWizardValues {
     themeColor: event.coverColor,
     paymentAccountId: event.paymentAccountId ?? defaultPaymentAccountId,
     paymentMethods: [],
+    venueUniqueId: "",
     purchaseTimeLimitHours: event.purchaseTimeLimitHours ?? undefined,
     timeZone: event.timeZone ?? "",
     sessions: event.sessions ?? [],

@@ -13,6 +13,7 @@ import {
   updateEventWizardDescription,
   updateEventWizardName,
   updateEventWizardPaymentAccount,
+  updateEventWizardVenue,
   updateEventWizardThemeColor,
 } from "@/api/events"
 import { useAuthSession } from "@/hooks/useAuthSession"
@@ -221,7 +222,7 @@ export function EventWizardLayout() {
     },
   })
 
-  function setWizardStepCache(step: "name" | "description" | "theme-color" | "advanced-settings", value: unknown) {
+  function setWizardStepCache(step: "name" | "description" | "theme-color" | "venue" | "advanced-settings", value: unknown) {
     if (!eventId) {
       return
     }
@@ -255,6 +256,7 @@ export function EventWizardLayout() {
   })
   const paymentAccountId = useWatch({ control: form.control, name: "paymentAccountId" })
   const paymentMethods = useWatch({ control: form.control, name: "paymentMethods" })
+  const venueUniqueId = useWatch({ control: form.control, name: "venueUniqueId" }) ?? ""
   const isReviewStep = activeStep.slug === "review"
   const isOptionalStep =
     activeStep.slug === "description" ||
@@ -295,6 +297,12 @@ export function EventWizardLayout() {
           shouldTouch: false,
           shouldValidate: false,
         })
+      } else if ("venueUniqueId" in draftData) {
+        form.setValue("venueUniqueId", draftData.venueUniqueId ?? "", {
+          shouldDirty: false,
+          shouldTouch: false,
+          shouldValidate: false,
+        })
       } else if ("purchaseTimeLimit" in draftData) {
         form.setValue("purchaseTimeLimitHours", draftData.purchaseTimeLimit ?? undefined, { shouldDirty: false, shouldTouch: false, shouldValidate: false })
       }
@@ -327,10 +335,10 @@ export function EventWizardLayout() {
         return eventWizardFieldGroups.theme
       case "payment-account":
         return eventWizardFieldGroups.paymentAccount
+      case "venue":
+        return eventWizardFieldGroups.venue
       case "time-zone":
         return eventWizardFieldGroups.timeZone
-      case "venue":
-        return []
       case "sessions":
         return []
       case "discount-coupon":
@@ -394,13 +402,20 @@ export function EventWizardLayout() {
           )
           setPaymentAccountStepCache(result)
           setWizardProgressCache(4)
+        } else if (activeStep.slug === "venue") {
+          if (venueUniqueId.trim()) {
+            const result = await updateEventWizardVenue(eventId, { venueUniqueId }, 6)
+            setWizardStepCache("venue", result)
+            setWizardProgressCache(6)
+          } else {
+            await persistSkippedStep(activeStep.slug)
+          }
         } else if (activeStep.slug === "advanced-settings") {
           const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 11)
           setWizardStepCache("advanced-settings", result)
           setWizardProgressCache(11)
         } else if (
           activeStep.slug === "time-zone" ||
-          activeStep.slug === "venue" ||
           activeStep.slug === "discount-coupon" ||
           activeStep.slug === "questions" ||
           activeStep.slug === "thank-you-email"
@@ -462,13 +477,20 @@ export function EventWizardLayout() {
           )
           setPaymentAccountStepCache(result)
           setWizardProgressCache(4)
+        } else if (activeStep.slug === "venue") {
+          if (venueUniqueId.trim()) {
+            const result = await updateEventWizardVenue(eventId, { venueUniqueId }, 6)
+            setWizardStepCache("venue", result)
+            setWizardProgressCache(6)
+          } else {
+            await persistSkippedStep(activeStep.slug)
+          }
         } else if (activeStep.slug === "advanced-settings") {
           const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 11)
           setWizardStepCache("advanced-settings", result)
           setWizardProgressCache(11)
         } else if (
           activeStep.slug === "time-zone" ||
-          activeStep.slug === "venue" ||
           activeStep.slug === "discount-coupon" ||
           activeStep.slug === "questions" ||
           activeStep.slug === "thank-you-email"

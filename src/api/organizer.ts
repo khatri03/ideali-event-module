@@ -62,7 +62,7 @@ export async function fetchOrganizerVenues(): Promise<OrganizerVenueOption[]> {
 }
 
 export async function createOrganizerVenue(payload: OrganizerVenueCreateRequest): Promise<OrganizerVenueOption> {
-  const res = await client.post<unknown>(`${API_ROUTES.organizerVenues}/create`, payload)
+  const res = await client.post<unknown>(API_ROUTES.organizerVenueCreate, payload)
   const responseData = parseServicePayload(res.data)
   const venue = organizerVenueSchema.parse(responseData)
 

@@ -35,6 +35,7 @@ export interface AppEvent {
   tags: string[]
   timeZone?: string
   paymentAccountId?: string
+  venueUniqueId?: string
   purchaseTimeLimitHours?: number | null
   sessions?: EventSession[]
 }

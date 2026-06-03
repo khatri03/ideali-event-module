@@ -28,6 +28,7 @@ const appEventSchema = z.object({
   tags: z.array(z.string()),
   timeZone: z.string().optional(),
   paymentAccountId: z.string().optional(),
+  venueUniqueId: z.string().optional(),
   purchaseTimeLimitHours: z.number().int().positive().nullable().optional(),
   sessions: z
     .array(
@@ -68,6 +69,10 @@ const eventWizardAdvancedSettingsResponseSchema = z.object({
 const eventWizardPaymentAccountResponseSchema = z.object({
   paymentAccountUniqueId: z.string().nullable().optional(),
   paymentMethods: z.array(z.number().int().positive()).nullable().optional(),
+})
+
+const eventWizardVenueResponseSchema = z.object({
+  venueUniqueId: z.string().nullable().optional(),
 })
 
 const eventWizardProgressResponseSchema = z.object({
@@ -217,6 +222,27 @@ export interface EventWizardPaymentAccountResponse {
 export async function fetchEventWizardPaymentAccount(uniqueId: string): Promise<EventWizardPaymentAccountResponse> {
   const res = await client.get<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "payment-account")}`)
   return eventWizardPaymentAccountResponseSchema.parse(res.data)
+}
+
+export interface EventWizardVenueResponse {
+  venueUniqueId?: string | null
+}
+
+export async function fetchEventWizardVenue(uniqueId: string): Promise<EventWizardVenueResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "venue")}`)
+  return eventWizardVenueResponseSchema.parse(res.data)
+}
+
+export async function updateEventWizardVenue(
+  uniqueId: string,
+  payload: { venueUniqueId: string },
+  stepNo = 6
+): Promise<EventWizardVenueResponse> {
+  const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "venue")}`, payload, {
+    params: { stepNo },
+  })
+
+  return eventWizardVenueResponseSchema.parse(res.data)
 }
 
 export async function updateEventWizardPaymentAccount(
