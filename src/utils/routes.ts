@@ -41,6 +41,7 @@ export const APP_ROUTES = {
       name: "name",
       description: "description",
       venue: "venue",
+      event: "event",
       booking: "booking",
       startEnd: "start-end",
       schedule: "schedule",

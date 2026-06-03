@@ -69,6 +69,7 @@ export default function App() {
           <Route index element={<Navigate to={APP_ROUTES.sessionWizard.slugs.name} replace />} />
           <Route path={APP_ROUTES.sessionWizard.slugs.name} element={<SessionWizardStepPage />} />
           <Route path={APP_ROUTES.sessionWizard.slugs.description} element={<SessionWizardStepPage />} />
+          <Route path={APP_ROUTES.sessionWizard.slugs.event} element={<SessionWizardStepPage />} />
           <Route path={APP_ROUTES.sessionWizard.slugs.venue} element={<SessionWizardStepPage />} />
           <Route path={APP_ROUTES.sessionWizard.slugs.booking} element={<SessionWizardStepPage />} />
           <Route path={APP_ROUTES.sessionWizard.slugs.startEnd} element={<SessionWizardStepPage />} />

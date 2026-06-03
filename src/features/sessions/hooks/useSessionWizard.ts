@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom"
 import { APP_ROUTES } from "@/utils/routes"
 
 export interface SessionWizardStep {
-  slug: "name" | "description" | "venue" | "booking" | "start-end" | "schedule" | "ticket" | "review"
+  slug: "name" | "description" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket" | "review"
   label: string
   path: string
 }
@@ -11,6 +11,7 @@ export interface SessionWizardStep {
 const SESSION_WIZARD_STEP_DEFINITIONS: Array<Omit<SessionWizardStep, "path">> = [
   { slug: "name", label: "Name" },
   { slug: "description", label: "Description" },
+  { slug: "event", label: "Event" },
   { slug: "venue", label: "Venue" },
   { slug: "booking", label: "Booking" },
   { slug: "start-end", label: "Start/End" },

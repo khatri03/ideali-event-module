@@ -23,9 +23,34 @@ export function SessionWizardStepper({
         const isComplete = index < completedStepCount
         const isFutureStep = index > maxUnlockedStepIndex
         const isNavigable = Boolean(onStepClick) && index <= maxUnlockedStepIndex && index !== activeStepIndex
+        const isDisabled = isFutureStep
+        const itemBg = isActive
+          ? isComplete
+            ? "green.300"
+            : "green.100"
+          : isComplete
+            ? "green.300"
+            : isDisabled
+              ? "gray.50"
+              : "white"
+        const itemBorderColor = isActive
+          ? isComplete
+            ? "green.900"
+            : "green.700"
+          : isComplete
+            ? "green.300"
+            : isDisabled
+              ? "gray.300"
+              : "gray.200"
+        const itemHoverBg = isNavigable ? (isComplete ? "green.400" : "green.200") : itemBg
+        const itemHoverBorderColor = isNavigable ? "green.300" : itemBorderColor
 
         return (
-          <Box key={step.slug} w="full" cursor={isFutureStep ? "not-allowed" : isNavigable ? "pointer" : "default"}>
+          <Box
+            key={step.slug}
+            w="full"
+            cursor={isFutureStep ? "not-allowed" : isNavigable ? "pointer" : "default"}
+          >
             <Button
               type="button"
               disabled={isFutureStep}
@@ -37,9 +62,9 @@ export function SessionWizardStepper({
               py={2}
               borderRadius="14px"
               border="2px solid"
-              borderColor={isActive ? "green.700" : isComplete ? "green.300" : isFutureStep ? "gray.300" : "gray.200"}
-              bg={isActive ? "green.50" : isComplete ? "green.100" : isFutureStep ? "gray.50" : "white"}
-              boxShadow={isActive ? "0 0 0 2px rgba(1, 181, 116, 0.22), 0 18px 34px rgba(1, 181, 116, 0.18)" : "none"}
+              borderColor={itemBorderColor}
+              bg={itemBg}
+              boxShadow={isActive ? "0 0 0 2px rgba(1, 181, 116, 0.22), 0 18px 34px rgba(1, 181, 116, 0.24)" : "none"}
               justifyContent="flex-start"
               alignItems="center"
               textAlign="left"
@@ -49,13 +74,28 @@ export function SessionWizardStepper({
               position="relative"
               overflow="hidden"
               _hover={{
-                bg: isActive ? "green.50" : isComplete ? "green.50" : isFutureStep ? "gray.50" : "gray.50",
+                bg: itemHoverBg,
+                borderColor: itemHoverBorderColor,
               }}
-              _disabled={{ opacity: 0.45, cursor: "inherit" }}
+              _disabled={{
+                opacity: 0.45,
+                cursor: "inherit",
+              }}
+              _active={{ transform: isNavigable ? "translateY(0)" : undefined }}
             >
               {isActive ? (
-                <Box position="absolute" left={0} top={0} bottom={0} w="4px" bg="green.700" borderTopLeftRadius="12px" borderBottomLeftRadius="12px" />
+                <Box
+                  position="absolute"
+                  left={0}
+                  top={0}
+                  bottom={0}
+                  w="4px"
+                  bg="green.700"
+                  borderTopLeftRadius="12px"
+                  borderBottomLeftRadius="12px"
+                />
               ) : null}
+
               <Flex align="center" gap={2.5} minW={0}>
                 <Flex
                   w={isActive ? "34px" : "30px"}
@@ -64,15 +104,25 @@ export function SessionWizardStepper({
                   align="center"
                   justify="center"
                   flexShrink={0}
-                  bg={isActive ? "green.600" : isComplete ? "green.800" : isFutureStep ? "gray.200" : "white"}
-                  color={isActive || isComplete ? "white" : isFutureStep ? "gray.500" : "green.700"}
+                  bg={isActive ? (isComplete ? "green.800" : "green.600") : isComplete ? "green.800" : isDisabled ? "gray.200" : "white"}
+                  color={isComplete || isActive ? "white" : isDisabled ? "gray.500" : "green.700"}
                   border="2px solid"
-                  borderColor={isActive ? "green.900" : isComplete ? "green.800" : isFutureStep ? "gray.300" : "green.200"}
+                  borderColor={isActive ? "green.900" : isComplete ? "green.800" : isDisabled ? "gray.300" : "green.200"}
+                  boxShadow={isActive ? "0 0 0 2px rgba(1, 181, 116, 0.30), 0 10px 20px rgba(1, 181, 116, 0.20)" : "none"}
                 >
                   {isComplete ? "✓" : <Text fontSize="sm" fontWeight="800">{index + 1}</Text>}
                 </Flex>
+
                 <Box minW={0}>
-                  <Text fontSize="sm" fontWeight={isActive ? "900" : "700"} color={isFutureStep ? "gray.500" : "gray.900"} lineHeight={1.1}>
+                  <Text
+                    fontSize="sm"
+                    fontWeight={isActive ? "900" : "700"}
+                    color={isDisabled ? "gray.500" : isActive ? "green.950" : "gray.900"}
+                    lineHeight={1.1}
+                    whiteSpace="nowrap"
+                    overflow="hidden"
+                    textOverflow="ellipsis"
+                  >
                     {step.label}
                   </Text>
                 </Box>
