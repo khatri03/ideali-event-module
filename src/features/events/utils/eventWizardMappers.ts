@@ -14,14 +14,6 @@ export function eventToWizardValues(event: AppEvent): EventWizardValues {
     paymentMethods: [],
     purchaseTimeLimitHours: event.purchaseTimeLimitHours ?? undefined,
     timeZone: event.timeZone ?? "",
-    sessions: event.sessions?.length
-      ? event.sessions
-      : [
-          {
-            title: "",
-            startsAt: "",
-            endsAt: "",
-          },
-        ],
+    sessions: event.sessions ?? [],
   }
 }

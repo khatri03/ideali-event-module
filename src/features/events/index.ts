@@ -8,6 +8,7 @@ export { EventPurchaseTimeLimitStepPage } from "./pages/EventPurchaseTimeLimitSt
 export { EventQuestionsStepPage } from "./pages/EventQuestionsStepPage"
 export { EventReviewStepPage } from "./pages/EventReviewStepPage"
 export { EventSessionsStepPage } from "./pages/EventSessionsStepPage"
+export { EventVenueStepPage } from "./pages/EventVenueStepPage"
 export { EventThankYouEmailStepPage } from "./pages/EventThankYouEmailStepPage"
 export { EventThemeColorStepPage } from "./pages/EventThemeColorStepPage"
 export { EventTimeZoneStepPage } from "./pages/EventTimeZoneStepPage"

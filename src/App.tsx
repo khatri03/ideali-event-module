@@ -17,6 +17,7 @@ import {
   EventQuestionsStepPage,
   EventReviewStepPage,
   EventSessionsStepPage,
+  EventVenueStepPage,
   EventThankYouEmailStepPage,
   EventThemeColorStepPage,
   EventTimeZoneStepPage,
@@ -40,6 +41,7 @@ export default function App() {
           <Route path={APP_ROUTES.eventWizard.slugs.themeColor} element={<EventThemeColorStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.paymentAccount} element={<EventPaymentAccountStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.timeZone} element={<EventTimeZoneStepPage />} />
+          <Route path={APP_ROUTES.eventWizard.slugs.venue} element={<EventVenueStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.sessions} element={<EventSessionsStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.discountCoupon} element={<EventDiscountCouponStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.questions} element={<EventQuestionsStepPage />} />
@@ -54,6 +56,7 @@ export default function App() {
           <Route path={APP_ROUTES.eventWizard.slugs.themeColor} element={<EventThemeColorStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.paymentAccount} element={<EventPaymentAccountStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.timeZone} element={<EventTimeZoneStepPage />} />
+          <Route path={APP_ROUTES.eventWizard.slugs.venue} element={<EventVenueStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.sessions} element={<EventSessionsStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.discountCoupon} element={<EventDiscountCouponStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.questions} element={<EventQuestionsStepPage />} />

@@ -20,6 +20,8 @@ export function EventWizardStepSkeleton({ step }: EventWizardStepSkeletonProps) 
       return <PurchaseLimitSkeleton />
     case "time-zone":
       return <TimeZoneSkeleton />
+    case "venue":
+      return <InfoSkeleton titleWidth="120px" />
     case "sessions":
       return <SessionsSkeleton />
     case "discount-coupon":

@@ -10,11 +10,12 @@ export interface EventWizardStep {
   slug:
     | "name"
     | "description"
-    | "theme-color"
-    | "payment-account"
-    | "advanced-settings"
-    | "time-zone"
-    | "sessions"
+  | "theme-color"
+  | "payment-account"
+  | "venue"
+  | "advanced-settings"
+  | "time-zone"
+  | "sessions"
     | "discount-coupon"
     | "questions"
     | "thank-you-email"
@@ -29,6 +30,7 @@ const EVENT_WIZARD_STEP_DEFINITIONS: Array<Omit<EventWizardStep, "path">> = [
   { slug: "theme-color", label: "Theme Color" },
   { slug: "payment-account", label: "Payment Account" },
   { slug: "time-zone", label: "Time Zone" },
+  { slug: "venue", label: "Venue" },
   { slug: "sessions", label: "Sessions" },
   { slug: "discount-coupon", label: "Discount Coupon" },
   { slug: "questions", label: "Questions" },
@@ -51,18 +53,20 @@ export function getEventWizardStepNumber(stepSlug: EventWizardStepSlug) {
       return 4
     case "time-zone":
       return 5
-    case "sessions":
+    case "venue":
       return 6
-    case "discount-coupon":
+    case "sessions":
       return 7
-    case "questions":
+    case "discount-coupon":
       return 8
-    case "thank-you-email":
+    case "questions":
       return 9
-    case "advanced-settings":
+    case "thank-you-email":
       return 10
-    case "review":
+    case "advanced-settings":
       return 11
+    case "review":
+      return 12
   }
 }
 
@@ -153,7 +157,7 @@ export function buildCreateEventPayload(values: EventWizardValues): Omit<AppEven
     timeZone: values.timeZone?.trim() || undefined,
     paymentAccountId: values.paymentAccountId,
     purchaseTimeLimitHours: values.purchaseTimeLimitHours ?? null,
-    sessions: values.sessions,
+    sessions: values.sessions ?? [],
   }
 }
 

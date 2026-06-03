@@ -21,7 +21,7 @@ export function useEventWizardResumeValues(eventId?: string, lastCompletedStepNo
       const [descriptionResult, themeColorResult, advancedSettingsResult] = await Promise.all([
         lastCompletedStepNo >= 1 ? fetchEventWizardDescription(eventId) : Promise.resolve(null),
         lastCompletedStepNo >= 2 ? fetchEventWizardThemeColor(eventId) : Promise.resolve(null),
-        lastCompletedStepNo >= 9 ? fetchEventWizardAdvancedSettings(eventId) : Promise.resolve(null),
+        lastCompletedStepNo >= 10 ? fetchEventWizardAdvancedSettings(eventId) : Promise.resolve(null),
       ])
 
       return {

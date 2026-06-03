@@ -23,6 +23,7 @@ export const APP_ROUTES = {
       themeColor: "theme-color",
       paymentAccount: "payment-account",
       timeZone: "time-zone",
+      venue: "venue",
       sessions: "sessions",
       discountCoupon: "discount-coupon",
       questions: "questions",
@@ -43,6 +44,7 @@ export const API_ROUTES = {
   eventWizardSkip: (id: string) => `/api/organizer/events/${id}/skip`,
   eventWizardStep: (id: string, step: string) => `/api/organizer/events/${id}/${step}`,
   eventWizardName: (id: string) => `/api/organizer/events/${id}/name`,
+  organizerVenues: "/api/organizer/venues/list",
 } as const
 
 export const API_AUTH_ROUTES = {

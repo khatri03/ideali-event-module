@@ -36,22 +36,29 @@ export function EventReviewStepPage() {
             value={values.purchaseTimeLimitHours ? `${values.purchaseTimeLimitHours} hours before start` : "Not set"}
           />
           <ReviewRow label="Time zone" value={values.timeZone || "Not set"} />
+          <ReviewRow label="Venue" value="Not configured" />
           <ReviewRow
             label="Sessions"
             value={
-              <Stack gap={2}>
-                {values.sessions.map((session, index) => (
-                  <Box key={`${session.title}-${index}`} p={3} borderRadius="16px" bg="app.bg" border="1px solid" borderColor="border.subtle">
-                    <Text fontSize="sm" fontWeight="700" color="text.primary">
-                      {session.title || `Session ${index + 1}`}
-                    </Text>
-                    <Text fontSize="sm" color="text.secondary">
-                      {session.startsAt ? format(new Date(session.startsAt), "PPpp") : "Start time not set"} -{" "}
-                      {session.endsAt ? format(new Date(session.endsAt), "PPpp") : "End time not set"}
-                    </Text>
-                  </Box>
-                ))}
-              </Stack>
+              values.sessions.length > 0 ? (
+                <Stack gap={2}>
+                  {values.sessions.map((session, index) => (
+                    <Box key={`${session.title}-${index}`} p={3} borderRadius="16px" bg="app.bg" border="1px solid" borderColor="border.subtle">
+                      <Text fontSize="sm" fontWeight="700" color="text.primary">
+                        {session.title || `Session ${index + 1}`}
+                      </Text>
+                      <Text fontSize="sm" color="text.secondary">
+                        {session.startsAt ? format(new Date(session.startsAt), "PPpp") : "Start time not set"} -{" "}
+                        {session.endsAt ? format(new Date(session.endsAt), "PPpp") : "End time not set"}
+                      </Text>
+                    </Box>
+                  ))}
+                </Stack>
+              ) : (
+                <Text fontSize="sm" color="text.secondary">
+                  No sessions configured.
+                </Text>
+              )
             }
           />
         </Stack>

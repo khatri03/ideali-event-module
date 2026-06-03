@@ -14,7 +14,7 @@ export const eventWizardSchema = z.object({
   paymentMethods: z.array(z.number().int().positive()).min(1, "Select at least one payment method"),
   purchaseTimeLimitHours: z.number().int().positive().max(8760, "Use a reasonable number of hours").optional(),
   timeZone: z.string().trim().optional(),
-  sessions: z.array(eventSessionSchema).min(1, "Add at least one session"),
+  sessions: z.array(eventSessionSchema).default([]),
 })
 
 export type EventWizardValues = z.infer<typeof eventWizardSchema>
@@ -37,11 +37,5 @@ export const defaultEventWizardValues: EventWizardValues = {
   paymentAccountId: "",
   paymentMethods: [],
   timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-  sessions: [
-    {
-      title: "",
-      startsAt: "",
-      endsAt: "",
-    },
-  ],
+  sessions: [],
 }

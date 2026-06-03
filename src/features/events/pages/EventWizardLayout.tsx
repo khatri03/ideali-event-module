@@ -196,8 +196,8 @@ export function EventWizardLayout() {
   const currentUser = auth.getUser() ?? (sessionQuery.data ? sessionDataToUser(sessionQuery.data) : null)
   const wizardProgressQuery = useEventWizardProgress(eventId)
   const lastCompletedStepNo = eventId ? wizardProgressQuery.data?.stepNo ?? 0 : 0
-  const completedStepCount = eventId ? Math.min(lastCompletedStepNo, 10) : 0
-  const maxUnlockedStepIndex = eventId ? Math.min(lastCompletedStepNo, 10) : 0
+  const completedStepCount = eventId ? Math.min(lastCompletedStepNo, 11) : 0
+  const maxUnlockedStepIndex = eventId ? Math.min(lastCompletedStepNo, 11) : 0
   const { steps, activeStepIndex, activeStep, goToStep, goBack, goNext, isFirstStep, isLastStep } = useEventWizardNavigation(maxUnlockedStepIndex)
   const wizardDraftQuery = useEventWizardDraft(eventId, activeStep.slug)
   const isMobile = useBreakpointValue({ base: true, lg: false }) ?? true
@@ -237,6 +237,14 @@ export function EventWizardLayout() {
     queryClient.setQueryData(["events", "wizard-draft", eventId, "payment-account"], value)
   }
 
+  function setWizardProgressCache(stepNo: number) {
+    if (!eventId) {
+      return
+    }
+
+    queryClient.setQueryData(["events", "wizard-progress", eventId], { stepNo })
+  }
+
   const form = useForm<EventWizardValues>({
     defaultValues: {
       ...defaultEventWizardValues,
@@ -251,6 +259,8 @@ export function EventWizardLayout() {
   const isOptionalStep =
     activeStep.slug === "description" ||
     activeStep.slug === "time-zone" ||
+    activeStep.slug === "venue" ||
+    activeStep.slug === "sessions" ||
     activeStep.slug === "discount-coupon" ||
     activeStep.slug === "questions" ||
     activeStep.slug === "thank-you-email" ||
@@ -319,8 +329,10 @@ export function EventWizardLayout() {
         return eventWizardFieldGroups.paymentAccount
       case "time-zone":
         return eventWizardFieldGroups.timeZone
+      case "venue":
+        return []
       case "sessions":
-        return eventWizardFieldGroups.sessions
+        return []
       case "discount-coupon":
       case "questions":
       case "thank-you-email":
@@ -347,7 +359,7 @@ export function EventWizardLayout() {
 
     if (!eventId && activeStep.slug === "name") {
       const result = await createEventDraftMutation.mutateAsync({ name, stepNo: 1 })
-      navigate(APP_ROUTES.eventWizard.editStep(result.uniqueId, "name"), { replace: true })
+      navigate(APP_ROUTES.eventWizard.editStep(result.uniqueId, "description"), { replace: true })
       return
     }
 
@@ -362,12 +374,15 @@ export function EventWizardLayout() {
         if (activeStep.slug === "name") {
           const result = await updateEventWizardName(eventId, { name }, 1)
           setWizardStepCache("name", result)
+          setWizardProgressCache(1)
         } else if (activeStep.slug === "description") {
           const result = await updateEventWizardDescription(eventId, { description }, 2)
           setWizardStepCache("description", result)
+          setWizardProgressCache(2)
         } else if (activeStep.slug === "theme-color") {
           const result = await updateEventWizardThemeColor(eventId, { themeColor }, 3)
           setWizardStepCache("theme-color", result)
+          setWizardProgressCache(3)
         } else if (activeStep.slug === "payment-account") {
           const result = await updateEventWizardPaymentAccount(
             eventId,
@@ -378,11 +393,14 @@ export function EventWizardLayout() {
             4,
           )
           setPaymentAccountStepCache(result)
+          setWizardProgressCache(4)
         } else if (activeStep.slug === "advanced-settings") {
-          const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 10)
+          const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 11)
           setWizardStepCache("advanced-settings", result)
+          setWizardProgressCache(11)
         } else if (
           activeStep.slug === "time-zone" ||
+          activeStep.slug === "venue" ||
           activeStep.slug === "discount-coupon" ||
           activeStep.slug === "questions" ||
           activeStep.slug === "thank-you-email"
@@ -424,12 +442,15 @@ export function EventWizardLayout() {
         if (activeStep.slug === "name") {
           const result = await updateEventWizardName(eventId, { name }, 1)
           setWizardStepCache("name", result)
+          setWizardProgressCache(1)
         } else if (activeStep.slug === "description") {
           const result = await updateEventWizardDescription(eventId, { description }, 2)
           setWizardStepCache("description", result)
+          setWizardProgressCache(2)
         } else if (activeStep.slug === "theme-color") {
           const result = await updateEventWizardThemeColor(eventId, { themeColor }, 3)
           setWizardStepCache("theme-color", result)
+          setWizardProgressCache(3)
         } else if (activeStep.slug === "payment-account") {
           const result = await updateEventWizardPaymentAccount(
             eventId,
@@ -440,11 +461,14 @@ export function EventWizardLayout() {
             4,
           )
           setPaymentAccountStepCache(result)
+          setWizardProgressCache(4)
         } else if (activeStep.slug === "advanced-settings") {
-          const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 10)
+          const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 11)
           setWizardStepCache("advanced-settings", result)
+          setWizardProgressCache(11)
         } else if (
           activeStep.slug === "time-zone" ||
+          activeStep.slug === "venue" ||
           activeStep.slug === "discount-coupon" ||
           activeStep.slug === "questions" ||
           activeStep.slug === "thank-you-email"
