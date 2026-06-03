@@ -12,6 +12,7 @@ export function useOrganizerVenues() {
   return {
     venues: query.data ?? [],
     isLoading: query.isLoading,
+    refetch: query.refetch,
     isError: query.isError,
     error: query.isError ? extractApiError(query.error) : "",
   }

@@ -26,6 +26,10 @@ export interface OrganizerVenueOption {
   name: string
 }
 
+export interface OrganizerVenueCreateRequest {
+  name: string
+}
+
 function readResponseData(payload: unknown): unknown {
   if (!payload || typeof payload !== "object") {
     return payload
@@ -55,4 +59,15 @@ export async function fetchOrganizerVenues(): Promise<OrganizerVenueOption[]> {
     uniqueId: item.UniqueId ?? item.uniqueId ?? "",
     name: item.Name ?? item.name ?? "",
   }))
+}
+
+export async function createOrganizerVenue(payload: OrganizerVenueCreateRequest): Promise<OrganizerVenueOption> {
+  const res = await client.post<unknown>(`${API_ROUTES.organizerVenues}/create`, payload)
+  const responseData = parseServicePayload(res.data)
+  const venue = organizerVenueSchema.parse(responseData)
+
+  return {
+    uniqueId: venue.UniqueId ?? venue.uniqueId ?? "",
+    name: venue.Name ?? venue.name ?? "",
+  }
 }

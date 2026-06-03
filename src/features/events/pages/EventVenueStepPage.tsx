@@ -1,33 +1,42 @@
 import { useMemo, useState } from "react"
+import { useMutation } from "@tanstack/react-query"
 import { Box, Button, CloseButton, Dialog, Flex, Input, Stack, Text } from "@chakra-ui/react"
 import { Plus } from "lucide-react"
+import { createOrganizerVenue } from "@/api/organizer"
 import { StyledSelect } from "@/components/common/StyledSelect"
-import type { OrganizerVenueOption } from "@/api/organizer"
+import { extractApiError } from "@/utils/errors"
 import { useOrganizerVenues } from "../hooks/useOrganizerVenues"
 
 export function EventVenueStepPage() {
   const [isOpen, setIsOpen] = useState(false)
   const [selectedVenueId, setSelectedVenueId] = useState("")
-  const [addedVenues, setAddedVenues] = useState<OrganizerVenueOption[]>([])
   const [venueName, setVenueName] = useState("")
-  const { venues, isLoading, isError, error } = useOrganizerVenues()
+  const [venueNameError, setVenueNameError] = useState("")
+  const { venues, isLoading, refetch, isError, error } = useOrganizerVenues()
 
-  const venueOptions = useMemo(() => [...addedVenues, ...venues], [addedVenues, venues])
+  const venueOptions = useMemo(() => venues, [venues])
 
-  function handleSave() {
-    if (!venueName.trim()) {
+  const createVenueMutation = useMutation({
+    mutationFn: createOrganizerVenue,
+  })
+
+  async function handleSave() {
+    const trimmedName = venueName.trim()
+    if (!trimmedName) {
+      setVenueNameError("Venue name is required.")
       return
     }
 
-    const localVenue = {
-      uniqueId: `local-${Date.now()}`,
-      name: venueName.trim(),
+    setVenueNameError("")
+    try {
+      const createdVenue = await createVenueMutation.mutateAsync({ name: trimmedName })
+      await refetch()
+      setSelectedVenueId(createdVenue.uniqueId)
+      setVenueName("")
+      setIsOpen(false)
+    } catch (error: unknown) {
+      setVenueNameError(extractApiError(error))
     }
-
-    setAddedVenues((current) => [localVenue, ...current])
-    setSelectedVenueId(localVenue.uniqueId)
-    setVenueName("")
-    setIsOpen(false)
   }
 
   return (
@@ -142,7 +151,12 @@ export function EventVenueStepPage() {
                   </Text>
                   <Input
                     value={venueName}
-                    onChange={(event) => setVenueName(event.target.value)}
+                    onChange={(event) => {
+                      setVenueName(event.target.value)
+                      if (venueNameError) {
+                        setVenueNameError("")
+                      }
+                    }}
                     placeholder="Main hall, rooftop, venue name..."
                     border="1px solid"
                     borderColor="secondaryGray.100"
@@ -156,6 +170,11 @@ export function EventVenueStepPage() {
                       outline: "none",
                     }}
                   />
+                  {venueNameError ? (
+                    <Text mt={2} fontSize="sm" color="red.500">
+                      {venueNameError}
+                    </Text>
+                  ) : null}
                 </Box>
 
                 <Flex
@@ -188,9 +207,9 @@ export function EventVenueStepPage() {
                     px={6}
                     minW={{ base: "full", md: "140px" }}
                     onClick={handleSave}
-                    disabled={!venueName.trim()}
                     color="white"
                     style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+                    loading={createVenueMutation.isPending}
                   >
                     Save
                   </Button>
