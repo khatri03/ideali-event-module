@@ -75,6 +75,11 @@ const eventWizardVenueResponseSchema = z.object({
   venueUniqueId: z.string().nullable().optional(),
 })
 
+const eventWizardSessionItemSchema = z.object({
+  uniqueId: z.string().min(1),
+  name: z.string().min(1),
+})
+
 const eventWizardProgressResponseSchema = z.object({
   stepNo: z.number().int().min(0),
 })
@@ -243,6 +248,29 @@ export async function updateEventWizardVenue(
   })
 
   return eventWizardVenueResponseSchema.parse(res.data)
+}
+
+export type EventWizardSessionItem = z.infer<typeof eventWizardSessionItemSchema>
+
+export interface EventWizardSessionCreateRequest {
+  name: string
+}
+
+export async function fetchEventWizardSessions(uniqueId: string): Promise<EventWizardSessionItem[]> {
+  const res = await client.get<unknown>(API_ROUTES.eventWizardSessions(uniqueId))
+  return z.array(eventWizardSessionItemSchema).parse(res.data)
+}
+
+export async function createEventWizardSession(
+  uniqueId: string,
+  payload: EventWizardSessionCreateRequest,
+  stepNo = 7
+): Promise<EventWizardSessionItem> {
+  const res = await client.post<unknown>(API_ROUTES.eventWizardSessions(uniqueId), payload, {
+    params: { stepNo },
+  })
+
+  return eventWizardSessionItemSchema.parse(res.data)
 }
 
 export async function updateEventWizardPaymentAccount(

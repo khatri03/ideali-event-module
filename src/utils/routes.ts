@@ -44,6 +44,7 @@ export const API_ROUTES = {
   eventWizardSkip: (id: string) => `/api/organizer/events/${id}/skip`,
   eventWizardStep: (id: string, step: string) => `/api/organizer/events/${id}/${step}`,
   eventWizardName: (id: string) => `/api/organizer/events/${id}/name`,
+  eventWizardSessions: (id: string) => `/api/organizer/events/${id}/sessions`,
   organizerVenues: "/api/organizer/venues/list",
   organizerVenueCreate: "/api/organizer/venues/create",
 } as const
