@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Badge,
   Box,
@@ -16,18 +16,26 @@ import {
 import { Plus } from "lucide-react"
 import { useParams } from "react-router-dom"
 import { EventDescriptionEditor } from "@/features/events"
-import { createOrganizerVenue, fetchOrganizerVenues, type OrganizerVenueOption } from "@/api/organizer"
+import {
+  createOrganizerVenue,
+  fetchOrganizerEvents,
+  fetchOrganizerVenues,
+  type OrganizerEventOption,
+  type OrganizerVenueOption,
+} from "@/api/organizer"
 import {
   fetchSessionWizardDescription,
+  fetchSessionWizardEvent,
   fetchSessionWizardName,
   fetchSessionWizardVenue,
   updateSessionWizardDescription,
+  updateSessionWizardEvent,
   updateSessionWizardName,
   updateSessionWizardVenue,
 } from "@/api/sessions"
 import { StyledSelect } from "@/components/common/StyledSelect"
 import { extractApiError } from "@/utils/errors"
-import { useSessionWizardNavigation } from "../hooks/useSessionWizard"
+import { getSessionWizardStepNumber, useSessionWizardNavigation } from "../hooks/useSessionWizard"
 import { useSessionWizardActions } from "../hooks/useSessionWizardActions"
 
 export function SessionWizardStepPage() {
@@ -40,6 +48,10 @@ export function SessionWizardStepPage() {
 
   if (activeStep?.slug === "description") {
     return <SessionDescriptionStep sessionId={sessionId} />
+  }
+
+  if (activeStep?.slug === "event") {
+    return <SessionEventStep sessionId={sessionId} />
   }
 
   if (activeStep?.slug === "venue") {
@@ -96,6 +108,7 @@ function SessionNameStep({ sessionId }: { sessionId: string }) {
 
 function SessionNameEditor({ sessionId }: { sessionId: string }) {
   const { setPrimaryAction } = useSessionWizardActions()
+  const queryClient = useQueryClient()
   const [error, setError] = useState("")
   const [draftName, setDraftName] = useState<string | null>(null)
   const [loadedName, setLoadedName] = useState("")
@@ -137,8 +150,10 @@ function SessionNameEditor({ sessionId }: { sessionId: string }) {
 
       setError("")
       try {
-        const result = await updateSessionWizardName(sessionId, { name: trimmedName })
+        const stepNo = getSessionWizardStepNumber("name")
+        const result = await updateSessionWizardName(sessionId, { name: trimmedName }, stepNo)
         setDraftName(result.name)
+        queryClient.setQueryData(["sessions", "wizard-progress", sessionId], { stepNo })
       } catch (saveError: unknown) {
         setError(extractApiError(saveError))
         throw saveError
@@ -146,7 +161,7 @@ function SessionNameEditor({ sessionId }: { sessionId: string }) {
     })
 
     return () => setPrimaryAction(null)
-  }, [displayedName, sessionId, setPrimaryAction])
+  }, [displayedName, queryClient, sessionId, setPrimaryAction])
 
   if (isLoading) {
     return <LoadingState label="Loading the session name..." />
@@ -168,7 +183,7 @@ function SessionNameEditor({ sessionId }: { sessionId: string }) {
   return (
     <SessionStepShell label="Name">
       <Text fontSize="lg" fontWeight="800" color="gray.900">
-        Name
+        Name *
       </Text>
       <Box>
         <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
@@ -246,6 +261,7 @@ function SessionDescriptionStep({ sessionId }: { sessionId: string }) {
 
 function SessionDescriptionEditor({ sessionId, initialDescription }: { sessionId: string; initialDescription: string }) {
   const { setPrimaryAction } = useSessionWizardActions()
+  const queryClient = useQueryClient()
   const [description, setDescription] = useState(initialDescription)
   const [error, setError] = useState("")
 
@@ -253,10 +269,12 @@ function SessionDescriptionEditor({ sessionId, initialDescription }: { sessionId
     setPrimaryAction(async () => {
       setError("")
       try {
+        const stepNo = getSessionWizardStepNumber("description")
         const result = await updateSessionWizardDescription(sessionId, {
           description: description.trim() ? description.trim() : null,
-        })
+        }, stepNo)
         setDescription(result.description ?? "")
+        queryClient.setQueryData(["sessions", "wizard-progress", sessionId], { stepNo })
       } catch (saveError: unknown) {
         setError(extractApiError(saveError))
         throw saveError
@@ -264,7 +282,7 @@ function SessionDescriptionEditor({ sessionId, initialDescription }: { sessionId
     })
 
     return () => setPrimaryAction(null)
-  }, [description, sessionId, setPrimaryAction])
+  }, [description, queryClient, sessionId, setPrimaryAction])
 
   return (
     <SessionStepShell label="Description">
@@ -292,6 +310,143 @@ function SessionDescriptionEditor({ sessionId, initialDescription }: { sessionId
       </Box>
       <Text fontSize="sm" color="text.secondary">
         Optional. Keep it helpful and focused.
+      </Text>
+    </SessionStepShell>
+  )
+}
+
+function SessionEventStep({ sessionId }: { sessionId: string }) {
+  const sessionEventQuery = useQuery({
+    queryKey: ["sessions", { sessionId, step: "event" }],
+    queryFn: () => fetchSessionWizardEvent(sessionId),
+    enabled: !!sessionId,
+    retry: false,
+  })
+
+  const eventsQuery = useQuery({
+    queryKey: ["events", { scope: "organizer", step: "list" }],
+    queryFn: fetchOrganizerEvents,
+    retry: false,
+  })
+
+  if (sessionEventQuery.isLoading || eventsQuery.isLoading) {
+    return <LoadingState label="Loading the session event..." />
+  }
+
+  if (sessionEventQuery.isError) {
+    return (
+      <SessionStepShell label="Event">
+        <Text fontSize="lg" fontWeight="800" color="gray.900">
+          Event
+        </Text>
+        <Text fontSize="sm" color="red.500">
+          {extractApiError(sessionEventQuery.error)}
+        </Text>
+      </SessionStepShell>
+    )
+  }
+
+  if (eventsQuery.isError) {
+    return (
+      <SessionStepShell label="Event">
+        <Text fontSize="lg" fontWeight="800" color="gray.900">
+          Event
+        </Text>
+        <Text fontSize="sm" color="red.500">
+          {extractApiError(eventsQuery.error)}
+        </Text>
+      </SessionStepShell>
+    )
+  }
+
+  return (
+    <SessionEventEditor
+      key={`${sessionId}:${sessionEventQuery.data?.eventUniqueId ?? ""}`}
+      sessionId={sessionId}
+      initialEventUniqueId={sessionEventQuery.data?.eventUniqueId ?? ""}
+      events={eventsQuery.data ?? []}
+    />
+  )
+}
+
+function SessionEventEditor({
+  sessionId,
+  initialEventUniqueId,
+  events,
+}: {
+  sessionId: string
+  initialEventUniqueId: string
+  events: OrganizerEventOption[]
+}) {
+  const { setPrimaryAction } = useSessionWizardActions()
+  const queryClient = useQueryClient()
+  const [selectedEventUniqueId, setSelectedEventUniqueId] = useState(initialEventUniqueId)
+  const [eventError, setEventError] = useState("")
+
+  useEffect(() => {
+    setPrimaryAction(async () => {
+      if (!selectedEventUniqueId) {
+        setEventError("Event is required.")
+        throw new Error("Event is required.")
+      }
+
+      setEventError("")
+      try {
+        const stepNo = getSessionWizardStepNumber("event")
+        const result = await updateSessionWizardEvent(sessionId, { eventUniqueId: selectedEventUniqueId }, stepNo)
+        queryClient.setQueryData(["sessions", { sessionId, step: "event" }], { ...result, stepNo })
+        queryClient.setQueryData(["sessions", "wizard-progress", sessionId], { stepNo })
+        setSelectedEventUniqueId(result.eventUniqueId)
+      } catch (saveError: unknown) {
+        setEventError(extractApiError(saveError))
+        throw saveError
+      }
+    })
+
+    return () => setPrimaryAction(null)
+  }, [queryClient, selectedEventUniqueId, sessionId, setPrimaryAction])
+
+  return (
+    <SessionStepShell label="Event">
+      <Text fontSize="lg" fontWeight="800" color="gray.900">
+        Event *
+      </Text>
+      <Stack gap={2} maxW="720px">
+        <Text fontSize="sm" fontWeight="600" color="navy.700">
+          Session event
+        </Text>
+
+        <StyledSelect
+          options={events.map((event) => ({
+            label: event.name,
+            value: event.uniqueId,
+          }))}
+          value={selectedEventUniqueId}
+          onChange={(value) => {
+            setSelectedEventUniqueId(value)
+            if (eventError) {
+              setEventError("")
+            }
+          }}
+          placeholder="Select event"
+          disabled={false}
+        />
+      </Stack>
+
+      {eventError ? (
+        <Text fontSize="sm" color="red.500">
+          {eventError}
+        </Text>
+      ) : null}
+
+      {events.length === 0 ? (
+        <Text fontSize="sm" color="gray.600">
+          No events found for the current organizer.
+        </Text>
+      ) : null}
+
+      <Text fontSize="sm" color="text.secondary">
+        Pick the event this session belongs to.
       </Text>
     </SessionStepShell>
   )
@@ -354,15 +509,12 @@ function SessionVenueEditor({
   venuesError: string
 }) {
   const { setPrimaryAction } = useSessionWizardActions()
+  const queryClient = useQueryClient()
   const [selectedVenueUniqueId, setSelectedVenueUniqueId] = useState(initialVenueUniqueId)
   const [isOpen, setIsOpen] = useState(false)
   const [venueName, setVenueName] = useState("")
   const [venueNameError, setVenueNameError] = useState("")
   const [venueError, setVenueError] = useState("")
-
-  const saveMutation = useMutation({
-    mutationFn: async (payload: { venueUniqueId: string }) => updateSessionWizardVenue(sessionId, payload),
-  })
 
   const createVenueMutation = useMutation({
     mutationFn: createOrganizerVenue,
@@ -372,7 +524,9 @@ function SessionVenueEditor({
     setPrimaryAction(async () => {
       setVenueError("")
       try {
-        const result = await saveMutation.mutateAsync({ venueUniqueId: selectedVenueUniqueId })
+        const stepNo = getSessionWizardStepNumber("venue")
+        const result = await updateSessionWizardVenue(sessionId, { venueUniqueId: selectedVenueUniqueId }, stepNo)
+        queryClient.setQueryData(["sessions", "wizard-progress", sessionId], { stepNo })
         setSelectedVenueUniqueId(result.venueUniqueId)
       } catch (saveError: unknown) {
         setVenueError(extractApiError(saveError))
@@ -381,7 +535,7 @@ function SessionVenueEditor({
     })
 
     return () => setPrimaryAction(null)
-  }, [selectedVenueUniqueId, saveMutation, setPrimaryAction])
+  }, [queryClient, selectedVenueUniqueId, sessionId, setPrimaryAction])
 
   async function handleCreateVenue() {
     const trimmedName = venueName.trim()

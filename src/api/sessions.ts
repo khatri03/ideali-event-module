@@ -32,6 +32,15 @@ const sessionVenueSchema = z.object({
   venueUniqueId: z.string().optional(),
 })
 
+const sessionEventSchema = z.object({
+  EventUniqueId: z.string().optional(),
+  eventUniqueId: z.string().optional(),
+})
+
+const sessionProgressSchema = z.object({
+  stepNo: z.number().int().min(0),
+})
+
 function readResponseData(payload: unknown): unknown {
   if (!payload || typeof payload !== "object") {
     return payload
@@ -66,6 +75,10 @@ export interface SessionWizardVenue {
   venueUniqueId: string
 }
 
+export interface SessionWizardEvent {
+  eventUniqueId: string
+}
+
 export interface SessionWizardNameRequest {
   name: string
 }
@@ -76,6 +89,14 @@ export interface SessionWizardDescriptionRequest {
 
 export interface SessionWizardVenueRequest {
   venueUniqueId: string
+}
+
+export interface SessionWizardEventRequest {
+  eventUniqueId: string
+}
+
+export interface SessionWizardProgressResponse {
+  stepNo: number
 }
 
 export async function fetchSessionWizardName(uniqueId: string): Promise<SessionWizardName> {
@@ -92,8 +113,11 @@ export async function fetchSessionWizardName(uniqueId: string): Promise<SessionW
 export async function updateSessionWizardName(
   uniqueId: string,
   payload: SessionWizardNameRequest,
+  stepNo = 1,
 ): Promise<SessionWizardName> {
-  const res = await client.post<unknown>(API_ROUTES.sessionWizardName(uniqueId), payload)
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardName(uniqueId), payload, {
+    params: { stepNo },
+  })
   const responseData = parseServicePayload(res.data)
   const session = sessionNameSchema.parse(responseData)
 
@@ -116,13 +140,42 @@ export async function fetchSessionWizardDescription(uniqueId: string): Promise<S
 export async function updateSessionWizardDescription(
   uniqueId: string,
   payload: SessionWizardDescriptionRequest,
+  stepNo = 2,
 ): Promise<SessionWizardDescription> {
-  const res = await client.post<unknown>(API_ROUTES.sessionWizardDescription(uniqueId), payload)
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardDescription(uniqueId), payload, {
+    params: { stepNo },
+  })
   const responseData = parseServicePayload(res.data)
   const description = sessionDescriptionSchema.parse(responseData)
 
   return {
     description: description.Description ?? description.description ?? null,
+  }
+}
+
+export async function fetchSessionWizardEvent(uniqueId: string): Promise<SessionWizardEvent> {
+  const res = await client.get<unknown>(API_ROUTES.sessionWizardEvent(uniqueId))
+  const responseData = parseServicePayload(res.data)
+  const sessionEvent = sessionEventSchema.parse(responseData)
+
+  return {
+    eventUniqueId: sessionEvent.EventUniqueId ?? sessionEvent.eventUniqueId ?? "",
+  }
+}
+
+export async function updateSessionWizardEvent(
+  uniqueId: string,
+  payload: SessionWizardEventRequest,
+  stepNo = 3,
+): Promise<SessionWizardEvent> {
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardEvent(uniqueId), payload, {
+    params: { stepNo },
+  })
+  const responseData = parseServicePayload(res.data)
+  const sessionEvent = sessionEventSchema.parse(responseData)
+
+  return {
+    eventUniqueId: sessionEvent.EventUniqueId ?? sessionEvent.eventUniqueId ?? "",
   }
 }
 
@@ -139,12 +192,21 @@ export async function fetchSessionWizardVenue(uniqueId: string): Promise<Session
 export async function updateSessionWizardVenue(
   uniqueId: string,
   payload: SessionWizardVenueRequest,
+  stepNo = 4,
 ): Promise<SessionWizardVenue> {
-  const res = await client.post<unknown>(API_ROUTES.sessionWizardVenue(uniqueId), payload)
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardVenue(uniqueId), payload, {
+    params: { stepNo },
+  })
   const responseData = parseServicePayload(res.data)
   const venue = sessionVenueSchema.parse(responseData)
 
   return {
     venueUniqueId: venue.VenueUniqueId ?? venue.venueUniqueId ?? "",
   }
+}
+
+export async function fetchSessionWizardProgress(uniqueId: string): Promise<SessionWizardProgressResponse> {
+  const res = await client.get<unknown>(API_ROUTES.sessionWizardProgress(uniqueId))
+  const responseData = parseServicePayload(res.data)
+  return sessionProgressSchema.parse(responseData)
 }

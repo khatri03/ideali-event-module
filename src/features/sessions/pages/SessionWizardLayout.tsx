@@ -6,6 +6,7 @@ import { APP_ROUTES } from "@/utils/routes"
 import { SessionWizardStepper } from "../components/SessionWizardStepper"
 import { SessionWizardActionsProvider, useSessionWizardActions } from "../hooks/useSessionWizardActions"
 import { useSessionWizardNavigation } from "../hooks/useSessionWizard"
+import { useSessionWizardProgress } from "../hooks/useSessionWizardProgress"
 
 function WizardLoadingState() {
   return (
@@ -94,21 +95,30 @@ function SessionWizardLayoutContent() {
   const [isStepsCollapsedOverride, setIsStepsCollapsedOverride] = useState<boolean | null>(null)
   const isStepsCollapsed = isStepsCollapsedOverride ?? isMobile
   const { steps, activeStepIndex, goToStep, goBack, goNext, isFirstStep, isLastStep } = useSessionWizardNavigation()
+  const wizardProgressQuery = useSessionWizardProgress(sessionId)
   const { runPrimaryAction } = useSessionWizardActions()
   const currentStepIndex = sessionId ? steps.findIndex((step) => step.path === location.pathname) : -1
-  const shouldRedirectToStep = Boolean(sessionId) && currentStepIndex === -1
+  const lastCompletedStepNo = sessionId ? wizardProgressQuery.data?.stepNo ?? 0 : 0
+  const completedStepCount = sessionId ? Math.min(lastCompletedStepNo, steps.length) : 0
+  const maxUnlockedStepIndex = sessionId ? Math.min(lastCompletedStepNo, steps.length - 1) : 0
+  const resolvedStepIndex = sessionId ? Math.min(lastCompletedStepNo, steps.length - 1) : -1
+  const resolvedStepPath = sessionId ? steps[resolvedStepIndex]?.path : undefined
+  const shouldRedirectToResolvedStep =
+    Boolean(sessionId) &&
+    wizardProgressQuery.isSuccess &&
+    (currentStepIndex === -1 || currentStepIndex > resolvedStepIndex)
 
   useEffect(() => {
-    if (shouldRedirectToStep && steps[0]) {
-      navigate(steps[0].path, { replace: true })
+    if (shouldRedirectToResolvedStep && resolvedStepPath) {
+      navigate(resolvedStepPath, { replace: true })
     }
-  }, [navigate, shouldRedirectToStep, steps])
+  }, [navigate, resolvedStepPath, shouldRedirectToResolvedStep])
 
   if (!sessionId) {
     return <Navigate to={APP_ROUTES.events} replace />
   }
 
-  if (!steps.length) {
+  if (!steps.length || (sessionId && (wizardProgressQuery.isLoading || (currentStepIndex === -1 && wizardProgressQuery.isSuccess)))) {
     return <WizardLoadingState />
   }
 
@@ -238,6 +248,8 @@ function SessionWizardLayoutContent() {
                   <SessionWizardStepper
                     steps={steps}
                     activeStepIndex={activeStepIndex}
+                    completedStepCount={completedStepCount}
+                    maxUnlockedStepIndex={maxUnlockedStepIndex}
                     onStepClick={goToStep}
                   />
                 ) : null}

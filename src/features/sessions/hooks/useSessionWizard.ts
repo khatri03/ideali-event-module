@@ -37,6 +37,22 @@ export function getSessionWizardStepIndex(pathname: string, sessionId?: string) 
   return steps.findIndex((step) => pathname === step.path)
 }
 
+const SESSION_WIZARD_STEP_NUMBER: Record<SessionWizardStep["slug"], number> = {
+  name: 1,
+  description: 2,
+  event: 3,
+  venue: 4,
+  booking: 5,
+  "start-end": 6,
+  schedule: 7,
+  ticket: 8,
+  review: 9,
+}
+
+export function getSessionWizardStepNumber(step: SessionWizardStep["slug"]) {
+  return SESSION_WIZARD_STEP_NUMBER[step]
+}
+
 export function useSessionWizardNavigation() {
   const navigate = useNavigate()
   const { pathname } = useLocation()

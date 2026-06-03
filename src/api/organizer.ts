@@ -21,12 +21,24 @@ const organizerVenueSchema = z.object({
   name: z.string().optional(),
 })
 
+const organizerEventSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  Name: z.string().optional(),
+  name: z.string().optional(),
+})
+
 export interface OrganizerVenueOption {
   uniqueId: string
   name: string
 }
 
 export interface OrganizerVenueCreateRequest {
+  name: string
+}
+
+export interface OrganizerEventOption {
+  uniqueId: string
   name: string
 }
 
@@ -70,4 +82,14 @@ export async function createOrganizerVenue(payload: OrganizerVenueCreateRequest)
     uniqueId: venue.UniqueId ?? venue.uniqueId ?? "",
     name: venue.Name ?? venue.name ?? "",
   }
+}
+
+export async function fetchOrganizerEvents(): Promise<OrganizerEventOption[]> {
+  const res = await client.get<unknown>(API_ROUTES.organizerEvents)
+  const responseData = Array.isArray(res.data) ? res.data : parseServicePayload(res.data)
+
+  return z.array(organizerEventSchema).parse(responseData).map((item) => ({
+    uniqueId: item.UniqueId ?? item.uniqueId ?? "",
+    name: item.Name ?? item.name ?? "",
+  }))
 }
