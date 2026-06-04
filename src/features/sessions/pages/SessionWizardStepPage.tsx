@@ -76,7 +76,7 @@ export function SessionWizardStepPage() {
   }
 
   if (activeStep?.slug === "schedule") {
-    return <SessionScheduleStep />
+    return <SessionScheduleStep sessionId={sessionId} />
   }
 
   if (activeStep?.slug === "name" || !activeStep) {
@@ -123,7 +123,7 @@ function SessionStepPlaceholder({ label }: { label: string }) {
   )
 }
 
-function SessionScheduleStep() {
+function SessionScheduleStep({ sessionId }: { sessionId: string }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [scheduleName, setScheduleName] = useState("")
@@ -135,6 +135,12 @@ function SessionScheduleStep() {
   const [schedules, setSchedules] = useState<Array<{ id: string; name: string; time: string }>>([])
   const scheduleNameInputRef = useRef<HTMLInputElement>(null)
   const scheduleTimeInputRef = useRef<HTMLInputElement>(null)
+  const durationQuery = useQuery({
+    queryKey: ["sessions", { sessionId, step: "start-end" }],
+    queryFn: () => fetchSessionWizardDuration(sessionId),
+    enabled: !!sessionId,
+    retry: false,
+  })
   const sortedSchedules = useMemo(
     () =>
       [...schedules].sort((left, right) => {
@@ -237,6 +243,14 @@ function SessionScheduleStep() {
     }
   }
 
+  const sessionStartsLabel = durationQuery.data?.startDate
+    ? format(parseISO(durationQuery.data.startDate), "dd-MMM-yyyy hh:mm aa")
+    : "Not set"
+  const sessionEndsLabel = durationQuery.data?.endDate
+    ? format(parseISO(durationQuery.data.endDate), "dd-MMM-yyyy hh:mm aa")
+    : "Not set"
+  const sessionDateTimeRange = `${sessionStartsLabel} to ${sessionEndsLabel}`
+
   return (
     <SessionStepShell label="Schedule">
       <Flex justify="flex-end">
@@ -252,9 +266,14 @@ function SessionScheduleStep() {
         </Tooltip.Root>
       </Flex>
 
-      <Text fontSize="lg" fontWeight="800" color="gray.900">
-        Schedule
-      </Text>
+      <Flex align={{ base: "flex-start", md: "center" }} gap={3} wrap="wrap">
+        <Text fontSize="lg" fontWeight="800" color="gray.900">
+          Schedule
+        </Text>
+        <Text fontSize="sm" fontWeight="600" color="gray.700" cursor="default" title="Star/end date time">
+          {sessionDateTimeRange}
+        </Text>
+      </Flex>
 
       <Box overflowX="auto" borderRadius="20px" border="1px solid" borderColor="gray.300" bg="app.bg">
         <Table.Root variant="line" size="sm" borderColor="gray.300">
@@ -316,6 +335,7 @@ function SessionScheduleStep() {
                       <Button
                         variant="outline"
                         size="sm"
+                        colorPalette="red"
                         aria-label={`Delete ${schedule.name}`}
                         borderRadius="full"
                         h="36px"
@@ -390,6 +410,10 @@ function SessionScheduleStep() {
 
             <Dialog.Body px={6} py={6} overflowY="auto">
               <Stack gap={4}>
+                <Text fontSize="sm" fontWeight="600" color="gray.700" cursor="default" title="Star/end date time">
+                  {sessionDateTimeRange}
+                </Text>
+
                 <SimpleGrid columns={{ base: 1, md: 12 }} gap={4}>
                   <Box gridColumn={{ base: "span 1", md: "span 8" }}>
                     <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
