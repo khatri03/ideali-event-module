@@ -100,7 +100,7 @@ function SessionWizardLayoutContent() {
   const { steps, activeStep, activeStepIndex, goToStep, goBack, goNext, isFirstStep, isLastStep } = useSessionWizardNavigation()
   const wizardProgressQuery = useSessionWizardProgress(sessionId)
   const { runPrimaryAction } = useSessionWizardActions()
-  const isDescriptionStep = activeStep?.slug === "description"
+  const isSkippableStep = activeStep?.slug === "description" || activeStep?.slug === "schedule"
   const currentStepIndex = sessionId ? steps.findIndex((step) => step.path === location.pathname) : -1
   const lastCompletedStepNo = sessionId ? wizardProgressQuery.data?.stepNo ?? 0 : 0
   const completedStepCount = sessionId ? Math.min(lastCompletedStepNo, steps.length) : 0
@@ -119,7 +119,7 @@ function SessionWizardLayoutContent() {
   }, [navigate, resolvedStepPath, shouldRedirectToResolvedStep])
 
   async function handleSkip() {
-    if (!sessionId || !activeStep || !isDescriptionStep) {
+    if (!sessionId || !activeStep || !isSkippableStep) {
       return
     }
 
@@ -356,10 +356,10 @@ function SessionWizardLayoutContent() {
                   Back
                 </Button>
                 <Flex gap={3} flexWrap="wrap" ml="auto">
-                  {isDescriptionStep ? (
+                  {isSkippableStep ? (
                     <Button
-                      variant="outline"
-                      colorPalette="gray"
+                      variant="subtle"
+                      colorPalette="orange"
                       borderRadius="14px"
                       h="44px"
                       px={6}

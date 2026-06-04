@@ -39,6 +39,13 @@ const sessionBookingSchema = z.object({
   bookingEndDate: z.string().nullable().optional(),
 })
 
+const sessionDurationSchema = z.object({
+  StartDate: z.string().nullable().optional(),
+  startDate: z.string().nullable().optional(),
+  EndDate: z.string().nullable().optional(),
+  endDate: z.string().nullable().optional(),
+})
+
 const sessionEventSchema = z.object({
   EventUniqueId: z.string().optional(),
   eventUniqueId: z.string().optional(),
@@ -91,6 +98,11 @@ export interface SessionWizardBooking {
   bookingEndDate: string | null
 }
 
+export interface SessionWizardDuration {
+  startDate: string | null
+  endDate: string | null
+}
+
 export interface SessionWizardNameRequest {
   name: string
 }
@@ -110,6 +122,11 @@ export interface SessionWizardEventRequest {
 export interface SessionWizardBookingRequest {
   bookingStartDate: string | null
   bookingEndDate: string | null
+}
+
+export interface SessionWizardDurationRequest {
+  startDate: string | null
+  endDate: string | null
 }
 
 export interface SessionWizardProgressResponse {
@@ -255,6 +272,34 @@ export async function updateSessionWizardBooking(
   return {
     bookingStartDate: booking.BookingStartDate ?? booking.bookingStartDate ?? null,
     bookingEndDate: booking.BookingEndDate ?? booking.bookingEndDate ?? null,
+  }
+}
+
+export async function fetchSessionWizardDuration(uniqueId: string): Promise<SessionWizardDuration> {
+  const res = await client.get<unknown>(API_ROUTES.sessionWizardDuration(uniqueId))
+  const responseData = parseServicePayload(res.data)
+  const duration = sessionDurationSchema.parse(responseData)
+
+  return {
+    startDate: duration.StartDate ?? duration.startDate ?? null,
+    endDate: duration.EndDate ?? duration.endDate ?? null,
+  }
+}
+
+export async function updateSessionWizardDuration(
+  uniqueId: string,
+  payload: SessionWizardDurationRequest,
+  stepNo = 6,
+): Promise<SessionWizardDuration> {
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardDuration(uniqueId), payload, {
+    params: { stepNo },
+  })
+  const responseData = parseServicePayload(res.data)
+  const duration = sessionDurationSchema.parse(responseData)
+
+  return {
+    startDate: duration.StartDate ?? duration.startDate ?? null,
+    endDate: duration.EndDate ?? duration.endDate ?? null,
   }
 }
 

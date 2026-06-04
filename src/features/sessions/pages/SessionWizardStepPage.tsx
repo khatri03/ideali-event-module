@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Badge,
@@ -11,10 +11,11 @@ import {
   SimpleGrid,
   Skeleton,
   Stack,
+  Table,
   Text,
   Tooltip,
 } from "@chakra-ui/react"
-import { Calendar, Plus } from "lucide-react"
+import { Calendar, PencilLine, Plus, Trash2 } from "lucide-react"
 import { useParams } from "react-router-dom"
 import { format, parseISO } from "date-fns"
 import { Timepicker } from "timepicker-ui-react"
@@ -30,11 +31,13 @@ import {
 import {
   fetchSessionWizardDescription,
   fetchSessionWizardBooking,
+  fetchSessionWizardDuration,
   fetchSessionWizardEvent,
   fetchSessionWizardName,
   fetchSessionWizardVenue,
   updateSessionWizardDescription,
   updateSessionWizardBooking,
+  updateSessionWizardDuration,
   updateSessionWizardEvent,
   updateSessionWizardName,
   updateSessionWizardVenue,
@@ -68,6 +71,14 @@ export function SessionWizardStepPage() {
     return <SessionBookingStep sessionId={sessionId} />
   }
 
+  if (activeStep?.slug === "start-end") {
+    return <SessionDurationStep sessionId={sessionId} />
+  }
+
+  if (activeStep?.slug === "schedule") {
+    return <SessionScheduleStep />
+  }
+
   if (activeStep?.slug === "name" || !activeStep) {
     return <SessionNameStep sessionId={sessionId} />
   }
@@ -86,6 +97,19 @@ function SessionStepShell({ label, children }: { label: string; children: ReactN
   )
 }
 
+function isTimepickerInteraction(target: EventTarget | null) {
+  return target instanceof HTMLElement && !!target.closest(".tp-ui, .tp-ui-modal, .tp-ui-popover, .tp-ui-wrapper")
+}
+
+function getTimepickerPersistentElements() {
+  return [
+    document.querySelector(".tp-ui-modal"),
+    document.querySelector(".tp-ui-popover"),
+    document.querySelector(".tp-ui-wrapper"),
+    document.querySelector(".tp-ui"),
+  ].filter((element): element is Element => element instanceof Element)
+}
+
 function SessionStepPlaceholder({ label }: { label: string }) {
   return (
     <SessionStepShell label={label}>
@@ -95,6 +119,476 @@ function SessionStepPlaceholder({ label }: { label: string }) {
       <Text fontSize="sm" color="gray.600">
         This step is scaffolded for now.
       </Text>
+    </SessionStepShell>
+  )
+}
+
+function SessionScheduleStep() {
+  const [isOpen, setIsOpen] = useState(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [scheduleName, setScheduleName] = useState("")
+  const [scheduleTime, setScheduleTime] = useState("")
+  const [scheduleNameError, setScheduleNameError] = useState("")
+  const [scheduleTimeError, setScheduleTimeError] = useState("")
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null)
+  const [scheduleToDelete, setScheduleToDelete] = useState<{ id: string; name: string } | null>(null)
+  const [schedules, setSchedules] = useState<Array<{ id: string; name: string; time: string }>>([])
+  const scheduleNameInputRef = useRef<HTMLInputElement>(null)
+  const scheduleTimeInputRef = useRef<HTMLInputElement>(null)
+  const sortedSchedules = useMemo(
+    () =>
+      [...schedules].sort((left, right) => {
+        const timeCompare = left.time.localeCompare(right.time)
+        if (timeCompare !== 0) {
+          return timeCompare
+        }
+
+        return left.name.localeCompare(right.name, undefined, { sensitivity: "base" })
+      }),
+    [schedules],
+  )
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      scheduleNameInputRef.current?.focus()
+    })
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [isOpen])
+
+  function resetScheduleForm() {
+    setScheduleName("")
+    setScheduleTime("")
+    setScheduleNameError("")
+    setScheduleTimeError("")
+    setEditingScheduleId(null)
+  }
+
+  function handleUpsertSchedule(closeAfterSave: boolean) {
+    const trimmedName = scheduleName.trim()
+
+    let hasError = false
+
+    if (!trimmedName) {
+      setScheduleNameError("Name is required.")
+      hasError = true
+    } else {
+      setScheduleNameError("")
+    }
+
+    if (!scheduleTime) {
+      setScheduleTimeError("Time is required.")
+      hasError = true
+    } else {
+      setScheduleTimeError("")
+    }
+
+    if (hasError) {
+      return
+    }
+
+    setSchedules((current) => {
+      if (editingScheduleId) {
+        return current.map((schedule) =>
+          schedule.id === editingScheduleId
+            ? { ...schedule, name: trimmedName, time: scheduleTime }
+            : schedule,
+        )
+      }
+
+      return [...current, { id: crypto.randomUUID(), name: trimmedName, time: scheduleTime }]
+    })
+
+    if (closeAfterSave) {
+      setIsOpen(false)
+      resetScheduleForm()
+      return
+    }
+
+    resetScheduleForm()
+  }
+
+  function handleDeleteSchedule() {
+    if (!scheduleToDelete) {
+      return
+    }
+
+    setSchedules((current) => current.filter((item) => item.id !== scheduleToDelete.id))
+    setIsDeleteOpen(false)
+    setScheduleToDelete(null)
+  }
+
+  function handleScheduleTimeConfirm(data: ConfirmEventData) {
+    if (!data.hour || !data.minutes) {
+      return
+    }
+
+    const time24h = data.type
+      ? to24hFromConfirm(data.hour, data.minutes, data.type)
+      : `${data.hour.padStart(2, "0")}:${data.minutes.padStart(2, "0")}`
+
+    setScheduleTime(time24h)
+    if (scheduleTimeError) {
+      setScheduleTimeError("")
+    }
+  }
+
+  return (
+    <SessionStepShell label="Schedule">
+      <Flex justify="flex-end">
+        <Tooltip.Root openDelay={300} closeDelay={100}>
+          <Tooltip.Trigger asChild>
+            <Button variant="outline" aria-label="Add schedule" borderRadius="999px" h="44px" w="44px" minW="44px" p={0} onClick={() => setIsOpen(true)}>
+              <Plus size={18} />
+            </Button>
+          </Tooltip.Trigger>
+          <Tooltip.Positioner>
+            <Tooltip.Content>Add schedule</Tooltip.Content>
+          </Tooltip.Positioner>
+        </Tooltip.Root>
+      </Flex>
+
+      <Text fontSize="lg" fontWeight="800" color="gray.900">
+        Schedule
+      </Text>
+
+      <Box overflowX="auto" borderRadius="20px" border="1px solid" borderColor="gray.300" bg="app.bg">
+        <Table.Root variant="line" size="sm" borderColor="gray.300">
+          <Table.ColumnGroup>
+            <Table.Column htmlWidth="60%" />
+            <Table.Column htmlWidth="20%" />
+            <Table.Column htmlWidth="20%" />
+          </Table.ColumnGroup>
+          <Table.Header>
+            <Table.Row bg="app.bg" borderColor="gray.300">
+              <Table.ColumnHeader px={6} py={3} borderColor="gray.300" fontSize="xs" fontWeight="700" color="text.secondary" textTransform="uppercase" letterSpacing="0.05em">
+                Name
+              </Table.ColumnHeader>
+              <Table.ColumnHeader px={6} py={3} borderColor="gray.300" fontSize="xs" fontWeight="700" color="text.secondary" textTransform="uppercase" letterSpacing="0.05em">
+                Time
+              </Table.ColumnHeader>
+              <Table.ColumnHeader px={4} py={3} borderColor="gray.300" textAlign="right" fontSize="xs" fontWeight="700" color="text.secondary" textTransform="uppercase" letterSpacing="0.05em">
+                Action
+              </Table.ColumnHeader>
+            </Table.Row>
+          </Table.Header>
+
+          <Table.Body>
+            {sortedSchedules.length > 0 ? (
+              sortedSchedules.map((schedule) => (
+                <Table.Row key={schedule.id} _hover={{ bg: "app.bg" }} transition="background 0.15s" borderColor="gray.300">
+                  <Table.Cell px={6} py={4} borderColor="gray.300">
+                    <Text fontSize="sm" fontWeight="600" color="text.primary" lineClamp={1}>
+                      {schedule.name}
+                    </Text>
+                  </Table.Cell>
+                  <Table.Cell px={6} py={4} borderColor="gray.300">
+                    <Text fontSize="sm" color="text.primary">
+                      {to12hDisplay(schedule.time)}
+                    </Text>
+                  </Table.Cell>
+                  <Table.Cell px={4} py={4} borderColor="gray.300">
+                    <Flex justify="flex-end" gap={2}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        aria-label={`Edit ${schedule.name}`}
+                        borderRadius="full"
+                        h="36px"
+                        w="36px"
+                        minW="36px"
+                        p={0}
+                        onClick={() => {
+                          setEditingScheduleId(schedule.id)
+                          setScheduleName(schedule.name)
+                          setScheduleTime(schedule.time)
+                          setScheduleNameError("")
+                          setScheduleTimeError("")
+                          setIsOpen(true)
+                        }}
+                      >
+                        <PencilLine size={15} />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        aria-label={`Delete ${schedule.name}`}
+                        borderRadius="full"
+                        h="36px"
+                        w="36px"
+                        minW="36px"
+                        p={0}
+                        onClick={() => {
+                          setScheduleToDelete({ id: schedule.id, name: schedule.name })
+                          setIsDeleteOpen(true)
+                        }}
+                      >
+                        <Trash2 size={15} />
+                      </Button>
+                    </Flex>
+                  </Table.Cell>
+                </Table.Row>
+              ))
+            ) : (
+              <Table.Row borderColor="gray.300">
+                <Table.Cell px={6} py={6} colSpan={3} borderColor="gray.300">
+                  <Text fontSize="sm" color="text.secondary">
+                    No schedule items added yet.
+                  </Text>
+                </Table.Cell>
+              </Table.Row>
+            )}
+          </Table.Body>
+        </Table.Root>
+      </Box>
+
+      <Dialog.Root
+        open={isOpen}
+        onOpenChange={(details) => {
+          setIsOpen(details.open)
+          if (!details.open) {
+            resetScheduleForm()
+          }
+        }}
+        onInteractOutside={(event) => {
+          if (isTimepickerInteraction(event.target) || isTimepickerInteraction(event.detail.target)) {
+            event.preventDefault()
+          }
+        }}
+        persistentElements={[() => getTimepickerPersistentElements()[0] ?? null, () => getTimepickerPersistentElements()[1] ?? null, () => getTimepickerPersistentElements()[2] ?? null, () => getTimepickerPersistentElements()[3] ?? null]}
+        size="lg"
+      >
+        <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
+        <Dialog.Positioner>
+          <Dialog.Content
+            bg="white"
+            borderRadius={{ base: 0, md: "24px" }}
+            maxW={{ base: "100vw", md: "560px" }}
+            maxH={{ base: "100dvh", md: "90vh" }}
+            m={{ base: 0, md: "auto" }}
+            overflow="hidden"
+            display="flex"
+            flexDirection="column"
+          >
+            <Box px={6} pt={6} pb={4} borderBottom="1px solid" borderColor="gray.200">
+              <Flex align="flex-start" justify="space-between" gap={4}>
+                <Box>
+                  <Text fontSize="lg" fontWeight="800" color="gray.900">
+                    {editingScheduleId ? "Edit schedule" : "Add schedule"}
+                  </Text>
+                </Box>
+
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton aria-label="Close schedule modal" />
+                </Dialog.CloseTrigger>
+              </Flex>
+            </Box>
+
+            <Dialog.Body px={6} py={6} overflowY="auto">
+              <Stack gap={4}>
+                <SimpleGrid columns={{ base: 1, md: 12 }} gap={4}>
+                  <Box gridColumn={{ base: "span 1", md: "span 8" }}>
+                    <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
+                      Name
+                    </Text>
+                    <Input
+                      ref={scheduleNameInputRef}
+                      value={scheduleName}
+                      onChange={(event) => {
+                        setScheduleName(event.target.value)
+                        if (scheduleNameError) {
+                          setScheduleNameError("")
+                        }
+                      }}
+                      placeholder="Schedule item name"
+                      border="1px solid"
+                      borderColor="secondaryGray.100"
+                      borderRadius="14px"
+                      h="44px"
+                      px={4}
+                      w="full"
+                      _focusVisible={{
+                        borderColor: "brand.400",
+                        boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
+                        outline: "none",
+                      }}
+                    />
+                    {scheduleNameError ? (
+                      <Text mt={2} fontSize="sm" color="red.500">
+                        {scheduleNameError}
+                      </Text>
+                    ) : null}
+                  </Box>
+
+                  <Box gridColumn={{ base: "span 1", md: "span 4" }}>
+                    <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
+                      Time
+                    </Text>
+                    <Timepicker
+                      ref={scheduleTimeInputRef}
+                      value={scheduleTime ? to12hDisplay(scheduleTime) : undefined}
+                      options={{ clock: { type: "12h", autoSwitchToMinutes: true } }}
+                      onConfirm={handleScheduleTimeConfirm}
+                      onFocus={() => {
+                        scheduleTimeInputRef.current?.click()
+                      }}
+                      placeholder="Select time"
+                      style={{
+                        border: "1px solid #E0E5F2",
+                        borderRadius: "14px",
+                        height: "44px",
+                        padding: "0 16px",
+                        width: "100%",
+                        fontSize: "14px",
+                        fontFamily: "'DM Sans', sans-serif",
+                        cursor: "pointer",
+                        background: "transparent",
+                        outline: "none",
+                        color: scheduleTime ? "#1B254B" : "#8F9BBA",
+                      }}
+                    />
+                    {scheduleTimeError ? (
+                      <Text mt={2} fontSize="sm" color="red.500">
+                        {scheduleTimeError}
+                      </Text>
+                    ) : null}
+                  </Box>
+                </SimpleGrid>
+
+                <Flex
+                  pt={5}
+                  borderTop="1px solid"
+                  borderColor="gray.200"
+                  align="center"
+                  justify="space-between"
+                  gap={3}
+                  flexWrap="wrap"
+                >
+                  <Button
+                    variant="outline"
+                    colorPalette="gray"
+                    borderRadius="14px"
+                    h="44px"
+                    px={6}
+                    minW={{ base: "full", md: "140px" }}
+                    _hover={{ bg: "gray.50", borderColor: "gray.300" }}
+                    onClick={() => {
+                      setIsOpen(false)
+                    }}
+                  >
+                    Close
+                  </Button>
+
+                  <Flex gap={3} flexWrap="wrap" ml="auto">
+                    <Button
+                      variant="outline"
+                      borderRadius="14px"
+                      h="44px"
+                      px={6}
+                      minW={{ base: "full", md: "160px" }}
+                      onClick={() => handleUpsertSchedule(false)}
+                    >
+                      {editingScheduleId ? "Update & Continue" : "Add & Continue"}
+                    </Button>
+
+                    <Button
+                      borderRadius="14px"
+                      h="44px"
+                      px={6}
+                      minW={{ base: "full", md: "160px" }}
+                      onClick={() => handleUpsertSchedule(true)}
+                      color="white"
+                      style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+                    >
+                      {editingScheduleId ? "Update & Close" : "Add & Close"}
+                    </Button>
+                  </Flex>
+                </Flex>
+              </Stack>
+            </Dialog.Body>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+
+      <Dialog.Root
+        open={isDeleteOpen}
+        onOpenChange={(details) => {
+          setIsDeleteOpen(details.open)
+          if (!details.open) {
+            setScheduleToDelete(null)
+          }
+        }}
+        size="sm"
+      >
+        <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
+        <Dialog.Positioner>
+          <Dialog.Content
+            bg="white"
+            borderRadius={{ base: 0, md: "24px" }}
+            maxW={{ base: "100vw", md: "420px" }}
+            m={{ base: 0, md: "auto" }}
+            overflow="hidden"
+          >
+            <Box px={6} pt={6} pb={4} borderBottom="1px solid" borderColor="gray.200">
+              <Flex align="flex-start" justify="space-between" gap={4}>
+                <Box>
+                  <Text fontSize="lg" fontWeight="800" color="gray.900">
+                    Delete schedule
+                  </Text>
+                  <Text fontSize="sm" color="gray.600">
+                    This action cannot be undone.
+                  </Text>
+                </Box>
+
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton aria-label="Close delete schedule dialog" />
+                </Dialog.CloseTrigger>
+              </Flex>
+            </Box>
+
+            <Dialog.Body px={6} py={6}>
+              <Stack gap={5}>
+                <Text fontSize="sm" color="gray.700">
+                  Are you sure you want to delete
+                  {" "}
+                  <Text as="span" fontWeight="700" color="gray.900">
+                    {scheduleToDelete?.name ?? "this schedule"}
+                  </Text>
+                  ?
+                </Text>
+
+                <Flex justify="flex-end" gap={3} flexWrap="wrap">
+                  <Button
+                    variant="outline"
+                    colorPalette="gray"
+                    borderRadius="14px"
+                    h="44px"
+                    px={6}
+                    minW={{ base: "full", md: "120px" }}
+                    onClick={() => setIsDeleteOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    borderRadius="14px"
+                    h="44px"
+                    px={6}
+                    minW={{ base: "full", md: "120px" }}
+                    colorPalette="red"
+                    onClick={handleDeleteSchedule}
+                  >
+                    Delete
+                  </Button>
+                </Flex>
+              </Stack>
+            </Dialog.Body>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </SessionStepShell>
   )
 }
@@ -564,14 +1058,14 @@ function SessionBookingStep({ sessionId }: { sessionId: string }) {
   })
 
   if (bookingQuery.isLoading) {
-    return <LoadingState label="Loading the booking tenure..." />
+    return <LoadingState label="Loading the booking window..." />
   }
 
   if (bookingQuery.isError) {
     return (
-      <SessionStepShell label="Booking Tenure">
+      <SessionStepShell label="Booking Window">
         <Text fontSize="lg" fontWeight="800" color="gray.900">
-          Booking Tenure
+          Booking Window
         </Text>
         <Text fontSize="sm" color="red.500">
           {extractApiError(bookingQuery.error)}
@@ -586,6 +1080,41 @@ function SessionBookingStep({ sessionId }: { sessionId: string }) {
       sessionId={sessionId}
       initialBookingStartDate={bookingQuery.data?.bookingStartDate ?? null}
       initialBookingEndDate={bookingQuery.data?.bookingEndDate ?? null}
+    />
+  )
+}
+
+function SessionDurationStep({ sessionId }: { sessionId: string }) {
+  const durationQuery = useQuery({
+    queryKey: ["sessions", { sessionId, step: "start-end" }],
+    queryFn: () => fetchSessionWizardDuration(sessionId),
+    enabled: !!sessionId,
+    retry: false,
+  })
+
+  if (durationQuery.isLoading) {
+    return <LoadingState label="Loading the session date/time..." />
+  }
+
+  if (durationQuery.isError) {
+    return (
+      <SessionStepShell label="Session Date/Time">
+        <Text fontSize="lg" fontWeight="800" color="gray.900">
+          Session Date/Time
+        </Text>
+        <Text fontSize="sm" color="red.500">
+          {extractApiError(durationQuery.error)}
+        </Text>
+      </SessionStepShell>
+    )
+  }
+
+  return (
+    <SessionDurationEditor
+      key={`${sessionId}:${durationQuery.data?.startDate ?? ""}:${durationQuery.data?.endDate ?? ""}`}
+      sessionId={sessionId}
+      initialStartDate={durationQuery.data?.startDate ?? null}
+      initialEndDate={durationQuery.data?.endDate ?? null}
     />
   )
 }
@@ -646,9 +1175,9 @@ function SessionBookingEditor({
   }, [bookingEndDate, bookingStartDate, queryClient, sessionId, setPrimaryAction])
 
   return (
-    <SessionStepShell label="Booking Tenure">
+    <SessionStepShell label="Booking Window">
       <Text fontSize="lg" fontWeight="800" color="gray.900">
-        Booking Tenure
+        Booking Window
       </Text>
 
       <SimpleGrid columns={{ base: 1, lg: 2 }} gap={5} maxW="760px">
@@ -699,6 +1228,120 @@ function SessionBookingEditor({
 
       <Text fontSize="sm" color="text.secondary">
         Choose when booking opens and closes for this session. UTC Date/Time recommended.
+      </Text>
+    </SessionStepShell>
+  )
+}
+
+function SessionDurationEditor({
+  sessionId,
+  initialStartDate,
+  initialEndDate,
+}: {
+  sessionId: string
+  initialStartDate: string | null
+  initialEndDate: string | null
+}) {
+  const { setPrimaryAction } = useSessionWizardActions()
+  const queryClient = useQueryClient()
+  const [sessionStartDate, setSessionStartDate] = useState<Date | null>(toDateTimeInputValue(initialStartDate))
+  const [sessionEndDate, setSessionEndDate] = useState<Date | null>(toDateTimeInputValue(initialEndDate))
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    setPrimaryAction(async () => {
+      if (!sessionStartDate || !sessionEndDate) {
+        const missingFields = [
+          !sessionStartDate ? "Session start date/time is required." : null,
+          !sessionEndDate ? "Session end date/time is required." : null,
+        ].filter(Boolean)
+        const message = missingFields.join(" ")
+        setError(message)
+        throw new Error(message)
+      }
+
+      if (sessionEndDate <= sessionStartDate) {
+        setError("Session end date/time must be after the start date/time.")
+        throw new Error("Session end date/time must be after the start date/time.")
+      }
+
+      setError("")
+      try {
+        const stepNo = getSessionWizardStepNumber("start-end")
+        const result = await updateSessionWizardDuration(
+          sessionId,
+          {
+            startDate: toBookingDateString(sessionStartDate),
+            endDate: toBookingDateString(sessionEndDate),
+          },
+          stepNo,
+        )
+        setSessionStartDate(toDateTimeInputValue(result.startDate))
+        setSessionEndDate(toDateTimeInputValue(result.endDate))
+        queryClient.setQueryData(["sessions", "wizard-progress", sessionId], { stepNo })
+      } catch (saveError: unknown) {
+        setError(extractApiError(saveError))
+        throw saveError
+      }
+    })
+
+    return () => setPrimaryAction(null)
+  }, [queryClient, sessionEndDate, sessionId, sessionStartDate, setPrimaryAction])
+
+  return (
+    <SessionStepShell label="Session Date/Time">
+      <Text fontSize="lg" fontWeight="800" color="gray.900">
+        Session Date/Time
+      </Text>
+
+      <SimpleGrid columns={{ base: 1, lg: 2 }} gap={5} maxW="760px">
+        <Stack gap={3}>
+          <Text fontSize="sm" fontWeight="700" color="gray.900">
+            Session Starts <Text as="span" color="red.500">*</Text>
+          </Text>
+          <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
+            <BookingDateTimeField
+              key={`session-start-${sessionStartDate?.toISOString() ?? "empty"}`}
+              value={sessionStartDate}
+              error={error.includes("Session start date/time is required.") ? "Session start date/time is required." : ""}
+              onChange={(nextStart) => {
+                setSessionStartDate(nextStart)
+                if (sessionEndDate && nextStart && sessionEndDate <= nextStart) {
+                  setSessionEndDate(null)
+                }
+                if (error) setError("")
+              }}
+            />
+          </Box>
+        </Stack>
+
+        <Stack gap={3}>
+          <Text fontSize="sm" fontWeight="700" color="gray.900">
+            Session Ends <Text as="span" color="red.500">*</Text>
+          </Text>
+          <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
+            <BookingDateTimeField
+              key={`session-end-${sessionEndDate?.toISOString() ?? "empty"}-${sessionStartDate?.toISOString() ?? "nostart"}`}
+              value={sessionEndDate}
+              minDate={sessionStartDate ?? undefined}
+              error={error.includes("Session end date/time is required.") ? "Session end date/time is required." : ""}
+              onChange={(value) => {
+                setSessionEndDate(value)
+                if (error) setError("")
+              }}
+            />
+          </Box>
+        </Stack>
+      </SimpleGrid>
+
+      {error ? (
+        <Text fontSize="sm" color="red.500" maxW="760px">
+          {error}
+        </Text>
+      ) : null}
+
+      <Text fontSize="sm" color="text.secondary">
+        Choose when this session starts and ends. UTC Date/Time recommended.
       </Text>
     </SessionStepShell>
   )
@@ -755,13 +1398,13 @@ function BookingDateTimeField({
         <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
           Date
         </Text>
-        <Box position="relative">
-          <Flex
-            align="center"
-            justify="space-between"
-            border="1px solid"
-            borderColor="secondaryGray.100"
-            borderRadius="14px"
+          <Box position="relative">
+            <Flex
+              align="center"
+              justify="space-between"
+              border="1px solid"
+              borderColor="secondaryGray.100"
+              borderRadius="14px"
             h="44px"
             px={4}
             cursor="pointer"
