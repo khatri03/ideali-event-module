@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { Box, Button, Flex, Grid, Heading, Skeleton, SkeletonText, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
 import { Navigate, Outlet, useLocation, useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, ChevronLeft, ChevronRight, Sparkles } from "lucide-react"
 import { APP_ROUTES } from "@/utils/routes"
+import { skipSessionWizardStep } from "@/api/sessions"
 import { SessionWizardStepper } from "../components/SessionWizardStepper"
 import { SessionWizardActionsProvider, useSessionWizardActions } from "../hooks/useSessionWizardActions"
-import { useSessionWizardNavigation } from "../hooks/useSessionWizard"
+import { getSessionWizardStepNumber, useSessionWizardNavigation } from "../hooks/useSessionWizard"
 import { useSessionWizardProgress } from "../hooks/useSessionWizardProgress"
 
 function WizardLoadingState() {
@@ -90,13 +92,15 @@ export function SessionWizardLayout() {
 function SessionWizardLayoutContent() {
   const navigate = useNavigate()
   const location = useLocation()
+  const queryClient = useQueryClient()
   const { sessionId } = useParams<{ sessionId?: string }>()
   const isMobile = useBreakpointValue({ base: true, lg: false }) ?? true
   const [isStepsCollapsedOverride, setIsStepsCollapsedOverride] = useState<boolean | null>(null)
   const isStepsCollapsed = isStepsCollapsedOverride ?? isMobile
-  const { steps, activeStepIndex, goToStep, goBack, goNext, isFirstStep, isLastStep } = useSessionWizardNavigation()
+  const { steps, activeStep, activeStepIndex, goToStep, goBack, goNext, isFirstStep, isLastStep } = useSessionWizardNavigation()
   const wizardProgressQuery = useSessionWizardProgress(sessionId)
   const { runPrimaryAction } = useSessionWizardActions()
+  const isDescriptionStep = activeStep?.slug === "description"
   const currentStepIndex = sessionId ? steps.findIndex((step) => step.path === location.pathname) : -1
   const lastCompletedStepNo = sessionId ? wizardProgressQuery.data?.stepNo ?? 0 : 0
   const completedStepCount = sessionId ? Math.min(lastCompletedStepNo, steps.length) : 0
@@ -113,6 +117,17 @@ function SessionWizardLayoutContent() {
       navigate(resolvedStepPath, { replace: true })
     }
   }, [navigate, resolvedStepPath, shouldRedirectToResolvedStep])
+
+  async function handleSkip() {
+    if (!sessionId || !activeStep || !isDescriptionStep) {
+      return
+    }
+
+    const stepNo = getSessionWizardStepNumber(activeStep.slug)
+    const result = await skipSessionWizardStep(sessionId, stepNo)
+    queryClient.setQueryData(["sessions", "wizard-progress", sessionId], { stepNo: result.stepNo })
+    goNext()
+  }
 
   if (!sessionId) {
     return <Navigate to={APP_ROUTES.events} replace />
@@ -341,6 +356,25 @@ function SessionWizardLayoutContent() {
                   Back
                 </Button>
                 <Flex gap={3} flexWrap="wrap" ml="auto">
+                  {isDescriptionStep ? (
+                    <Button
+                      variant="outline"
+                      colorPalette="gray"
+                      borderRadius="14px"
+                      h="44px"
+                      px={6}
+                      minW={{ base: "full", md: "140px" }}
+                      onClick={async () => {
+                        try {
+                          await handleSkip()
+                        } catch {
+                          // Skip path intentionally stays lightweight.
+                        }
+                      }}
+                    >
+                      Skip
+                    </Button>
+                  ) : null}
                   <Button
                     variant="outline"
                     borderRadius="14px"

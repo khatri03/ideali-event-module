@@ -153,6 +153,14 @@ export async function updateSessionWizardDescription(
   }
 }
 
+export async function skipSessionWizardStep(uniqueId: string, stepNo: number): Promise<SessionWizardProgressResponse> {
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardSkip(uniqueId), null, {
+    params: { stepNo },
+  })
+  const responseData = parseServicePayload(res.data)
+  return sessionProgressSchema.parse(responseData)
+}
+
 export async function fetchSessionWizardEvent(uniqueId: string): Promise<SessionWizardEvent> {
   const res = await client.get<unknown>(API_ROUTES.sessionWizardEvent(uniqueId))
   const responseData = parseServicePayload(res.data)
