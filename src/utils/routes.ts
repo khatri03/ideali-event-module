@@ -68,6 +68,9 @@ export const API_ROUTES = {
   sessionWizardVenue: (id: string) => `/api/organizer/sessions/${id}/venue`,
   sessionWizardBooking: (id: string) => `/api/organizer/sessions/${id}/booking`,
   sessionWizardDuration: (id: string) => `/api/organizer/sessions/${id}/start-end`,
+  sessionWizardSchedule: (id: string) => `/api/organizer/sessions/${id}/schedule`,
+  sessionWizardScheduleItem: (id: string, scheduleId: string) =>
+    `/api/organizer/sessions/${id}/schedule/${scheduleId}`,
   sessionWizardProgress: (id: string) => `/api/organizer/sessions/${id}/wizard-progress`,
   organizerVenues: "/api/organizer/venues/list",
   organizerVenueCreate: "/api/organizer/venues/create",

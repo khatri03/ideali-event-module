@@ -16,7 +16,7 @@ const SESSION_WIZARD_STEP_DEFINITIONS: Array<Omit<SessionWizardStep, "path">> = 
   { slug: "booking", label: "Booking Window" },
   { slug: "start-end", label: "Session Date/Time" },
   { slug: "schedule", label: "Schedule" },
-  { slug: "ticket", label: "Ticket" },
+  { slug: "ticket", label: "Tickets" },
   { slug: "review", label: "Review" },
 ]
 

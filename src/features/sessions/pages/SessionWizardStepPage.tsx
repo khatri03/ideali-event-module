@@ -29,12 +29,16 @@ import {
   type OrganizerVenueOption,
 } from "@/api/organizer"
 import {
+  createSessionWizardSchedule,
+  deleteSessionWizardSchedule,
   fetchSessionWizardDescription,
   fetchSessionWizardBooking,
   fetchSessionWizardDuration,
   fetchSessionWizardEvent,
   fetchSessionWizardName,
+  fetchSessionWizardSchedule,
   fetchSessionWizardVenue,
+  updateSessionWizardSchedule,
   updateSessionWizardDescription,
   updateSessionWizardBooking,
   updateSessionWizardDuration,
@@ -131,28 +135,58 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
   const [scheduleNameError, setScheduleNameError] = useState("")
   const [scheduleTimeError, setScheduleTimeError] = useState("")
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null)
-  const [scheduleToDelete, setScheduleToDelete] = useState<{ id: string; name: string } | null>(null)
-  const [schedules, setSchedules] = useState<Array<{ id: string; name: string; time: string }>>([])
+  const [scheduleToDelete, setScheduleToDelete] = useState<{ uniqueId: string; name: string } | null>(null)
   const scheduleNameInputRef = useRef<HTMLInputElement>(null)
   const scheduleTimeInputRef = useRef<HTMLInputElement>(null)
+  const queryClient = useQueryClient()
   const durationQuery = useQuery({
     queryKey: ["sessions", { sessionId, step: "start-end" }],
     queryFn: () => fetchSessionWizardDuration(sessionId),
     enabled: !!sessionId,
     retry: false,
   })
+  const schedulesQuery = useQuery({
+    queryKey: ["sessions", { sessionId, step: "schedule" }],
+    queryFn: () => fetchSessionWizardSchedule(sessionId),
+    enabled: !!sessionId,
+    retry: false,
+  })
   const sortedSchedules = useMemo(
     () =>
-      [...schedules].sort((left, right) => {
-        const timeCompare = left.time.localeCompare(right.time)
+      [...(schedulesQuery.data ?? [])].sort((left, right) => {
+        const timeCompare = left.scheduleTime.localeCompare(right.scheduleTime)
         if (timeCompare !== 0) {
           return timeCompare
         }
 
         return left.name.localeCompare(right.name, undefined, { sensitivity: "base" })
       }),
-    [schedules],
+    [schedulesQuery.data],
   )
+  const createScheduleMutation = useMutation({
+    mutationFn: (payload: { name: string; scheduleTime: string }) => createSessionWizardSchedule(sessionId, payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "schedule" }] })
+    },
+  })
+  const updateScheduleMutation = useMutation({
+    mutationFn: (payload: { scheduleUniqueId: string; name: string; scheduleTime: string }) =>
+      updateSessionWizardSchedule(sessionId, payload.scheduleUniqueId, {
+        name: payload.name,
+        scheduleTime: payload.scheduleTime,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "schedule" }] })
+    },
+  })
+  const deleteScheduleMutation = useMutation({
+    mutationFn: (scheduleUniqueId: string) => deleteSessionWizardSchedule(sessionId, scheduleUniqueId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "schedule" }] })
+    },
+  })
+  const scheduleActionError = createScheduleMutation.error ?? updateScheduleMutation.error
+  const deleteActionError = deleteScheduleMutation.error
 
   useEffect(() => {
     if (!isOpen) {
@@ -172,9 +206,11 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
     setScheduleNameError("")
     setScheduleTimeError("")
     setEditingScheduleId(null)
+    createScheduleMutation.reset()
+    updateScheduleMutation.reset()
   }
 
-  function handleUpsertSchedule(closeAfterSave: boolean) {
+  async function handleUpsertSchedule(closeAfterSave: boolean) {
     const trimmedName = scheduleName.trim()
 
     let hasError = false
@@ -197,17 +233,22 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
       return
     }
 
-    setSchedules((current) => {
+    try {
       if (editingScheduleId) {
-        return current.map((schedule) =>
-          schedule.id === editingScheduleId
-            ? { ...schedule, name: trimmedName, time: scheduleTime }
-            : schedule,
-        )
+        await updateScheduleMutation.mutateAsync({
+          scheduleUniqueId: editingScheduleId,
+          name: trimmedName,
+          scheduleTime,
+        })
+      } else {
+        await createScheduleMutation.mutateAsync({
+          name: trimmedName,
+          scheduleTime,
+        })
       }
-
-      return [...current, { id: crypto.randomUUID(), name: trimmedName, time: scheduleTime }]
-    })
+    } catch {
+      return
+    }
 
     if (closeAfterSave) {
       setIsOpen(false)
@@ -223,9 +264,12 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
       return
     }
 
-    setSchedules((current) => current.filter((item) => item.id !== scheduleToDelete.id))
-    setIsDeleteOpen(false)
-    setScheduleToDelete(null)
+    deleteScheduleMutation.mutate(scheduleToDelete.uniqueId, {
+      onSuccess: () => {
+        setIsDeleteOpen(false)
+        setScheduleToDelete(null)
+      },
+    })
   }
 
   function handleScheduleTimeConfirm(data: ConfirmEventData) {
@@ -256,7 +300,19 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
       <Flex justify="flex-end">
         <Tooltip.Root openDelay={300} closeDelay={100}>
           <Tooltip.Trigger asChild>
-            <Button variant="outline" aria-label="Add schedule" borderRadius="999px" h="44px" w="44px" minW="44px" p={0} onClick={() => setIsOpen(true)}>
+            <Button
+              variant="outline"
+              aria-label="Add schedule"
+              borderRadius="999px"
+              h="44px"
+              w="44px"
+              minW="44px"
+              p={0}
+              onClick={() => {
+                resetScheduleForm()
+                setIsOpen(true)
+              }}
+            >
               <Plus size={18} />
             </Button>
           </Tooltip.Trigger>
@@ -299,7 +355,12 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
           <Table.Body>
             {sortedSchedules.length > 0 ? (
               sortedSchedules.map((schedule) => (
-                <Table.Row key={schedule.id} _hover={{ bg: "app.bg" }} transition="background 0.15s" borderColor="gray.300">
+                <Table.Row
+                  key={schedule.uniqueId}
+                  _hover={{ bg: "app.bg" }}
+                  transition="background 0.15s"
+                  borderColor="gray.300"
+                >
                   <Table.Cell px={6} py={4} borderColor="gray.300">
                     <Text fontSize="sm" fontWeight="600" color="text.primary" lineClamp={1}>
                       {schedule.name}
@@ -307,7 +368,7 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
                   </Table.Cell>
                   <Table.Cell px={6} py={4} borderColor="gray.300">
                     <Text fontSize="sm" color="text.primary">
-                      {to12hDisplay(schedule.time)}
+                      {to12hDisplay(schedule.scheduleTime)}
                     </Text>
                   </Table.Cell>
                   <Table.Cell px={4} py={4} borderColor="gray.300">
@@ -322,11 +383,13 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
                         minW="36px"
                         p={0}
                         onClick={() => {
-                          setEditingScheduleId(schedule.id)
+                          setEditingScheduleId(schedule.uniqueId)
                           setScheduleName(schedule.name)
-                          setScheduleTime(schedule.time)
+                          setScheduleTime(schedule.scheduleTime)
                           setScheduleNameError("")
                           setScheduleTimeError("")
+                          createScheduleMutation.reset()
+                          updateScheduleMutation.reset()
                           setIsOpen(true)
                         }}
                       >
@@ -343,7 +406,8 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
                         minW="36px"
                         p={0}
                         onClick={() => {
-                          setScheduleToDelete({ id: schedule.id, name: schedule.name })
+                          deleteScheduleMutation.reset()
+                          setScheduleToDelete({ uniqueId: schedule.uniqueId, name: schedule.name })
                           setIsDeleteOpen(true)
                         }}
                       >
@@ -356,15 +420,25 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
             ) : (
               <Table.Row borderColor="gray.300">
                 <Table.Cell px={6} py={6} colSpan={3} borderColor="gray.300">
-                  <Text fontSize="sm" color="text.secondary">
-                    No schedule items added yet.
-                  </Text>
+                  {schedulesQuery.isLoading ? (
+                    <Skeleton h="20px" w="220px" borderRadius="8px" />
+                  ) : (
+                    <Text fontSize="sm" color="text.secondary">
+                      No schedule items added yet.
+                    </Text>
+                  )}
                 </Table.Cell>
               </Table.Row>
             )}
           </Table.Body>
         </Table.Root>
       </Box>
+
+      {schedulesQuery.isError ? (
+        <Text fontSize="sm" color="red.500">
+          {extractApiError(schedulesQuery.error)}
+        </Text>
+      ) : null}
 
       <Dialog.Root
         open={isOpen}
@@ -410,7 +484,7 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
 
             <Dialog.Body px={6} py={6} overflowY="auto">
               <Stack gap={4}>
-                <Text fontSize="sm" fontWeight="600" color="gray.700" cursor="default" title="Star/end date time">
+                  <Text fontSize="sm" fontWeight="600" color="gray.700" cursor="default" title="Star/end date time">
                   {sessionDateTimeRange}
                 </Text>
 
@@ -483,6 +557,12 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
                   </Box>
                 </SimpleGrid>
 
+                {scheduleActionError ? (
+                  <Text fontSize="sm" color="red.500">
+                    {extractApiError(scheduleActionError)}
+                  </Text>
+                ) : null}
+
                 <Flex
                   pt={5}
                   borderTop="1px solid"
@@ -515,6 +595,8 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
                       px={6}
                       minW={{ base: "full", md: "160px" }}
                       onClick={() => handleUpsertSchedule(false)}
+                      disabled={createScheduleMutation.isPending || updateScheduleMutation.isPending}
+                      loading={createScheduleMutation.isPending || updateScheduleMutation.isPending}
                     >
                       {editingScheduleId ? "Update & Continue" : "Add & Continue"}
                     </Button>
@@ -527,6 +609,8 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
                       onClick={() => handleUpsertSchedule(true)}
                       color="white"
                       style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+                      disabled={createScheduleMutation.isPending || updateScheduleMutation.isPending}
+                      loading={createScheduleMutation.isPending || updateScheduleMutation.isPending}
                     >
                       {editingScheduleId ? "Update & Close" : "Add & Close"}
                     </Button>
@@ -544,6 +628,7 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
           setIsDeleteOpen(details.open)
           if (!details.open) {
             setScheduleToDelete(null)
+            deleteScheduleMutation.reset()
           }
         }}
         size="sm"
@@ -585,6 +670,12 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
                   ?
                 </Text>
 
+                {deleteActionError ? (
+                  <Text fontSize="sm" color="red.500">
+                    {extractApiError(deleteActionError)}
+                  </Text>
+                ) : null}
+
                 <Flex justify="flex-end" gap={3} flexWrap="wrap">
                   <Button
                     variant="outline"
@@ -594,6 +685,7 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
                     px={6}
                     minW={{ base: "full", md: "120px" }}
                     onClick={() => setIsDeleteOpen(false)}
+                    disabled={deleteScheduleMutation.isPending}
                   >
                     Cancel
                   </Button>
@@ -604,6 +696,8 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
                     minW={{ base: "full", md: "120px" }}
                     colorPalette="red"
                     onClick={handleDeleteSchedule}
+                    disabled={deleteScheduleMutation.isPending}
+                    loading={deleteScheduleMutation.isPending}
                   >
                     Delete
                   </Button>

@@ -55,6 +55,17 @@ const sessionProgressSchema = z.object({
   stepNo: z.number().int().min(0),
 })
 
+const sessionScheduleSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  Name: z.string().optional(),
+  name: z.string().optional(),
+  ScheduleTime: z.string().optional(),
+  scheduleTime: z.string().optional(),
+})
+
+const sessionScheduleListSchema = z.array(sessionScheduleSchema)
+
 function readResponseData(payload: unknown): unknown {
   if (!payload || typeof payload !== "object") {
     return payload
@@ -72,6 +83,10 @@ function readResponseData(payload: unknown): unknown {
 }
 
 function parseServicePayload(payload: unknown): unknown {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
   const serviceResponse = serviceResponseSchema.parse(payload)
   return readResponseData(serviceResponse)
 }
@@ -131,6 +146,25 @@ export interface SessionWizardDurationRequest {
 
 export interface SessionWizardProgressResponse {
   stepNo: number
+}
+
+export interface SessionWizardSchedule {
+  uniqueId: string
+  name: string
+  scheduleTime: string
+}
+
+export interface SessionWizardScheduleRequest {
+  name: string
+  scheduleTime: string
+}
+
+function normalizeScheduleTime(value: string | undefined): string {
+  if (!value) {
+    return ""
+  }
+
+  return value.length >= 5 ? value.slice(0, 5) : value
 }
 
 export async function fetchSessionWizardName(uniqueId: string): Promise<SessionWizardName> {
@@ -301,6 +335,53 @@ export async function updateSessionWizardDuration(
     startDate: duration.StartDate ?? duration.startDate ?? null,
     endDate: duration.EndDate ?? duration.endDate ?? null,
   }
+}
+
+export async function fetchSessionWizardSchedule(uniqueId: string): Promise<SessionWizardSchedule[]> {
+  const res = await client.get<unknown>(API_ROUTES.sessionWizardSchedule(uniqueId))
+  const responseData = parseServicePayload(res.data)
+  const schedules = sessionScheduleListSchema.parse(responseData)
+
+  return schedules.map((schedule) => ({
+    uniqueId: schedule.UniqueId ?? schedule.uniqueId ?? "",
+    name: schedule.Name ?? schedule.name ?? "",
+    scheduleTime: normalizeScheduleTime(schedule.ScheduleTime ?? schedule.scheduleTime),
+  }))
+}
+
+export async function createSessionWizardSchedule(
+  uniqueId: string,
+  payload: SessionWizardScheduleRequest,
+): Promise<SessionWizardSchedule> {
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardSchedule(uniqueId), payload)
+  const responseData = parseServicePayload(res.data)
+  const schedule = sessionScheduleSchema.parse(responseData)
+
+  return {
+    uniqueId: schedule.UniqueId ?? schedule.uniqueId ?? "",
+    name: schedule.Name ?? schedule.name ?? "",
+    scheduleTime: normalizeScheduleTime(schedule.ScheduleTime ?? schedule.scheduleTime),
+  }
+}
+
+export async function updateSessionWizardSchedule(
+  uniqueId: string,
+  scheduleUniqueId: string,
+  payload: SessionWizardScheduleRequest,
+): Promise<SessionWizardSchedule> {
+  const res = await client.put<unknown>(API_ROUTES.sessionWizardScheduleItem(uniqueId, scheduleUniqueId), payload)
+  const responseData = parseServicePayload(res.data)
+  const schedule = sessionScheduleSchema.parse(responseData)
+
+  return {
+    uniqueId: schedule.UniqueId ?? schedule.uniqueId ?? "",
+    name: schedule.Name ?? schedule.name ?? "",
+    scheduleTime: normalizeScheduleTime(schedule.ScheduleTime ?? schedule.scheduleTime),
+  }
+}
+
+export async function deleteSessionWizardSchedule(uniqueId: string, scheduleUniqueId: string): Promise<void> {
+  await client.delete(API_ROUTES.sessionWizardScheduleItem(uniqueId, scheduleUniqueId))
 }
 
 export async function fetchSessionWizardProgress(uniqueId: string): Promise<SessionWizardProgressResponse> {
