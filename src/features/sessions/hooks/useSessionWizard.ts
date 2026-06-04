@@ -14,7 +14,7 @@ const SESSION_WIZARD_STEP_DEFINITIONS: Array<Omit<SessionWizardStep, "path">> = 
   { slug: "event", label: "Event" },
   { slug: "venue", label: "Venue" },
   { slug: "booking", label: "Booking Tenure" },
-  { slug: "start-end", label: "Session Duration" },
+  { slug: "start-end", label: "Session Tenure" },
   { slug: "schedule", label: "Schedule" },
   { slug: "ticket", label: "Ticket" },
   { slug: "review", label: "Review" },
