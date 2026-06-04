@@ -32,6 +32,13 @@ const sessionVenueSchema = z.object({
   venueUniqueId: z.string().optional(),
 })
 
+const sessionBookingSchema = z.object({
+  BookingStartDate: z.string().nullable().optional(),
+  bookingStartDate: z.string().nullable().optional(),
+  BookingEndDate: z.string().nullable().optional(),
+  bookingEndDate: z.string().nullable().optional(),
+})
+
 const sessionEventSchema = z.object({
   EventUniqueId: z.string().optional(),
   eventUniqueId: z.string().optional(),
@@ -79,6 +86,11 @@ export interface SessionWizardEvent {
   eventUniqueId: string
 }
 
+export interface SessionWizardBooking {
+  bookingStartDate: string | null
+  bookingEndDate: string | null
+}
+
 export interface SessionWizardNameRequest {
   name: string
 }
@@ -93,6 +105,11 @@ export interface SessionWizardVenueRequest {
 
 export interface SessionWizardEventRequest {
   eventUniqueId: string
+}
+
+export interface SessionWizardBookingRequest {
+  bookingStartDate: string | null
+  bookingEndDate: string | null
 }
 
 export interface SessionWizardProgressResponse {
@@ -210,6 +227,34 @@ export async function updateSessionWizardVenue(
 
   return {
     venueUniqueId: venue.VenueUniqueId ?? venue.venueUniqueId ?? "",
+  }
+}
+
+export async function fetchSessionWizardBooking(uniqueId: string): Promise<SessionWizardBooking> {
+  const res = await client.get<unknown>(API_ROUTES.sessionWizardBooking(uniqueId))
+  const responseData = parseServicePayload(res.data)
+  const booking = sessionBookingSchema.parse(responseData)
+
+  return {
+    bookingStartDate: booking.BookingStartDate ?? booking.bookingStartDate ?? null,
+    bookingEndDate: booking.BookingEndDate ?? booking.bookingEndDate ?? null,
+  }
+}
+
+export async function updateSessionWizardBooking(
+  uniqueId: string,
+  payload: SessionWizardBookingRequest,
+  stepNo = 5,
+): Promise<SessionWizardBooking> {
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardBooking(uniqueId), payload, {
+    params: { stepNo },
+  })
+  const responseData = parseServicePayload(res.data)
+  const booking = sessionBookingSchema.parse(responseData)
+
+  return {
+    bookingStartDate: booking.BookingStartDate ?? booking.bookingStartDate ?? null,
+    bookingEndDate: booking.BookingEndDate ?? booking.bookingEndDate ?? null,
   }
 }
 
