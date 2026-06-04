@@ -652,39 +652,43 @@ function SessionBookingEditor({
       </Text>
 
       <SimpleGrid columns={{ base: 1, lg: 2 }} gap={5} maxW="760px">
-        <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
-          <Badge colorPalette="green" variant="subtle" borderRadius="999px" px={3} py={1} mb={4}>
-            Booking Opens
-          </Badge>
-          <BookingDateTimeField
-            key={`booking-start-${bookingStartDate?.toISOString() ?? "empty"}`}
-            value={bookingStartDate}
-            error={error.includes("Booking start date/time is required.") ? "Booking start date/time is required." : ""}
-            onChange={(nextStart) => {
-              setBookingStartDate(nextStart)
-              if (bookingEndDate && nextStart && bookingEndDate <= nextStart) {
-                setBookingEndDate(null)
-              }
-              if (error) setError("")
-            }}
-          />
-        </Box>
+        <Stack gap={3}>
+          <Text fontSize="sm" fontWeight="700" color="gray.900">
+            Booking Opens <Text as="span" color="red.500">*</Text>
+          </Text>
+          <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
+            <BookingDateTimeField
+              key={`booking-start-${bookingStartDate?.toISOString() ?? "empty"}`}
+              value={bookingStartDate}
+              error={error.includes("Booking start date/time is required.") ? "Booking start date/time is required." : ""}
+              onChange={(nextStart) => {
+                setBookingStartDate(nextStart)
+                if (bookingEndDate && nextStart && bookingEndDate <= nextStart) {
+                  setBookingEndDate(null)
+                }
+                if (error) setError("")
+              }}
+            />
+          </Box>
+        </Stack>
 
-        <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
-          <Badge colorPalette="orange" variant="subtle" borderRadius="999px" px={3} py={1} mb={4}>
-            Booking Closes
-          </Badge>
-          <BookingDateTimeField
-            key={`booking-end-${bookingEndDate?.toISOString() ?? "empty"}-${bookingStartDate?.toISOString() ?? "nostart"}`}
-            value={bookingEndDate}
-            minDate={bookingStartDate ?? undefined}
-            error={error.includes("Booking end date/time is required.") ? "Booking end date/time is required." : ""}
-            onChange={(value) => {
-              setBookingEndDate(value)
-              if (error) setError("")
-            }}
-          />
-        </Box>
+        <Stack gap={3}>
+          <Text fontSize="sm" fontWeight="700" color="gray.900">
+            Booking Closes <Text as="span" color="red.500">*</Text>
+          </Text>
+          <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
+            <BookingDateTimeField
+              key={`booking-end-${bookingEndDate?.toISOString() ?? "empty"}-${bookingStartDate?.toISOString() ?? "nostart"}`}
+              value={bookingEndDate}
+              minDate={bookingStartDate ?? undefined}
+              error={error.includes("Booking end date/time is required.") ? "Booking end date/time is required." : ""}
+              onChange={(value) => {
+                setBookingEndDate(value)
+                if (error) setError("")
+              }}
+            />
+          </Box>
+        </Stack>
       </SimpleGrid>
 
       {error ? (
@@ -694,7 +698,7 @@ function SessionBookingEditor({
       ) : null}
 
       <Text fontSize="sm" color="text.secondary">
-        Choose when booking opens and closes for this session. Enter both date and time in UTC.
+        Choose when booking opens and closes for this session. UTC Date/Time recommended.
       </Text>
     </SessionStepShell>
   )
@@ -749,7 +753,7 @@ function BookingDateTimeField({
     <SimpleGrid columns={{ base: 1, sm: 2 }} gap={4}>
       <Box>
         <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
-          Date (UTC)
+          Date
         </Text>
         <Box position="relative">
           <Flex
@@ -811,7 +815,7 @@ function BookingDateTimeField({
 
       <Box>
         <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
-          Time (UTC)
+          Time
         </Text>
         <Timepicker
           value={selectedTime ? to12hDisplay(selectedTime) : undefined}
