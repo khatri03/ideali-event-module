@@ -99,6 +99,22 @@ const sessionTicketSchema = z.object({
       }),
     )
     .optional(),
+  pricePeriods: z
+    .array(
+      z.object({
+        UniqueId: z.string().optional(),
+        uniqueId: z.string().optional(),
+        Amount: z.union([z.number(), z.string()]).optional(),
+        amount: z.union([z.number(), z.string()]).optional(),
+        StartDateTime: z.string().optional(),
+        startDateTime: z.string().optional(),
+        EndDateTime: z.string().optional(),
+        endDateTime: z.string().optional(),
+        CurrentStatus: z.string().optional(),
+        currentStatus: z.string().optional(),
+      }),
+    )
+    .optional(),
 })
 
 const sessionTicketListSchema = z.array(sessionTicketSchema)
@@ -487,7 +503,7 @@ export async function fetchSessionWizardTickets(uniqueId: string): Promise<Sessi
     minPurchase: ticket.MinPurchase ?? ticket.minPurchase ?? null,
     maxPurchase: ticket.MaxPurchase ?? ticket.maxPurchase ?? null,
     isActive: ticket.IsActive ?? ticket.isActive ?? false,
-    pricePeriods: (ticket.PricePeriods ?? [])
+    pricePeriods: (ticket.PricePeriods ?? ticket.pricePeriods ?? [])
       .map((period) => ({
         uniqueId: period.UniqueId ?? period.uniqueId ?? "",
         amount: normalizeTicketPrice(period.Amount ?? period.amount),

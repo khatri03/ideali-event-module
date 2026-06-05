@@ -137,6 +137,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
   const [minimumPurchaseError, setMinimumPurchaseError] = useState("")
   const [maximumPurchaseError, setMaximumPurchaseError] = useState("")
   const [editingTicketId, setEditingTicketId] = useState<string | null>(null)
+  const [editingTicket, setEditingTicket] = useState<SessionWizardTicket | null>(null)
   const [ticketToDelete, setTicketToDelete] = useState<{ uniqueId: string; name: string } | null>(null)
   const ticketNameInputRef = useRef<HTMLInputElement>(null)
   const tenurePricingSectionRef = useRef<SessionTicketPricePeriodsSectionHandle>(null)
@@ -173,6 +174,17 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
     () => sortedTickets.find((ticket) => ticket.uniqueId === editingTicketId) ?? null,
     [editingTicketId, sortedTickets],
   )
+
+  useEffect(() => {
+    if (!editingTicketId) {
+      setEditingTicket(null)
+      return
+    }
+
+    if (selectedTicket) {
+      setEditingTicket(selectedTicket)
+    }
+  }, [editingTicketId, selectedTicket])
 
   const createTicketMutation = useMutation({
     mutationFn: (payload: {
@@ -250,6 +262,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
     setMinimumPurchaseError("")
     setMaximumPurchaseError("")
     setEditingTicketId(null)
+    setEditingTicket(null)
     createTicketMutation.reset()
     updateTicketMutation.reset()
   }
@@ -262,6 +275,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
   }
 
   function openEditTicketDialog(ticket: SessionWizardTicket) {
+    setEditingTicket(ticket)
     setEditingTicketId(ticket.uniqueId)
     setTicketName(ticket.name)
     setTicketDescription(ticket.description ?? "")
@@ -367,6 +381,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
         : await createTicketMutation.mutateAsync(payload)
 
       setEditingTicketId(savedTicket.uniqueId)
+      setEditingTicket(savedTicket)
       await tenurePricingSectionRef.current?.persistDrafts(savedTicket.uniqueId)
 
       if (closeAfterSave) {
@@ -903,7 +918,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                 </Stack>
 
                 <Box pl={{ base: 0, lg: 2 }}>
-                  <SessionTicketPricePeriodsSection ref={tenurePricingSectionRef} sessionId={sessionId} ticket={selectedTicket} />
+                  <SessionTicketPricePeriodsSection ref={tenurePricingSectionRef} sessionId={sessionId} ticket={editingTicket} />
                 </Box>
               </SimpleGrid>
             </Dialog.Body>
