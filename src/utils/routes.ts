@@ -73,6 +73,7 @@ export const API_ROUTES = {
     `/api/organizer/sessions/${id}/schedule/${scheduleId}`,
   sessionWizardTicket: (id: string) => `/api/organizer/sessions/${id}/ticket`,
   sessionWizardTicketItem: (id: string, ticketId: string) => `/api/organizer/sessions/${id}/ticket/${ticketId}`,
+  sessionWizardTicketDisplayOrder: (id: string) => `/api/organizer/sessions/${id}/ticket/display-order`,
   sessionWizardTicketPricePeriod: (id: string, ticketId: string) =>
     `/api/organizer/sessions/${id}/ticket/${ticketId}/price-period`,
   sessionWizardTicketPricePeriodItem: (id: string, ticketId: string, pricePeriodId: string) =>

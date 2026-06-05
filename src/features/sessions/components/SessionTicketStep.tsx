@@ -16,15 +16,25 @@ import {
   Text,
   Textarea,
 } from "@chakra-ui/react"
-import { ArrowUpDown, PencilLine, Plus, Trash2 } from "lucide-react"
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type Modifier } from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import { ArrowUpDown, GripVertical, PencilLine, Plus, Trash2 } from "lucide-react"
 import { extractApiError } from "@/utils/errors"
 import {
   createSessionWizardTicket,
   deleteSessionWizardTicket,
   fetchSessionWizardBooking,
   fetchSessionWizardTickets,
+  updateSessionWizardTicketDisplayOrder,
   updateSessionWizardTicket,
   type SessionWizardTicket,
+  type SessionWizardTicketDisplayOrderRequest,
 } from "@/api/sessions"
 import {
   SessionTicketPricePeriodsSection,
@@ -121,6 +131,88 @@ function getTimepickerPersistentElements() {
   ].filter((element): element is Element => element instanceof Element)
 }
 
+const restrictToParentBounds: Modifier = ({ transform, containerNodeRect, draggingNodeRect }) => {
+  if (!containerNodeRect || !draggingNodeRect) {
+    return transform
+  }
+
+  const minX = containerNodeRect.left - draggingNodeRect.left
+  const maxX = containerNodeRect.right - draggingNodeRect.right
+  const minY = containerNodeRect.top - draggingNodeRect.top
+  const maxY = containerNodeRect.bottom - draggingNodeRect.bottom
+
+  return {
+    ...transform,
+    x: Math.min(Math.max(transform.x, minX), maxX),
+    y: Math.min(Math.max(transform.y, minY), maxY),
+  }
+}
+
+function SortableTicketRow({
+  ticket,
+}: {
+  ticket: SessionWizardTicket
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: ticket.uniqueId })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  const DragIcon = GripVertical
+
+  return (
+    <Flex
+      ref={setNodeRef}
+      style={style}
+      align="center"
+      justify="space-between"
+      gap={4}
+      px={4}
+      py={3}
+      border="1px solid"
+      borderColor={isDragging ? "brand.300" : "gray.200"}
+      borderRadius="16px"
+      bg={isDragging ? "brand.50" : "white"}
+      boxShadow={isDragging ? "0 12px 30px rgba(117, 81, 255, 0.12)" : "none"}
+      opacity={isDragging ? 0.88 : 1}
+    >
+      <Box minW={0}>
+        <Text fontSize="sm" fontWeight="700" color="gray.900" lineClamp={1}>
+          {ticket.name}
+        </Text>
+        <Text fontSize="xs" color="gray.600" lineClamp={1}>
+          {formatMoneyDisplay(ticket.fullPrice)} · {formatCount(ticket.totalQuantity)} tickets
+        </Text>
+      </Box>
+
+      <Button
+        variant="outline"
+        colorPalette="gray"
+        borderRadius="full"
+        h="40px"
+        w="40px"
+        minW="40px"
+        p={0}
+        cursor={isDragging ? "grabbing" : "grab"}
+        _hover={{ bg: "gray.50" }}
+        {...attributes}
+        {...listeners}
+      >
+        <DragIcon size={16} />
+      </Button>
+    </Flex>
+  )
+}
+
 export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -131,6 +223,8 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
   const [minimumPurchase, setMinimumPurchase] = useState("")
   const [maximumPurchase, setMaximumPurchase] = useState("")
   const [isActive, setIsActive] = useState(true)
+  const [isSortOpen, setIsSortOpen] = useState(false)
+  const [sortedTicketDraft, setSortedTicketDraft] = useState<SessionWizardTicket[]>([])
   const [ticketNameError, setTicketNameError] = useState("")
   const [ticketTotalTicketsError, setTicketTotalTicketsError] = useState("")
   const [ticketPriceError, setTicketPriceError] = useState("")
@@ -167,7 +261,12 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
   })
 
   const sortedTickets = useMemo(
-    () => [...(ticketsQuery.data ?? [])].sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: "base" })),
+    () =>
+      [...(ticketsQuery.data ?? [])].sort(
+        (left, right) =>
+          left.displayOrder - right.displayOrder ||
+          left.name.localeCompare(right.name, undefined, { sensitivity: "base" }),
+      ),
     [ticketsQuery.data],
   )
   const selectedTicket = useMemo(
@@ -233,8 +332,24 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
     },
   })
 
+  const sortTicketsMutation = useMutation({
+    mutationFn: (payload: SessionWizardTicketDisplayOrderRequest) =>
+      updateSessionWizardTicketDisplayOrder(sessionId, payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "ticket" }] })
+    },
+  })
+
   const ticketActionError = createTicketMutation.error ?? updateTicketMutation.error
   const deleteActionError = deleteTicketMutation.error
+  const sortActionError = sortTicketsMutation.error
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 6,
+      },
+    }),
+  )
 
   useEffect(() => {
     if (!isOpen) {
@@ -247,6 +362,53 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
 
     return () => window.cancelAnimationFrame(frameId)
   }, [isOpen])
+
+  useEffect(() => {
+    if (!isSortOpen) {
+      return
+    }
+
+    setSortedTicketDraft(sortedTickets)
+  }, [isSortOpen, sortedTickets])
+
+  function openSortTicketsDialog() {
+    setSortedTicketDraft(sortedTickets)
+    setIsSortOpen(true)
+  }
+
+  function handleSortDragEnd(event: { active: { id: string }; over: { id: string } | null }) {
+    if (!event.over || event.active.id === event.over.id) {
+      return
+    }
+
+    setSortedTicketDraft((current) => {
+      const oldIndex = current.findIndex((item) => item.uniqueId === event.active.id)
+      const newIndex = current.findIndex((item) => item.uniqueId === event.over?.id)
+
+      if (oldIndex < 0 || newIndex < 0) {
+        return current
+      }
+
+      return arrayMove(current, oldIndex, newIndex)
+    })
+  }
+
+  async function handleSortSave() {
+    try {
+      await sortTicketsMutation.mutateAsync({
+        ticketUniqueIds: sortedTicketDraft.map((ticket) => ticket.uniqueId),
+      })
+      setIsSortOpen(false)
+      setSortedTicketDraft([])
+    } catch {
+      return
+    }
+  }
+
+  function closeSortDialog() {
+    setIsSortOpen(false)
+    setSortedTicketDraft([])
+  }
 
   function resetTicketForm() {
     setTicketName("")
@@ -425,14 +587,14 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
         <Flex gap={2}>
           <Button
             variant="outline"
-            aria-label="Sort tickets"
-            title="Sort tickets"
+            aria-label="Change display order"
+            title="Change display order"
             borderRadius="999px"
             h="44px"
             w="44px"
             minW="44px"
             p={0}
-            onClick={() => undefined}
+            onClick={openSortTicketsDialog}
           >
             <ArrowUpDown size={18} />
           </Button>
@@ -984,6 +1146,122 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                     Save &amp; Close
                   </Button>
                 </Flex>
+              </Stack>
+            </Box>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+
+      <Dialog.Root
+        open={isSortOpen}
+        onOpenChange={(details) => {
+          setIsSortOpen(details.open)
+          if (!details.open) {
+            closeSortDialog()
+          }
+        }}
+      >
+        <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
+        <Dialog.Positioner>
+          <Dialog.Content
+            bg="white"
+            borderRadius={{ base: 0, md: "24px" }}
+            w={{ base: "100vw", md: "820px" }}
+            maxW={{ base: "100vw", md: "820px" }}
+            maxH={{ base: "100dvh", md: "90vh" }}
+            m={{ base: 0, md: "auto" }}
+            overflow="hidden"
+            display="flex"
+            flexDirection="column"
+          >
+            <Box px={6} pt={6} pb={4} borderBottom="1px solid" borderColor="gray.200">
+              <Flex align="flex-start" justify="space-between" gap={4}>
+                <Box>
+                  <Text fontSize="lg" fontWeight="800" color="gray.900">
+                    Sort tickets
+                  </Text>
+                  <Text fontSize="sm" color="gray.600">
+                    Drag tickets into the order you want them displayed.
+                  </Text>
+                </Box>
+
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton aria-label="Close sort tickets modal" />
+                </Dialog.CloseTrigger>
+              </Flex>
+            </Box>
+
+            <Dialog.Body px={6} py={6} overflowY="auto">
+              <Stack gap={4}>
+                {sortActionError ? (
+                  <Text fontSize="sm" color="red.500">
+                    {extractApiError(sortActionError)}
+                  </Text>
+                ) : null}
+
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  modifiers={[restrictToParentBounds]}
+                  onDragEnd={({ active, over }) => handleSortDragEnd({ active: { id: String(active.id) }, over: over ? { id: String(over.id) } : null })}
+                >
+                  <SortableContext
+                    items={sortedTicketDraft.map((ticket) => ticket.uniqueId)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <Stack gap={3}>
+                      {sortedTicketDraft.length > 0 ? (
+                        sortedTicketDraft.map((ticket) => (
+                          <SortableTicketRow key={ticket.uniqueId} ticket={ticket} />
+                        ))
+                      ) : (
+                        <Box border="1px solid" borderColor="gray.200" borderRadius="16px" px={4} py={6}>
+                          <Text fontSize="sm" color="gray.600">
+                            No tickets to sort yet.
+                          </Text>
+                        </Box>
+                      )}
+                    </Stack>
+                  </SortableContext>
+                </DndContext>
+              </Stack>
+            </Dialog.Body>
+
+            <Box px={6} py={4} borderTop="1px solid" borderColor="gray.200" bg="gray.50">
+              <Stack
+                direction={{ base: "column", md: "row" }}
+                gap={4}
+                align={{ base: "stretch", md: "center" }}
+                justify="space-between"
+              >
+                <Button
+                  variant="outline"
+                  colorPalette="gray"
+                  borderRadius="12px"
+                  borderColor="gray.300"
+                  bg="white"
+                  _hover={{ bg: "gray.50", borderColor: "gray.400" }}
+                  w={{ base: "full", md: "auto" }}
+                  minW={{ base: "full", md: "120px" }}
+                  fontWeight="700"
+                  onClick={closeSortDialog}
+                >
+                  Close
+                </Button>
+
+                <Button
+                  colorPalette="brand"
+                  borderRadius="12px"
+                  minW={{ base: "full", md: "170px" }}
+                  onClick={() => {
+                    void handleSortSave()
+                  }}
+                  loading={sortTicketsMutation.isPending}
+                  loadingText="Saving..."
+                  disabled={sortedTicketDraft.length === 0}
+                >
+                  Save
+                </Button>
               </Stack>
             </Box>
           </Dialog.Content>

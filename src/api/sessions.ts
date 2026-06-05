@@ -83,6 +83,8 @@ const sessionTicketSchema = z.object({
   maxPurchase: z.number().int().nullable().optional(),
   IsActive: z.boolean().optional(),
   isActive: z.boolean().optional(),
+  DisplayOrder: z.number().int().optional(),
+  displayOrder: z.number().int().optional(),
   PricePeriods: z
     .array(
       z.object({
@@ -225,6 +227,7 @@ export interface SessionWizardTicket {
   minPurchase: number | null
   maxPurchase: number | null
   isActive: boolean
+  displayOrder: number
   pricePeriods: SessionWizardTicketPricePeriod[]
 }
 
@@ -245,6 +248,10 @@ export interface SessionWizardTicketRequest {
   minPurchase: number | null
   maxPurchase: number | null
   isActive: boolean
+}
+
+export interface SessionWizardTicketDisplayOrderRequest {
+  ticketUniqueIds: string[]
 }
 
 export interface SessionWizardTicketPricePeriodRequest {
@@ -509,6 +516,7 @@ export async function fetchSessionWizardTickets(uniqueId: string): Promise<Sessi
     minPurchase: ticket.MinPurchase ?? ticket.minPurchase ?? null,
     maxPurchase: ticket.MaxPurchase ?? ticket.maxPurchase ?? null,
     isActive: ticket.IsActive ?? ticket.isActive ?? false,
+    displayOrder: ticket.DisplayOrder ?? ticket.displayOrder ?? 0,
     pricePeriods: (ticket.PricePeriods ?? ticket.pricePeriods ?? [])
       .map((period) => ({
         uniqueId: period.UniqueId ?? period.uniqueId ?? "",
@@ -539,6 +547,7 @@ export async function createSessionWizardTicket(
     minPurchase: ticket.MinPurchase ?? ticket.minPurchase ?? null,
     maxPurchase: ticket.MaxPurchase ?? ticket.maxPurchase ?? null,
     isActive: ticket.IsActive ?? ticket.isActive ?? false,
+    displayOrder: ticket.DisplayOrder ?? ticket.displayOrder ?? 0,
     pricePeriods: [],
   }
 }
@@ -561,12 +570,20 @@ export async function updateSessionWizardTicket(
     minPurchase: ticket.MinPurchase ?? ticket.minPurchase ?? null,
     maxPurchase: ticket.MaxPurchase ?? ticket.maxPurchase ?? null,
     isActive: ticket.IsActive ?? ticket.isActive ?? false,
+    displayOrder: ticket.DisplayOrder ?? ticket.displayOrder ?? 0,
     pricePeriods: [],
   }
 }
 
 export async function deleteSessionWizardTicket(uniqueId: string, ticketUniqueId: string): Promise<void> {
   await client.delete(API_ROUTES.sessionWizardTicketItem(uniqueId, ticketUniqueId))
+}
+
+export async function updateSessionWizardTicketDisplayOrder(
+  uniqueId: string,
+  payload: SessionWizardTicketDisplayOrderRequest,
+): Promise<void> {
+  await client.post(API_ROUTES.sessionWizardTicketDisplayOrder(uniqueId), payload)
 }
 
 export async function createSessionWizardTicketPricePeriod(
