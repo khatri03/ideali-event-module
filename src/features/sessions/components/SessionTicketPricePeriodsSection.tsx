@@ -7,6 +7,7 @@ import {
   Dialog,
   Flex,
   Input,
+  SimpleGrid,
   Stack,
   Table,
   Text,
@@ -176,11 +177,13 @@ function DateTimeCell({
 }
 
 function toTicketPricePeriodPayload(
+  name: string,
   amount: string,
   startDateTime: Date | null,
   endDateTime: Date | null,
 ) {
   return {
+    name: name.trim() || null,
     amount: parseMoneyInput(amount) ?? 0,
     startDateTime: startDateTime ? toLocalDateTimeString(startDateTime) : "",
     endDateTime: endDateTime ? toLocalDateTimeString(endDateTime) : "",
@@ -209,6 +212,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [editingPricePeriodId, setEditingPricePeriodId] = useState<string | null>(null)
   const [pricePeriodToDelete, setPricePeriodToDelete] = useState<{ uniqueId: string; amount: string } | null>(null)
+  const [name, setName] = useState("")
   const [amount, setAmount] = useState("")
   const [startDateTime, setStartDateTime] = useState<Date | null>(null)
   const [endDateTime, setEndDateTime] = useState<Date | null>(null)
@@ -257,7 +261,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
   }, [ticket?.uniqueId, ticket?.pricePeriods])
 
   const createMutation = useMutation({
-    mutationFn: (payload: { amount: number; startDateTime: string; endDateTime: string }) =>
+    mutationFn: (payload: { name: string | null; amount: number; startDateTime: string; endDateTime: string }) =>
       createSessionWizardTicketPricePeriod(sessionId, effectiveTicketId ?? "", payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "ticket" }] })
@@ -265,8 +269,15 @@ export const SessionTicketPricePeriodsSection = forwardRef<
   })
 
   const updateMutation = useMutation({
-    mutationFn: (payload: { pricePeriodUniqueId: string; amount: number; startDateTime: string; endDateTime: string }) =>
+    mutationFn: (payload: {
+      pricePeriodUniqueId: string
+      name: string | null
+      amount: number
+      startDateTime: string
+      endDateTime: string
+    }) =>
       updateSessionWizardTicketPricePeriod(sessionId, effectiveTicketId ?? "", payload.pricePeriodUniqueId, {
+        name: payload.name,
         amount: payload.amount,
         startDateTime: payload.startDateTime,
         endDateTime: payload.endDateTime,
@@ -296,6 +307,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
       const persistedRows: SessionWizardTicketPricePeriod[] = []
       for (const period of pricePeriods) {
         const savedPeriod = await createSessionWizardTicketPricePeriod(sessionId, ticketUniqueId, {
+          name: period.name,
           amount: parseMoneyInput(period.amount) ?? 0,
           startDateTime: period.startDateTime,
           endDateTime: period.endDateTime,
@@ -311,6 +323,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
       setPricePeriods(ticket?.pricePeriods ?? [])
       setIsDraftMode(!ticket?.uniqueId)
       setEditingPricePeriodId(null)
+      setName("")
       setAmount("")
       setStartDateTime(null)
       setEndDateTime(null)
@@ -337,6 +350,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
 
   function resetForm() {
     setEditingPricePeriodId(null)
+    setName("")
     setAmount("")
     setStartDateTime(null)
     setEndDateTime(null)
@@ -356,6 +370,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
 
   function openEditDialog(pricePeriod: SessionWizardTicketPricePeriod) {
     setEditingPricePeriodId(pricePeriod.uniqueId)
+    setName(pricePeriod.name ?? "")
     setAmount(formatMoneyInput(pricePeriod.amount))
     setStartDateTime(toDateValue(pricePeriod.startDateTime))
     setEndDateTime(toDateValue(pricePeriod.endDateTime))
@@ -370,6 +385,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
 
   async function handleSave(closeAfterSave: boolean) {
     const parsedAmount = parseMoneyInput(amount)
+    const trimmedName = name.trim()
 
     let hasError = false
     if (parsedAmount === null || parsedAmount <= 0) {
@@ -416,6 +432,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
       const resolvedEndDateTime = endDateTime as Date
       const nextPeriod = {
         uniqueId: editingPricePeriodId ?? (window.crypto?.randomUUID?.() ?? `${Date.now()}`),
+        name: trimmedName || null,
         amount: formatMoneyInput(resolvedAmount.toString()),
         startDateTime: toLocalDateTimeString(resolvedStartDateTime),
         endDateTime: toLocalDateTimeString(resolvedEndDateTime),
@@ -447,7 +464,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
       return
     }
 
-    const payload = toTicketPricePeriodPayload(amount, startDateTime, endDateTime)
+    const payload = toTicketPricePeriodPayload(name, amount, startDateTime, endDateTime)
 
     try {
       if (editingPricePeriodId) {
@@ -694,39 +711,63 @@ export const SessionTicketPricePeriodsSection = forwardRef<
                   </Flex>
                 </Box>
 
-                <Box>
-                  <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
-                    Amount ($) <Text as="span" color="red.500">*</Text>
-                  </Text>
-                  <Input
-                    ref={amountInputRef}
-                    value={amount}
-                    onChange={(event) => {
-                      setAmount(formatMoneyInput(event.target.value))
-                      if (amountError) {
-                        setAmountError("")
-                      }
-                    }}
-                    placeholder="Discounted price"
-                    border="1px solid"
-                    borderColor="secondaryGray.100"
-                    borderRadius="14px"
-                    h="44px"
-                    px={4}
-                    w="full"
-                    inputMode="decimal"
-                    _focusVisible={{
-                      borderColor: "brand.400",
-                      boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
-                      outline: "none",
-                    }}
-                  />
-                  {amountError ? (
-                    <Text mt={2} fontSize="sm" color="red.500">
-                      {amountError}
+                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                  <Box>
+                    <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
+                      Name <Text as="span" color="gray.500">(optional)</Text>
                     </Text>
-                  ) : null}
-                </Box>
+                    <Input
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      placeholder="Optional label"
+                      border="1px solid"
+                      borderColor="secondaryGray.100"
+                      borderRadius="14px"
+                      h="44px"
+                      px={4}
+                      w="full"
+                      _focusVisible={{
+                        borderColor: "brand.400",
+                        boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
+                        outline: "none",
+                      }}
+                    />
+                  </Box>
+
+                  <Box>
+                    <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
+                      Amount ($) <Text as="span" color="red.500">*</Text>
+                    </Text>
+                    <Input
+                      ref={amountInputRef}
+                      value={amount}
+                      onChange={(event) => {
+                        setAmount(formatMoneyInput(event.target.value))
+                        if (amountError) {
+                          setAmountError("")
+                        }
+                      }}
+                      placeholder="Discounted price"
+                      border="1px solid"
+                      borderColor="secondaryGray.100"
+                      borderRadius="14px"
+                      h="44px"
+                      px={4}
+                      w="full"
+                      inputMode="decimal"
+                      _focusVisible={{
+                        borderColor: "brand.400",
+                        boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
+                        outline: "none",
+                      }}
+                    />
+                    {amountError ? (
+                      <Text mt={2} fontSize="sm" color="red.500">
+                        {amountError}
+                      </Text>
+                    ) : null}
+                  </Box>
+                </SimpleGrid>
 
                 <Stack gap={5} maxW="760px">
                   <Box>
@@ -816,7 +857,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
 
                 <Flex gap={3} wrap="wrap" justify="flex-end" w={{ base: "full", md: "auto" }}>
                   <Button
-                    variant="outline"
+                    colorPalette="brand"
                     borderRadius="12px"
                     minW={{ base: "full", md: "170px" }}
                     onClick={() => {
@@ -828,7 +869,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
                     Save &amp; Continue
                   </Button>
                   <Button
-                    colorPalette="brand"
+                    colorPalette="orange"
                     borderRadius="12px"
                     minW={{ base: "full", md: "170px" }}
                     onClick={() => {

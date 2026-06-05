@@ -945,7 +945,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
 
                 <Flex gap={3} wrap="wrap" justify="flex-end" w={{ base: "full", md: "auto" }}>
                   <Button
-                    variant="outline"
+                    colorPalette="brand"
                     borderRadius="12px"
                     minW={{ base: "full", md: "170px" }}
                     onClick={() => {
@@ -957,7 +957,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                     Save &amp; Continue
                   </Button>
                   <Button
-                    colorPalette="brand"
+                    colorPalette="orange"
                     borderRadius="12px"
                     minW={{ base: "full", md: "170px" }}
                     onClick={() => {

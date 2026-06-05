@@ -88,6 +88,8 @@ const sessionTicketSchema = z.object({
       z.object({
         UniqueId: z.string().optional(),
         uniqueId: z.string().optional(),
+        Name: z.string().nullable().optional(),
+        name: z.string().nullable().optional(),
         Amount: z.union([z.number(), z.string()]).optional(),
         amount: z.union([z.number(), z.string()]).optional(),
         StartDateTime: z.string().optional(),
@@ -104,6 +106,8 @@ const sessionTicketSchema = z.object({
       z.object({
         UniqueId: z.string().optional(),
         uniqueId: z.string().optional(),
+        Name: z.string().nullable().optional(),
+        name: z.string().nullable().optional(),
         Amount: z.union([z.number(), z.string()]).optional(),
         amount: z.union([z.number(), z.string()]).optional(),
         StartDateTime: z.string().optional(),
@@ -226,6 +230,7 @@ export interface SessionWizardTicket {
 
 export interface SessionWizardTicketPricePeriod {
   uniqueId: string
+  name: string | null
   amount: string
   startDateTime: string
   endDateTime: string
@@ -243,6 +248,7 @@ export interface SessionWizardTicketRequest {
 }
 
 export interface SessionWizardTicketPricePeriodRequest {
+  name: string | null
   amount: number
   startDateTime: string
   endDateTime: string
@@ -506,6 +512,7 @@ export async function fetchSessionWizardTickets(uniqueId: string): Promise<Sessi
     pricePeriods: (ticket.PricePeriods ?? ticket.pricePeriods ?? [])
       .map((period) => ({
         uniqueId: period.UniqueId ?? period.uniqueId ?? "",
+        name: period.Name ?? period.name ?? null,
         amount: normalizeTicketPrice(period.Amount ?? period.amount),
         startDateTime: normalizeDateTime(period.StartDateTime ?? period.startDateTime),
         endDateTime: normalizeDateTime(period.EndDateTime ?? period.endDateTime),
@@ -573,6 +580,8 @@ export async function createSessionWizardTicketPricePeriod(
     .object({
       UniqueId: z.string().optional(),
       uniqueId: z.string().optional(),
+      Name: z.string().nullable().optional(),
+      name: z.string().nullable().optional(),
       Amount: z.union([z.number(), z.string()]).optional(),
       amount: z.union([z.number(), z.string()]).optional(),
       StartDateTime: z.string().optional(),
@@ -586,6 +595,7 @@ export async function createSessionWizardTicketPricePeriod(
 
   return {
     uniqueId: period.UniqueId ?? period.uniqueId ?? "",
+    name: period.Name ?? period.name ?? null,
     amount: normalizeTicketPrice(period.Amount ?? period.amount),
     startDateTime: normalizeDateTime(period.StartDateTime ?? period.startDateTime),
     endDateTime: normalizeDateTime(period.EndDateTime ?? period.endDateTime),
@@ -608,6 +618,8 @@ export async function updateSessionWizardTicketPricePeriod(
     .object({
       UniqueId: z.string().optional(),
       uniqueId: z.string().optional(),
+      Name: z.string().nullable().optional(),
+      name: z.string().nullable().optional(),
       Amount: z.union([z.number(), z.string()]).optional(),
       amount: z.union([z.number(), z.string()]).optional(),
       StartDateTime: z.string().optional(),
@@ -621,6 +633,7 @@ export async function updateSessionWizardTicketPricePeriod(
 
   return {
     uniqueId: period.UniqueId ?? period.uniqueId ?? "",
+    name: period.Name ?? period.name ?? null,
     amount: normalizeTicketPrice(period.Amount ?? period.amount),
     startDateTime: normalizeDateTime(period.StartDateTime ?? period.startDateTime),
     endDateTime: normalizeDateTime(period.EndDateTime ?? period.endDateTime),
