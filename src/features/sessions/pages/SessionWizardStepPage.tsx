@@ -151,6 +151,10 @@ function updateWizardProgressCache(
   }))
 }
 
+async function invalidateSessionReviewQueries(queryClient: ReturnType<typeof useQueryClient>, sessionId: string) {
+  await queryClient.invalidateQueries({ queryKey: ["sessions", "review", sessionId] })
+}
+
 function SessionScheduleStep({ sessionId }: { sessionId: string }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -191,6 +195,7 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
     mutationFn: (payload: { name: string; scheduleTime: string }) => createSessionWizardSchedule(sessionId, payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "schedule" }] })
+      await invalidateSessionReviewQueries(queryClient, sessionId)
     },
   })
   const updateScheduleMutation = useMutation({
@@ -201,12 +206,14 @@ function SessionScheduleStep({ sessionId }: { sessionId: string }) {
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "schedule" }] })
+      await invalidateSessionReviewQueries(queryClient, sessionId)
     },
   })
   const deleteScheduleMutation = useMutation({
     mutationFn: (scheduleUniqueId: string) => deleteSessionWizardSchedule(sessionId, scheduleUniqueId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "schedule" }] })
+      await invalidateSessionReviewQueries(queryClient, sessionId)
     },
   })
   const scheduleActionError = createScheduleMutation.error ?? updateScheduleMutation.error
@@ -850,6 +857,7 @@ function SessionNameEditor({ sessionId }: { sessionId: string }) {
         const result = await updateSessionWizardName(sessionId, { name: trimmedName }, stepNo)
         setDraftName(result.name)
         updateWizardProgressCache(queryClient, sessionId, stepNo)
+        await invalidateSessionReviewQueries(queryClient, sessionId)
       } catch (saveError: unknown) {
         setError(extractApiError(saveError))
         throw saveError
@@ -971,6 +979,7 @@ function SessionDescriptionEditor({ sessionId, initialDescription }: { sessionId
         }, stepNo)
         setDescription(result.description ?? "")
         updateWizardProgressCache(queryClient, sessionId, stepNo)
+        await invalidateSessionReviewQueries(queryClient, sessionId)
       } catch (saveError: unknown) {
         setError(extractApiError(saveError))
         throw saveError
@@ -1092,6 +1101,7 @@ function SessionEventEditor({
         const result = await updateSessionWizardEvent(sessionId, { eventUniqueId: selectedEventUniqueId }, stepNo)
         queryClient.setQueryData(["sessions", { sessionId, step: "event" }], { ...result, stepNo })
         updateWizardProgressCache(queryClient, sessionId, stepNo)
+        await invalidateSessionReviewQueries(queryClient, sessionId)
         setSelectedEventUniqueId(result.eventUniqueId)
       } catch (saveError: unknown) {
         setEventError(extractApiError(saveError))
@@ -1307,6 +1317,7 @@ function SessionBookingEditor({
         setBookingStartDate(toDateTimeInputValue(result.bookingStartDate))
         setBookingEndDate(toDateTimeInputValue(result.bookingEndDate))
         updateWizardProgressCache(queryClient, sessionId, stepNo)
+        await invalidateSessionReviewQueries(queryClient, sessionId)
       } catch (saveError: unknown) {
         setError(extractApiError(saveError))
         throw saveError
@@ -1421,6 +1432,7 @@ function SessionDurationEditor({
         setSessionStartDate(toDateTimeInputValue(result.startDate))
         setSessionEndDate(toDateTimeInputValue(result.endDate))
         updateWizardProgressCache(queryClient, sessionId, stepNo)
+        await invalidateSessionReviewQueries(queryClient, sessionId)
       } catch (saveError: unknown) {
         setError(extractApiError(saveError))
         throw saveError
@@ -1660,6 +1672,7 @@ function SessionVenueEditor({
         const result = await updateSessionWizardVenue(sessionId, { venueUniqueId: selectedVenueUniqueId }, stepNo)
         updateWizardProgressCache(queryClient, sessionId, stepNo)
         setSelectedVenueUniqueId(result.venueUniqueId)
+        await invalidateSessionReviewQueries(queryClient, sessionId)
       } catch (saveError: unknown) {
         setVenueError(extractApiError(saveError))
         throw saveError

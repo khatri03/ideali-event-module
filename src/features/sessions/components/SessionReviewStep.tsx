@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Badge, Box, Button, Flex, SimpleGrid, Skeleton, Stack, Switch, Text } from "@chakra-ui/react"
-import { CheckCircle2, PencilLine } from "lucide-react"
+import { Badge, Box, Button, Flex, Grid, Skeleton, Stack, Switch, Text } from "@chakra-ui/react"
+import { CheckCircle2, PencilLine, X } from "lucide-react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { format, parseISO } from "date-fns"
 import { fetchOrganizerEvents, fetchOrganizerVenues } from "@/api/organizer"
@@ -27,11 +27,10 @@ interface SessionReviewStepProps {
 
 interface ReviewItemProps {
   label: string
-  value: string | number | null | undefined
-  onEdit: () => void
+  value: ReactNode
+  onEdit?: () => void
   editLabel: string
   isLoading?: boolean
-  isBadge?: boolean
 }
 
 function formatDateTime(value: string | null | undefined) {
@@ -50,78 +49,79 @@ function formatRange(startDateTime: string | null | undefined, endDateTime: stri
   return `${formatDateTime(startDateTime)} to ${formatDateTime(endDateTime)}`
 }
 
-function ReviewItem({ label, value, onEdit, editLabel, isLoading = false, isBadge = false }: ReviewItemProps) {
-  return (
-    <Box
-      border="1px solid"
-      borderColor="gray.200"
-      borderRadius="20px"
-      bg="gray.50"
-      px={4}
-      py={4}
-      boxShadow="0 10px 24px rgba(15, 23, 42, 0.04)"
-    >
-      <Flex align="flex-start" justify="space-between" gap={4}>
-        <Stack gap={1} minW={0} flex={1}>
-          <Text fontSize="xs" fontWeight="800" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
-            {label}
-          </Text>
-          {isLoading ? (
-            <Skeleton h="20px" w="220px" borderRadius="8px" />
-          ) : isBadge ? (
-            <Badge
-              alignSelf="flex-start"
-              variant="subtle"
-              colorPalette={String(value).toLowerCase() === "check" ? "green" : "gray"}
-              borderRadius="999px"
-              px={3}
-              py={1}
-            >
-              <Flex align="center" gap={1.5}>
-                <CheckCircle2 size={14} />
-                <Text as="span" fontSize="xs" fontWeight="800">
-                  {value}
-                </Text>
-              </Flex>
-            </Badge>
-          ) : (
-            <Text fontSize="sm" fontWeight="700" color="gray.900" lineClamp={2} wordBreak="break-word">
-              {value ?? "Not set"}
-            </Text>
-          )}
-        </Stack>
+function getSetupStateTheme(setupState: SessionWizardSetupState["setupState"]) {
+  if (setupState === "ReadyForSale") {
+    return {
+      colorPalette: "green" as const,
+      label: "Ready for sale",
+    }
+  }
 
-        <Button
-          variant="outline"
-          borderRadius="full"
-          h="40px"
-          w="40px"
-          minW="40px"
-          p={0}
-          aria-label={editLabel}
-          onClick={onEdit}
-        >
-          <PencilLine size={15} />
-        </Button>
-      </Flex>
-    </Box>
-  )
+  if (setupState === "ReadyForReview") {
+    return {
+      colorPalette: "orange" as const,
+      label: "Ready for review",
+    }
+  }
+
+  return {
+    colorPalette: "gray" as const,
+    label: "Incomplete",
+  }
 }
 
-function ReviewLoadingState() {
+function ReviewItem({ label, value, onEdit, editLabel, isLoading = false }: ReviewItemProps) {
   return (
-    <Stack gap={4}>
-      <Skeleton h="96px" borderRadius="24px" />
-      <SimpleGrid columns={{ base: 1, xl: 2 }} gap={4}>
-        <Skeleton h="116px" borderRadius="20px" />
-        <Skeleton h="116px" borderRadius="20px" />
-        <Skeleton h="116px" borderRadius="20px" />
-        <Skeleton h="116px" borderRadius="20px" />
-        <Skeleton h="116px" borderRadius="20px" />
-        <Skeleton h="116px" borderRadius="20px" />
-        <Skeleton h="116px" borderRadius="20px" />
-      </SimpleGrid>
-    </Stack>
+    <Grid
+      templateColumns={{ base: "1fr", md: "220px minmax(0, 1fr) auto" }}
+      alignItems={{ base: "start", md: "stretch" }}
+      gap={{ base: 3, md: 4 }}
+      px={0}
+      py={0}
+      borderTop="1px solid"
+      borderColor="gray.200"
+      bg="white"
+    >
+      <Flex
+        h="full"
+        minH={{ base: "auto", md: "56px" }}
+        align="center"
+        bg="gray.50"
+        px={{ base: 3, md: 4 }}
+        py={{ base: 3, md: 0 }}
+        borderRight={{ base: "none", md: "1px solid" }}
+        borderRightColor={{ base: "transparent", md: "gray.200" }}
+      >
+        <Text fontSize="xs" fontWeight="800" color="gray.900" textTransform="none" letterSpacing="-0.01em">
+          {label}
+        </Text>
+      </Flex>
+
+      <Box minW={0} w="full" px={{ base: 3, md: 0 }} py={{ base: 0, md: 3.5 }}>
+        {isLoading ? (
+          <Skeleton h="18px" w="180px" borderRadius="8px" />
+        ) : (
+          <Box>{value}</Box>
+        )}
+      </Box>
+
+      <Flex justify={{ base: "flex-start", md: "flex-end" }} px={{ base: 3, md: 2 }} py={{ base: 0, md: 3 }}>
+        {onEdit ? (
+          <Button
+            variant="outline"
+            borderRadius="full"
+            h="34px"
+            w="34px"
+            minW="34px"
+            p={0}
+            aria-label={editLabel}
+            onClick={onEdit}
+          >
+            <PencilLine size={14} />
+          </Button>
+        ) : null}
+      </Flex>
+    </Grid>
   )
 }
 
@@ -130,7 +130,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   const location = useLocation()
   const queryClient = useQueryClient()
   const { setPrimaryAction, setPrimaryActionReady } = useSessionWizardActions()
-  const [isReadyForSale, setIsReadyForSale] = useState(false)
+  const [setupState, setSetupState] = useState<SessionWizardSetupState["setupState"]>("Incomplete")
   const [isInitialised, setIsInitialised] = useState(false)
   const requestedSetupStateSessionIdRef = useRef<string | null>(null)
 
@@ -139,12 +139,12 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   const setupStateMutation = useMutation({
     mutationFn: () => markSessionWizardReadyForReview(sessionId),
     onSuccess: (data) => {
-      setIsReadyForSale(data.setupState === "ReadyForSale")
+      setSetupState(data.setupState)
       setIsInitialised(true)
       setPrimaryActionReady(true)
     },
     onError: () => {
-      setIsReadyForSale(false)
+      setSetupState("Incomplete")
       setIsInitialised(true)
       setPrimaryActionReady(true)
     },
@@ -153,7 +153,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   const finishMutation = useMutation<SessionWizardSetupState, Error, "ReadyForReview" | "ReadyForSale">({
     mutationFn: (setupState) => updateSessionWizardSetupState(sessionId, { setupState }),
     onSuccess: async (data) => {
-      setIsReadyForSale(data.setupState === "ReadyForSale")
+      setSetupState(data.setupState)
       await queryClient.invalidateQueries({ queryKey: ["sessions", "wizard-progress", sessionId] })
     },
     onSettled: () => {
@@ -239,12 +239,12 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     setPrimaryAction(async () => {
       try {
         setPrimaryActionReady(false)
-        await finishMutation.mutateAsync(isReadyForSale ? "ReadyForSale" : "ReadyForReview")
+        await finishMutation.mutateAsync(setupState === "ReadyForSale" ? "ReadyForSale" : "ReadyForReview")
       } catch {
         // Finish path keeps inline state visible for the user.
       }
     })
-  }, [finishMutation, isInitialised, isReadyForSale, setPrimaryAction, setPrimaryActionReady])
+  }, [finishMutation, isInitialised, setPrimaryAction, setPrimaryActionReady, setupState])
 
   const eventUniqueId = sessionEventQuery.data?.eventUniqueId ?? ""
   const venueUniqueId = sessionVenueQuery.data?.venueUniqueId ?? ""
@@ -265,18 +265,6 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     schedulesQuery.error ??
     ticketsQuery.error
 
-  const isLoading =
-    setupStateMutation.isPending ||
-    nameQuery.isLoading ||
-    sessionEventQuery.isLoading ||
-    organizerEventsQuery.isLoading ||
-    sessionVenueQuery.isLoading ||
-    organizerVenuesQuery.isLoading ||
-    bookingQuery.isLoading ||
-    durationQuery.isLoading ||
-    schedulesQuery.isLoading ||
-    ticketsQuery.isLoading
-
   function buildEditUrl(step: "name" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket") {
     const target = APP_ROUTES.sessionWizard.editStep(sessionId, step)
     return `${target}?returnUrl=${encodeURIComponent(reviewReturnUrl)}`
@@ -291,40 +279,154 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
       <Box
         border="1px solid"
         borderColor="gray.200"
-        borderRadius="24px"
-        bg="linear-gradient(135deg, rgba(117,81,255,0.08) 0%, rgba(66,42,251,0.04) 100%)"
-        px={{ base: 4, md: 5 }}
-        py={{ base: 4, md: 5 }}
-        boxShadow="0 14px 32px rgba(15, 23, 42, 0.05)"
+        borderRadius="20px"
+        overflow="hidden"
+        bg="white"
+        boxShadow="0 10px 24px rgba(15, 23, 42, 0.045)"
       >
-        <Flex align="center" justify="space-between" gap={4} wrap="wrap">
-          <Stack gap={1}>
-            <Text fontSize="xs" fontWeight="800" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
-              Review
-            </Text>
-            <Text fontSize={{ base: "lg", md: "xl" }} fontWeight="800" color="gray.900">
+        <Flex
+          direction={{ base: "column", md: "row" }}
+          align={{ base: "flex-start", md: "flex-start" }}
+          justify="space-between"
+          gap={4}
+          px={{ base: 4, md: 5 }}
+          py={{ base: 4, md: 4 }}
+          bg="linear-gradient(135deg, rgba(117,81,255,0.08) 0%, rgba(66,42,251,0.04) 100%)"
+          borderBottom="1px solid"
+          borderColor="gray.200"
+        >
+          <Box>
+            <Text fontSize={{ base: "sm", md: "md" }} fontWeight="800" color="gray.900">
               Ready For Sale?
             </Text>
-            <Text fontSize="sm" color="gray.600">
+            <Text mt={1} fontSize="sm" color="gray.600">
               Decide whether this session should be released for sale or remain in review.
             </Text>
-          </Stack>
+          </Box>
 
-          <Switch.Root
-            checked={isReadyForSale}
-            onCheckedChange={(details) => setIsReadyForSale(Boolean(details.checked))}
-            colorPalette="brand"
-            disabled={!isInitialised || finishMutation.isPending || setupStateMutation.isPending}
-          >
-            <Switch.HiddenInput />
-            <Switch.Control />
-            <Switch.Label>
-              <Text fontSize="sm" fontWeight="700" color="gray.900">
-                Ready For Sale?
-              </Text>
-            </Switch.Label>
-          </Switch.Root>
+          <Flex align="center" gap={3} wrap="wrap" justify={{ base: "flex-start", md: "flex-end" }}>
+            <Switch.Root
+              checked={setupState === "ReadyForSale"}
+              onCheckedChange={(details) =>
+                setSetupState(Boolean(details.checked) ? "ReadyForSale" : "ReadyForReview")
+              }
+              colorPalette="brand"
+              aria-label="Ready For Sale"
+            >
+              <Switch.HiddenInput />
+              <Box transform="scale(1.12)" transformOrigin="center">
+                <Switch.Control />
+              </Box>
+            </Switch.Root>
+          </Flex>
         </Flex>
+
+        <ReviewItem
+          label="Name"
+          value={nameQuery.data?.name || "Not set"}
+          onEdit={() => handleEdit("name")}
+          editLabel="Edit session name"
+          isLoading={nameQuery.isLoading}
+        />
+        <ReviewItem
+          label="Event Name"
+          value={eventName}
+          onEdit={() => handleEdit("event")}
+          editLabel="Edit event"
+          isLoading={sessionEventQuery.isLoading || organizerEventsQuery.isLoading}
+        />
+        <ReviewItem
+          label="Venue Name"
+          value={venueName}
+          onEdit={() => handleEdit("venue")}
+          editLabel="Edit venue"
+          isLoading={sessionVenueQuery.isLoading || organizerVenuesQuery.isLoading}
+        />
+        <ReviewItem
+          label="Booking Window"
+          value={bookingWindow}
+          onEdit={() => handleEdit("booking")}
+          editLabel="Edit booking window"
+          isLoading={bookingQuery.isLoading}
+        />
+        <ReviewItem
+          label="Session Date Time"
+          value={sessionDateTime}
+          onEdit={() => handleEdit("start-end")}
+          editLabel="Edit session date time"
+          isLoading={durationQuery.isLoading}
+        />
+        <ReviewItem
+          label="Schedule"
+          value={
+            scheduleCount > 0 ? (
+              <Badge
+                variant="subtle"
+                colorPalette="green"
+                borderRadius="999px"
+                px={3}
+                py={1}
+              >
+                <Flex align="center" gap={1.5}>
+                  <CheckCircle2 size={14} />
+                  <Text as="span" fontSize="xs" fontWeight="800">
+                    Yes
+                  </Text>
+                </Flex>
+              </Badge>
+            ) : (
+              <Badge variant="subtle" colorPalette="gray" borderRadius="999px" px={3} py={1}>
+                <Flex align="center" gap={1.5}>
+                  <X size={14} />
+                  <Text as="span" fontSize="xs" fontWeight="800">
+                    No
+                  </Text>
+                </Flex>
+              </Badge>
+            )
+          }
+          onEdit={() => handleEdit("schedule")}
+          editLabel="Edit schedule"
+          isLoading={schedulesQuery.isLoading}
+        />
+        <ReviewItem
+          label="Number of tickets defined"
+          value={
+            <Text fontSize="sm" fontWeight="800" color="gray.900">
+              {ticketsCount}
+            </Text>
+          }
+          onEdit={() => handleEdit("ticket")}
+          editLabel="Edit tickets"
+          isLoading={ticketsQuery.isLoading}
+        />
+        <ReviewItem
+          label="Setup State"
+          value={
+            (() => {
+              const setupStateTheme = getSetupStateTheme(setupState)
+
+              return (
+                <Badge
+                  variant="subtle"
+                  colorPalette={setupStateTheme.colorPalette}
+                  borderRadius="999px"
+                  px={3}
+                  py={1}
+                >
+                  <Flex align="center" gap={1.5}>
+                    <CheckCircle2 size={14} />
+                    <Text as="span" fontSize="xs" fontWeight="800">
+                      {setupStateTheme.label}
+                    </Text>
+                  </Flex>
+                </Badge>
+              )
+            })()
+          }
+          editLabel="Setup state"
+          isLoading={false}
+        />
       </Box>
 
       {setupStateMutation.isError ? (
@@ -344,56 +446,6 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
           {extractApiError(summaryError)}
         </Text>
       ) : null}
-
-      {isLoading ? (
-        <ReviewLoadingState />
-      ) : (
-        <SimpleGrid columns={{ base: 1, xl: 2 }} gap={4}>
-          <ReviewItem
-            label="Name"
-            value={nameQuery.data?.name || "Not set"}
-            onEdit={() => handleEdit("name")}
-            editLabel="Edit session name"
-          />
-          <ReviewItem
-            label="Event Name"
-            value={eventName}
-            onEdit={() => handleEdit("event")}
-            editLabel="Edit event"
-          />
-          <ReviewItem
-            label="Venue Name"
-            value={venueName}
-            onEdit={() => handleEdit("venue")}
-            editLabel="Edit venue"
-          />
-          <ReviewItem
-            label="Booking Window"
-            value={bookingWindow}
-            onEdit={() => handleEdit("booking")}
-            editLabel="Edit booking window"
-          />
-          <ReviewItem
-            label="Session Date Time"
-            value={sessionDateTime}
-            onEdit={() => handleEdit("start-end")}
-            editLabel="Edit session date time"
-          />
-          <ReviewItem
-            label="Schedule"
-            value={scheduleCount > 0 ? "Check" : "Not set"}
-            onEdit={() => handleEdit("schedule")}
-            editLabel="Edit schedule"
-            isBadge
-          />
-          <ReviewItem
-            label="Number of tickets defined"
-            value={ticketsCount}
-            onEdit={() => handleEdit("ticket")}
-            editLabel="Edit tickets"
-          />
-        </SimpleGrid>
-      )}
     </Stack>
   )
 }
