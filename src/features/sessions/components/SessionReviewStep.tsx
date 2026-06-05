@@ -143,6 +143,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   const [isFinishConfirmOpen, setIsFinishConfirmOpen] = useState(false)
   const requestedSetupStateSessionIdRef = useRef<string | null>(null)
   const finishConfirmationDeferredRef = useRef<FinishConfirmationDeferred | null>(null)
+  const finishSetupStateLabel = finishSetupState === "ReadyForSale" ? "Ready For Sale" : "Ready for review"
 
   const reviewReturnUrl = useMemo(() => `${location.pathname}${location.search}`, [location.pathname, location.search])
 
@@ -440,7 +441,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
           isLoading={ticketsQuery.isLoading}
         />
         <ReviewItem
-          label="Setup State"
+          label="Current Setup State"
           value={
             <Badge
               variant="subtle"
@@ -504,17 +505,17 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
             <Dialog.Body px={5} py={4} flex="0 0 auto">
               <Stack gap={3}>
                 <Text fontSize="sm" color="gray.700" lineHeight="1.45">
-                  You are about to finish the review and set the session setup state.
+                  You are about to finish the review and set the session to the selected state.
                 </Text>
 
                 <Box border="1px solid" borderColor="gray.200" bg="gray.50" borderRadius="16px" px={4} py={3}>
                   <Text fontSize="xs" fontWeight="900" color="gray.500" letterSpacing="0.18em" textTransform="uppercase">
-                    Setup State
+                    Target State
                   </Text>
                   <Badge
                     mt={1.5}
                     variant="subtle"
-                    colorPalette={setupStateTheme.colorPalette}
+                    colorPalette={finishSetupState === "ReadyForSale" ? "green" : "orange"}
                     borderRadius="999px"
                     px={3}
                     py={0.75}
@@ -522,7 +523,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
                     <Flex align="center" gap={1.5}>
                       <CheckCircle2 size={14} />
                       <Text as="span" fontSize="xs" fontWeight="800">
-                        {setupStateTheme.label}
+                        {finishSetupStateLabel}
                       </Text>
                     </Flex>
                   </Badge>
