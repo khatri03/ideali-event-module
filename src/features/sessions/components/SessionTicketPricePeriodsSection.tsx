@@ -111,8 +111,11 @@ function getPricePeriodStyles(status: PricePeriodStatus) {
     return {
       amountColor: "gray.900",
       amountWeight: "700",
+      amountSize: "15px",
       dateColor: "gray.900",
       timeColor: "gray.700",
+      dateSize: "15px",
+      timeSize: "15px",
       iconColor: "var(--chakra-colors-gray-700)",
       opacity: 1,
     } as const
@@ -122,8 +125,11 @@ function getPricePeriodStyles(status: PricePeriodStatus) {
     return {
       amountColor: "gray.800",
       amountWeight: "500",
+      amountSize: "sm",
       dateColor: "gray.800",
       timeColor: "gray.700",
+      dateSize: "sm",
+      timeSize: "sm",
       iconColor: "var(--chakra-colors-gray-700)",
       opacity: 1,
     } as const
@@ -132,8 +138,11 @@ function getPricePeriodStyles(status: PricePeriodStatus) {
   return {
     amountColor: "gray.500",
     amountWeight: "400",
+    amountSize: "sm",
     dateColor: "gray.500",
     timeColor: "gray.400",
+    dateSize: "sm",
+    timeSize: "sm",
     iconColor: "var(--chakra-colors-gray-400)",
     opacity: 0.68,
   } as const
@@ -152,13 +161,13 @@ function DateTimeCell({
     <Stack gap={1} opacity={styles.opacity}>
       <Flex align="center" gap={2}>
         <CalendarDays size={14} color={styles.iconColor} />
-        <Text fontSize="sm" color={styles.dateColor} fontWeight={styles.amountWeight}>
+        <Text fontSize={styles.dateSize} color={styles.dateColor} fontWeight={styles.amountWeight}>
           {formatDateOnly(value)}
         </Text>
       </Flex>
       <Flex align="center" gap={2}>
         <Clock3 size={14} color={styles.iconColor} />
-        <Text fontSize="sm" color={styles.timeColor} fontWeight={styles.amountWeight}>
+        <Text fontSize={styles.timeSize} color={styles.timeColor} fontWeight={styles.amountWeight}>
           {formatTimeOnly(value)}
         </Text>
       </Flex>
@@ -558,7 +567,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
                   <Table.Row key={pricePeriod.uniqueId} borderColor="gray.300">
                     <Table.Cell px={5} py={4} borderColor="gray.300">
                       <Text
-                        fontSize="sm"
+                        fontSize={getPricePeriodStyles(pricePeriod.currentStatus).amountSize}
                         fontWeight={getPricePeriodStyles(pricePeriod.currentStatus).amountWeight}
                         color={getPricePeriodStyles(pricePeriod.currentStatus).amountColor}
                         opacity={getPricePeriodStyles(pricePeriod.currentStatus).opacity}
