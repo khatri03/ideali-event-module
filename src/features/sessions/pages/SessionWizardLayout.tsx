@@ -383,16 +383,6 @@ function SessionWizardLayoutContent() {
                       Skip
                     </Button>
                   ) : null}
-                  <Button
-                    variant="outline"
-                    borderRadius="14px"
-                    h="44px"
-                    px={6}
-                    minW={{ base: "full", md: "140px" }}
-                    onClick={() => navigate(APP_ROUTES.events)}
-                  >
-                    Close
-                  </Button>
                 <Button
                   borderRadius="14px"
                   h="44px"

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Badge, Box, Button, Flex, Grid, Skeleton, Stack, Switch, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, CloseButton, Dialog, Flex, Grid, Skeleton, Stack, Switch, Text, useBreakpointValue } from "@chakra-ui/react"
 import { CheckCircle2, PencilLine, X } from "lucide-react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { format, parseISO } from "date-fns"
@@ -70,6 +70,11 @@ function getSetupStateTheme(setupState: SessionWizardSetupState["setupState"]) {
   }
 }
 
+interface FinishConfirmationDeferred {
+  resolve: () => void
+  reject: (error: Error) => void
+}
+
 function ReviewItem({ label, value, onEdit, editLabel, isLoading = false }: ReviewItemProps) {
   return (
     <Grid
@@ -130,9 +135,14 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   const location = useLocation()
   const queryClient = useQueryClient()
   const { setPrimaryAction, setPrimaryActionReady } = useSessionWizardActions()
+  const finishDialogSize = useBreakpointValue<"full" | "sm">({ base: "full", md: "sm" }) ?? "sm"
   const [setupState, setSetupState] = useState<SessionWizardSetupState["setupState"]>("Incomplete")
+  const setupStateTheme = getSetupStateTheme(setupState)
+  const [finishSetupState, setFinishSetupState] = useState<"ReadyForReview" | "ReadyForSale">("ReadyForReview")
   const [isInitialised, setIsInitialised] = useState(false)
+  const [isFinishConfirmOpen, setIsFinishConfirmOpen] = useState(false)
   const requestedSetupStateSessionIdRef = useRef<string | null>(null)
+  const finishConfirmationDeferredRef = useRef<FinishConfirmationDeferred | null>(null)
 
   const reviewReturnUrl = useMemo(() => `${location.pathname}${location.search}`, [location.pathname, location.search])
 
@@ -140,11 +150,13 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     mutationFn: () => markSessionWizardReadyForReview(sessionId),
     onSuccess: (data) => {
       setSetupState(data.setupState)
+      setFinishSetupState(data.setupState === "ReadyForSale" ? "ReadyForSale" : "ReadyForReview")
       setIsInitialised(true)
       setPrimaryActionReady(true)
     },
     onError: () => {
       setSetupState("Incomplete")
+      setFinishSetupState("ReadyForReview")
       setIsInitialised(true)
       setPrimaryActionReady(true)
     },
@@ -154,6 +166,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     mutationFn: (setupState) => updateSessionWizardSetupState(sessionId, { setupState }),
     onSuccess: async (data) => {
       setSetupState(data.setupState)
+      setFinishSetupState(data.setupState === "ReadyForSale" ? "ReadyForSale" : "ReadyForReview")
       await queryClient.invalidateQueries({ queryKey: ["sessions", "wizard-progress", sessionId] })
     },
     onSettled: () => {
@@ -216,6 +229,37 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     retry: false,
   })
 
+  const openFinishConfirmation = useCallback(() => {
+    return new Promise<void>((resolve, reject) => {
+      finishConfirmationDeferredRef.current = { resolve, reject }
+      setIsFinishConfirmOpen(true)
+    })
+  }, [])
+
+  const closeFinishConfirmation = useCallback(() => {
+    const pending = finishConfirmationDeferredRef.current
+    finishConfirmationDeferredRef.current = null
+    setIsFinishConfirmOpen(false)
+    pending?.reject(new Error("Finish cancelled."))
+  }, [])
+
+  const handleFinishConfirmed = useCallback(async () => {
+    const pending = finishConfirmationDeferredRef.current
+    if (!pending) {
+      return
+    }
+
+    try {
+      setPrimaryActionReady(false)
+      await finishMutation.mutateAsync(finishSetupState)
+      finishConfirmationDeferredRef.current = null
+      setIsFinishConfirmOpen(false)
+      pending.resolve()
+    } catch (error) {
+      pending.reject(error instanceof Error ? error : new Error("Unable to finish review."))
+    }
+  }, [finishMutation, finishSetupState, setPrimaryActionReady])
+
   useEffect(() => {
     if (requestedSetupStateSessionIdRef.current === sessionId) {
       return
@@ -237,14 +281,9 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     }
 
     setPrimaryAction(async () => {
-      try {
-        setPrimaryActionReady(false)
-        await finishMutation.mutateAsync(setupState === "ReadyForSale" ? "ReadyForSale" : "ReadyForReview")
-      } catch {
-        // Finish path keeps inline state visible for the user.
-      }
+      await openFinishConfirmation()
     })
-  }, [finishMutation, isInitialised, setPrimaryAction, setPrimaryActionReady, setupState])
+  }, [isInitialised, openFinishConfirmation, setPrimaryAction])
 
   const eventUniqueId = sessionEventQuery.data?.eventUniqueId ?? ""
   const venueUniqueId = sessionVenueQuery.data?.venueUniqueId ?? ""
@@ -295,7 +334,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
           borderBottom="1px solid"
           borderColor="gray.200"
         >
-          <Box>
+          <Box flex="1" minW={0}>
             <Text fontSize={{ base: "sm", md: "md" }} fontWeight="800" color="gray.900">
               Ready For Sale?
             </Text>
@@ -304,11 +343,11 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
             </Text>
           </Box>
 
-          <Flex align="center" gap={3} wrap="wrap" justify={{ base: "flex-start", md: "flex-end" }}>
+          <Flex align="center" gap={3} wrap="wrap" justify={{ base: "flex-start", md: "flex-end" }} flexShrink={0}>
             <Switch.Root
-              checked={setupState === "ReadyForSale"}
+              checked={finishSetupState === "ReadyForSale"}
               onCheckedChange={(details) =>
-                setSetupState(Boolean(details.checked) ? "ReadyForSale" : "ReadyForReview")
+                setFinishSetupState(Boolean(details.checked) ? "ReadyForSale" : "ReadyForReview")
               }
               colorPalette="brand"
               aria-label="Ready For Sale"
@@ -403,31 +442,138 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
         <ReviewItem
           label="Setup State"
           value={
-            (() => {
-              const setupStateTheme = getSetupStateTheme(setupState)
-
-              return (
-                <Badge
-                  variant="subtle"
-                  colorPalette={setupStateTheme.colorPalette}
-                  borderRadius="999px"
-                  px={3}
-                  py={1}
-                >
-                  <Flex align="center" gap={1.5}>
-                    <CheckCircle2 size={14} />
-                    <Text as="span" fontSize="xs" fontWeight="800">
-                      {setupStateTheme.label}
-                    </Text>
-                  </Flex>
-                </Badge>
-              )
-            })()
+            <Badge
+              variant="subtle"
+              colorPalette={setupStateTheme.colorPalette}
+              borderRadius="999px"
+              px={3}
+              py={1}
+            >
+              <Flex align="center" gap={1.5}>
+                <CheckCircle2 size={14} />
+                <Text as="span" fontSize="xs" fontWeight="800">
+                  {setupStateTheme.label}
+                </Text>
+              </Flex>
+            </Badge>
           }
           editLabel="Setup state"
           isLoading={false}
         />
       </Box>
+
+      <Dialog.Root
+        open={isFinishConfirmOpen}
+        onOpenChange={(details) => {
+          if (details.open) {
+            setIsFinishConfirmOpen(true)
+            return
+          }
+
+          if (finishConfirmationDeferredRef.current) {
+            closeFinishConfirmation()
+          }
+        }}
+        size={finishDialogSize}
+      >
+        <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
+        <Dialog.Positioner>
+          <Dialog.Content
+            bg="white"
+            borderRadius={{ base: 0, md: "24px" }}
+            maxW={{ base: "100vw", md: "620px" }}
+            m={{ base: 0, md: "auto" }}
+            overflow="hidden"
+            display="flex"
+            flexDirection="column"
+          >
+            <Box px={5} pt={5} pb={4} borderBottom="1px solid" borderColor="gray.200">
+              <Flex align="flex-start" justify="space-between" gap={4}>
+                <Box>
+                  <Text fontSize="xl" fontWeight="900" color="gray.900" lineHeight="1.05">
+                    Confirm Finish
+                  </Text>
+                </Box>
+
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton aria-label="Close finish confirmation" />
+                </Dialog.CloseTrigger>
+              </Flex>
+            </Box>
+
+            <Dialog.Body px={5} py={4} flex="0 0 auto">
+              <Stack gap={3}>
+                <Text fontSize="sm" color="gray.700" lineHeight="1.45">
+                  You are about to finish the review and set the session setup state.
+                </Text>
+
+                <Box border="1px solid" borderColor="gray.200" bg="gray.50" borderRadius="16px" px={4} py={3}>
+                  <Text fontSize="xs" fontWeight="900" color="gray.500" letterSpacing="0.18em" textTransform="uppercase">
+                    Setup State
+                  </Text>
+                  <Badge
+                    mt={1.5}
+                    variant="subtle"
+                    colorPalette={setupStateTheme.colorPalette}
+                    borderRadius="999px"
+                    px={3}
+                    py={0.75}
+                  >
+                    <Flex align="center" gap={1.5}>
+                      <CheckCircle2 size={14} />
+                      <Text as="span" fontSize="xs" fontWeight="800">
+                        {setupStateTheme.label}
+                      </Text>
+                    </Flex>
+                  </Badge>
+                </Box>
+              </Stack>
+            </Dialog.Body>
+
+            <Flex
+              px={5}
+              pb={4}
+              pt={3}
+              borderTop="1px solid"
+              borderColor="gray.200"
+              align="center"
+              justify="flex-end"
+              gap={2.5}
+              flexWrap="wrap"
+            >
+              <Button
+                variant="outline"
+                colorPalette="gray"
+                borderRadius="14px"
+                h="38px"
+                px={4.5}
+                minW={{ base: "full", md: "104px" }}
+                onClick={() => closeFinishConfirmation()}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                borderRadius="14px"
+                h="38px"
+                px={4.5}
+                minW={{ base: "full", md: "122px" }}
+                color="white"
+                style={{
+                  background:
+                    finishSetupState === "ReadyForSale"
+                      ? "linear-gradient(135deg, #22C55E 0%, #16A34A 100%)"
+                      : "linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)",
+                }}
+                loading={finishMutation.isPending}
+                onClick={handleFinishConfirmed}
+              >
+                Finish
+              </Button>
+            </Flex>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
 
       {setupStateMutation.isError ? (
         <Text fontSize="sm" color="red.500">
