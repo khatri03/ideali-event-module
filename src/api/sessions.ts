@@ -55,6 +55,11 @@ const sessionProgressSchema = z.object({
   stepNo: z.number().int().min(0),
 })
 
+const sessionSetupStateSchema = z.object({
+  SetupState: z.string().optional(),
+  setupState: z.string().optional(),
+})
+
 const sessionScheduleSchema = z.object({
   UniqueId: z.string().optional(),
   uniqueId: z.string().optional(),
@@ -205,6 +210,14 @@ export interface SessionWizardDurationRequest {
 
 export interface SessionWizardProgressResponse {
   stepNo: number
+}
+
+export interface SessionWizardSetupState {
+  setupState: "Incomplete" | "ReadyForReview" | "ReadyForSale"
+}
+
+export interface SessionWizardSetupStateRequest {
+  setupState: "ReadyForReview" | "ReadyForSale"
 }
 
 export interface SessionWizardSchedule {
@@ -452,6 +465,29 @@ export async function updateSessionWizardDuration(
   return {
     startDate: duration.StartDate ?? duration.startDate ?? null,
     endDate: duration.EndDate ?? duration.endDate ?? null,
+  }
+}
+
+export async function markSessionWizardReadyForReview(uniqueId: string): Promise<SessionWizardSetupState> {
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardSetupStateReview(uniqueId))
+  const responseData = parseServicePayload(res.data)
+  const setupState = sessionSetupStateSchema.parse(responseData)
+
+  return {
+    setupState: (setupState.SetupState ?? setupState.setupState ?? "Incomplete") as SessionWizardSetupState["setupState"],
+  }
+}
+
+export async function updateSessionWizardSetupState(
+  uniqueId: string,
+  payload: SessionWizardSetupStateRequest,
+): Promise<SessionWizardSetupState> {
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardSetupState(uniqueId), payload)
+  const responseData = parseServicePayload(res.data)
+  const setupState = sessionSetupStateSchema.parse(responseData)
+
+  return {
+    setupState: (setupState.SetupState ?? setupState.setupState ?? "Incomplete") as SessionWizardSetupState["setupState"],
   }
 }
 

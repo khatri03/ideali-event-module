@@ -51,6 +51,7 @@ import { StyledSelect } from "@/components/common/StyledSelect"
 import { extractApiError } from "@/utils/errors"
 import { getSessionWizardStepNumber, useSessionWizardNavigation } from "../hooks/useSessionWizard"
 import { useSessionWizardActions } from "../hooks/useSessionWizardActions"
+import { SessionReviewStep } from "../components"
 
 export function SessionWizardStepPage() {
   const { activeStep } = useSessionWizardNavigation()
@@ -86,6 +87,10 @@ export function SessionWizardStepPage() {
 
   if (activeStep?.slug === "ticket") {
     return <SessionTicketStep sessionId={sessionId} />
+  }
+
+  if (activeStep?.slug === "review") {
+    return <SessionReviewStep sessionId={sessionId} />
   }
 
   if (activeStep?.slug === "name" || !activeStep) {

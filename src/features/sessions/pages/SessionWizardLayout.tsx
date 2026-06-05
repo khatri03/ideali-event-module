@@ -99,8 +99,10 @@ function SessionWizardLayoutContent() {
   const isStepsCollapsed = isStepsCollapsedOverride ?? isMobile
   const { steps, activeStep, activeStepIndex, goToStep, goBack, goNext, isFirstStep, isLastStep } = useSessionWizardNavigation()
   const wizardProgressQuery = useSessionWizardProgress(sessionId)
-  const { runPrimaryAction } = useSessionWizardActions()
+  const { runPrimaryAction, isPrimaryActionReady } = useSessionWizardActions()
   const isSkippableStep = activeStep?.slug === "description" || activeStep?.slug === "schedule"
+  const isReviewStep = activeStep?.slug === "review"
+  const returnUrl = new URLSearchParams(location.search).get("returnUrl") ?? undefined
   const currentStepIndex = sessionId ? steps.findIndex((step) => step.path === location.pathname) : -1
   const lastCompletedStepNo = sessionId ? wizardProgressQuery.data?.stepNo ?? 0 : 0
   const completedStepCount = sessionId ? Math.min(lastCompletedStepNo, steps.length) : 0
@@ -391,24 +393,36 @@ function SessionWizardLayoutContent() {
                   >
                     Close
                   </Button>
-                  <Button
-                    borderRadius="14px"
-                    h="44px"
-                    px={6}
-                    minW={{ base: "full", md: "140px" }}
-                    onClick={async () => {
-                      try {
-                        await runPrimaryAction()
-                        goNext()
-                      } catch {
-                        // Step component handles inline validation/state.
+                <Button
+                  borderRadius="14px"
+                  h="44px"
+                  px={6}
+                  minW={{ base: "full", md: "140px" }}
+                  loading={isReviewStep && !isPrimaryActionReady}
+                  loadingText={isReviewStep ? "Working..." : "Saving..."}
+                  onClick={async () => {
+                    try {
+                      await runPrimaryAction()
+                      if (isReviewStep) {
+                        navigate(returnUrl ?? APP_ROUTES.events)
+                        return
                       }
-                    }}
-                    disabled={isLastStep}
-                    color="white"
-                    style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
-                  >
-                    Save & Continue
+
+                      if (returnUrl) {
+                        navigate(returnUrl)
+                        return
+                      }
+
+                      goNext()
+                    } catch {
+                      // Step component handles inline validation/state.
+                    }
+                  }}
+                  disabled={!isReviewStep && isLastStep}
+                  color="white"
+                  style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+                >
+                    {isReviewStep ? "Finish" : "Save & Continue"}
                   </Button>
                 </Flex>
               </Flex>
