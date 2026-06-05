@@ -66,6 +66,27 @@ const sessionScheduleSchema = z.object({
 
 const sessionScheduleListSchema = z.array(sessionScheduleSchema)
 
+const sessionTicketSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  Name: z.string().optional(),
+  name: z.string().optional(),
+  Description: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  TotalQuantity: z.number().int().nullable().optional(),
+  totalQuantity: z.number().int().nullable().optional(),
+  FullPrice: z.union([z.number(), z.string()]).nullable().optional(),
+  fullPrice: z.union([z.number(), z.string()]).nullable().optional(),
+  MinPurchase: z.number().int().nullable().optional(),
+  minPurchase: z.number().int().nullable().optional(),
+  MaxPurchase: z.number().int().nullable().optional(),
+  maxPurchase: z.number().int().nullable().optional(),
+  IsActive: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+})
+
+const sessionTicketListSchema = z.array(sessionTicketSchema)
+
 function readResponseData(payload: unknown): unknown {
   if (!payload || typeof payload !== "object") {
     return payload
@@ -159,12 +180,41 @@ export interface SessionWizardScheduleRequest {
   scheduleTime: string
 }
 
+export interface SessionWizardTicket {
+  uniqueId: string
+  name: string
+  description: string | null
+  totalQuantity: number | null
+  fullPrice: string
+  minPurchase: number | null
+  maxPurchase: number | null
+  isActive: boolean
+}
+
+export interface SessionWizardTicketRequest {
+  name: string
+  description: string | null
+  totalQuantity: number
+  fullPrice: number
+  minPurchase: number | null
+  maxPurchase: number | null
+  isActive: boolean
+}
+
 function normalizeScheduleTime(value: string | undefined): string {
   if (!value) {
     return ""
   }
 
   return value.length >= 5 ? value.slice(0, 5) : value
+}
+
+function normalizeTicketPrice(value: string | number | null | undefined): string {
+  if (value === null || value === undefined || value === "") {
+    return ""
+  }
+
+  return typeof value === "number" ? value.toString() : value
 }
 
 export async function fetchSessionWizardName(uniqueId: string): Promise<SessionWizardName> {
@@ -382,6 +432,68 @@ export async function updateSessionWizardSchedule(
 
 export async function deleteSessionWizardSchedule(uniqueId: string, scheduleUniqueId: string): Promise<void> {
   await client.delete(API_ROUTES.sessionWizardScheduleItem(uniqueId, scheduleUniqueId))
+}
+
+export async function fetchSessionWizardTickets(uniqueId: string): Promise<SessionWizardTicket[]> {
+  const res = await client.get<unknown>(API_ROUTES.sessionWizardTicket(uniqueId))
+  const responseData = parseServicePayload(res.data)
+  const tickets = sessionTicketListSchema.parse(responseData)
+
+  return tickets.map((ticket) => ({
+    uniqueId: ticket.UniqueId ?? ticket.uniqueId ?? "",
+    name: ticket.Name ?? ticket.name ?? "",
+    description: ticket.Description ?? ticket.description ?? null,
+    totalQuantity: ticket.TotalQuantity ?? ticket.totalQuantity ?? null,
+    fullPrice: normalizeTicketPrice(ticket.FullPrice ?? ticket.fullPrice),
+    minPurchase: ticket.MinPurchase ?? ticket.minPurchase ?? null,
+    maxPurchase: ticket.MaxPurchase ?? ticket.maxPurchase ?? null,
+    isActive: ticket.IsActive ?? ticket.isActive ?? false,
+  }))
+}
+
+export async function createSessionWizardTicket(
+  uniqueId: string,
+  payload: SessionWizardTicketRequest,
+): Promise<SessionWizardTicket> {
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardTicket(uniqueId), payload)
+  const responseData = parseServicePayload(res.data)
+  const ticket = sessionTicketSchema.parse(responseData)
+
+  return {
+    uniqueId: ticket.UniqueId ?? ticket.uniqueId ?? "",
+    name: ticket.Name ?? ticket.name ?? "",
+    description: ticket.Description ?? ticket.description ?? null,
+    totalQuantity: ticket.TotalQuantity ?? ticket.totalQuantity ?? null,
+    fullPrice: normalizeTicketPrice(ticket.FullPrice ?? ticket.fullPrice),
+    minPurchase: ticket.MinPurchase ?? ticket.minPurchase ?? null,
+    maxPurchase: ticket.MaxPurchase ?? ticket.maxPurchase ?? null,
+    isActive: ticket.IsActive ?? ticket.isActive ?? false,
+  }
+}
+
+export async function updateSessionWizardTicket(
+  uniqueId: string,
+  ticketUniqueId: string,
+  payload: SessionWizardTicketRequest,
+): Promise<SessionWizardTicket> {
+  const res = await client.put<unknown>(API_ROUTES.sessionWizardTicketItem(uniqueId, ticketUniqueId), payload)
+  const responseData = parseServicePayload(res.data)
+  const ticket = sessionTicketSchema.parse(responseData)
+
+  return {
+    uniqueId: ticket.UniqueId ?? ticket.uniqueId ?? "",
+    name: ticket.Name ?? ticket.name ?? "",
+    description: ticket.Description ?? ticket.description ?? null,
+    totalQuantity: ticket.TotalQuantity ?? ticket.totalQuantity ?? null,
+    fullPrice: normalizeTicketPrice(ticket.FullPrice ?? ticket.fullPrice),
+    minPurchase: ticket.MinPurchase ?? ticket.minPurchase ?? null,
+    maxPurchase: ticket.MaxPurchase ?? ticket.maxPurchase ?? null,
+    isActive: ticket.IsActive ?? ticket.isActive ?? false,
+  }
+}
+
+export async function deleteSessionWizardTicket(uniqueId: string, ticketUniqueId: string): Promise<void> {
+  await client.delete(API_ROUTES.sessionWizardTicketItem(uniqueId, ticketUniqueId))
 }
 
 export async function fetchSessionWizardProgress(uniqueId: string): Promise<SessionWizardProgressResponse> {

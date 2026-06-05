@@ -71,6 +71,8 @@ export const API_ROUTES = {
   sessionWizardSchedule: (id: string) => `/api/organizer/sessions/${id}/schedule`,
   sessionWizardScheduleItem: (id: string, scheduleId: string) =>
     `/api/organizer/sessions/${id}/schedule/${scheduleId}`,
+  sessionWizardTicket: (id: string) => `/api/organizer/sessions/${id}/ticket`,
+  sessionWizardTicketItem: (id: string, ticketId: string) => `/api/organizer/sessions/${id}/ticket/${ticketId}`,
   sessionWizardProgress: (id: string) => `/api/organizer/sessions/${id}/wizard-progress`,
   organizerVenues: "/api/organizer/venues/list",
   organizerVenueCreate: "/api/organizer/venues/create",
