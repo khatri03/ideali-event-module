@@ -70,10 +70,10 @@ function formatMoneyDisplay(value: string) {
     return value || "0"
   }
 
-  return new Intl.NumberFormat("en-US", {
+  return `$${new Intl.NumberFormat("en-US", {
     minimumFractionDigits: parsed % 1 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
-  }).format(parsed)
+  }).format(parsed)}`
 }
 
 function formatCount(value: number | null) {
@@ -734,7 +734,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
 
                     <Box>
                       <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
-                        Price <Text as="span" color="red.500">*</Text>
+                        Price ($) <Text as="span" color="red.500">*</Text>
                       </Text>
                       <Input
                         type="text"

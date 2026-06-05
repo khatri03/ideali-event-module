@@ -11,7 +11,7 @@ import {
   Table,
   Text,
 } from "@chakra-ui/react"
-import { PencilLine, Plus, Trash2 } from "lucide-react"
+import { CalendarDays, Clock3, PencilLine, Plus, Trash2 } from "lucide-react"
 import { format } from "date-fns"
 import { SessionUtcDateTimeField } from "./SessionUtcDateTimeField"
 import {
@@ -70,10 +70,10 @@ function formatMoneyDisplay(value: string) {
     return value || "0"
   }
 
-  return new Intl.NumberFormat("en-US", {
+  return `$${new Intl.NumberFormat("en-US", {
     minimumFractionDigits: parsed % 1 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
-  }).format(parsed)
+  }).format(parsed)}`
 }
 
 function toDateValue(value: string | null) {
@@ -88,6 +88,35 @@ function toDateValue(value: string | null) {
 function formatDateTime(value: string) {
   const parsed = toDateValue(value)
   return parsed ? format(parsed, "dd-MMM-yyyy hh:mm aa") : "—"
+}
+
+function formatDateOnly(value: string) {
+  const parsed = toDateValue(value)
+  return parsed ? format(parsed, "dd-MMM-yyyy") : "—"
+}
+
+function formatTimeOnly(value: string) {
+  const parsed = toDateValue(value)
+  return parsed ? format(parsed, "hh:mm aa") : "—"
+}
+
+function DateTimeCell({ value }: { value: string }) {
+  return (
+    <Stack gap={1}>
+      <Flex align="center" gap={2}>
+        <CalendarDays size={14} color="var(--chakra-colors-gray-600)" />
+        <Text fontSize="sm" color="gray.900" fontWeight="600">
+          {formatDateOnly(value)}
+        </Text>
+      </Flex>
+      <Flex align="center" gap={2}>
+        <Clock3 size={14} color="var(--chakra-colors-gray-600)" />
+        <Text fontSize="sm" color="gray.700">
+          {formatTimeOnly(value)}
+        </Text>
+      </Flex>
+    </Stack>
+  )
 }
 
 function toTicketPricePeriodPayload(
@@ -453,7 +482,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
           <Table.Header>
             <Table.Row bg="gray.50" borderColor="gray.300">
               <Table.ColumnHeader px={5} py={3} borderColor="gray.300" fontSize="xs" fontWeight="700">
-                Amount
+                Amount ($)
               </Table.ColumnHeader>
               <Table.ColumnHeader px={5} py={3} borderColor="gray.300" fontSize="xs" fontWeight="700">
                 Start Date/Time
@@ -485,14 +514,10 @@ export const SessionTicketPricePeriodsSection = forwardRef<
                     </Text>
                   </Table.Cell>
                   <Table.Cell px={5} py={4} borderColor="gray.300">
-                    <Text fontSize="sm" color="gray.900">
-                      {formatDateTime(pricePeriod.startDateTime)}
-                    </Text>
+                    <DateTimeCell value={pricePeriod.startDateTime} />
                   </Table.Cell>
                   <Table.Cell px={5} py={4} borderColor="gray.300">
-                    <Text fontSize="sm" color="gray.900">
-                      {formatDateTime(pricePeriod.endDateTime)}
-                    </Text>
+                    <DateTimeCell value={pricePeriod.endDateTime} />
                   </Table.Cell>
                   <Table.Cell px={4} py={4} borderColor="gray.300">
                     <Flex justify="flex-end" gap={2}>
@@ -611,7 +636,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
 
                 <Box>
                   <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
-                    Amount <Text as="span" color="red.500">*</Text>
+                    Amount ($) <Text as="span" color="red.500">*</Text>
                   </Text>
                   <Input
                     ref={amountInputRef}
