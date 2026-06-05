@@ -16,7 +16,7 @@ import {
   Text,
   Textarea,
 } from "@chakra-ui/react"
-import { PencilLine, Plus, Trash2 } from "lucide-react"
+import { ArrowUpDown, PencilLine, Plus, Trash2 } from "lucide-react"
 import { extractApiError } from "@/utils/errors"
 import {
   createSessionWizardTicket,
@@ -422,19 +422,34 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
           </Text>
         </Box>
 
-        <Button
-          variant="outline"
-          aria-label="Add ticket"
-          title="Add ticket"
-          borderRadius="999px"
-          h="44px"
-          w="44px"
-          minW="44px"
-          p={0}
-          onClick={openNewTicketDialog}
-        >
-          <Plus size={18} />
-        </Button>
+        <Flex gap={2}>
+          <Button
+            variant="outline"
+            aria-label="Sort tickets"
+            title="Sort tickets"
+            borderRadius="999px"
+            h="44px"
+            w="44px"
+            minW="44px"
+            p={0}
+            onClick={() => undefined}
+          >
+            <ArrowUpDown size={18} />
+          </Button>
+          <Button
+            variant="outline"
+            aria-label="Add ticket"
+            title="Add ticket"
+            borderRadius="999px"
+            h="44px"
+            w="44px"
+            minW="44px"
+            p={0}
+            onClick={openNewTicketDialog}
+          >
+            <Plus size={18} />
+          </Button>
+        </Flex>
       </Flex>
 
       <Box overflowX="auto" borderRadius="20px" border="1px solid" borderColor="gray.300" bg="app.bg">
