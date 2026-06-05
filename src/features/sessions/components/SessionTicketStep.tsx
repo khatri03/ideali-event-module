@@ -580,10 +580,10 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
             <Dialog.Body px={{ base: 6, md: 8 }} py={6} overflowY="auto">
               <SimpleGrid
                 columns={{ base: 1, lg: 2 }}
-                gap={10}
+                gap={6}
                 alignItems="start"
               >
-                <Stack gap={4} pr={{ base: 0, lg: 8 }} borderRight={{ base: "none", lg: "2px solid" }} borderColor={{ base: "transparent", lg: "gray.200" }}>
+                <Stack gap={4} pr={{ base: 0, lg: 6 }} borderRight={{ base: "none", lg: "2px solid" }} borderColor={{ base: "transparent", lg: "gray.200" }}>
                   <Box>
                     <Flex align="center" justify="space-between" gap={4} wrap="wrap" mb={2}>
                       <Text fontSize="sm" fontWeight="600" color="navy.700">
@@ -799,7 +799,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                   </SimpleGrid>
                 </Stack>
 
-                <Box pl={{ base: 0, lg: 8 }}>
+                <Box pl={{ base: 0, lg: 2 }}>
                   <SessionTicketPricePeriodsSection sessionId={sessionId} ticket={selectedTicket} />
                 </Box>
               </SimpleGrid>
