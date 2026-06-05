@@ -439,26 +439,6 @@ export const SessionTicketPricePeriodsSection = forwardRef<
 
   return (
     <Stack gap={3}>
-      <Box px={2}>
-        <Flex
-          align={{ base: "flex-start", md: "center" }}
-          direction={{ base: "column", md: "row" }}
-          justify="space-between"
-          gap={2}
-        >
-          <Text fontSize="xs" fontWeight="700" color="gray.600" textTransform="uppercase" letterSpacing="0.08em">
-            Booking Window
-          </Text>
-          <Text fontSize="sm" fontWeight="600" color="gray.900" textAlign={{ base: "left", md: "right" }}>
-            {bookingWindowQuery.data?.bookingStartDate
-              ? formatDateTime(bookingWindowQuery.data.bookingStartDate)
-              : "—"}{" "}
-            to{" "}
-            {bookingWindowQuery.data?.bookingEndDate ? formatDateTime(bookingWindowQuery.data.bookingEndDate) : "—"}
-          </Text>
-        </Flex>
-      </Box>
-
       <Box
         minH="full"
         border="1px solid"
@@ -632,6 +612,28 @@ export const SessionTicketPricePeriodsSection = forwardRef<
             <Dialog.Body px={6} py={6} overflowY="auto">
               <Stack gap={4}>
                 <Box>
+                  <Flex
+                    align={{ base: "flex-start", md: "center" }}
+                    direction={{ base: "column", md: "row" }}
+                    justify="space-between"
+                    gap={2}
+                  >
+                    <Text fontSize="xs" fontWeight="700" color="gray.600" textTransform="uppercase" letterSpacing="0.08em">
+                      Booking Window
+                    </Text>
+                    <Text fontSize="sm" fontWeight="600" color="gray.900" textAlign={{ base: "left", md: "right" }}>
+                      {bookingWindowQuery.data?.bookingStartDate
+                        ? formatDateTime(bookingWindowQuery.data.bookingStartDate)
+                        : "—"}{" "}
+                      to{" "}
+                      {bookingWindowQuery.data?.bookingEndDate
+                      ? formatDateTime(bookingWindowQuery.data.bookingEndDate)
+                      : "—"}
+                    </Text>
+                  </Flex>
+                </Box>
+
+                <Box>
                   <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
                     Amount ($) <Text as="span" color="red.500">*</Text>
                   </Text>
@@ -711,6 +713,10 @@ export const SessionTicketPricePeriodsSection = forwardRef<
                     />
                     </Box>
                   </Box>
+
+                  <Text fontSize="xs" color="gray.600" mt={-1}>
+                    UTC dates recommended
+                  </Text>
                 </Stack>
 
                 {formError ? (

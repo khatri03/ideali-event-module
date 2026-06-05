@@ -21,6 +21,7 @@ import { extractApiError } from "@/utils/errors"
 import {
   createSessionWizardTicket,
   deleteSessionWizardTicket,
+  fetchSessionWizardBooking,
   fetchSessionWizardTickets,
   updateSessionWizardTicket,
   type SessionWizardTicket,
@@ -62,6 +63,33 @@ function parseMoneyInput(value: string) {
 
   const parsed = Number(normalized.startsWith(".") ? `0${normalized}` : normalized)
   return Number.isFinite(parsed) ? parsed : null
+}
+
+function toDateValue(value: string | null) {
+  if (!value) {
+    return null
+  }
+
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function formatDateTime(value: string) {
+  const parsed = toDateValue(value)
+  if (!parsed) {
+    return "—"
+  }
+
+  return parsed
+    .toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    })
+    .replace(",", "")
 }
 
 function formatMoneyDisplay(value: string) {
@@ -114,6 +142,21 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
   const tenurePricingSectionRef = useRef<SessionTicketPricePeriodsSectionHandle>(null)
   const keepDraftTenureOnCloseRef = useRef(false)
   const queryClient = useQueryClient()
+  const bookingQuery = queryClient.getQueryData(["sessions", { sessionId, step: "booking" }]) as
+    | { bookingStartDate?: string | null; bookingEndDate?: string | null }
+    | undefined
+  const bookingWindowQuery = useQuery({
+    queryKey: ["sessions", { sessionId, step: "booking-window" }],
+    queryFn: () => fetchSessionWizardBooking(sessionId),
+    enabled: !!sessionId,
+    retry: false,
+    initialData: bookingQuery
+      ? {
+          bookingStartDate: bookingQuery.bookingStartDate ?? null,
+          bookingEndDate: bookingQuery.bookingEndDate ?? null,
+        }
+      : undefined,
+  })
 
   const ticketsQuery = useQuery({
     queryKey: ["sessions", { sessionId, step: "ticket" }],
@@ -279,16 +322,17 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
       setMaximumPurchaseError("Maximum purchase must be greater than zero.")
       hasError = true
     } else if (parsedMaximumPurchase !== null) {
-      const resolvedMinimum = parsedMinimumPurchase ?? 1
       const resolvedTotalTickets = parsedTotalTickets
 
-      if (parsedMaximumPurchase <= resolvedMinimum) {
-        setMaximumPurchaseError("Maximum purchase must be greater than minimum purchase.")
+      if (parsedMinimumPurchase !== null && parsedMinimumPurchase >= parsedMaximumPurchase) {
+        setMinimumPurchaseError("Must be less than maximum")
+        setMaximumPurchaseError("Must be greater than minimum")
         hasError = true
       } else if (parsedMaximumPurchase >= resolvedTotalTickets) {
         setMaximumPurchaseError("Maximum purchase must be less than total tickets.")
         hasError = true
       } else {
+        setMinimumPurchaseError("")
         setMaximumPurchaseError("")
       }
     } else {
@@ -615,17 +659,39 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
             </Box>
 
             <Dialog.Body px={{ base: 6, md: 8 }} py={6} overflowY="auto">
-            <SimpleGrid
-              columns={{ base: 1, lg: 2 }}
-              gap={6}
-              alignItems="start"
-            >
-              <Stack gap={4} pr={{ base: 0, lg: 6 }} borderRight={{ base: "none", lg: "2px solid" }} borderColor={{ base: "transparent", lg: "gray.200" }}>
-                <Box>
-                  <Flex align="center" justify="space-between" gap={4} wrap="wrap" mb={2}>
-                    <Text fontSize="sm" fontWeight="600" color="navy.700">
-                      Name <Text as="span" color="red.500">*</Text>
-                    </Text>
+              <SimpleGrid
+                columns={{ base: 1, lg: 2 }}
+                gap={6}
+                alignItems="start"
+              >
+                <Stack gap={4} pr={{ base: 0, lg: 6 }} borderRight={{ base: "none", lg: "2px solid" }} borderColor={{ base: "transparent", lg: "gray.200" }}>
+                  <Box>
+                    <Flex
+                      align={{ base: "flex-start", md: "center" }}
+                      direction={{ base: "column", md: "row" }}
+                      justify="space-between"
+                      gap={2}
+                    >
+                      <Text fontSize="xs" fontWeight="700" color="gray.600" textTransform="uppercase" letterSpacing="0.08em">
+                        Booking Window
+                      </Text>
+                      <Text fontSize="sm" fontWeight="600" color="gray.900" textAlign={{ base: "left", md: "right" }}>
+                        {bookingWindowQuery.data?.bookingStartDate
+                          ? formatDateTime(bookingWindowQuery.data.bookingStartDate)
+                          : "—"}{" "}
+                        to{" "}
+                        {bookingWindowQuery.data?.bookingEndDate
+                          ? formatDateTime(bookingWindowQuery.data.bookingEndDate)
+                          : "—"}
+                      </Text>
+                    </Flex>
+                  </Box>
+
+                  <Box>
+                    <Flex align="center" justify="space-between" gap={4} wrap="wrap" mb={2}>
+                      <Text fontSize="sm" fontWeight="600" color="navy.700">
+                        Name <Text as="span" color="red.500">*</Text>
+                      </Text>
 
                       <Switch.Root
                         checked={isActive}
