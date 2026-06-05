@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Box,
   Button,
@@ -7,7 +7,6 @@ import {
   Dialog,
   Flex,
   Input,
-  SimpleGrid,
   Stack,
   Table,
   Text,
@@ -18,6 +17,7 @@ import { SessionUtcDateTimeField } from "./SessionUtcDateTimeField"
 import {
   createSessionWizardTicketPricePeriod,
   deleteSessionWizardTicketPricePeriod,
+  fetchSessionWizardBooking,
   updateSessionWizardTicketPricePeriod,
   type SessionWizardTicket,
   type SessionWizardTicketPricePeriod,
@@ -27,6 +27,11 @@ import { extractApiError } from "@/utils/errors"
 interface SessionTicketPricePeriodsSectionProps {
   sessionId: string
   ticket: SessionWizardTicket | null
+}
+
+export interface SessionTicketPricePeriodsSectionHandle {
+  persistDrafts: (ticketUniqueId: string) => Promise<void>
+  resetDrafts: () => void
 }
 
 function formatMoneyInput(value: string) {
@@ -97,7 +102,23 @@ function toTicketPricePeriodPayload(
   }
 }
 
-export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionTicketPricePeriodsSectionProps) {
+function isTimepickerInteraction(target: EventTarget | null) {
+  return target instanceof HTMLElement && !!target.closest(".tp-ui, .tp-ui-modal, .tp-ui-popover, .tp-ui-wrapper")
+}
+
+function getTimepickerPersistentElements() {
+  return [
+    document.querySelector(".tp-ui-modal"),
+    document.querySelector(".tp-ui-popover"),
+    document.querySelector(".tp-ui-wrapper"),
+    document.querySelector(".tp-ui"),
+  ].filter((element): element is Element => element instanceof Element)
+}
+
+export const SessionTicketPricePeriodsSection = forwardRef<
+  SessionTicketPricePeriodsSectionHandle,
+  SessionTicketPricePeriodsSectionProps
+>(function SessionTicketPricePeriodsSection({ sessionId, ticket }, ref) {
   const queryClient = useQueryClient()
   const [isOpen, setIsOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -110,11 +131,31 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
   const [startDateTimeError, setStartDateTimeError] = useState("")
   const [endDateTimeError, setEndDateTimeError] = useState("")
   const [formError, setFormError] = useState("")
+  const [ticketIdOverride, setTicketIdOverride] = useState<string | null>(ticket?.uniqueId ?? null)
+  const [pricePeriods, setPricePeriods] = useState<SessionWizardTicketPricePeriod[]>(ticket?.pricePeriods ?? [])
+  const [isDraftMode, setIsDraftMode] = useState(!ticket?.uniqueId)
   const amountInputRef = useRef<HTMLInputElement>(null)
+
+  const effectiveTicketId = ticket?.uniqueId ?? ticketIdOverride
+  const bookingQuery = queryClient.getQueryData(["sessions", { sessionId, step: "booking" }]) as
+    | { bookingStartDate?: string | null; bookingEndDate?: string | null }
+    | undefined
+  const bookingWindowQuery = useQuery({
+    queryKey: ["sessions", { sessionId, step: "booking-window" }],
+    queryFn: () => fetchSessionWizardBooking(sessionId),
+    enabled: !!sessionId,
+    retry: false,
+    initialData: bookingQuery
+      ? {
+          bookingStartDate: bookingQuery.bookingStartDate ?? null,
+          bookingEndDate: bookingQuery.bookingEndDate ?? null,
+        }
+      : undefined,
+  })
 
   const sortedPricePeriods = useMemo(
     () =>
-      [...(ticket?.pricePeriods ?? [])].sort((left, right) => {
+      [...pricePeriods].sort((left, right) => {
         const startCompare = left.startDateTime.localeCompare(right.startDateTime)
         if (startCompare !== 0) {
           return startCompare
@@ -122,12 +163,22 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
 
         return left.amount.localeCompare(right.amount)
       }),
-    [ticket?.pricePeriods],
+    [pricePeriods],
   )
+
+  useEffect(() => {
+    if (!ticket?.uniqueId) {
+      return
+    }
+
+    setTicketIdOverride(ticket.uniqueId)
+    setPricePeriods(ticket.pricePeriods ?? [])
+    setIsDraftMode(false)
+  }, [ticket?.uniqueId, ticket?.pricePeriods])
 
   const createMutation = useMutation({
     mutationFn: (payload: { amount: number; startDateTime: string; endDateTime: string }) =>
-      createSessionWizardTicketPricePeriod(sessionId, ticket?.uniqueId ?? "", payload),
+      createSessionWizardTicketPricePeriod(sessionId, effectiveTicketId ?? "", payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "ticket" }] })
     },
@@ -135,7 +186,7 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
 
   const updateMutation = useMutation({
     mutationFn: (payload: { pricePeriodUniqueId: string; amount: number; startDateTime: string; endDateTime: string }) =>
-      updateSessionWizardTicketPricePeriod(sessionId, ticket?.uniqueId ?? "", payload.pricePeriodUniqueId, {
+      updateSessionWizardTicketPricePeriod(sessionId, effectiveTicketId ?? "", payload.pricePeriodUniqueId, {
         amount: payload.amount,
         startDateTime: payload.startDateTime,
         endDateTime: payload.endDateTime,
@@ -147,11 +198,50 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
 
   const deleteMutation = useMutation({
     mutationFn: (pricePeriodUniqueId: string) =>
-      deleteSessionWizardTicketPricePeriod(sessionId, ticket?.uniqueId ?? "", pricePeriodUniqueId),
+      deleteSessionWizardTicketPricePeriod(sessionId, effectiveTicketId ?? "", pricePeriodUniqueId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "ticket" }] })
     },
   })
+
+  useImperativeHandle(ref, () => ({
+    async persistDrafts(ticketUniqueId: string) {
+      setTicketIdOverride(ticketUniqueId)
+      setIsDraftMode(false)
+
+      if (pricePeriods.length === 0) {
+        return
+      }
+
+      const persistedRows: SessionWizardTicketPricePeriod[] = []
+      for (const period of pricePeriods) {
+        const savedPeriod = await createSessionWizardTicketPricePeriod(sessionId, ticketUniqueId, {
+          amount: parseMoneyInput(period.amount) ?? 0,
+          startDateTime: period.startDateTime,
+          endDateTime: period.endDateTime,
+        })
+        persistedRows.push(savedPeriod)
+      }
+
+      setPricePeriods(persistedRows)
+      await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "ticket" }] })
+    },
+    resetDrafts() {
+      setTicketIdOverride(ticket?.uniqueId ?? null)
+      setPricePeriods(ticket?.pricePeriods ?? [])
+      setIsDraftMode(!ticket?.uniqueId)
+      setEditingPricePeriodId(null)
+      setAmount("")
+      setStartDateTime(null)
+      setEndDateTime(null)
+      setAmountError("")
+      setStartDateTimeError("")
+      setEndDateTimeError("")
+      setFormError("")
+      createMutation.reset()
+      updateMutation.reset()
+    },
+  }), [createMutation, pricePeriods, queryClient, sessionId, ticket?.pricePeriods, ticket?.uniqueId, updateMutation])
 
   useEffect(() => {
     if (!isOpen) {
@@ -179,11 +269,8 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
   }
 
   function openNewDialog() {
-    if (!ticket?.uniqueId) {
-      return
-    }
-
     resetForm()
+    setIsDraftMode(!effectiveTicketId)
     setIsOpen(true)
   }
 
@@ -238,12 +325,40 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
       return
     }
 
-    if (ticket?.uniqueId === undefined || !ticket.uniqueId) {
-      setFormError("Save the ticket before adding tenure based pricing.")
+    if (isDraftMode || !effectiveTicketId) {
+      const resolvedAmount = parsedAmount ?? 0
+      const resolvedStartDateTime = startDateTime as Date
+      const resolvedEndDateTime = endDateTime as Date
+      const nextPeriod = {
+        uniqueId: editingPricePeriodId ?? (window.crypto?.randomUUID?.() ?? `${Date.now()}`),
+        amount: formatMoneyInput(resolvedAmount.toString()),
+        startDateTime: resolvedStartDateTime.toISOString(),
+        endDateTime: resolvedEndDateTime.toISOString(),
+        currentStatus: "Scheduled",
+      } satisfies SessionWizardTicketPricePeriod
+
+      setPricePeriods((current) => {
+        const index = current.findIndex((item) => item.uniqueId === editingPricePeriodId)
+        if (index >= 0) {
+          const next = [...current]
+          next[index] = nextPeriod
+          return next
+        }
+
+        return [...current, nextPeriod]
+      })
+
+      if (closeAfterSave) {
+        setIsOpen(false)
+        resetForm()
+        return
+      }
+
+      resetForm()
       return
     }
 
-    if (hasError) {
+    if (hasError || !effectiveTicketId) {
       return
     }
 
@@ -256,7 +371,8 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
           ...payload,
         })
       } else {
-        await createMutation.mutateAsync(payload)
+        const createdPeriod = await createMutation.mutateAsync(payload)
+        setPricePeriods((current) => [...current.filter((item) => item.uniqueId !== createdPeriod.uniqueId), createdPeriod])
       }
     } catch {
       return
@@ -276,8 +392,16 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
       return
     }
 
+    if (isDraftMode || !effectiveTicketId) {
+      setPricePeriods((current) => current.filter((item) => item.uniqueId !== pricePeriodToDelete.uniqueId))
+      setIsDeleteOpen(false)
+      setPricePeriodToDelete(null)
+      return
+    }
+
     deleteMutation.mutate(pricePeriodToDelete.uniqueId, {
       onSuccess: () => {
+        setPricePeriods((current) => current.filter((item) => item.uniqueId !== pricePeriodToDelete.uniqueId))
         setIsDeleteOpen(false)
         setPricePeriodToDelete(null)
       },
@@ -306,13 +430,12 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
         <Button
           variant="outline"
           aria-label="Add tenure based pricing"
-          title={ticket?.uniqueId ? "Add tenure based pricing" : "Save the ticket first"}
+          title="Add tenure based pricing"
           borderRadius="999px"
           h="44px"
           w="44px"
           minW="44px"
           p={0}
-          disabled={!ticket?.uniqueId}
           onClick={openNewDialog}
         >
           <Plus size={18} />
@@ -345,15 +468,15 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
           </Table.Header>
 
           <Table.Body>
-            {!ticket ? (
+            {sortedPricePeriods.length === 0 ? (
               <Table.Row borderColor="gray.300">
                 <Table.Cell colSpan={4} px={5} py={8} borderColor="gray.300">
                   <Text fontSize="sm" color="gray.600">
-                    Save the ticket first to add tenure based pricing.
+                    No tenure based pricing added yet. Add rows now and save them with the ticket.
                   </Text>
                 </Table.Cell>
               </Table.Row>
-            ) : sortedPricePeriods.length > 0 ? (
+            ) : (
               sortedPricePeriods.map((pricePeriod) => (
                 <Table.Row key={pricePeriod.uniqueId} borderColor="gray.300">
                   <Table.Cell px={5} py={4} borderColor="gray.300">
@@ -407,14 +530,6 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
                   </Table.Cell>
                 </Table.Row>
               ))
-            ) : (
-              <Table.Row borderColor="gray.300">
-                <Table.Cell colSpan={4} px={5} py={8} borderColor="gray.300">
-                  <Text fontSize="sm" color="gray.600">
-                    No tenure based pricing added yet.
-                  </Text>
-                </Table.Cell>
-              </Table.Row>
             )}
           </Table.Body>
         </Table.Root>
@@ -428,6 +543,17 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
             resetForm()
           }
         }}
+        onInteractOutside={(event) => {
+          if (isTimepickerInteraction(event.target) || isTimepickerInteraction(event.detail.target)) {
+            event.preventDefault()
+          }
+        }}
+        persistentElements={[
+          () => getTimepickerPersistentElements()[0] ?? null,
+          () => getTimepickerPersistentElements()[1] ?? null,
+          () => getTimepickerPersistentElements()[2] ?? null,
+          () => getTimepickerPersistentElements()[3] ?? null,
+        ]}
         size="lg"
       >
         <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
@@ -458,6 +584,31 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
 
             <Dialog.Body px={6} py={6} overflowY="auto">
               <Stack gap={4}>
+                <Box>
+                  <Flex
+                    align={{ base: "flex-start", md: "center" }}
+                    direction={{ base: "column", md: "row" }}
+                    justify="space-between"
+                    gap={2}
+                  >
+                    <Text fontSize="xs" fontWeight="700" color="gray.600" textTransform="uppercase" letterSpacing="0.08em">
+                      Booking Window
+                    </Text>
+                    <Text fontSize="sm" fontWeight="600" color="gray.900" textAlign={{ base: "left", md: "right" }}>
+                      {bookingWindowQuery.data?.bookingStartDate
+                        ? formatDateTime(bookingWindowQuery.data.bookingStartDate)
+                        : "—"}{" "}
+                      to{" "}
+                      {bookingWindowQuery.data?.bookingEndDate
+                        ? formatDateTime(bookingWindowQuery.data.bookingEndDate)
+                        : "—"}
+                    </Text>
+                  </Flex>
+                  <Text fontSize="xs" color="gray.600" mt={1}>
+                    Use this window to define tenure based pricing.
+                  </Text>
+                </Box>
+
                 <Box>
                   <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
                     Amount <Text as="span" color="red.500">*</Text>
@@ -492,11 +643,12 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
                   ) : null}
                 </Box>
 
-                <SimpleGrid columns={{ base: 1, lg: 2 }} gap={5} maxW="760px">
-                  <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
-                    <Text fontSize="sm" fontWeight="700" color="gray.900" mb={4}>
-                      Start Date/Time <Text as="span" color="red.500">*</Text>
+                <Stack gap={5} maxW="760px">
+                  <Box>
+                    <Text fontSize="sm" fontWeight="700" color="gray.900" mb={2}>
+                      From <Text as="span" color="red.500">*</Text>
                     </Text>
+                    <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
                     <SessionUtcDateTimeField
                       value={startDateTime}
                       error={startDateTimeError}
@@ -513,12 +665,14 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
                         }
                       }}
                     />
+                    </Box>
                   </Box>
 
-                  <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
-                    <Text fontSize="sm" fontWeight="700" color="gray.900" mb={4}>
-                      End Date/Time <Text as="span" color="red.500">*</Text>
+                  <Box>
+                    <Text fontSize="sm" fontWeight="700" color="gray.900" mb={2}>
+                      To <Text as="span" color="red.500">*</Text>
                     </Text>
+                    <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
                     <SessionUtcDateTimeField
                       value={endDateTime}
                       minDate={startDateTime ?? undefined}
@@ -533,8 +687,9 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
                         }
                       }}
                     />
+                    </Box>
                   </Box>
-                </SimpleGrid>
+                </Stack>
 
                 {formError ? (
                   <Text fontSize="sm" color="red.500">
@@ -639,7 +794,7 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
             </Dialog.Body>
 
             <Box px={6} py={4} borderTop="1px solid" borderColor="gray.200" bg="gray.50">
-              <Flex justify="flex-end" gap={3}>
+              <Stack direction={{ base: "column", md: "row" }} gap={3} justify="space-between">
                 <Button
                   variant="outline"
                   colorPalette="gray"
@@ -647,6 +802,9 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
                   borderColor="gray.300"
                   bg="white"
                   _hover={{ bg: "gray.50", borderColor: "gray.400" }}
+                  w={{ base: "full", md: "auto" }}
+                  minW={{ base: "full", md: "140px" }}
+                  order={{ base: 2, md: 1 }}
                   onClick={() => {
                     setIsDeleteOpen(false)
                     setPricePeriodToDelete(null)
@@ -657,6 +815,9 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
                 <Button
                   colorPalette="red"
                   borderRadius="12px"
+                  w={{ base: "full", md: "auto" }}
+                  minW={{ base: "full", md: "140px" }}
+                  order={{ base: 1, md: 2 }}
                   loading={deleteMutation.isPending}
                   loadingText="Deleting..."
                   onClick={() => {
@@ -665,11 +826,11 @@ export function SessionTicketPricePeriodsSection({ sessionId, ticket }: SessionT
                 >
                   Delete
                 </Button>
-              </Flex>
+              </Stack>
             </Box>
           </Dialog.Content>
         </Dialog.Positioner>
       </Dialog.Root>
     </Box>
   )
-}
+})

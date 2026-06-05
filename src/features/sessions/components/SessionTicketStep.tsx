@@ -25,7 +25,10 @@ import {
   updateSessionWizardTicket,
   type SessionWizardTicket,
 } from "@/api/sessions"
-import { SessionTicketPricePeriodsSection } from "./SessionTicketPricePeriodsSection"
+import {
+  SessionTicketPricePeriodsSection,
+  type SessionTicketPricePeriodsSectionHandle,
+} from "./SessionTicketPricePeriodsSection"
 
 interface SessionTicketStepProps {
   sessionId: string
@@ -77,6 +80,19 @@ function formatCount(value: number | null) {
   return value === null ? "—" : new Intl.NumberFormat("en-US").format(value)
 }
 
+function isTimepickerInteraction(target: EventTarget | null) {
+  return target instanceof HTMLElement && !!target.closest(".tp-ui, .tp-ui-modal, .tp-ui-popover, .tp-ui-wrapper")
+}
+
+function getTimepickerPersistentElements() {
+  return [
+    document.querySelector(".tp-ui-modal"),
+    document.querySelector(".tp-ui-popover"),
+    document.querySelector(".tp-ui-wrapper"),
+    document.querySelector(".tp-ui"),
+  ].filter((element): element is Element => element instanceof Element)
+}
+
 export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -95,6 +111,8 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
   const [editingTicketId, setEditingTicketId] = useState<string | null>(null)
   const [ticketToDelete, setTicketToDelete] = useState<{ uniqueId: string; name: string } | null>(null)
   const ticketNameInputRef = useRef<HTMLInputElement>(null)
+  const tenurePricingSectionRef = useRef<SessionTicketPricePeriodsSectionHandle>(null)
+  const keepDraftTenureOnCloseRef = useRef(false)
   const queryClient = useQueryClient()
 
   const ticketsQuery = useQuery({
@@ -195,6 +213,8 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
 
   function openNewTicketDialog() {
     resetTicketForm()
+    keepDraftTenureOnCloseRef.current = false
+    tenurePricingSectionRef.current?.resetDrafts()
     setIsOpen(true)
   }
 
@@ -295,25 +315,27 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
     }
 
     try {
-      if (editingTicketId) {
-        await updateTicketMutation.mutateAsync({
-          ticketUniqueId: editingTicketId,
-          ...payload,
-        })
-      } else {
-        await createTicketMutation.mutateAsync(payload)
+      const savedTicket = editingTicketId
+        ? await updateTicketMutation.mutateAsync({
+            ticketUniqueId: editingTicketId,
+            ...payload,
+          })
+        : await createTicketMutation.mutateAsync(payload)
+
+      setEditingTicketId(savedTicket.uniqueId)
+      await tenurePricingSectionRef.current?.persistDrafts(savedTicket.uniqueId)
+
+      if (closeAfterSave) {
+        keepDraftTenureOnCloseRef.current = true
+        setIsOpen(false)
+        resetTicketForm()
+        return
       }
+
+      return
     } catch {
       return
     }
-
-    if (closeAfterSave) {
-      setIsOpen(false)
-      resetTicketForm()
-      return
-    }
-
-    resetTicketForm()
   }
 
   function handleDeleteTicket() {
@@ -545,9 +567,24 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
         onOpenChange={(details) => {
           setIsOpen(details.open)
           if (!details.open) {
+            if (!keepDraftTenureOnCloseRef.current) {
+              tenurePricingSectionRef.current?.resetDrafts()
+            }
+            keepDraftTenureOnCloseRef.current = false
             resetTicketForm()
           }
         }}
+        onInteractOutside={(event) => {
+          if (isTimepickerInteraction(event.target) || isTimepickerInteraction(event.detail.target)) {
+            event.preventDefault()
+          }
+        }}
+        persistentElements={[
+          () => getTimepickerPersistentElements()[0] ?? null,
+          () => getTimepickerPersistentElements()[1] ?? null,
+          () => getTimepickerPersistentElements()[2] ?? null,
+          () => getTimepickerPersistentElements()[3] ?? null,
+        ]}
         size="lg"
       >
         <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
@@ -800,7 +837,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                 </Stack>
 
                 <Box pl={{ base: 0, lg: 2 }}>
-                  <SessionTicketPricePeriodsSection sessionId={sessionId} ticket={selectedTicket} />
+                  <SessionTicketPricePeriodsSection ref={tenurePricingSectionRef} sessionId={sessionId} ticket={selectedTicket} />
                 </Box>
               </SimpleGrid>
             </Dialog.Body>

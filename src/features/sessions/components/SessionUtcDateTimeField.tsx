@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { Box, Flex, Text } from "@chakra-ui/react"
+import { Box, Flex, SimpleGrid, Text } from "@chakra-ui/react"
 import { Calendar } from "lucide-react"
 import { format, parseISO } from "date-fns"
 import { Timepicker } from "timepicker-ui-react"
@@ -73,84 +73,90 @@ export function SessionUtcDateTimeField({ value, minDate, error, onChange }: Ses
 
   return (
     <Box>
-      <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
-        Date
-      </Text>
-      <Box position="relative">
-        <Flex
-          align="center"
-          justify="space-between"
-          border="1px solid"
-          borderColor="secondaryGray.100"
-          borderRadius="14px"
-          h="44px"
-          px={4}
-          cursor="pointer"
-          _hover={{ borderColor: "brand.400" }}
-          onClick={handleDateClick}
-        >
-          <Text fontSize="sm" color={displayDate ? "navy.700" : "secondaryGray.500"}>
-            {displayDate || "DD-MMM-YYYY"}
+      <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+        <Box>
+          <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
+            Date
           </Text>
-          <Calendar size={16} color="#8F9BBA" />
-        </Flex>
-        <input
-          ref={dateInputRef}
-          type="date"
-          value={selectedDate}
-          min={minDateValue}
-          onChange={(event) => {
-            const dateStr = event.target.value
-            setSelectedDate(dateStr)
+          <Box position="relative">
+            <Flex
+              align="center"
+              justify="space-between"
+              border="1px solid"
+              borderColor="secondaryGray.100"
+              borderRadius="14px"
+              h="44px"
+              px={4}
+              cursor="pointer"
+              _hover={{ borderColor: "brand.400" }}
+              onClick={handleDateClick}
+            >
+              <Text fontSize="sm" color={displayDate ? "navy.700" : "secondaryGray.500"}>
+                {displayDate || "DD-MMM-YYYY"}
+              </Text>
+              <Calendar size={16} color="#8F9BBA" />
+            </Flex>
+            <input
+              ref={dateInputRef}
+              type="date"
+              value={selectedDate}
+              min={minDateValue}
+              onChange={(event) => {
+                const dateStr = event.target.value
+                setSelectedDate(dateStr)
 
-            if (!dateStr) {
-              onChange(null)
-              return
-            }
+                if (!dateStr) {
+                  onChange(null)
+                  return
+                }
 
-            if (selectedTime) {
-              const next = new Date(`${dateStr}T${selectedTime}:00`)
-              onChange(Number.isNaN(next.getTime()) ? null : next)
-              return
-            }
+                if (selectedTime) {
+                  const next = new Date(`${dateStr}T${selectedTime}:00`)
+                  onChange(Number.isNaN(next.getTime()) ? null : next)
+                  return
+                }
 
-            onChange(null)
-          }}
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "1px",
-            height: "1px",
-            opacity: 0,
-            pointerEvents: "none",
-          }}
-        />
-      </Box>
+                onChange(null)
+              }}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "1px",
+                height: "1px",
+                opacity: 0,
+                pointerEvents: "none",
+              }}
+            />
+          </Box>
+        </Box>
 
-      <Text fontSize="sm" fontWeight="600" color="navy.700" mt={4} mb={2}>
-        Time
-      </Text>
-      <Timepicker
-        value={selectedTime ? to12hDisplay(selectedTime) : undefined}
-        options={{ clock: { type: "12h", autoSwitchToMinutes: true } }}
-        onConfirm={handleTimeConfirm}
-        disabled={!selectedDate}
-        placeholder="Select time"
-        style={{
-          border: "1px solid #E0E5F2",
-          borderRadius: "14px",
-          height: "44px",
-          padding: "0 16px",
-          width: "100%",
-          fontSize: "14px",
-          fontFamily: "'DM Sans', sans-serif",
-          cursor: selectedDate ? "pointer" : "not-allowed",
-          background: "transparent",
-          outline: "none",
-          color: selectedDate ? "#1B254B" : "#8F9BBA",
-        }}
-      />
+        <Box>
+          <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
+            Time
+          </Text>
+          <Timepicker
+            value={selectedTime ? to12hDisplay(selectedTime) : undefined}
+            options={{ clock: { type: "12h", autoSwitchToMinutes: true } }}
+            onConfirm={handleTimeConfirm}
+            disabled={!selectedDate}
+            placeholder="Select time"
+            style={{
+              border: "1px solid #E0E5F2",
+              borderRadius: "14px",
+              height: "44px",
+              padding: "0 16px",
+              width: "100%",
+              fontSize: "14px",
+              fontFamily: "'DM Sans', sans-serif",
+              cursor: selectedDate ? "pointer" : "not-allowed",
+              background: "transparent",
+              outline: "none",
+              color: selectedDate ? "#1B254B" : "#8F9BBA",
+            }}
+          />
+        </Box>
+      </SimpleGrid>
 
       {error ? (
         <Text mt={2} fontSize="sm" color="red.500">
