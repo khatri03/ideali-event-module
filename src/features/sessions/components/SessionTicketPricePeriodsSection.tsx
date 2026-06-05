@@ -156,12 +156,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
   const sortedPricePeriods = useMemo(
     () =>
       [...pricePeriods].sort((left, right) => {
-        const startCompare = left.startDateTime.localeCompare(right.startDateTime)
-        if (startCompare !== 0) {
-          return startCompare
-        }
-
-        return left.amount.localeCompare(right.amount)
+        return left.startDateTime.localeCompare(right.startDateTime)
       }),
     [pricePeriods],
   )
@@ -318,6 +313,11 @@ export const SessionTicketPricePeriodsSection = forwardRef<
       if (hasError) {
         return
       }
+    }
+
+    if (hasError) {
+      setFormError("")
+      return
     }
 
     if (startDateTime && endDateTime && endDateTime <= startDateTime) {
