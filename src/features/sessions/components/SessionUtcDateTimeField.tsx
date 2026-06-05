@@ -32,16 +32,19 @@ function to24hFromConfirm(hour: string, minutes: string, period: string) {
 interface SessionUtcDateTimeFieldProps {
   value: Date | null
   minDate?: Date
+  maxDate?: Date
   error?: string
   onChange: (value: Date | null) => void
 }
 
-export function SessionUtcDateTimeField({ value, minDate, error, onChange }: SessionUtcDateTimeFieldProps) {
+export function SessionUtcDateTimeField({ value, minDate, maxDate, error, onChange }: SessionUtcDateTimeFieldProps) {
   const [selectedDate, setSelectedDate] = useState(toDateInputValue(value))
   const [selectedTime, setSelectedTime] = useState(toTimeInputValue(value))
   const dateInputRef = useRef<HTMLInputElement>(null)
   const minDateValue = minDate ? toDateInputValue(minDate) : undefined
+  const maxDateValue = maxDate ? toDateInputValue(maxDate) : undefined
   const minTimeValue = minDateValue && selectedDate === minDateValue ? toTimeInputValue(minDate ?? null) : ""
+  const maxTimeValue = maxDateValue && selectedDate === maxDateValue ? toTimeInputValue(maxDate ?? null) : ""
   const displayDate = selectedDate ? format(parseISO(selectedDate), "dd-MMM-yyyy") : ""
 
   function handleDateClick() {
@@ -101,6 +104,7 @@ export function SessionUtcDateTimeField({ value, minDate, error, onChange }: Ses
               type="date"
               value={selectedDate}
               min={minDateValue}
+              max={maxDateValue}
               onChange={(event) => {
                 const dateStr = event.target.value
                 setSelectedDate(dateStr)
@@ -111,6 +115,16 @@ export function SessionUtcDateTimeField({ value, minDate, error, onChange }: Ses
                 }
 
                 if (selectedTime) {
+                  if (minTimeValue && selectedDate === minDateValue && selectedTime < minTimeValue) {
+                    onChange(null)
+                    return
+                  }
+
+                  if (maxTimeValue && selectedDate === maxDateValue && selectedTime > maxTimeValue) {
+                    onChange(null)
+                    return
+                  }
+
                   const next = new Date(`${dateStr}T${selectedTime}:00`)
                   onChange(Number.isNaN(next.getTime()) ? null : next)
                   return

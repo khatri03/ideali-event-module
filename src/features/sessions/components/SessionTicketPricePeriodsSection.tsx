@@ -679,6 +679,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
                     <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
                     <SessionUtcDateTimeField
                       value={startDateTime}
+                      maxDate={endDateTime ?? undefined}
                       error={startDateTimeError}
                       onChange={(nextStart) => {
                         setStartDateTime(nextStart)
