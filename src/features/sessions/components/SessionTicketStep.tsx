@@ -615,17 +615,17 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
             </Box>
 
             <Dialog.Body px={{ base: 6, md: 8 }} py={6} overflowY="auto">
-              <SimpleGrid
-                columns={{ base: 1, lg: 2 }}
-                gap={6}
-                alignItems="start"
-              >
-                <Stack gap={4} pr={{ base: 0, lg: 6 }} borderRight={{ base: "none", lg: "2px solid" }} borderColor={{ base: "transparent", lg: "gray.200" }}>
-                  <Box>
-                    <Flex align="center" justify="space-between" gap={4} wrap="wrap" mb={2}>
-                      <Text fontSize="sm" fontWeight="600" color="navy.700">
-                        Name <Text as="span" color="red.500">*</Text>
-                      </Text>
+            <SimpleGrid
+              columns={{ base: 1, lg: 2 }}
+              gap={6}
+              alignItems="start"
+            >
+              <Stack gap={4} pr={{ base: 0, lg: 6 }} borderRight={{ base: "none", lg: "2px solid" }} borderColor={{ base: "transparent", lg: "gray.200" }}>
+                <Box>
+                  <Flex align="center" justify="space-between" gap={4} wrap="wrap" mb={2}>
+                    <Text fontSize="sm" fontWeight="600" color="navy.700">
+                      Name <Text as="span" color="red.500">*</Text>
+                    </Text>
 
                       <Switch.Root
                         checked={isActive}

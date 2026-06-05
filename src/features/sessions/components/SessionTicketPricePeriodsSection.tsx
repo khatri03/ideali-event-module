@@ -438,15 +438,36 @@ export const SessionTicketPricePeriodsSection = forwardRef<
   }
 
   return (
-    <Box
-      minH="full"
-      border="1px solid"
-      borderColor="gray.300"
-      borderRadius="20px"
-      bg="white"
-      overflow="hidden"
-    >
-      <Flex align="center" justify="space-between" gap={3} px={5} py={4} borderBottom="1px solid" borderColor="gray.200">
+    <Stack gap={3}>
+      <Box px={2}>
+        <Flex
+          align={{ base: "flex-start", md: "center" }}
+          direction={{ base: "column", md: "row" }}
+          justify="space-between"
+          gap={2}
+        >
+          <Text fontSize="xs" fontWeight="700" color="gray.600" textTransform="uppercase" letterSpacing="0.08em">
+            Booking Window
+          </Text>
+          <Text fontSize="sm" fontWeight="600" color="gray.900" textAlign={{ base: "left", md: "right" }}>
+            {bookingWindowQuery.data?.bookingStartDate
+              ? formatDateTime(bookingWindowQuery.data.bookingStartDate)
+              : "—"}{" "}
+            to{" "}
+            {bookingWindowQuery.data?.bookingEndDate ? formatDateTime(bookingWindowQuery.data.bookingEndDate) : "—"}
+          </Text>
+        </Flex>
+      </Box>
+
+      <Box
+        minH="full"
+        border="1px solid"
+        borderColor="gray.300"
+        borderRadius="20px"
+        bg="white"
+        overflow="hidden"
+      >
+        <Flex align="center" justify="space-between" gap={3} px={5} py={4} borderBottom="1px solid" borderColor="gray.200">
         <Box>
           <Text fontSize="md" fontWeight="800" color="gray.900">
             Tenure Based Pricing
@@ -469,95 +490,96 @@ export const SessionTicketPricePeriodsSection = forwardRef<
         >
           <Plus size={18} />
         </Button>
-      </Flex>
+        </Flex>
 
-      <Box overflowX="auto" maxH="calc(90vh - 260px)" overflowY="auto">
-        <Table.Root variant="line" size="sm" borderColor="gray.300">
-          <Table.ColumnGroup>
-            <Table.Column htmlWidth="22%" />
-            <Table.Column htmlWidth="26%" />
-            <Table.Column htmlWidth="26%" />
-            <Table.Column htmlWidth="26%" />
-          </Table.ColumnGroup>
-          <Table.Header>
-            <Table.Row bg="gray.50" borderColor="gray.300">
-              <Table.ColumnHeader px={5} py={3} borderColor="gray.300" fontSize="xs" fontWeight="700">
-                Amount ($)
-              </Table.ColumnHeader>
-              <Table.ColumnHeader px={5} py={3} borderColor="gray.300" fontSize="xs" fontWeight="700">
-                Start Date/Time
-              </Table.ColumnHeader>
-              <Table.ColumnHeader px={5} py={3} borderColor="gray.300" fontSize="xs" fontWeight="700">
-                End Date/Time
-              </Table.ColumnHeader>
-              <Table.ColumnHeader px={4} py={3} borderColor="gray.300" textAlign="right" fontSize="xs" fontWeight="700">
-                Action
-              </Table.ColumnHeader>
-            </Table.Row>
-          </Table.Header>
-
-          <Table.Body>
-            {sortedPricePeriods.length === 0 ? (
-              <Table.Row borderColor="gray.300">
-                <Table.Cell colSpan={4} px={5} py={8} borderColor="gray.300">
-                  <Text fontSize="sm" color="gray.600">
-                    No tenure based pricing added yet. Add rows now and save them with the ticket.
-                  </Text>
-                </Table.Cell>
+        <Box overflowX="auto" maxH="calc(90vh - 260px)" overflowY="auto">
+          <Table.Root variant="line" size="sm" borderColor="gray.300">
+            <Table.ColumnGroup>
+              <Table.Column htmlWidth="22%" />
+              <Table.Column htmlWidth="26%" />
+              <Table.Column htmlWidth="26%" />
+              <Table.Column htmlWidth="26%" />
+            </Table.ColumnGroup>
+            <Table.Header>
+              <Table.Row bg="gray.50" borderColor="gray.300">
+                <Table.ColumnHeader px={5} py={3} borderColor="gray.300" fontSize="xs" fontWeight="700">
+                  Amount ($)
+                </Table.ColumnHeader>
+                <Table.ColumnHeader px={5} py={3} borderColor="gray.300" fontSize="xs" fontWeight="700">
+                  Start Date/Time
+                </Table.ColumnHeader>
+                <Table.ColumnHeader px={5} py={3} borderColor="gray.300" fontSize="xs" fontWeight="700">
+                  End Date/Time
+                </Table.ColumnHeader>
+                <Table.ColumnHeader px={4} py={3} borderColor="gray.300" textAlign="right" fontSize="xs" fontWeight="700">
+                  Action
+                </Table.ColumnHeader>
               </Table.Row>
-            ) : (
-              sortedPricePeriods.map((pricePeriod) => (
-                <Table.Row key={pricePeriod.uniqueId} borderColor="gray.300">
-                  <Table.Cell px={5} py={4} borderColor="gray.300">
-                    <Text fontSize="sm" fontWeight="600" color="gray.900">
-                      {formatMoneyDisplay(pricePeriod.amount)}
+            </Table.Header>
+
+            <Table.Body>
+              {sortedPricePeriods.length === 0 ? (
+                <Table.Row borderColor="gray.300">
+                  <Table.Cell colSpan={4} px={5} py={8} borderColor="gray.300">
+                    <Text fontSize="sm" color="gray.600">
+                      No tenure based pricing added yet. Add rows now and save them with the ticket.
                     </Text>
                   </Table.Cell>
-                  <Table.Cell px={5} py={4} borderColor="gray.300">
-                    <DateTimeCell value={pricePeriod.startDateTime} />
-                  </Table.Cell>
-                  <Table.Cell px={5} py={4} borderColor="gray.300">
-                    <DateTimeCell value={pricePeriod.endDateTime} />
-                  </Table.Cell>
-                  <Table.Cell px={4} py={4} borderColor="gray.300">
-                    <Flex justify="flex-end" gap={2}>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        aria-label={`Edit tenure pricing ${pricePeriod.amount}`}
-                        borderRadius="full"
-                        h="36px"
-                        w="36px"
-                        minW="36px"
-                        p={0}
-                        onClick={() => openEditDialog(pricePeriod)}
-                      >
-                        <PencilLine size={15} />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        colorPalette="red"
-                        aria-label={`Delete tenure pricing ${pricePeriod.amount}`}
-                        borderRadius="full"
-                        h="36px"
-                        w="36px"
-                        minW="36px"
-                        p={0}
-                        onClick={() => {
-                          setPricePeriodToDelete({ uniqueId: pricePeriod.uniqueId, amount: pricePeriod.amount })
-                          setIsDeleteOpen(true)
-                        }}
-                      >
-                        <Trash2 size={15} />
-                      </Button>
-                    </Flex>
-                  </Table.Cell>
                 </Table.Row>
-              ))
-            )}
-          </Table.Body>
-        </Table.Root>
+              ) : (
+                sortedPricePeriods.map((pricePeriod) => (
+                  <Table.Row key={pricePeriod.uniqueId} borderColor="gray.300">
+                    <Table.Cell px={5} py={4} borderColor="gray.300">
+                      <Text fontSize="sm" fontWeight="600" color="gray.900">
+                        {formatMoneyDisplay(pricePeriod.amount)}
+                      </Text>
+                    </Table.Cell>
+                    <Table.Cell px={5} py={4} borderColor="gray.300">
+                      <DateTimeCell value={pricePeriod.startDateTime} />
+                    </Table.Cell>
+                    <Table.Cell px={5} py={4} borderColor="gray.300">
+                      <DateTimeCell value={pricePeriod.endDateTime} />
+                    </Table.Cell>
+                    <Table.Cell px={4} py={4} borderColor="gray.300">
+                      <Flex justify="flex-end" gap={2}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          aria-label={`Edit tenure pricing ${pricePeriod.amount}`}
+                          borderRadius="full"
+                          h="36px"
+                          w="36px"
+                          minW="36px"
+                          p={0}
+                          onClick={() => openEditDialog(pricePeriod)}
+                        >
+                          <PencilLine size={15} />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          colorPalette="red"
+                          aria-label={`Delete tenure pricing ${pricePeriod.amount}`}
+                          borderRadius="full"
+                          h="36px"
+                          w="36px"
+                          minW="36px"
+                          p={0}
+                          onClick={() => {
+                            setPricePeriodToDelete({ uniqueId: pricePeriod.uniqueId, amount: pricePeriod.amount })
+                            setIsDeleteOpen(true)
+                          }}
+                        >
+                          <Trash2 size={15} />
+                        </Button>
+                      </Flex>
+                    </Table.Cell>
+                  </Table.Row>
+                ))
+              )}
+            </Table.Body>
+          </Table.Root>
+        </Box>
       </Box>
 
       <Dialog.Root
@@ -609,31 +631,6 @@ export const SessionTicketPricePeriodsSection = forwardRef<
 
             <Dialog.Body px={6} py={6} overflowY="auto">
               <Stack gap={4}>
-                <Box>
-                  <Flex
-                    align={{ base: "flex-start", md: "center" }}
-                    direction={{ base: "column", md: "row" }}
-                    justify="space-between"
-                    gap={2}
-                  >
-                    <Text fontSize="xs" fontWeight="700" color="gray.600" textTransform="uppercase" letterSpacing="0.08em">
-                      Booking Window
-                    </Text>
-                    <Text fontSize="sm" fontWeight="600" color="gray.900" textAlign={{ base: "left", md: "right" }}>
-                      {bookingWindowQuery.data?.bookingStartDate
-                        ? formatDateTime(bookingWindowQuery.data.bookingStartDate)
-                        : "—"}{" "}
-                      to{" "}
-                      {bookingWindowQuery.data?.bookingEndDate
-                        ? formatDateTime(bookingWindowQuery.data.bookingEndDate)
-                        : "—"}
-                    </Text>
-                  </Flex>
-                  <Text fontSize="xs" color="gray.600" mt={1}>
-                    Use this window to define tenure based pricing.
-                  </Text>
-                </Box>
-
                 <Box>
                   <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
                     Amount ($) <Text as="span" color="red.500">*</Text>
@@ -856,6 +853,6 @@ export const SessionTicketPricePeriodsSection = forwardRef<
           </Dialog.Content>
         </Dialog.Positioner>
       </Dialog.Root>
-    </Box>
+    </Stack>
   )
 })
