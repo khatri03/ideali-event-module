@@ -104,18 +104,61 @@ function formatTimeOnly(value: string) {
   return parsed ? format(parsed, "hh:mm aa") : "—"
 }
 
-function DateTimeCell({ value }: { value: string }) {
+type PricePeriodStatus = SessionWizardTicketPricePeriod["currentStatus"]
+
+function getPricePeriodStyles(status: PricePeriodStatus) {
+  if (status === "Ongoing") {
+    return {
+      amountColor: "gray.900",
+      amountWeight: "700",
+      dateColor: "gray.900",
+      timeColor: "gray.700",
+      iconColor: "var(--chakra-colors-gray-700)",
+      opacity: 1,
+    } as const
+  }
+
+  if (status === "Upcoming") {
+    return {
+      amountColor: "gray.800",
+      amountWeight: "500",
+      dateColor: "gray.800",
+      timeColor: "gray.700",
+      iconColor: "var(--chakra-colors-gray-700)",
+      opacity: 1,
+    } as const
+  }
+
+  return {
+    amountColor: "gray.500",
+    amountWeight: "400",
+    dateColor: "gray.500",
+    timeColor: "gray.400",
+    iconColor: "var(--chakra-colors-gray-400)",
+    opacity: 0.68,
+  } as const
+}
+
+function DateTimeCell({
+  value,
+  status,
+}: {
+  value: string
+  status: PricePeriodStatus
+}) {
+  const styles = getPricePeriodStyles(status)
+
   return (
-    <Stack gap={1}>
+    <Stack gap={1} opacity={styles.opacity}>
       <Flex align="center" gap={2}>
-        <CalendarDays size={14} color="var(--chakra-colors-gray-600)" />
-        <Text fontSize="sm" color="gray.900" fontWeight="600">
+        <CalendarDays size={14} color={styles.iconColor} />
+        <Text fontSize="sm" color={styles.dateColor} fontWeight={styles.amountWeight}>
           {formatDateOnly(value)}
         </Text>
       </Flex>
       <Flex align="center" gap={2}>
-        <Clock3 size={14} color="var(--chakra-colors-gray-600)" />
-        <Text fontSize="sm" color="gray.700">
+        <Clock3 size={14} color={styles.iconColor} />
+        <Text fontSize="sm" color={styles.timeColor} fontWeight={styles.amountWeight}>
           {formatTimeOnly(value)}
         </Text>
       </Flex>
@@ -514,15 +557,20 @@ export const SessionTicketPricePeriodsSection = forwardRef<
                 sortedPricePeriods.map((pricePeriod) => (
                   <Table.Row key={pricePeriod.uniqueId} borderColor="gray.300">
                     <Table.Cell px={5} py={4} borderColor="gray.300">
-                      <Text fontSize="sm" fontWeight="600" color="gray.900">
+                      <Text
+                        fontSize="sm"
+                        fontWeight={getPricePeriodStyles(pricePeriod.currentStatus).amountWeight}
+                        color={getPricePeriodStyles(pricePeriod.currentStatus).amountColor}
+                        opacity={getPricePeriodStyles(pricePeriod.currentStatus).opacity}
+                      >
                         {formatMoneyDisplay(pricePeriod.amount)}
                       </Text>
                     </Table.Cell>
                     <Table.Cell px={5} py={4} borderColor="gray.300">
-                      <DateTimeCell value={pricePeriod.startDateTime} />
+                      <DateTimeCell value={pricePeriod.startDateTime} status={pricePeriod.currentStatus} />
                     </Table.Cell>
                     <Table.Cell px={5} py={4} borderColor="gray.300">
-                      <DateTimeCell value={pricePeriod.endDateTime} />
+                      <DateTimeCell value={pricePeriod.endDateTime} status={pricePeriod.currentStatus} />
                     </Table.Cell>
                     <Table.Cell px={4} py={4} borderColor="gray.300">
                       <Flex justify="flex-end" gap={2}>
