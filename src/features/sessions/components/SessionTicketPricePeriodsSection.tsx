@@ -90,6 +90,10 @@ function formatDateTime(value: string) {
   return parsed ? format(parsed, "dd-MMM-yyyy hh:mm aa") : "—"
 }
 
+function toLocalDateTimeString(value: Date) {
+  return format(value, "yyyy-MM-dd'T'HH:mm:ss")
+}
+
 function formatDateOnly(value: string) {
   const parsed = toDateValue(value)
   return parsed ? format(parsed, "dd-MMM-yyyy") : "—"
@@ -126,8 +130,8 @@ function toTicketPricePeriodPayload(
 ) {
   return {
     amount: parseMoneyInput(amount) ?? 0,
-    startDateTime: startDateTime ? startDateTime.toISOString() : "",
-    endDateTime: endDateTime ? endDateTime.toISOString() : "",
+    startDateTime: startDateTime ? toLocalDateTimeString(startDateTime) : "",
+    endDateTime: endDateTime ? toLocalDateTimeString(endDateTime) : "",
   }
 }
 
@@ -361,8 +365,8 @@ export const SessionTicketPricePeriodsSection = forwardRef<
       const nextPeriod = {
         uniqueId: editingPricePeriodId ?? (window.crypto?.randomUUID?.() ?? `${Date.now()}`),
         amount: formatMoneyInput(resolvedAmount.toString()),
-        startDateTime: resolvedStartDateTime.toISOString(),
-        endDateTime: resolvedEndDateTime.toISOString(),
+        startDateTime: toLocalDateTimeString(resolvedStartDateTime),
+        endDateTime: toLocalDateTimeString(resolvedEndDateTime),
         currentStatus: "Scheduled",
       } satisfies SessionWizardTicketPricePeriod
 
