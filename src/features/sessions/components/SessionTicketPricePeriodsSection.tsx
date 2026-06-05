@@ -523,7 +523,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
         <Flex align="center" justify="space-between" gap={3} px={5} py={4} borderBottom="1px solid" borderColor="gray.200">
         <Box>
           <Text fontSize="md" fontWeight="800" color="gray.900">
-            Tenure Based Pricing
+            Pricing Windows
           </Text>
           <Text fontSize="sm" color="gray.600">
             Add discounted pricing windows for this ticket.
@@ -532,8 +532,8 @@ export const SessionTicketPricePeriodsSection = forwardRef<
 
         <Button
           variant="outline"
-          aria-label="Add tenure based pricing"
-          title="Add tenure based pricing"
+          aria-label="Add Pricing Window"
+          title="Add Pricing Window"
           borderRadius="999px"
           h="44px"
           w="44px"
@@ -677,7 +677,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
               <Flex align="flex-start" justify="space-between" gap={4}>
                 <Box>
                   <Text fontSize="lg" fontWeight="800" color="gray.900">
-                    {editingPricePeriodId ? "Edit tenure pricing" : "Add tenure pricing"}
+                    {editingPricePeriodId ? "Edit Pricing Window" : "Add Pricing Window"}
                   </Text>
                 </Box>
 

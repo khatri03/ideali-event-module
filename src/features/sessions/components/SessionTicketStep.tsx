@@ -617,11 +617,12 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
       <Box overflowX="auto" borderRadius="20px" border="1px solid" borderColor="gray.300" bg="app.bg">
         <Table.Root variant="line" size="sm" borderColor="gray.300">
           <Table.ColumnGroup>
-            <Table.Column htmlWidth="36%" />
-            <Table.Column htmlWidth="18%" />
+            <Table.Column htmlWidth="30%" />
             <Table.Column htmlWidth="16%" />
             <Table.Column htmlWidth="14%" />
-            <Table.Column htmlWidth="16%" />
+            <Table.Column htmlWidth="14%" />
+            <Table.Column htmlWidth="12%" />
+            <Table.Column htmlWidth="14%" />
           </Table.ColumnGroup>
           <Table.Header>
             <Table.Row bg="app.bg" borderColor="gray.300">
@@ -660,6 +661,18 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                 letterSpacing="0.05em"
               >
                 Total Tickets
+              </Table.ColumnHeader>
+              <Table.ColumnHeader
+                px={6}
+                py={3}
+                borderColor="gray.300"
+                fontSize="xs"
+                fontWeight="700"
+                color="text.secondary"
+                textTransform="uppercase"
+                letterSpacing="0.05em"
+              >
+                Pricing Window
               </Table.ColumnHeader>
               <Table.ColumnHeader
                 px={6}
@@ -732,6 +745,11 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                     </Text>
                   </Table.Cell>
                   <Table.Cell px={6} py={4} borderColor="gray.300">
+                    <Text fontSize="sm" color="text.primary">
+                      {ticket.pricePeriods.length > 0 ? "Yes" : "No"}
+                    </Text>
+                  </Table.Cell>
+                  <Table.Cell px={6} py={4} borderColor="gray.300">
                     <Badge colorPalette={ticket.isActive ? "green" : "gray"} variant="subtle">
                       {ticket.isActive ? "Active" : "Inactive"}
                     </Badge>
@@ -775,7 +793,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
               ))
             ) : (
               <Table.Row borderColor="gray.300">
-                <Table.Cell px={6} py={8} borderColor="gray.300" colSpan={5}>
+                <Table.Cell px={6} py={8} borderColor="gray.300" colSpan={6}>
                   <Text fontSize="sm" color="gray.600">
                     No tickets added yet.
                   </Text>
