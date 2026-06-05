@@ -132,6 +132,20 @@ function SessionStepPlaceholder({ label }: { label: string }) {
   )
 }
 
+interface WizardProgressState {
+  stepNo?: number
+}
+
+function updateWizardProgressCache(
+  queryClient: ReturnType<typeof useQueryClient>,
+  sessionId: string,
+  stepNo: number,
+) {
+  queryClient.setQueryData(["sessions", "wizard-progress", sessionId], (current: WizardProgressState | undefined) => ({
+    stepNo: Math.max(current?.stepNo ?? 0, stepNo),
+  }))
+}
+
 function SessionScheduleStep({ sessionId }: { sessionId: string }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -830,7 +844,7 @@ function SessionNameEditor({ sessionId }: { sessionId: string }) {
         const stepNo = getSessionWizardStepNumber("name")
         const result = await updateSessionWizardName(sessionId, { name: trimmedName }, stepNo)
         setDraftName(result.name)
-        queryClient.setQueryData(["sessions", "wizard-progress", sessionId], { stepNo })
+        updateWizardProgressCache(queryClient, sessionId, stepNo)
       } catch (saveError: unknown) {
         setError(extractApiError(saveError))
         throw saveError
@@ -951,7 +965,7 @@ function SessionDescriptionEditor({ sessionId, initialDescription }: { sessionId
           description: description.trim() ? description.trim() : null,
         }, stepNo)
         setDescription(result.description ?? "")
-        queryClient.setQueryData(["sessions", "wizard-progress", sessionId], { stepNo })
+        updateWizardProgressCache(queryClient, sessionId, stepNo)
       } catch (saveError: unknown) {
         setError(extractApiError(saveError))
         throw saveError
@@ -1072,7 +1086,7 @@ function SessionEventEditor({
         const stepNo = getSessionWizardStepNumber("event")
         const result = await updateSessionWizardEvent(sessionId, { eventUniqueId: selectedEventUniqueId }, stepNo)
         queryClient.setQueryData(["sessions", { sessionId, step: "event" }], { ...result, stepNo })
-        queryClient.setQueryData(["sessions", "wizard-progress", sessionId], { stepNo })
+        updateWizardProgressCache(queryClient, sessionId, stepNo)
         setSelectedEventUniqueId(result.eventUniqueId)
       } catch (saveError: unknown) {
         setEventError(extractApiError(saveError))
@@ -1287,7 +1301,7 @@ function SessionBookingEditor({
         )
         setBookingStartDate(toDateTimeInputValue(result.bookingStartDate))
         setBookingEndDate(toDateTimeInputValue(result.bookingEndDate))
-        queryClient.setQueryData(["sessions", "wizard-progress", sessionId], { stepNo })
+        updateWizardProgressCache(queryClient, sessionId, stepNo)
       } catch (saveError: unknown) {
         setError(extractApiError(saveError))
         throw saveError
@@ -1401,7 +1415,7 @@ function SessionDurationEditor({
         )
         setSessionStartDate(toDateTimeInputValue(result.startDate))
         setSessionEndDate(toDateTimeInputValue(result.endDate))
-        queryClient.setQueryData(["sessions", "wizard-progress", sessionId], { stepNo })
+        updateWizardProgressCache(queryClient, sessionId, stepNo)
       } catch (saveError: unknown) {
         setError(extractApiError(saveError))
         throw saveError
@@ -1639,7 +1653,7 @@ function SessionVenueEditor({
       try {
         const stepNo = getSessionWizardStepNumber("venue")
         const result = await updateSessionWizardVenue(sessionId, { venueUniqueId: selectedVenueUniqueId }, stepNo)
-        queryClient.setQueryData(["sessions", "wizard-progress", sessionId], { stepNo })
+        updateWizardProgressCache(queryClient, sessionId, stepNo)
         setSelectedVenueUniqueId(result.venueUniqueId)
       } catch (saveError: unknown) {
         setVenueError(extractApiError(saveError))

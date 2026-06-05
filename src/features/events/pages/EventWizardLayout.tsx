@@ -243,7 +243,9 @@ export function EventWizardLayout() {
       return
     }
 
-    queryClient.setQueryData(["events", "wizard-progress", eventId], { stepNo })
+    queryClient.setQueryData(["events", "wizard-progress", eventId], (current: { stepNo?: number } | undefined) => ({
+      stepNo: Math.max(current?.stepNo ?? 0, stepNo),
+    }))
   }
 
   const form = useForm<EventWizardValues>({
@@ -322,7 +324,7 @@ export function EventWizardLayout() {
 
     const stepNo = getEventWizardStepNumber(stepSlug)
     const result = await skipEventWizardStep(eventId, stepNo)
-    queryClient.setQueryData(["events", "wizard-progress", eventId], { stepNo: result.stepNo })
+    setWizardProgressCache(result.stepNo)
   }
 
   function getStepValidationFields() {

@@ -112,6 +112,12 @@ function SessionWizardLayoutContent() {
     wizardProgressQuery.isSuccess &&
     (currentStepIndex === -1 || currentStepIndex > resolvedStepIndex)
 
+  function updateWizardProgressCache(stepNo: number) {
+    queryClient.setQueryData(["sessions", "wizard-progress", sessionId], (current: { stepNo?: number } | undefined) => ({
+      stepNo: Math.max(current?.stepNo ?? 0, stepNo),
+    }))
+  }
+
   useEffect(() => {
     if (shouldRedirectToResolvedStep && resolvedStepPath) {
       navigate(resolvedStepPath, { replace: true })
@@ -125,7 +131,7 @@ function SessionWizardLayoutContent() {
 
     const stepNo = getSessionWizardStepNumber(activeStep.slug)
     const result = await skipSessionWizardStep(sessionId, stepNo)
-    queryClient.setQueryData(["sessions", "wizard-progress", sessionId], { stepNo: result.stepNo })
+    updateWizardProgressCache(result.stepNo)
     goNext()
   }
 
