@@ -25,6 +25,7 @@ import {
   updateSessionWizardTicket,
   type SessionWizardTicket,
 } from "@/api/sessions"
+import { SessionTicketPricePeriodsSection } from "./SessionTicketPricePeriodsSection"
 
 interface SessionTicketStepProps {
   sessionId: string
@@ -106,6 +107,10 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
   const sortedTickets = useMemo(
     () => [...(ticketsQuery.data ?? [])].sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: "base" })),
     [ticketsQuery.data],
+  )
+  const selectedTicket = useMemo(
+    () => sortedTickets.find((ticket) => ticket.uniqueId === editingTicketId) ?? null,
+    [editingTicketId, sortedTickets],
   )
 
   const createTicketMutation = useMutation({
@@ -550,7 +555,8 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
           <Dialog.Content
             bg="white"
             borderRadius={{ base: 0, md: "24px" }}
-            maxW={{ base: "100vw", md: "720px" }}
+            w={{ base: "100vw", md: "95vw", xl: "1400px" }}
+            maxW={{ base: "100vw", md: "95vw", xl: "1400px" }}
             maxH={{ base: "100dvh", md: "90vh" }}
             m={{ base: 0, md: "auto" }}
             overflow="hidden"
@@ -571,222 +577,232 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
               </Flex>
             </Box>
 
-            <Dialog.Body px={6} py={6} overflowY="auto">
-              <Stack gap={4}>
-                <Box>
-                  <Flex align="center" justify="space-between" gap={4} wrap="wrap" mb={2}>
-                    <Text fontSize="sm" fontWeight="600" color="navy.700">
-                      Name <Text as="span" color="red.500">*</Text>
-                    </Text>
+            <Dialog.Body px={{ base: 6, md: 8 }} py={6} overflowY="auto">
+              <SimpleGrid
+                columns={{ base: 1, lg: 2 }}
+                gap={10}
+                alignItems="start"
+              >
+                <Stack gap={4} pr={{ base: 0, lg: 8 }} borderRight={{ base: "none", lg: "2px solid" }} borderColor={{ base: "transparent", lg: "gray.200" }}>
+                  <Box>
+                    <Flex align="center" justify="space-between" gap={4} wrap="wrap" mb={2}>
+                      <Text fontSize="sm" fontWeight="600" color="navy.700">
+                        Name <Text as="span" color="red.500">*</Text>
+                      </Text>
 
-                    <Switch.Root
-                      checked={isActive}
-                      onCheckedChange={(details) => setIsActive(Boolean(details.checked))}
-                    >
-                      <Switch.HiddenInput />
-                      <Switch.Control />
-                      <Switch.Label>
-                        <Text fontSize="sm" fontWeight="600" color="navy.700">
-                          Active
+                      <Switch.Root
+                        checked={isActive}
+                        onCheckedChange={(details) => setIsActive(Boolean(details.checked))}
+                        colorPalette="brand"
+                      >
+                        <Switch.HiddenInput />
+                        <Switch.Control />
+                        <Switch.Label>
+                          <Text fontSize="sm" fontWeight="600" color="navy.700">
+                            Active
+                          </Text>
+                        </Switch.Label>
+                      </Switch.Root>
+                    </Flex>
+
+                    <Input
+                      ref={ticketNameInputRef}
+                      value={ticketName}
+                      onChange={(event) => {
+                        setTicketName(event.target.value)
+                        if (ticketNameError) {
+                          setTicketNameError("")
+                        }
+                      }}
+                      placeholder="Ticket name"
+                      border="1px solid"
+                      borderColor="secondaryGray.100"
+                      borderRadius="14px"
+                      h="44px"
+                      px={4}
+                      w="full"
+                      _focusVisible={{
+                        borderColor: "brand.400",
+                        boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
+                        outline: "none",
+                      }}
+                    />
+                    {ticketNameError ? (
+                      <Text mt={2} fontSize="sm" color="red.500">
+                        {ticketNameError}
+                      </Text>
+                    ) : null}
+                  </Box>
+
+                  <Box>
+                    <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
+                      Description
+                    </Text>
+                    <Textarea
+                      value={ticketDescription}
+                      onChange={(event) => {
+                        setTicketDescription(event.target.value)
+                      }}
+                      placeholder="Optional description"
+                      resize="none"
+                      border="1px solid"
+                      borderColor="secondaryGray.100"
+                      borderRadius="14px"
+                      minH="100px"
+                      px={4}
+                      py={3}
+                      w="full"
+                      _focusVisible={{
+                        borderColor: "brand.400",
+                        boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
+                        outline: "none",
+                      }}
+                    />
+                  </Box>
+
+                  <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                    <Box>
+                      <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
+                        Total Tickets <Text as="span" color="red.500">*</Text>
+                      </Text>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={ticketTotalTickets}
+                        onChange={(event) => {
+                          setTicketTotalTickets(event.target.value.replace(/[^\d]/g, ""))
+                          if (ticketTotalTicketsError) {
+                            setTicketTotalTicketsError("")
+                          }
+                        }}
+                        placeholder="Total ticket count"
+                        border="1px solid"
+                        borderColor="secondaryGray.100"
+                        borderRadius="14px"
+                        h="44px"
+                        px={4}
+                        w="full"
+                        _focusVisible={{
+                          borderColor: "brand.400",
+                          boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
+                          outline: "none",
+                        }}
+                      />
+                      {ticketTotalTicketsError ? (
+                        <Text mt={2} fontSize="sm" color="red.500">
+                          {ticketTotalTicketsError}
                         </Text>
-                      </Switch.Label>
-                    </Switch.Root>
-                  </Flex>
+                      ) : null}
+                    </Box>
 
-                  <Input
-                    ref={ticketNameInputRef}
-                    value={ticketName}
-                    onChange={(event) => {
-                      setTicketName(event.target.value)
-                      if (ticketNameError) {
-                        setTicketNameError("")
-                      }
-                    }}
-                    placeholder="Ticket name"
-                    border="1px solid"
-                    borderColor="secondaryGray.100"
-                    borderRadius="14px"
-                    h="44px"
-                    px={4}
-                    w="full"
-                    _focusVisible={{
-                      borderColor: "brand.400",
-                      boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
-                      outline: "none",
-                    }}
-                  />
-                  {ticketNameError ? (
-                    <Text mt={2} fontSize="sm" color="red.500">
-                      {ticketNameError}
-                    </Text>
-                  ) : null}
+                    <Box>
+                      <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
+                        Price <Text as="span" color="red.500">*</Text>
+                      </Text>
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        value={ticketPrice}
+                        onChange={(event) => {
+                          setTicketPrice(formatMoneyInput(event.target.value))
+                          if (ticketPriceError) {
+                            setTicketPriceError("")
+                          }
+                        }}
+                        placeholder="0"
+                        border="1px solid"
+                        borderColor="secondaryGray.100"
+                        borderRadius="14px"
+                        h="44px"
+                        px={4}
+                        w="full"
+                        _focusVisible={{
+                          borderColor: "brand.400",
+                          boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
+                          outline: "none",
+                        }}
+                      />
+                      {ticketPriceError ? (
+                        <Text mt={2} fontSize="sm" color="red.500">
+                          {ticketPriceError}
+                        </Text>
+                      ) : null}
+                    </Box>
+
+                    <Box>
+                      <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
+                        Minimum Purchase
+                      </Text>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={minimumPurchase}
+                        onChange={(event) => {
+                          setMinimumPurchase(event.target.value.replace(/[^\d]/g, ""))
+                          if (minimumPurchaseError) {
+                            setMinimumPurchaseError("")
+                          }
+                        }}
+                        placeholder="Optional"
+                        border="1px solid"
+                        borderColor="secondaryGray.100"
+                        borderRadius="14px"
+                        h="44px"
+                        px={4}
+                        w="full"
+                        _focusVisible={{
+                          borderColor: "brand.400",
+                          boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
+                          outline: "none",
+                        }}
+                      />
+                      {minimumPurchaseError ? (
+                        <Text mt={2} fontSize="sm" color="red.500">
+                          {minimumPurchaseError}
+                        </Text>
+                      ) : null}
+                    </Box>
+
+                    <Box>
+                      <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
+                        Maximum Purchase
+                      </Text>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={maximumPurchase}
+                        onChange={(event) => {
+                          setMaximumPurchase(event.target.value.replace(/[^\d]/g, ""))
+                          if (maximumPurchaseError) {
+                            setMaximumPurchaseError("")
+                          }
+                        }}
+                        placeholder="Optional"
+                        border="1px solid"
+                        borderColor="secondaryGray.100"
+                        borderRadius="14px"
+                        h="44px"
+                        px={4}
+                        w="full"
+                        _focusVisible={{
+                          borderColor: "brand.400",
+                          boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
+                          outline: "none",
+                        }}
+                      />
+                      {maximumPurchaseError ? (
+                        <Text mt={2} fontSize="sm" color="red.500">
+                          {maximumPurchaseError}
+                        </Text>
+                      ) : null}
+                    </Box>
+                  </SimpleGrid>
+                </Stack>
+
+                <Box pl={{ base: 0, lg: 8 }}>
+                  <SessionTicketPricePeriodsSection sessionId={sessionId} ticket={selectedTicket} />
                 </Box>
-
-                <Box>
-                  <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
-                    Description
-                  </Text>
-                  <Textarea
-                    value={ticketDescription}
-                    onChange={(event) => {
-                      setTicketDescription(event.target.value)
-                    }}
-                    placeholder="Optional description"
-                    resize="none"
-                    border="1px solid"
-                    borderColor="secondaryGray.100"
-                    borderRadius="14px"
-                    minH="100px"
-                    px={4}
-                    py={3}
-                    w="full"
-                    _focusVisible={{
-                      borderColor: "brand.400",
-                      boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
-                      outline: "none",
-                    }}
-                  />
-                </Box>
-
-                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                  <Box>
-                    <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
-                      Total Tickets <Text as="span" color="red.500">*</Text>
-                    </Text>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      value={ticketTotalTickets}
-                      onChange={(event) => {
-                        setTicketTotalTickets(event.target.value.replace(/[^\d]/g, ""))
-                        if (ticketTotalTicketsError) {
-                          setTicketTotalTicketsError("")
-                        }
-                      }}
-                      placeholder="Total ticket count"
-                      border="1px solid"
-                      borderColor="secondaryGray.100"
-                      borderRadius="14px"
-                      h="44px"
-                      px={4}
-                      w="full"
-                      _focusVisible={{
-                        borderColor: "brand.400",
-                        boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
-                        outline: "none",
-                      }}
-                    />
-                    {ticketTotalTicketsError ? (
-                      <Text mt={2} fontSize="sm" color="red.500">
-                        {ticketTotalTicketsError}
-                      </Text>
-                    ) : null}
-                  </Box>
-
-                  <Box>
-                    <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
-                      Price <Text as="span" color="red.500">*</Text>
-                    </Text>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      value={ticketPrice}
-                      onChange={(event) => {
-                        setTicketPrice(formatMoneyInput(event.target.value))
-                        if (ticketPriceError) {
-                          setTicketPriceError("")
-                        }
-                      }}
-                      placeholder="0"
-                      border="1px solid"
-                      borderColor="secondaryGray.100"
-                      borderRadius="14px"
-                      h="44px"
-                      px={4}
-                      w="full"
-                      _focusVisible={{
-                        borderColor: "brand.400",
-                        boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
-                        outline: "none",
-                      }}
-                    />
-                    {ticketPriceError ? (
-                      <Text mt={2} fontSize="sm" color="red.500">
-                        {ticketPriceError}
-                      </Text>
-                    ) : null}
-                  </Box>
-
-                  <Box>
-                    <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
-                      Minimum Purchase
-                    </Text>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      value={minimumPurchase}
-                      onChange={(event) => {
-                        setMinimumPurchase(event.target.value.replace(/[^\d]/g, ""))
-                        if (minimumPurchaseError) {
-                          setMinimumPurchaseError("")
-                        }
-                      }}
-                      placeholder="Optional"
-                      border="1px solid"
-                      borderColor="secondaryGray.100"
-                      borderRadius="14px"
-                      h="44px"
-                      px={4}
-                      w="full"
-                      _focusVisible={{
-                        borderColor: "brand.400",
-                        boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
-                        outline: "none",
-                      }}
-                    />
-                    {minimumPurchaseError ? (
-                      <Text mt={2} fontSize="sm" color="red.500">
-                        {minimumPurchaseError}
-                      </Text>
-                    ) : null}
-                  </Box>
-
-                  <Box>
-                    <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
-                      Maximum Purchase
-                    </Text>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      value={maximumPurchase}
-                      onChange={(event) => {
-                        setMaximumPurchase(event.target.value.replace(/[^\d]/g, ""))
-                        if (maximumPurchaseError) {
-                          setMaximumPurchaseError("")
-                        }
-                      }}
-                      placeholder="Optional"
-                      border="1px solid"
-                      borderColor="secondaryGray.100"
-                      borderRadius="14px"
-                      h="44px"
-                      px={4}
-                      w="full"
-                      _focusVisible={{
-                        borderColor: "brand.400",
-                        boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
-                        outline: "none",
-                      }}
-                    />
-                    {maximumPurchaseError ? (
-                      <Text mt={2} fontSize="sm" color="red.500">
-                        {maximumPurchaseError}
-                      </Text>
-                    ) : null}
-                  </Box>
-                </SimpleGrid>
-
-              </Stack>
+              </SimpleGrid>
             </Dialog.Body>
 
             <Box px={6} py={4} borderTop="1px solid" borderColor="gray.200" bg="gray.50">

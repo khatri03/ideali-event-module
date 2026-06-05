@@ -83,6 +83,22 @@ const sessionTicketSchema = z.object({
   maxPurchase: z.number().int().nullable().optional(),
   IsActive: z.boolean().optional(),
   isActive: z.boolean().optional(),
+  PricePeriods: z
+    .array(
+      z.object({
+        UniqueId: z.string().optional(),
+        uniqueId: z.string().optional(),
+        Amount: z.union([z.number(), z.string()]).optional(),
+        amount: z.union([z.number(), z.string()]).optional(),
+        StartDateTime: z.string().optional(),
+        startDateTime: z.string().optional(),
+        EndDateTime: z.string().optional(),
+        endDateTime: z.string().optional(),
+        CurrentStatus: z.string().optional(),
+        currentStatus: z.string().optional(),
+      }),
+    )
+    .optional(),
 })
 
 const sessionTicketListSchema = z.array(sessionTicketSchema)
@@ -189,6 +205,15 @@ export interface SessionWizardTicket {
   minPurchase: number | null
   maxPurchase: number | null
   isActive: boolean
+  pricePeriods: SessionWizardTicketPricePeriod[]
+}
+
+export interface SessionWizardTicketPricePeriod {
+  uniqueId: string
+  amount: string
+  startDateTime: string
+  endDateTime: string
+  currentStatus: string
 }
 
 export interface SessionWizardTicketRequest {
@@ -199,6 +224,12 @@ export interface SessionWizardTicketRequest {
   minPurchase: number | null
   maxPurchase: number | null
   isActive: boolean
+}
+
+export interface SessionWizardTicketPricePeriodRequest {
+  amount: number
+  startDateTime: string
+  endDateTime: string
 }
 
 function normalizeScheduleTime(value: string | undefined): string {
@@ -215,6 +246,14 @@ function normalizeTicketPrice(value: string | number | null | undefined): string
   }
 
   return typeof value === "number" ? value.toString() : value
+}
+
+function normalizeDateTime(value: string | undefined): string {
+  if (!value) {
+    return ""
+  }
+
+  return value
 }
 
 export async function fetchSessionWizardName(uniqueId: string): Promise<SessionWizardName> {
@@ -448,6 +487,15 @@ export async function fetchSessionWizardTickets(uniqueId: string): Promise<Sessi
     minPurchase: ticket.MinPurchase ?? ticket.minPurchase ?? null,
     maxPurchase: ticket.MaxPurchase ?? ticket.maxPurchase ?? null,
     isActive: ticket.IsActive ?? ticket.isActive ?? false,
+    pricePeriods: (ticket.PricePeriods ?? [])
+      .map((period) => ({
+        uniqueId: period.UniqueId ?? period.uniqueId ?? "",
+        amount: normalizeTicketPrice(period.Amount ?? period.amount),
+        startDateTime: normalizeDateTime(period.StartDateTime ?? period.startDateTime),
+        endDateTime: normalizeDateTime(period.EndDateTime ?? period.endDateTime),
+        currentStatus: period.CurrentStatus ?? period.currentStatus ?? "",
+      }))
+      .filter((period) => !!period.uniqueId),
   }))
 }
 
@@ -468,6 +516,7 @@ export async function createSessionWizardTicket(
     minPurchase: ticket.MinPurchase ?? ticket.minPurchase ?? null,
     maxPurchase: ticket.MaxPurchase ?? ticket.maxPurchase ?? null,
     isActive: ticket.IsActive ?? ticket.isActive ?? false,
+    pricePeriods: [],
   }
 }
 
@@ -489,11 +538,86 @@ export async function updateSessionWizardTicket(
     minPurchase: ticket.MinPurchase ?? ticket.minPurchase ?? null,
     maxPurchase: ticket.MaxPurchase ?? ticket.maxPurchase ?? null,
     isActive: ticket.IsActive ?? ticket.isActive ?? false,
+    pricePeriods: [],
   }
 }
 
 export async function deleteSessionWizardTicket(uniqueId: string, ticketUniqueId: string): Promise<void> {
   await client.delete(API_ROUTES.sessionWizardTicketItem(uniqueId, ticketUniqueId))
+}
+
+export async function createSessionWizardTicketPricePeriod(
+  uniqueId: string,
+  ticketUniqueId: string,
+  payload: SessionWizardTicketPricePeriodRequest,
+): Promise<SessionWizardTicketPricePeriod> {
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardTicketPricePeriod(uniqueId, ticketUniqueId), payload)
+  const responseData = parseServicePayload(res.data)
+  const period = z
+    .object({
+      UniqueId: z.string().optional(),
+      uniqueId: z.string().optional(),
+      Amount: z.union([z.number(), z.string()]).optional(),
+      amount: z.union([z.number(), z.string()]).optional(),
+      StartDateTime: z.string().optional(),
+      startDateTime: z.string().optional(),
+      EndDateTime: z.string().optional(),
+      endDateTime: z.string().optional(),
+      CurrentStatus: z.string().optional(),
+      currentStatus: z.string().optional(),
+    })
+    .parse(responseData)
+
+  return {
+    uniqueId: period.UniqueId ?? period.uniqueId ?? "",
+    amount: normalizeTicketPrice(period.Amount ?? period.amount),
+    startDateTime: normalizeDateTime(period.StartDateTime ?? period.startDateTime),
+    endDateTime: normalizeDateTime(period.EndDateTime ?? period.endDateTime),
+    currentStatus: period.CurrentStatus ?? period.currentStatus ?? "",
+  }
+}
+
+export async function updateSessionWizardTicketPricePeriod(
+  uniqueId: string,
+  ticketUniqueId: string,
+  pricePeriodUniqueId: string,
+  payload: SessionWizardTicketPricePeriodRequest,
+): Promise<SessionWizardTicketPricePeriod> {
+  const res = await client.put<unknown>(
+    API_ROUTES.sessionWizardTicketPricePeriodItem(uniqueId, ticketUniqueId, pricePeriodUniqueId),
+    payload,
+  )
+  const responseData = parseServicePayload(res.data)
+  const period = z
+    .object({
+      UniqueId: z.string().optional(),
+      uniqueId: z.string().optional(),
+      Amount: z.union([z.number(), z.string()]).optional(),
+      amount: z.union([z.number(), z.string()]).optional(),
+      StartDateTime: z.string().optional(),
+      startDateTime: z.string().optional(),
+      EndDateTime: z.string().optional(),
+      endDateTime: z.string().optional(),
+      CurrentStatus: z.string().optional(),
+      currentStatus: z.string().optional(),
+    })
+    .parse(responseData)
+
+  return {
+    uniqueId: period.UniqueId ?? period.uniqueId ?? "",
+    amount: normalizeTicketPrice(period.Amount ?? period.amount),
+    startDateTime: normalizeDateTime(period.StartDateTime ?? period.startDateTime),
+    endDateTime: normalizeDateTime(period.EndDateTime ?? period.endDateTime),
+    currentStatus: period.CurrentStatus ?? period.currentStatus ?? "",
+  }
+}
+
+export async function deleteSessionWizardTicketPricePeriod(
+  uniqueId: string,
+  ticketUniqueId: string,
+  pricePeriodUniqueId: string,
+): Promise<void> {
+  await client.delete(API_ROUTES.sessionWizardTicketPricePeriodItem(uniqueId, ticketUniqueId, pricePeriodUniqueId))
 }
 
 export async function fetchSessionWizardProgress(uniqueId: string): Promise<SessionWizardProgressResponse> {
