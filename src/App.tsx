@@ -75,7 +75,7 @@ export default function App() {
           <Route path={APP_ROUTES.sessionWizard.slugs.startEnd} element={<SessionWizardStepPage />} />
           <Route path={APP_ROUTES.sessionWizard.slugs.schedule} element={<SessionWizardStepPage />} />
           <Route path={APP_ROUTES.sessionWizard.slugs.ticket} element={<SessionWizardStepPage />} />
-          <Route path={APP_ROUTES.sessionWizard.slugs.eTicking} element={<SessionWizardStepPage />} />
+          <Route path={APP_ROUTES.sessionWizard.slugs.eTicketing} element={<SessionWizardStepPage />} />
           <Route path={APP_ROUTES.sessionWizard.slugs.review} element={<SessionWizardStepPage />} />
         </Route>
 

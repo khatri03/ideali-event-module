@@ -348,7 +348,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
             <Switch.Root
               checked={finishSetupState === "ReadyForSale"}
               onCheckedChange={(details) =>
-                setFinishSetupState(Boolean(details.checked) ? "ReadyForSale" : "ReadyForReview")
+                setFinishSetupState(details.checked ? "ReadyForSale" : "ReadyForReview")
               }
               colorPalette="brand"
               aria-label="Ready For Sale"

@@ -388,7 +388,7 @@ function SessionWizardLayoutContent() {
                   h="44px"
                   px={6}
                   minW={{ base: "full", md: "140px" }}
-                  loading={isReviewStep && !isPrimaryActionReady}
+                  loading={!isPrimaryActionReady}
                   loadingText={isReviewStep ? "Working..." : "Saving..."}
                   onClick={async () => {
                     try {
@@ -408,7 +408,7 @@ function SessionWizardLayoutContent() {
                       // Step component handles inline validation/state.
                     }
                   }}
-                  disabled={!isReviewStep && isLastStep}
+                  disabled={(!isPrimaryActionReady || (!isReviewStep && isLastStep))}
                   color="white"
                   style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
                 >

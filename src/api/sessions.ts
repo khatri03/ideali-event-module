@@ -60,6 +60,13 @@ const sessionSetupStateSchema = z.object({
   setupState: z.string().optional(),
 })
 
+const sessionETicketingSchema = z.object({
+  EnableDigitalTicket: z.boolean().optional(),
+  enableDigitalTicket: z.boolean().optional(),
+  RequiresAttendeeInfo: z.boolean().optional(),
+  requiresAttendeeInfo: z.boolean().optional(),
+})
+
 const sessionScheduleSchema = z.object({
   UniqueId: z.string().optional(),
   uniqueId: z.string().optional(),
@@ -218,6 +225,16 @@ export interface SessionWizardSetupState {
 
 export interface SessionWizardSetupStateRequest {
   setupState: "ReadyForReview" | "ReadyForSale"
+}
+
+export interface SessionWizardETicketing {
+  enableDigitalTicket: boolean
+  requiresAttendeeInfo: boolean
+}
+
+export interface SessionWizardETicketingRequest {
+  enableDigitalTicket: boolean
+  requiresAttendeeInfo: boolean
 }
 
 export interface SessionWizardSchedule {
@@ -488,6 +505,31 @@ export async function updateSessionWizardSetupState(
 
   return {
     setupState: (setupState.SetupState ?? setupState.setupState ?? "Incomplete") as SessionWizardSetupState["setupState"],
+  }
+}
+
+export async function fetchSessionWizardETicketing(uniqueId: string): Promise<SessionWizardETicketing> {
+  const res = await client.get<unknown>(API_ROUTES.sessionWizardETicketing(uniqueId))
+  const responseData = parseServicePayload(res.data)
+  const ticketing = sessionETicketingSchema.parse(responseData)
+
+  return {
+    enableDigitalTicket: ticketing.EnableDigitalTicket ?? ticketing.enableDigitalTicket ?? false,
+    requiresAttendeeInfo: ticketing.RequiresAttendeeInfo ?? ticketing.requiresAttendeeInfo ?? false,
+  }
+}
+
+export async function updateSessionWizardETicketing(
+  uniqueId: string,
+  payload: SessionWizardETicketingRequest,
+): Promise<SessionWizardETicketing> {
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardETicketing(uniqueId), payload)
+  const responseData = parseServicePayload(res.data)
+  const ticketing = sessionETicketingSchema.parse(responseData)
+
+  return {
+    enableDigitalTicket: ticketing.EnableDigitalTicket ?? ticketing.enableDigitalTicket ?? false,
+    requiresAttendeeInfo: ticketing.RequiresAttendeeInfo ?? ticketing.requiresAttendeeInfo ?? false,
   }
 }
 

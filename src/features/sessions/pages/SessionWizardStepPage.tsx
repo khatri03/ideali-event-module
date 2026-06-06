@@ -21,7 +21,7 @@ import { format, parseISO } from "date-fns"
 import { Timepicker } from "timepicker-ui-react"
 import type { ConfirmEventData } from "timepicker-ui"
 import { EventDescriptionEditor } from "@/features/events"
-import { SessionTicketStep } from "../components"
+import { SessionETicketingStep, SessionTicketStep } from "../components"
 import {
   createOrganizerVenue,
   fetchOrganizerEvents,
@@ -87,6 +87,10 @@ export function SessionWizardStepPage() {
 
   if (activeStep?.slug === "ticket") {
     return <SessionTicketStep sessionId={sessionId} />
+  }
+
+  if (activeStep?.slug === "e-ticketing") {
+    return <SessionETicketingStep sessionId={sessionId} />
   }
 
   if (activeStep?.slug === "review") {

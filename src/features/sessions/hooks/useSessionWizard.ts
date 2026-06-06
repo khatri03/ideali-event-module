@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom"
 import { APP_ROUTES } from "@/utils/routes"
 
 export interface SessionWizardStep {
-  slug: "name" | "description" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket" | "e-ticking" | "review"
+  slug: "name" | "description" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket" | "e-ticketing" | "review"
   label: string
   path: string
 }
@@ -17,7 +17,7 @@ const SESSION_WIZARD_STEP_DEFINITIONS: Array<Omit<SessionWizardStep, "path">> = 
   { slug: "start-end", label: "Session Date/Time" },
   { slug: "schedule", label: "Schedule" },
   { slug: "ticket", label: "Tickets" },
-  { slug: "e-ticking", label: "e-Ticketing" },
+  { slug: "e-ticketing", label: "e-Ticketing" },
   { slug: "review", label: "Review" },
 ]
 
@@ -47,7 +47,7 @@ const SESSION_WIZARD_STEP_NUMBER: Record<SessionWizardStep["slug"], number> = {
   "start-end": 6,
   schedule: 7,
   ticket: 8,
-  "e-ticking": 9,
+  "e-ticketing": 9,
   review: 10,
 }
 
