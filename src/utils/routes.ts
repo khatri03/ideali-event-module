@@ -46,6 +46,7 @@ export const APP_ROUTES = {
       startEnd: "start-end",
       schedule: "schedule",
       ticket: "ticket",
+      eTicking: "e-ticking",
       review: "review",
     },
   },
