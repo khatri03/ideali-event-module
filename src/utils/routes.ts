@@ -40,6 +40,7 @@ export const APP_ROUTES = {
     slugs: {
       name: "name",
       description: "description",
+      genre: "genre",
       venue: "venue",
       event: "event",
       booking: "booking",
@@ -64,6 +65,7 @@ export const API_ROUTES = {
   organizerEvents: "/api/organizer/events/list",
   sessionWizardName: (id: string) => `/api/organizer/sessions/${id}/name`,
   sessionWizardDescription: (id: string) => `/api/organizer/sessions/${id}/description`,
+  sessionWizardGenre: (id: string) => `/api/organizer/sessions/${id}/genre`,
   sessionWizardSkip: (id: string) => `/api/organizer/sessions/${id}/skip`,
   sessionWizardEvent: (id: string) => `/api/organizer/sessions/${id}/event`,
   sessionWizardVenue: (id: string) => `/api/organizer/sessions/${id}/venue`,

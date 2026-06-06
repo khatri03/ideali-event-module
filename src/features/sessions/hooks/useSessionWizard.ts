@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom"
 import { APP_ROUTES } from "@/utils/routes"
 
 export interface SessionWizardStep {
-  slug: "name" | "description" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket" | "e-ticketing" | "review"
+  slug: "name" | "description" | "genre" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket" | "e-ticketing" | "review"
   label: string
   path: string
 }
@@ -11,6 +11,7 @@ export interface SessionWizardStep {
 const SESSION_WIZARD_STEP_DEFINITIONS: Array<Omit<SessionWizardStep, "path">> = [
   { slug: "name", label: "Name" },
   { slug: "description", label: "Description" },
+  { slug: "genre", label: "Genre" },
   { slug: "event", label: "Event" },
   { slug: "venue", label: "Venue" },
   { slug: "booking", label: "Booking Window" },
@@ -41,14 +42,15 @@ export function getSessionWizardStepIndex(pathname: string, sessionId?: string) 
 const SESSION_WIZARD_STEP_NUMBER: Record<SessionWizardStep["slug"], number> = {
   name: 1,
   description: 2,
-  event: 3,
-  venue: 4,
-  booking: 5,
-  "start-end": 6,
-  schedule: 7,
-  ticket: 8,
-  "e-ticketing": 9,
-  review: 10,
+  genre: 3,
+  event: 4,
+  venue: 5,
+  booking: 6,
+  "start-end": 7,
+  schedule: 8,
+  ticket: 9,
+  "e-ticketing": 10,
+  review: 11,
 }
 
 export function getSessionWizardStepNumber(step: SessionWizardStep["slug"]) {

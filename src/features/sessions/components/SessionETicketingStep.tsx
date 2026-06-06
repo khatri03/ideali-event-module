@@ -93,7 +93,7 @@ export function SessionETicketingStep({ sessionId }: SessionETicketingStepProps)
       setDraftTicketing(null)
       queryClient.setQueryData(["sessions", "review", sessionId, "e-ticketing"], data)
       queryClient.setQueryData(["sessions", "wizard-progress", sessionId], (current: { stepNo?: number } | undefined) => ({
-        stepNo: Math.max(current?.stepNo ?? 0, 9),
+        stepNo: Math.max(current?.stepNo ?? 0, 10),
       }))
     },
     onSettled: () => {

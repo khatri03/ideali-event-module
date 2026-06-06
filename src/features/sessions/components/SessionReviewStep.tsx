@@ -10,6 +10,7 @@ import {
   fetchSessionWizardDuration,
   fetchSessionWizardEvent,
   fetchSessionWizardETicketing,
+  fetchSessionWizardGenres,
   fetchSessionWizardName,
   fetchSessionWizardSchedule,
   fetchSessionWizardTickets,
@@ -218,6 +219,12 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     enabled: !!sessionId,
     retry: false,
   })
+  const genreQuery = useQuery({
+    queryKey: ["sessions", "review", sessionId, "genre"],
+    queryFn: () => fetchSessionWizardGenres(sessionId),
+    enabled: !!sessionId,
+    retry: false,
+  })
   const durationQuery = useQuery({
     queryKey: ["sessions", "review", sessionId, "duration"],
     queryFn: () => fetchSessionWizardDuration(sessionId),
@@ -309,18 +316,21 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     sessionVenueQuery.error ??
     organizerVenuesQuery.error ??
     bookingQuery.error ??
+    genreQuery.error ??
     durationQuery.error ??
     schedulesQuery.error ??
     ticketsQuery.error
 
-  function buildEditUrl(step: "name" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket" | "e-ticketing") {
+  function buildEditUrl(step: "name" | "genre" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket" | "e-ticketing") {
     const target = APP_ROUTES.sessionWizard.editStep(sessionId, step)
     return `${target}?returnUrl=${encodeURIComponent(reviewReturnUrl)}`
   }
 
-  function handleEdit(step: "name" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket" | "e-ticketing") {
+  function handleEdit(step: "name" | "genre" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket" | "e-ticketing") {
     navigate(buildEditUrl(step))
   }
+
+  const selectedGenres = genreQuery.data?.filter((genre) => genre.isSelected) ?? []
 
   return (
     <Stack gap={5}>
@@ -396,6 +406,34 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
           onEdit={() => handleEdit("name")}
           editLabel="Edit session name"
           isLoading={nameQuery.isLoading}
+        />
+        <ReviewItem
+          label="Genres"
+          value={
+            selectedGenres.length > 0 ? (
+              <Flex wrap="wrap" gap={2}>
+                {selectedGenres.map((genre) => (
+                  <Badge
+                    key={genre.uniqueId}
+                    variant="subtle"
+                    colorPalette={genre.isSystem ? "gray" : "brand"}
+                    borderRadius="999px"
+                    px={3}
+                    py={1}
+                  >
+                    {genre.name}
+                  </Badge>
+                ))}
+              </Flex>
+            ) : (
+              <Text fontSize="sm" color="gray.600">
+                Not set
+              </Text>
+            )
+          }
+          onEdit={() => handleEdit("genre")}
+          editLabel="Edit genres"
+          isLoading={genreQuery.isLoading}
         />
         <ReviewItem
           label="Event Name"

@@ -1,5 +1,5 @@
 export { SessionWizardLayout } from "./pages/SessionWizardLayout"
 export { SessionWizardStepPage } from "./pages/SessionWizardStepPage"
-export { SessionTicketStep, SessionWizardStepper } from "./components"
+export { SessionGenreStep, SessionTicketStep, SessionWizardStepper } from "./components"
 export { buildSessionWizardSteps, useSessionWizardNavigation } from "./hooks/useSessionWizard"
 export { SessionWizardActionsProvider, useSessionWizardActions } from "./hooks/useSessionWizardActions"

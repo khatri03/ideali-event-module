@@ -27,6 +27,19 @@ const sessionDescriptionSchema = z.object({
   description: z.string().nullable().optional(),
 })
 
+const sessionGenreSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  Name: z.string().optional(),
+  name: z.string().optional(),
+  IsSystem: z.boolean().optional(),
+  isSystem: z.boolean().optional(),
+  IsSelected: z.boolean().optional(),
+  isSelected: z.boolean().optional(),
+})
+
+const sessionGenreListSchema = z.array(sessionGenreSchema)
+
 const sessionVenueSchema = z.object({
   VenueUniqueId: z.string().optional(),
   venueUniqueId: z.string().optional(),
@@ -169,6 +182,17 @@ export interface SessionWizardName {
 
 export interface SessionWizardDescription {
   description: string | null
+}
+
+export interface SessionWizardGenre {
+  uniqueId: string
+  name: string
+  isSystem: boolean
+  isSelected: boolean
+}
+
+export interface SessionWizardGenreRequest {
+  genreUniqueIds: string[]
 }
 
 export interface SessionWizardVenue {
@@ -369,6 +393,38 @@ export async function updateSessionWizardDescription(
   }
 }
 
+export async function fetchSessionWizardGenres(uniqueId: string): Promise<SessionWizardGenre[]> {
+  const res = await client.get<unknown>(API_ROUTES.sessionWizardGenre(uniqueId))
+  const responseData = parseServicePayload(res.data)
+  const genres = sessionGenreListSchema.parse(responseData)
+
+  return genres.map((genre) => ({
+    uniqueId: genre.UniqueId ?? genre.uniqueId ?? "",
+    name: genre.Name ?? genre.name ?? "",
+    isSystem: genre.IsSystem ?? genre.isSystem ?? false,
+    isSelected: genre.IsSelected ?? genre.isSelected ?? false,
+  }))
+}
+
+export async function updateSessionWizardGenres(
+  uniqueId: string,
+  payload: SessionWizardGenreRequest,
+  stepNo = 3,
+): Promise<SessionWizardGenre[]> {
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardGenre(uniqueId), payload, {
+    params: { stepNo },
+  })
+  const responseData = parseServicePayload(res.data)
+  const genres = sessionGenreListSchema.parse(responseData)
+
+  return genres.map((genre) => ({
+    uniqueId: genre.UniqueId ?? genre.uniqueId ?? "",
+    name: genre.Name ?? genre.name ?? "",
+    isSystem: genre.IsSystem ?? genre.isSystem ?? false,
+    isSelected: genre.IsSelected ?? genre.isSelected ?? false,
+  }))
+}
+
 export async function skipSessionWizardStep(uniqueId: string, stepNo: number): Promise<SessionWizardProgressResponse> {
   const res = await client.post<unknown>(API_ROUTES.sessionWizardSkip(uniqueId), null, {
     params: { stepNo },
@@ -390,7 +446,7 @@ export async function fetchSessionWizardEvent(uniqueId: string): Promise<Session
 export async function updateSessionWizardEvent(
   uniqueId: string,
   payload: SessionWizardEventRequest,
-  stepNo = 3,
+  stepNo = 4,
 ): Promise<SessionWizardEvent> {
   const res = await client.post<unknown>(API_ROUTES.sessionWizardEvent(uniqueId), payload, {
     params: { stepNo },
@@ -416,7 +472,7 @@ export async function fetchSessionWizardVenue(uniqueId: string): Promise<Session
 export async function updateSessionWizardVenue(
   uniqueId: string,
   payload: SessionWizardVenueRequest,
-  stepNo = 4,
+  stepNo = 5,
 ): Promise<SessionWizardVenue> {
   const res = await client.post<unknown>(API_ROUTES.sessionWizardVenue(uniqueId), payload, {
     params: { stepNo },
@@ -443,7 +499,7 @@ export async function fetchSessionWizardBooking(uniqueId: string): Promise<Sessi
 export async function updateSessionWizardBooking(
   uniqueId: string,
   payload: SessionWizardBookingRequest,
-  stepNo = 5,
+  stepNo = 6,
 ): Promise<SessionWizardBooking> {
   const res = await client.post<unknown>(API_ROUTES.sessionWizardBooking(uniqueId), payload, {
     params: { stepNo },
@@ -471,7 +527,7 @@ export async function fetchSessionWizardDuration(uniqueId: string): Promise<Sess
 export async function updateSessionWizardDuration(
   uniqueId: string,
   payload: SessionWizardDurationRequest,
-  stepNo = 6,
+  stepNo = 7,
 ): Promise<SessionWizardDuration> {
   const res = await client.post<unknown>(API_ROUTES.sessionWizardDuration(uniqueId), payload, {
     params: { stepNo },
