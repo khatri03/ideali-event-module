@@ -9,6 +9,7 @@ import {
   fetchSessionWizardBooking,
   fetchSessionWizardDuration,
   fetchSessionWizardEvent,
+  fetchSessionWizardETicketing,
   fetchSessionWizardName,
   fetchSessionWizardSchedule,
   fetchSessionWizardTickets,
@@ -187,6 +188,12 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     enabled: !!sessionId,
     retry: false,
   })
+  const eTicketingQuery = useQuery({
+    queryKey: ["sessions", "review", sessionId, "e-ticketing"],
+    queryFn: () => fetchSessionWizardETicketing(sessionId),
+    enabled: !!sessionId,
+    retry: false,
+  })
   const organizerEventsQuery = useQuery({
     queryKey: ["sessions", "review", sessionId, "organizer-events"],
     queryFn: fetchOrganizerEvents,
@@ -297,6 +304,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   const summaryError =
     nameQuery.error ??
     sessionEventQuery.error ??
+    eTicketingQuery.error ??
     organizerEventsQuery.error ??
     sessionVenueQuery.error ??
     organizerVenuesQuery.error ??
@@ -305,12 +313,12 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     schedulesQuery.error ??
     ticketsQuery.error
 
-  function buildEditUrl(step: "name" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket") {
+  function buildEditUrl(step: "name" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket" | "e-ticketing") {
     const target = APP_ROUTES.sessionWizard.editStep(sessionId, step)
     return `${target}?returnUrl=${encodeURIComponent(reviewReturnUrl)}`
   }
 
-  function handleEdit(step: "name" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket") {
+  function handleEdit(step: "name" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket" | "e-ticketing") {
     navigate(buildEditUrl(step))
   }
 
@@ -361,6 +369,27 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
           </Flex>
         </Flex>
 
+        <ReviewItem
+          label="Current Setup State"
+          value={
+            <Badge
+              variant="subtle"
+              colorPalette={setupStateTheme.colorPalette}
+              borderRadius="999px"
+              px={3}
+              py={1}
+            >
+              <Flex align="center" gap={1.5}>
+                <CheckCircle2 size={14} />
+                <Text as="span" fontSize="xs" fontWeight="800">
+                  {setupStateTheme.label}
+                </Text>
+              </Flex>
+            </Badge>
+          }
+          editLabel="Setup state"
+          isLoading={false}
+        />
         <ReviewItem
           label="Name"
           value={nameQuery.data?.name || "Not set"}
@@ -441,25 +470,31 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
           isLoading={ticketsQuery.isLoading}
         />
         <ReviewItem
-          label="Current Setup State"
+          label="e-Ticketing"
           value={
-            <Badge
-              variant="subtle"
-              colorPalette={setupStateTheme.colorPalette}
-              borderRadius="999px"
-              px={3}
-              py={1}
-            >
-              <Flex align="center" gap={1.5}>
-                <CheckCircle2 size={14} />
-                <Text as="span" fontSize="xs" fontWeight="800">
-                  {setupStateTheme.label}
-                </Text>
-              </Flex>
-            </Badge>
+            eTicketingQuery.data?.enableDigitalTicket ? (
+              <Badge variant="subtle" colorPalette="green" borderRadius="999px" px={3} py={1}>
+                <Flex align="center" gap={1.5}>
+                  <CheckCircle2 size={14} />
+                  <Text as="span" fontSize="xs" fontWeight="800">
+                    Yes
+                  </Text>
+                </Flex>
+              </Badge>
+            ) : (
+              <Badge variant="subtle" colorPalette="gray" borderRadius="999px" px={3} py={1}>
+                <Flex align="center" gap={1.5}>
+                  <X size={14} />
+                  <Text as="span" fontSize="xs" fontWeight="800">
+                    No
+                  </Text>
+                </Flex>
+              </Badge>
+            )
           }
-          editLabel="Setup state"
-          isLoading={false}
+          onEdit={() => handleEdit("e-ticketing")}
+          editLabel="Edit e-ticketing"
+          isLoading={eTicketingQuery.isLoading}
         />
       </Box>
 
