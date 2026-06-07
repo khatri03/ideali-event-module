@@ -49,10 +49,6 @@ export function SessionGenreStep({ sessionId }: SessionGenreStepProps) {
   const currentSelectedGenreUniqueIdSet = useMemo(() => new Set(currentSelectedGenreUniqueIds), [currentSelectedGenreUniqueIds])
 
   const selectedGenreCount = currentSelectedGenreUniqueIds.length
-  const selectedGenres = useMemo(
-    () => currentGenres.filter((genre) => currentSelectedGenreUniqueIdSet.has(genre.uniqueId)),
-    [currentGenres, currentSelectedGenreUniqueIdSet],
-  )
   const filteredGenres = useMemo(() => {
     const normalizedSearch = genreSearch.trim().toLowerCase()
 
@@ -144,29 +140,6 @@ export function SessionGenreStep({ sessionId }: SessionGenreStepProps) {
           <Text fontSize="sm" fontWeight="700" color="gray.700">
             Select genres
           </Text>
-
-          {selectedGenres.length > 0 ? (
-            <Box>
-              <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
-                Selected genres
-              </Text>
-              <Flex wrap="wrap" gap={2} mt={2}>
-                {selectedGenres.map((genre) => (
-                  <Button
-                    key={genre.uniqueId}
-                    type="button"
-                    size="sm"
-                    variant="subtle"
-                    colorPalette={genre.isSystem ? "gray" : "brand"}
-                    borderRadius="999px"
-                    onClick={() => setGenreSearch(genre.name)}
-                  >
-                    {genre.name}
-                  </Button>
-                ))}
-              </Flex>
-            </Box>
-          ) : null}
 
           <Input
             value={genreSearch}

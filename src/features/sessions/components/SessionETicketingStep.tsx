@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Box, Flex, Skeleton, Stack, Switch, Text } from "@chakra-ui/react"
 import { extractApiError } from "@/utils/errors"
 import { fetchSessionWizardETicketing, updateSessionWizardETicketing, type SessionWizardETicketing } from "@/api/sessions"
+import { getSessionWizardStepNumber } from "../hooks/useSessionWizard"
 import { useSessionWizardActions } from "../hooks/useSessionWizardActions"
 
 interface SessionETicketingStepProps {
@@ -93,7 +94,7 @@ export function SessionETicketingStep({ sessionId }: SessionETicketingStepProps)
       setDraftTicketing(null)
       queryClient.setQueryData(["sessions", "review", sessionId, "e-ticketing"], data)
       queryClient.setQueryData(["sessions", "wizard-progress", sessionId], (current: { stepNo?: number } | undefined) => ({
-        stepNo: Math.max(current?.stepNo ?? 0, 10),
+        stepNo: Math.max(current?.stepNo ?? 0, getSessionWizardStepNumber("e-ticketing")),
       }))
     },
     onSettled: () => {
