@@ -27,6 +27,15 @@ const sessionDescriptionSchema = z.object({
   description: z.string().nullable().optional(),
 })
 
+const sessionBannerSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  BannerUrl: z.string().nullable().optional(),
+  bannerUrl: z.string().nullable().optional(),
+  StepNo: z.number().int().optional(),
+  stepNo: z.number().int().optional(),
+})
+
 const sessionGenreSchema = z.object({
   UniqueId: z.string().optional(),
   uniqueId: z.string().optional(),
@@ -184,6 +193,12 @@ export interface SessionWizardDescription {
   description: string | null
 }
 
+export interface SessionWizardBanner {
+  uniqueId: string
+  bannerUrl: string | null
+  stepNo: number
+}
+
 export interface SessionWizardGenre {
   uniqueId: string
   name: string
@@ -219,6 +234,11 @@ export interface SessionWizardNameRequest {
 
 export interface SessionWizardDescriptionRequest {
   description: string | null
+}
+
+export interface SessionWizardBannerRequest {
+  bannerFile: File | null
+  clearBanner: boolean
 }
 
 export interface SessionWizardVenueRequest {
@@ -390,6 +410,45 @@ export async function updateSessionWizardDescription(
 
   return {
     description: description.Description ?? description.description ?? null,
+  }
+}
+
+export async function fetchSessionWizardBanner(uniqueId: string): Promise<SessionWizardBanner> {
+  const res = await client.get<unknown>(API_ROUTES.sessionWizardBanner(uniqueId))
+  const responseData = parseServicePayload(res.data)
+  const banner = sessionBannerSchema.parse(responseData)
+
+  return {
+    uniqueId: banner.UniqueId ?? banner.uniqueId ?? "",
+    bannerUrl: banner.BannerUrl ?? banner.bannerUrl ?? null,
+    stepNo: banner.StepNo ?? banner.stepNo ?? 3,
+  }
+}
+
+export async function updateSessionWizardBanner(
+  uniqueId: string,
+  payload: SessionWizardBannerRequest,
+  stepNo = 3,
+): Promise<SessionWizardBanner> {
+  const formData = new FormData()
+  if (payload.bannerFile) {
+    formData.append("file", payload.bannerFile)
+  }
+  formData.append("clearBanner", String(payload.clearBanner))
+
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardBanner(uniqueId), formData, {
+    params: { stepNo },
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  })
+  const responseData = parseServicePayload(res.data)
+  const banner = sessionBannerSchema.parse(responseData)
+
+  return {
+    uniqueId: banner.UniqueId ?? banner.uniqueId ?? "",
+    bannerUrl: banner.BannerUrl ?? banner.bannerUrl ?? null,
+    stepNo: banner.StepNo ?? banner.stepNo ?? stepNo,
   }
 }
 
