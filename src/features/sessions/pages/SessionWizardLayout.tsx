@@ -100,7 +100,11 @@ function SessionWizardLayoutContent() {
   const { steps, activeStep, activeStepIndex, goToStep, goBack, goNext, isFirstStep, isLastStep } = useSessionWizardNavigation()
   const wizardProgressQuery = useSessionWizardProgress(sessionId)
   const { runPrimaryAction, isPrimaryActionReady } = useSessionWizardActions()
-  const isSkippableStep = activeStep?.slug === "description" || activeStep?.slug === "genre" || activeStep?.slug === "schedule"
+  const isSkippableStep =
+    activeStep?.slug === "description" ||
+    activeStep?.slug === "banner" ||
+    activeStep?.slug === "genre" ||
+    activeStep?.slug === "schedule"
   const isReviewStep = activeStep?.slug === "review"
   const returnUrl = new URLSearchParams(location.search).get("returnUrl") ?? undefined
   const currentStepIndex = sessionId ? steps.findIndex((step) => step.path === location.pathname) : -1

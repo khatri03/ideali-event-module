@@ -5,3 +5,4 @@ export { SessionTicketPricePeriodsSection } from "./SessionTicketPricePeriodsSec
 export { SessionReviewStep } from "./SessionReviewStep"
 export { SessionETicketingStep } from "./SessionETicketingStep"
 export { SessionGenreStep } from "./SessionGenreStep"
+export { SessionBannerStep } from "./SessionBannerStep"

@@ -21,7 +21,7 @@ import { format, parseISO } from "date-fns"
 import { Timepicker } from "timepicker-ui-react"
 import type { ConfirmEventData } from "timepicker-ui"
 import { EventDescriptionEditor } from "@/features/events"
-import { SessionETicketingStep, SessionGenreStep, SessionTicketStep } from "../components"
+import { SessionBannerStep, SessionETicketingStep, SessionGenreStep, SessionTicketStep } from "../components"
 import {
   createOrganizerVenue,
   fetchOrganizerEvents,
@@ -63,6 +63,10 @@ export function SessionWizardStepPage() {
 
   if (activeStep?.slug === "description") {
     return <SessionDescriptionStep sessionId={sessionId} />
+  }
+
+  if (activeStep?.slug === "banner") {
+    return <SessionBannerStep />
   }
 
   if (activeStep?.slug === "genre") {

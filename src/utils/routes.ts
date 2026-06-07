@@ -40,6 +40,7 @@ export const APP_ROUTES = {
     slugs: {
       name: "name",
       description: "description",
+      banner: "banner",
       genre: "genre",
       venue: "venue",
       event: "event",

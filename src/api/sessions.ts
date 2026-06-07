@@ -409,7 +409,7 @@ export async function fetchSessionWizardGenres(uniqueId: string): Promise<Sessio
 export async function updateSessionWizardGenres(
   uniqueId: string,
   payload: SessionWizardGenreRequest,
-  stepNo = 3,
+  stepNo = 4,
 ): Promise<SessionWizardGenre[]> {
   const res = await client.post<unknown>(API_ROUTES.sessionWizardGenre(uniqueId), payload, {
     params: { stepNo },
@@ -446,7 +446,7 @@ export async function fetchSessionWizardEvent(uniqueId: string): Promise<Session
 export async function updateSessionWizardEvent(
   uniqueId: string,
   payload: SessionWizardEventRequest,
-  stepNo = 4,
+  stepNo = 5,
 ): Promise<SessionWizardEvent> {
   const res = await client.post<unknown>(API_ROUTES.sessionWizardEvent(uniqueId), payload, {
     params: { stepNo },
@@ -472,7 +472,7 @@ export async function fetchSessionWizardVenue(uniqueId: string): Promise<Session
 export async function updateSessionWizardVenue(
   uniqueId: string,
   payload: SessionWizardVenueRequest,
-  stepNo = 5,
+  stepNo = 6,
 ): Promise<SessionWizardVenue> {
   const res = await client.post<unknown>(API_ROUTES.sessionWizardVenue(uniqueId), payload, {
     params: { stepNo },
@@ -499,7 +499,7 @@ export async function fetchSessionWizardBooking(uniqueId: string): Promise<Sessi
 export async function updateSessionWizardBooking(
   uniqueId: string,
   payload: SessionWizardBookingRequest,
-  stepNo = 6,
+  stepNo = 7,
 ): Promise<SessionWizardBooking> {
   const res = await client.post<unknown>(API_ROUTES.sessionWizardBooking(uniqueId), payload, {
     params: { stepNo },
@@ -527,7 +527,7 @@ export async function fetchSessionWizardDuration(uniqueId: string): Promise<Sess
 export async function updateSessionWizardDuration(
   uniqueId: string,
   payload: SessionWizardDurationRequest,
-  stepNo = 7,
+  stepNo = 8,
 ): Promise<SessionWizardDuration> {
   const res = await client.post<unknown>(API_ROUTES.sessionWizardDuration(uniqueId), payload, {
     params: { stepNo },
