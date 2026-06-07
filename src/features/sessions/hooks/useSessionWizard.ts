@@ -23,8 +23,8 @@ export interface SessionWizardStep {
 const SESSION_WIZARD_STEP_DEFINITIONS: Array<Omit<SessionWizardStep, "path">> = [
   { slug: "name", label: "Name" },
   { slug: "description", label: "Description" },
-  { slug: "banner", label: "Banner" },
   { slug: "genre", label: "Genre" },
+  { slug: "banner", label: "Banner" },
   { slug: "event", label: "Event" },
   { slug: "venue", label: "Venue" },
   { slug: "booking", label: "Booking Window" },
@@ -55,8 +55,8 @@ export function getSessionWizardStepIndex(pathname: string, sessionId?: string) 
 const SESSION_WIZARD_STEP_NUMBER: Record<SessionWizardStep["slug"], number> = {
   name: 1,
   description: 2,
-  banner: 3,
-  genre: 4,
+  genre: 3,
+  banner: 4,
   event: 5,
   venue: 6,
   booking: 7,

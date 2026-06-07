@@ -65,12 +65,12 @@ export function SessionWizardStepPage() {
     return <SessionDescriptionStep sessionId={sessionId} />
   }
 
-  if (activeStep?.slug === "banner") {
-    return <SessionBannerStep sessionId={sessionId} />
-  }
-
   if (activeStep?.slug === "genre") {
     return <SessionGenreStep sessionId={sessionId} />
+  }
+
+  if (activeStep?.slug === "banner") {
+    return <SessionBannerStep sessionId={sessionId} />
   }
 
   if (activeStep?.slug === "event") {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Badge,
@@ -15,7 +15,7 @@ import {
   Text,
 } from "@chakra-ui/react"
 import { FileImage, ImagePlus, RefreshCcw, Search, Sparkles, Trash2, Upload } from "lucide-react"
-import { fetchSessionWizardBanner, updateSessionWizardBanner } from "@/api/sessions"
+import { fetchSessionWizardBanner, fetchSessionWizardGenres, updateSessionWizardBanner } from "@/api/sessions"
 import { searchUnsplashPhotos, type UnsplashOrientation, type UnsplashPhoto } from "@/api/unsplash"
 import { extractApiError } from "@/utils/errors"
 import { getSessionWizardStepNumber } from "../hooks/useSessionWizard"
@@ -151,10 +151,18 @@ export function SessionBannerStep({ sessionId }: SessionBannerStepProps) {
   const [selectedUnsplashPhoto, setSelectedUnsplashPhoto] = useState<UnsplashPhoto | null>(null)
   const [unsplashPage, setUnsplashPage] = useState(1)
   const [isPreparingUnsplashSelection, setIsPreparingUnsplashSelection] = useState(false)
+  const [activeUnsplashGenreUniqueId, setActiveUnsplashGenreUniqueId] = useState<string | null>(null)
 
   const bannerQuery = useQuery({
     queryKey: ["sessions", { sessionId, step: "banner" }],
     queryFn: () => fetchSessionWizardBanner(sessionId),
+    enabled: !!sessionId,
+    retry: false,
+  })
+
+  const genresQuery = useQuery({
+    queryKey: ["sessions", { sessionId, step: "genre" }],
+    queryFn: () => fetchSessionWizardGenres(sessionId),
     enabled: !!sessionId,
     retry: false,
   })
@@ -189,6 +197,10 @@ export function SessionBannerStep({ sessionId }: SessionBannerStepProps) {
   const hasStagedBanner = Boolean(draftBannerFile)
   const hasUnsplashResults = unsplashResults.length > 0
   const hasMoreUnsplashResults = unsplashTotalResults > 0 && unsplashResults.length < unsplashTotalResults
+  const selectedGenres = useMemo(
+    () => (genresQuery.data ?? []).filter((genre) => genre.isSelected),
+    [genresQuery.data],
+  )
   const bannerStateLabel = hasStagedBanner
     ? "New banner staged"
     : clearRequested
@@ -932,10 +944,13 @@ export function SessionBannerStep({ sessionId }: SessionBannerStepProps) {
                     <Text fontSize="sm" fontWeight="700" color="gray.700" mb={2}>
                       Search
                     </Text>
-                    <Input
-                      ref={unsplashQueryInputRef}
-                      value={unsplashQuery}
-                      onChange={(event) => setUnsplashQuery(event.target.value)}
+                      <Input
+                        ref={unsplashQueryInputRef}
+                        value={unsplashQuery}
+                      onChange={(event) => {
+                        setActiveUnsplashGenreUniqueId(null)
+                        setUnsplashQuery(event.target.value)
+                      }}
                       onKeyDown={(event) => {
                         if (event.key === "Enter") {
                           event.preventDefault()
@@ -974,6 +989,36 @@ export function SessionBannerStep({ sessionId }: SessionBannerStepProps) {
                     </Flex>
                   </Button>
                 </Flex>
+
+                {selectedGenres.length > 0 ? (
+                  <Box>
+                    <Text fontSize="xs" fontWeight="800" color="gray.500" textTransform="uppercase" letterSpacing="0.12em">
+                      Selected genres
+                    </Text>
+                    <Flex wrap="wrap" gap={2} mt={2}>
+                      {selectedGenres.map((genre) => (
+                        <Button
+                          key={genre.uniqueId}
+                          type="button"
+                          variant={activeUnsplashGenreUniqueId === genre.uniqueId ? "solid" : "subtle"}
+                          borderRadius="999px"
+                          h="38px"
+                          px={4}
+                          colorPalette={activeUnsplashGenreUniqueId === genre.uniqueId ? "brand" : genre.isSystem ? "gray" : "brand"}
+                          bg={activeUnsplashGenreUniqueId === genre.uniqueId ? "brand.500" : undefined}
+                          color={activeUnsplashGenreUniqueId === genre.uniqueId ? "white" : undefined}
+                          onClick={() => {
+                            setActiveUnsplashGenreUniqueId(genre.uniqueId)
+                            setUnsplashQuery(genre.name)
+                            void searchUnsplash(genre.name, undefined, { suppressNextDebounce: true })
+                          }}
+                        >
+                          {genre.name}
+                        </Button>
+                      ))}
+                    </Flex>
+                  </Box>
+                ) : null}
 
                 <Box>
                   <Text fontSize="xs" fontWeight="800" color="gray.500" textTransform="uppercase" letterSpacing="0.12em">

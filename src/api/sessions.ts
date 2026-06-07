@@ -421,14 +421,14 @@ export async function fetchSessionWizardBanner(uniqueId: string): Promise<Sessio
   return {
     uniqueId: banner.UniqueId ?? banner.uniqueId ?? "",
     bannerUrl: banner.BannerUrl ?? banner.bannerUrl ?? null,
-    stepNo: banner.StepNo ?? banner.stepNo ?? 3,
+    stepNo: banner.StepNo ?? banner.stepNo ?? 4,
   }
 }
 
 export async function updateSessionWizardBanner(
   uniqueId: string,
   payload: SessionWizardBannerRequest,
-  stepNo = 3,
+  stepNo = 4,
 ): Promise<SessionWizardBanner> {
   const formData = new FormData()
   if (payload.bannerFile) {
@@ -468,7 +468,7 @@ export async function fetchSessionWizardGenres(uniqueId: string): Promise<Sessio
 export async function updateSessionWizardGenres(
   uniqueId: string,
   payload: SessionWizardGenreRequest,
-  stepNo = 4,
+  stepNo = 3,
 ): Promise<SessionWizardGenre[]> {
   const res = await client.post<unknown>(API_ROUTES.sessionWizardGenre(uniqueId), payload, {
     params: { stepNo },

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Badge, Box, Button, Flex, SimpleGrid, Skeleton, Stack, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, Flex, Input, SimpleGrid, Skeleton, Stack, Text } from "@chakra-ui/react"
 import { Check, Sparkles } from "lucide-react"
 import { fetchSessionWizardGenres, updateSessionWizardGenres } from "@/api/sessions"
 import { extractApiError } from "@/utils/errors"
@@ -28,6 +28,7 @@ export function SessionGenreStep({ sessionId }: SessionGenreStepProps) {
   const queryClient = useQueryClient()
   const { setPrimaryAction, setPrimaryActionReady } = useSessionWizardActions()
   const [draftGenreUniqueIds, setDraftGenreUniqueIds] = useState<string[] | null>(null)
+  const [genreSearch, setGenreSearch] = useState("")
 
   const genresQuery = useQuery({
     queryKey: ["sessions", { sessionId, step: "genre" }],
@@ -48,6 +49,19 @@ export function SessionGenreStep({ sessionId }: SessionGenreStepProps) {
   const currentSelectedGenreUniqueIdSet = useMemo(() => new Set(currentSelectedGenreUniqueIds), [currentSelectedGenreUniqueIds])
 
   const selectedGenreCount = currentSelectedGenreUniqueIds.length
+  const selectedGenres = useMemo(
+    () => currentGenres.filter((genre) => currentSelectedGenreUniqueIdSet.has(genre.uniqueId)),
+    [currentGenres, currentSelectedGenreUniqueIdSet],
+  )
+  const filteredGenres = useMemo(() => {
+    const normalizedSearch = genreSearch.trim().toLowerCase()
+
+    if (!normalizedSearch) {
+      return currentGenres
+    }
+
+    return currentGenres.filter((genre) => genre.name.toLowerCase().includes(normalizedSearch))
+  }, [currentGenres, genreSearch])
 
   const updateMutation = useMutation({
     mutationFn: (payload: { genreUniqueIds: string[] }) => updateSessionWizardGenres(sessionId, payload),
@@ -131,8 +145,42 @@ export function SessionGenreStep({ sessionId }: SessionGenreStepProps) {
             Select genres
           </Text>
 
+          {selectedGenres.length > 0 ? (
+            <Box>
+              <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
+                Selected genres
+              </Text>
+              <Flex wrap="wrap" gap={2} mt={2}>
+                {selectedGenres.map((genre) => (
+                  <Button
+                    key={genre.uniqueId}
+                    type="button"
+                    size="sm"
+                    variant="subtle"
+                    colorPalette={genre.isSystem ? "gray" : "brand"}
+                    borderRadius="999px"
+                    onClick={() => setGenreSearch(genre.name)}
+                  >
+                    {genre.name}
+                  </Button>
+                ))}
+              </Flex>
+            </Box>
+          ) : null}
+
+          <Input
+            value={genreSearch}
+            onChange={(event) => setGenreSearch(event.target.value)}
+            placeholder="Search genres"
+            borderRadius="14px"
+            h="11"
+            px={4}
+            bg="white"
+            borderColor="gray.200"
+          />
+
           <SimpleGrid columns={{ base: 2, sm: 3, md: 4, lg: 5 }} gap={3}>
-            {currentGenres.map((genre) => {
+            {filteredGenres.map((genre) => {
               const isSelected = currentSelectedGenreUniqueIdSet.has(genre.uniqueId)
               const isDisabled = !isSelected && selectedGenreCount >= 5
 
