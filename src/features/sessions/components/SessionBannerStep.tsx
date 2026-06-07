@@ -14,7 +14,7 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react"
-import { FileImage, ImagePlus, RefreshCcw, Search, Sparkles, Trash2, Upload } from "lucide-react"
+import { FileImage, ImagePlus, RefreshCcw, Search, Sparkles, Trash2, Upload, X } from "lucide-react"
 import { fetchSessionWizardBanner, fetchSessionWizardGenres, updateSessionWizardBanner } from "@/api/sessions"
 import { searchUnsplashPhotos, type UnsplashOrientation, type UnsplashPhoto } from "@/api/unsplash"
 import { extractApiError } from "@/utils/errors"
@@ -448,6 +448,16 @@ export function SessionBannerStep({ sessionId }: SessionBannerStepProps) {
     },
     [stageBannerFile],
   )
+
+  const clearUnsplashSearch = useCallback(() => {
+    setActiveUnsplashGenreUniqueId(null)
+    setUnsplashQuery("")
+    setUnsplashResults([])
+    setUnsplashTotalResults(0)
+    setUnsplashPage(1)
+    setUnsplashSearchError("")
+    unsplashQueryInputRef.current?.focus()
+  }, [])
 
   useEffect(() => {
     if (!bannerQuery.isSuccess) {
@@ -944,6 +954,7 @@ export function SessionBannerStep({ sessionId }: SessionBannerStepProps) {
                     <Text fontSize="sm" fontWeight="700" color="gray.700" mb={2}>
                       Search
                     </Text>
+                    <Box position="relative">
                       <Input
                         ref={unsplashQueryInputRef}
                         value={unsplashQuery}
@@ -963,13 +974,35 @@ export function SessionBannerStep({ sessionId }: SessionBannerStepProps) {
                       borderRadius="14px"
                       h="44px"
                       px={4}
+                      pe={12}
                       w="full"
                       _focusVisible={{
                         borderColor: "brand.400",
                         boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
                         outline: "none",
                       }}
-                    />
+                      />
+                      {unsplashQuery ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          position="absolute"
+                          right="8px"
+                          top="50%"
+                          transform="translateY(-50%)"
+                          minW="32px"
+                          h="32px"
+                          px={0}
+                          borderRadius="full"
+                          colorPalette="gray"
+                          onClick={clearUnsplashSearch}
+                          aria-label="Clear search"
+                        >
+                          <X size={14} />
+                        </Button>
+                      ) : null}
+                    </Box>
                   </Box>
 
                   <Button
