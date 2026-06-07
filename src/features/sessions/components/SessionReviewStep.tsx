@@ -156,6 +156,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
       setFinishSetupState(data.setupState === "ReadyForSale" ? "ReadyForSale" : "ReadyForReview")
       setIsInitialised(true)
       setPrimaryActionReady(true)
+      queryClient.invalidateQueries({ queryKey: ["sessions", "setup-state", sessionId] })
     },
     onError: () => {
       setSetupState("Incomplete")
@@ -171,6 +172,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
       setSetupState(data.setupState)
       setFinishSetupState(data.setupState === "ReadyForSale" ? "ReadyForSale" : "ReadyForReview")
       await queryClient.invalidateQueries({ queryKey: ["sessions", "wizard-progress", sessionId] })
+      await queryClient.invalidateQueries({ queryKey: ["sessions", "setup-state", sessionId] })
     },
     onSettled: () => {
       setPrimaryActionReady(true)

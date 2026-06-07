@@ -610,6 +610,16 @@ export async function markSessionWizardReadyForReview(uniqueId: string): Promise
   }
 }
 
+export async function fetchSessionWizardSetupState(uniqueId: string): Promise<SessionWizardSetupState> {
+  const res = await client.get<unknown>(API_ROUTES.sessionWizardSetupState(uniqueId))
+  const responseData = parseServicePayload(res.data)
+  const setupState = sessionSetupStateSchema.parse(responseData)
+
+  return {
+    setupState: (setupState.SetupState ?? setupState.setupState ?? "Incomplete") as SessionWizardSetupState["setupState"],
+  }
+}
+
 export async function updateSessionWizardSetupState(
   uniqueId: string,
   payload: SessionWizardSetupStateRequest,

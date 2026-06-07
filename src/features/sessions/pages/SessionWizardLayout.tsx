@@ -8,6 +8,7 @@ import { skipSessionWizardStep } from "@/api/sessions"
 import { SessionWizardStepper } from "../components/SessionWizardStepper"
 import { SessionWizardActionsProvider, useSessionWizardActions } from "../hooks/useSessionWizardActions"
 import { getSessionWizardStepNumber, useSessionWizardNavigation } from "../hooks/useSessionWizard"
+import { useSessionWizardSetupState } from "../hooks/useSessionWizardSetupState"
 import { useSessionWizardProgress } from "../hooks/useSessionWizardProgress"
 
 function WizardLoadingState() {
@@ -99,6 +100,7 @@ function SessionWizardLayoutContent() {
   const isStepsCollapsed = isStepsCollapsedOverride ?? isMobile
   const { steps, activeStep, activeStepIndex, goToStep, goBack, goNext, isFirstStep, isLastStep } = useSessionWizardNavigation()
   const wizardProgressQuery = useSessionWizardProgress(sessionId)
+  const setupStateQuery = useSessionWizardSetupState(sessionId)
   const { runPrimaryAction, isPrimaryActionReady } = useSessionWizardActions()
   const isSkippableStep =
     activeStep?.slug === "description" ||
@@ -109,7 +111,12 @@ function SessionWizardLayoutContent() {
   const returnUrl = new URLSearchParams(location.search).get("returnUrl") ?? undefined
   const currentStepIndex = sessionId ? steps.findIndex((step) => step.path === location.pathname) : -1
   const lastCompletedStepNo = sessionId ? wizardProgressQuery.data?.stepNo ?? 0 : 0
-  const completedStepCount = sessionId ? Math.min(lastCompletedStepNo, steps.length) : 0
+  const isReviewDone = setupStateQuery.data?.setupState === "ReadyForSale"
+  const completedStepCount = sessionId
+    ? isReviewDone
+      ? steps.length
+      : Math.min(lastCompletedStepNo, steps.length - 1)
+    : 0
   const maxUnlockedStepIndex = sessionId ? Math.min(lastCompletedStepNo, steps.length - 1) : 0
   const resolvedStepIndex = sessionId ? Math.min(lastCompletedStepNo, steps.length - 1) : -1
   const resolvedStepPath = sessionId ? steps[resolvedStepIndex]?.path : undefined
