@@ -13,7 +13,7 @@ import {
   Text,
   Tooltip,
 } from "@chakra-ui/react"
-import { CheckCircle2, PencilLine, Plus, Sparkles, Settings2, X } from "lucide-react"
+import { AlertTriangle, CheckCircle2, PencilLine, Plus, Sparkles, Settings2, X } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { useParams } from "react-router-dom"
 import { useCreateEventWizardSession, useEventWizardSessions } from "../hooks/useEventWizardSessions"
@@ -21,12 +21,22 @@ import { fetchSessionWizardSetupStateOptions, type SessionWizardSetupStateOption
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 
+function normalizeSetupStateToken(value: string) {
+  return value.replace(/[^a-z]/gi, "").toLowerCase()
+}
+
 function getSessionSetupStateTheme(setupState: string, setupStateOptions: SessionWizardSetupStateOption[] = []) {
-  const selectedState = setupStateOptions.find((option) => option.value === setupState)
+  const normalizedSetupState = normalizeSetupStateToken(setupState)
+  const selectedState = setupStateOptions.find(
+    (option) =>
+      normalizeSetupStateToken(option.value) === normalizedSetupState ||
+      normalizeSetupStateToken(option.label) === normalizedSetupState,
+  )
 
   if (!selectedState) {
     return {
       colorPalette: "gray" as const,
+      variant: "subtle" as const,
       label: setupState ? setupState : "Loading",
       icon: X,
     }
@@ -35,6 +45,7 @@ function getSessionSetupStateTheme(setupState: string, setupStateOptions: Sessio
   if (!selectedState.isSelectable) {
     return {
       colorPalette: "gray" as const,
+      variant: "subtle" as const,
       label: selectedState.label,
       icon: X,
     }
@@ -43,6 +54,7 @@ function getSessionSetupStateTheme(setupState: string, setupStateOptions: Sessio
   if (selectedState.isFinal) {
     return {
       colorPalette: "green" as const,
+      variant: "solid" as const,
       label: selectedState.label,
       icon: CheckCircle2,
     }
@@ -50,8 +62,9 @@ function getSessionSetupStateTheme(setupState: string, setupStateOptions: Sessio
 
   return {
     colorPalette: "orange" as const,
+    variant: "solid" as const,
     label: selectedState.label,
-    icon: CheckCircle2,
+    icon: AlertTriangle,
   }
 }
 
@@ -209,7 +222,13 @@ export function EventSessionsStepPage() {
                         const SetupStateIcon = setupStateTheme.icon
 
                         return (
-                          <Badge variant="subtle" colorPalette={setupStateTheme.colorPalette} borderRadius="999px" px={3} py={1}>
+                          <Badge
+                            variant={setupStateTheme.variant}
+                            colorPalette={setupStateTheme.colorPalette}
+                            borderRadius="999px"
+                            px={3}
+                            py={1}
+                          >
                             <Flex align="center" gap={1.5}>
                               <SetupStateIcon size={14} />
                               <Text as="span" fontSize="xs" fontWeight="800">
