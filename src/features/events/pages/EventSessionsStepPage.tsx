@@ -14,34 +14,44 @@ import {
   Tooltip,
 } from "@chakra-ui/react"
 import { CheckCircle2, PencilLine, Plus, Sparkles, Settings2, X } from "lucide-react"
+import { useQuery } from "@tanstack/react-query"
 import { useParams } from "react-router-dom"
 import { useCreateEventWizardSession, useEventWizardSessions } from "../hooks/useEventWizardSessions"
+import { fetchSessionWizardSetupStateOptions, type SessionWizardSetupStateOption } from "@/api/sessions"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 
-function getSessionSetupStateTheme(setupState: string) {
-  const normalizedSetupState = setupState.replace(/[^a-z]/gi, "").toLowerCase()
+function getSessionSetupStateTheme(setupState: string, setupStateOptions: SessionWizardSetupStateOption[] = []) {
+  const selectedState = setupStateOptions.find((option) => option.value === setupState)
 
-  if (normalizedSetupState === "readyforsale") {
+  if (!selectedState) {
     return {
-      colorPalette: "green" as const,
-      label: "Ready for sale",
-      icon: CheckCircle2,
+      colorPalette: "gray" as const,
+      label: setupState ? setupState : "Loading",
+      icon: X,
     }
   }
 
-  if (normalizedSetupState === "readyforreview") {
+  if (!selectedState.isSelectable) {
     return {
-      colorPalette: "orange" as const,
-      label: "Ready for review",
+      colorPalette: "gray" as const,
+      label: selectedState.label,
+      icon: X,
+    }
+  }
+
+  if (selectedState.isFinal) {
+    return {
+      colorPalette: "green" as const,
+      label: selectedState.label,
       icon: CheckCircle2,
     }
   }
 
   return {
-    colorPalette: "gray" as const,
-    label: "Incomplete",
-    icon: X,
+    colorPalette: "orange" as const,
+    label: selectedState.label,
+    icon: CheckCircle2,
   }
 }
 
@@ -53,6 +63,12 @@ export function EventSessionsStepPage() {
   const sessionNameInputRef = useRef<HTMLInputElement>(null)
   const { sessions, isLoading, isError, error, refetch } = useEventWizardSessions(eventId)
   const createSessionMutation = useCreateEventWizardSession(eventId)
+  const setupStateOptionsQuery = useQuery({
+    queryKey: ["sessions", "setup-state-options"],
+    queryFn: fetchSessionWizardSetupStateOptions,
+    staleTime: 1000 * 60 * 60,
+  })
+  const setupStateOptions = setupStateOptionsQuery.data ?? []
 
   useEffect(() => {
     if (!isOpen) {
@@ -189,7 +205,7 @@ export function EventSessionsStepPage() {
                     </Table.Cell>
                     <Table.Cell px={4} py={4}>
                       {(() => {
-                        const setupStateTheme = getSessionSetupStateTheme(session.setupState)
+                        const setupStateTheme = getSessionSetupStateTheme(session.setupState, setupStateOptions)
                         const SetupStateIcon = setupStateTheme.icon
 
                         return (

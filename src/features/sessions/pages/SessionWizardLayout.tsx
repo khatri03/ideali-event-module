@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react"
-import { useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Box, Button, Flex, Grid, Heading, Skeleton, SkeletonText, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
 import { Navigate, Outlet, useLocation, useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, ChevronLeft, ChevronRight, Sparkles } from "lucide-react"
 import { APP_ROUTES } from "@/utils/routes"
-import { skipSessionWizardStep } from "@/api/sessions"
+import { fetchSessionWizardSetupStateOptions, skipSessionWizardStep } from "@/api/sessions"
 import { SessionWizardStepper } from "../components/SessionWizardStepper"
 import { SessionWizardActionsProvider, useSessionWizardActions } from "../hooks/useSessionWizardActions"
 import { getSessionWizardStepNumber, useSessionWizardNavigation } from "../hooks/useSessionWizard"
@@ -101,6 +101,11 @@ function SessionWizardLayoutContent() {
   const { steps, activeStep, activeStepIndex, goToStep, goBack, goNext, isFirstStep, isLastStep } = useSessionWizardNavigation()
   const wizardProgressQuery = useSessionWizardProgress(sessionId)
   const setupStateQuery = useSessionWizardSetupState(sessionId)
+  const setupStateOptionsQuery = useQuery({
+    queryKey: ["sessions", "setup-state-options"],
+    queryFn: fetchSessionWizardSetupStateOptions,
+    staleTime: 1000 * 60 * 60,
+  })
   const { runPrimaryAction, isPrimaryActionReady } = useSessionWizardActions()
   const isOpenedFromEventWizard = useMemo(() => typeof window !== "undefined" && Boolean(window.opener), [])
   const isSkippableStep =
@@ -112,7 +117,8 @@ function SessionWizardLayoutContent() {
   const returnUrl = new URLSearchParams(location.search).get("returnUrl") ?? undefined
   const currentStepIndex = sessionId ? steps.findIndex((step) => step.path === location.pathname) : -1
   const lastCompletedStepNo = sessionId ? wizardProgressQuery.data?.stepNo ?? 0 : 0
-  const isReviewDone = setupStateQuery.data?.setupState === "ReadyForSale"
+  const finalSetupState = setupStateOptionsQuery.data?.find((option) => option.isFinal)?.value ?? ""
+  const isReviewDone = setupStateQuery.data?.setupState === finalSetupState
   const completedStepCount = sessionId
     ? isReviewDone
       ? steps.length

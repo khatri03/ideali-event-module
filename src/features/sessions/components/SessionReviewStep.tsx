@@ -12,12 +12,14 @@ import {
   fetchSessionWizardETicketing,
   fetchSessionWizardGenres,
   fetchSessionWizardName,
+  fetchSessionWizardSetupStateOptions,
   fetchSessionWizardSchedule,
   fetchSessionWizardTickets,
   fetchSessionWizardVenue,
   markSessionWizardReadyForReview,
   updateSessionWizardSetupState,
   type SessionWizardSetupState,
+  type SessionWizardSetupStateOption,
 } from "@/api/sessions"
 import { APP_ROUTES } from "@/utils/routes"
 import { extractApiError } from "@/utils/errors"
@@ -51,24 +53,33 @@ function formatRange(startDateTime: string | null | undefined, endDateTime: stri
   return `${formatDateTime(startDateTime)} to ${formatDateTime(endDateTime)}`
 }
 
-function getSetupStateTheme(setupState: SessionWizardSetupState["setupState"]) {
-  if (setupState === "ReadyForSale") {
+function getSetupStateTheme(setupState: string, setupStateOptions: SessionWizardSetupStateOption[] = []) {
+  const selectedState = setupStateOptions.find((option) => option.value === setupState)
+
+  if (!selectedState) {
     return {
-      colorPalette: "green" as const,
-      label: "Ready for sale",
+      colorPalette: "gray" as const,
+      label: setupState ? setupState : "Loading",
     }
   }
 
-  if (setupState === "ReadyForReview") {
+  if (!selectedState.isSelectable) {
     return {
-      colorPalette: "orange" as const,
-      label: "Ready for review",
+      colorPalette: "gray" as const,
+      label: selectedState.label,
+    }
+  }
+
+  if (selectedState.isFinal) {
+    return {
+      colorPalette: "green" as const,
+      label: selectedState.label,
     }
   }
 
   return {
-    colorPalette: "gray" as const,
-    label: "Incomplete",
+    colorPalette: "orange" as const,
+    label: selectedState.label,
   }
 }
 
@@ -138,40 +149,54 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   const queryClient = useQueryClient()
   const { setPrimaryAction, setPrimaryActionReady } = useSessionWizardActions()
   const finishDialogSize = useBreakpointValue<"full" | "sm">({ base: "full", md: "sm" }) ?? "sm"
-  const [setupState, setSetupState] = useState<SessionWizardSetupState["setupState"]>("Incomplete")
-  const setupStateTheme = getSetupStateTheme(setupState)
-  const [finishSetupState, setFinishSetupState] = useState<"ReadyForReview" | "ReadyForSale">("ReadyForReview")
+  const [setupState, setSetupState] = useState("")
+  const [finishSetupState, setFinishSetupState] = useState<string | null>(null)
   const [isInitialised, setIsInitialised] = useState(false)
   const [isFinishConfirmOpen, setIsFinishConfirmOpen] = useState(false)
   const isOpenedFromEventWizard = useMemo(() => typeof window !== "undefined" && Boolean(window.opener), [])
   const requestedSetupStateSessionIdRef = useRef<string | null>(null)
   const finishConfirmationDeferredRef = useRef<FinishConfirmationDeferred | null>(null)
-  const finishSetupStateLabel = finishSetupState === "ReadyForSale" ? "Ready For Sale" : "Ready for review"
 
   const reviewReturnUrl = useMemo(() => `${location.pathname}${location.search}`, [location.pathname, location.search])
+
+  const setupStateOptionsQuery = useQuery({
+    queryKey: ["sessions", "setup-state-options"],
+    queryFn: fetchSessionWizardSetupStateOptions,
+    staleTime: 1000 * 60 * 60,
+  })
+  const setupStateOptions = useMemo(() => setupStateOptionsQuery.data ?? [], [setupStateOptionsQuery.data])
+  const selectableSetupStates = useMemo(
+    () => setupStateOptions.filter((option) => option.isSelectable),
+    [setupStateOptions],
+  )
+  const finalSetupState = setupStateOptions.find((option) => option.isFinal)?.value ?? ""
+  const setupStateTheme = getSetupStateTheme(setupState, setupStateOptions)
+  const resolvedFinishSetupState =
+    finishSetupState ?? selectableSetupStates.find((option) => option.isFinal)?.value ?? selectableSetupStates[0]?.value ?? ""
+  const finishSetupStateLabel = setupStateOptions.find((option) => option.value === resolvedFinishSetupState)?.label ?? "Loading"
 
   const setupStateMutation = useMutation({
     mutationFn: () => markSessionWizardReadyForReview(sessionId),
     onSuccess: (data) => {
       setSetupState(data.setupState)
-      setFinishSetupState(data.setupState === "ReadyForSale" ? "ReadyForSale" : "ReadyForReview")
+      setFinishSetupState(selectableSetupStates.find((option) => option.value === data.setupState)?.value ?? null)
       setIsInitialised(true)
       setPrimaryActionReady(true)
       queryClient.invalidateQueries({ queryKey: ["sessions", "setup-state", sessionId] })
     },
     onError: () => {
-      setSetupState("Incomplete")
-      setFinishSetupState("ReadyForReview")
+      setSetupState("")
+      setFinishSetupState(null)
       setIsInitialised(true)
       setPrimaryActionReady(true)
     },
   })
 
-  const finishMutation = useMutation<SessionWizardSetupState, Error, "ReadyForReview" | "ReadyForSale">({
+  const finishMutation = useMutation<SessionWizardSetupState, Error, string>({
     mutationFn: (setupState) => updateSessionWizardSetupState(sessionId, { setupState }),
     onSuccess: async (data) => {
       setSetupState(data.setupState)
-      setFinishSetupState(data.setupState === "ReadyForSale" ? "ReadyForSale" : "ReadyForReview")
+      setFinishSetupState(selectableSetupStates.find((option) => option.value === data.setupState)?.value ?? null)
       await queryClient.invalidateQueries({ queryKey: ["sessions", "wizard-progress", sessionId] })
       await queryClient.invalidateQueries({ queryKey: ["sessions", "setup-state", sessionId] })
     },
@@ -269,7 +294,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
 
     try {
       setPrimaryActionReady(false)
-      await finishMutation.mutateAsync(finishSetupState)
+      await finishMutation.mutateAsync(resolvedFinishSetupState)
       finishConfirmationDeferredRef.current = null
       setIsFinishConfirmOpen(false)
       pending.resolve()
@@ -281,7 +306,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     } catch (error) {
       pending.reject(error instanceof Error ? error : new Error("Unable to finish review."))
     }
-  }, [finishMutation, finishSetupState, isOpenedFromEventWizard, sessionId, setPrimaryActionReady])
+  }, [finishMutation, isOpenedFromEventWizard, resolvedFinishSetupState, sessionId, setPrimaryActionReady])
 
   useEffect(() => {
     if (requestedSetupStateSessionIdRef.current === sessionId) {
@@ -318,6 +343,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   const ticketsCount = ticketsQuery.data?.length ?? 0
   const summaryError =
     nameQuery.error ??
+    setupStateOptionsQuery.error ??
     sessionEventQuery.error ??
     eTicketingQuery.error ??
     organizerEventsQuery.error ??
@@ -372,12 +398,15 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
 
           <Flex align="center" gap={3} wrap="wrap" justify={{ base: "flex-start", md: "flex-end" }} flexShrink={0}>
             <Switch.Root
-              checked={finishSetupState === "ReadyForSale"}
+              checked={resolvedFinishSetupState === finalSetupState}
+              disabled={selectableSetupStates.length < 2}
               onCheckedChange={(details) =>
-                setFinishSetupState(details.checked ? "ReadyForSale" : "ReadyForReview")
+                setFinishSetupState(
+                  details.checked ? finalSetupState : selectableSetupStates.find((option) => !option.isFinal)?.value ?? null,
+                )
               }
               colorPalette="brand"
-              aria-label="Ready For Sale"
+              aria-label={setupStateOptions.find((option) => option.isFinal)?.label ?? "Ready For Sale"}
             >
               <Switch.HiddenInput />
               <Box transform="scale(1.12)" transformOrigin="center">
@@ -596,7 +625,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
                   <Badge
                     mt={1.5}
                     variant="subtle"
-                    colorPalette={finishSetupState === "ReadyForSale" ? "green" : "orange"}
+                    colorPalette={resolvedFinishSetupState === finalSetupState ? "green" : "orange"}
                     borderRadius="999px"
                     px={3}
                     py={0.75}
@@ -643,7 +672,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
                 color="white"
                 style={{
                   background:
-                    finishSetupState === "ReadyForSale"
+                    resolvedFinishSetupState === finalSetupState
                       ? "linear-gradient(135deg, #22C55E 0%, #16A34A 100%)"
                       : "linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)",
                 }}

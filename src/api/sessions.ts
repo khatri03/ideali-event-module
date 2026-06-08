@@ -82,6 +82,17 @@ const sessionSetupStateSchema = z.object({
   setupState: z.string().optional(),
 })
 
+const sessionSetupStateOptionSchema = z.object({
+  Value: z.string().optional(),
+  value: z.string().optional(),
+  Label: z.string().optional(),
+  label: z.string().optional(),
+  IsSelectable: z.boolean().optional(),
+  isSelectable: z.boolean().optional(),
+  IsFinal: z.boolean().optional(),
+  isFinal: z.boolean().optional(),
+})
+
 const sessionETicketingSchema = z.object({
   EnableDigitalTicket: z.boolean().optional(),
   enableDigitalTicket: z.boolean().optional(),
@@ -268,11 +279,18 @@ export interface SessionWizardProgressResponse {
 }
 
 export interface SessionWizardSetupState {
-  setupState: "Incomplete" | "ReadyForReview" | "ReadyForSale"
+  setupState: string
+}
+
+export interface SessionWizardSetupStateOption {
+  value: string
+  label: string
+  isSelectable: boolean
+  isFinal: boolean
 }
 
 export interface SessionWizardSetupStateRequest {
-  setupState: "ReadyForReview" | "ReadyForSale"
+  setupState: string
 }
 
 export interface SessionWizardETicketing {
@@ -626,7 +644,7 @@ export async function markSessionWizardReadyForReview(uniqueId: string): Promise
   const setupState = sessionSetupStateSchema.parse(responseData)
 
   return {
-    setupState: (setupState.SetupState ?? setupState.setupState ?? "Incomplete") as SessionWizardSetupState["setupState"],
+    setupState: setupState.SetupState ?? setupState.setupState ?? "",
   }
 }
 
@@ -636,7 +654,7 @@ export async function fetchSessionWizardSetupState(uniqueId: string): Promise<Se
   const setupState = sessionSetupStateSchema.parse(responseData)
 
   return {
-    setupState: (setupState.SetupState ?? setupState.setupState ?? "Incomplete") as SessionWizardSetupState["setupState"],
+    setupState: setupState.SetupState ?? setupState.setupState ?? "",
   }
 }
 
@@ -649,8 +667,21 @@ export async function updateSessionWizardSetupState(
   const setupState = sessionSetupStateSchema.parse(responseData)
 
   return {
-    setupState: (setupState.SetupState ?? setupState.setupState ?? "Incomplete") as SessionWizardSetupState["setupState"],
+    setupState: setupState.SetupState ?? setupState.setupState ?? "",
   }
+}
+
+export async function fetchSessionWizardSetupStateOptions(): Promise<SessionWizardSetupStateOption[]> {
+  const res = await client.get<unknown>(API_ROUTES.sessionWizardSetupStateOptions)
+  const responseData = parseServicePayload(res.data)
+  const setupStateOptions = z.array(sessionSetupStateOptionSchema).parse(responseData)
+
+  return setupStateOptions.map((option) => ({
+    value: option.Value ?? option.value ?? "",
+    label: option.Label ?? option.label ?? "",
+    isSelectable: option.IsSelectable ?? option.isSelectable ?? false,
+    isFinal: option.IsFinal ?? option.isFinal ?? false,
+  }))
 }
 
 export async function fetchSessionWizardETicketing(uniqueId: string): Promise<SessionWizardETicketing> {
