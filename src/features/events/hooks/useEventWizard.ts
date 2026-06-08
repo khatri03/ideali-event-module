@@ -151,6 +151,7 @@ export function buildCreateEventPayload(values: EventWizardValues): Omit<AppEven
     title: values.name.trim(),
     description: values.description.trim(),
     termsConditions: values.termsConditions.trim() || null,
+    bannerUrl: values.bannerUrl.trim() || null,
     startDate: firstSession?.startsAt || new Date().toISOString(),
     endDate: lastSession?.endsAt || new Date().toISOString(),
     location: "TBD",

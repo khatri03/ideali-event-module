@@ -1,4 +1,4 @@
-import { Badge, Box, Flex, Stack, Text } from "@chakra-ui/react"
+import { Badge, Box, Flex, Image, Stack, Text } from "@chakra-ui/react"
 import { format } from "date-fns"
 import type { ReactNode } from "react"
 import { useWatch } from "react-hook-form"
@@ -21,6 +21,34 @@ export function EventReviewStepPage() {
         <Stack gap={4}>
           <ReviewRow label="Name" value={values.name} />
           <ReviewRow label="Description" value={htmlToPlainText(values.description) || "No description provided"} />
+          <ReviewRow
+            label="Banner"
+            value={
+              values.bannerUrl ? (
+                <Box
+                  border="1px solid"
+                  borderColor="border.subtle"
+                  borderRadius="18px"
+                  overflow="hidden"
+                  maxW={{ base: "full", md: "360px" }}
+                  ml={{ md: "auto" }}
+                >
+                  <Image
+                    src={values.bannerUrl}
+                    alt="Event banner preview"
+                    w="full"
+                    maxH="160px"
+                    objectFit="cover"
+                  />
+                </Box>
+              ) : (
+                <Text fontSize="sm" color="text.secondary">
+                  Not selected
+                </Text>
+              )
+            }
+            isRequired
+          />
           <ReviewRow label="Theme color" value={<ColorPill color={values.themeColor} />} isRequired />
           <ReviewRow label="Payment account" value={paymentAccount?.name || "Not selected"} isRequired />
           <ReviewRow

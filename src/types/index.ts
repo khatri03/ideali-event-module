@@ -22,6 +22,7 @@ export interface AppEvent {
   title: string
   description: string
   termsConditions?: string | null
+  bannerUrl?: string | null
   startDate: string
   endDate: string
   location: string

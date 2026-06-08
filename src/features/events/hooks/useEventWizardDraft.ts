@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import {
+  fetchEventWizardBanner,
   fetchEventWizardAdvancedSettings,
   fetchEventWizardDescription,
   fetchEventWizardName,
@@ -14,6 +15,7 @@ export type EventWizardDraftData =
   | Awaited<ReturnType<typeof fetchEventWizardName>>
   | Awaited<ReturnType<typeof fetchEventWizardDescription>>
   | Awaited<ReturnType<typeof fetchEventWizardTermsConditions>>
+  | Awaited<ReturnType<typeof fetchEventWizardBanner>>
   | Awaited<ReturnType<typeof fetchEventWizardThemeColor>>
   | Awaited<ReturnType<typeof fetchEventWizardAdvancedSettings>>
   | Awaited<ReturnType<typeof fetchEventWizardPaymentAccount>>
@@ -24,6 +26,7 @@ export function useEventWizardDraft(eventId?: string, stepSlug?: EventWizardStep
     stepSlug === "name" ||
     stepSlug === "description" ||
     stepSlug === "terms-conditions" ||
+    stepSlug === "banner" ||
     stepSlug === "theme-color" ||
     stepSlug === "payment-account" ||
     stepSlug === "venue" ||
@@ -46,6 +49,10 @@ export function useEventWizardDraft(eventId?: string, stepSlug?: EventWizardStep
 
       if (stepSlug === "terms-conditions") {
         return fetchEventWizardTermsConditions(eventId)
+      }
+
+      if (stepSlug === "banner") {
+        return fetchEventWizardBanner(eventId)
       }
 
       if (stepSlug === "theme-color") {

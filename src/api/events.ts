@@ -15,6 +15,7 @@ const appEventSchema = z.object({
   title: z.string(),
   description: z.string(),
   termsConditions: z.string().nullable().optional(),
+  bannerUrl: z.string().nullable().optional(),
   startDate: z.string(),
   endDate: z.string(),
   location: z.string(),
@@ -61,6 +62,12 @@ const eventWizardDescriptionResponseSchema = z.object({
 
 const eventWizardTermsConditionsResponseSchema = z.object({
   termsConditions: z.string().nullable().optional(),
+})
+
+const eventWizardBannerResponseSchema = z.object({
+  uniqueId: z.string().min(1),
+  bannerUrl: z.string().nullable().optional(),
+  stepNo: z.number().int().min(0).optional(),
 })
 
 const eventWizardThemeColorResponseSchema = z.object({
@@ -202,6 +209,38 @@ export async function updateEventWizardTermsConditions(
   })
 
   return eventWizardTermsConditionsResponseSchema.parse(res.data)
+}
+
+export interface EventWizardBannerResponse {
+  uniqueId: string
+  bannerUrl?: string | null
+  stepNo?: number
+}
+
+export async function fetchEventWizardBanner(uniqueId: string): Promise<EventWizardBannerResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "banner")}`)
+  return eventWizardBannerResponseSchema.parse(res.data)
+}
+
+export async function updateEventWizardBanner(
+  uniqueId: string,
+  payload: { bannerFile: File | null; clearBanner: boolean },
+  stepNo = 4,
+): Promise<EventWizardBannerResponse> {
+  const formData = new FormData()
+  if (payload.bannerFile) {
+    formData.append("file", payload.bannerFile)
+  }
+  formData.append("clearBanner", String(payload.clearBanner))
+
+  const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "banner")}`, formData, {
+    params: { stepNo },
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  })
+
+  return eventWizardBannerResponseSchema.parse(res.data)
 }
 
 export interface EventWizardThemeColorResponse {

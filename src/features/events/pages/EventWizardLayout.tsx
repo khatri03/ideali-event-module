@@ -29,6 +29,7 @@ import { EventWizardStepper } from "../components/EventWizardStepper"
 import { EventWizardStepSkeleton } from "../components/EventWizardStepSkeleton"
 import { EventWizardActions } from "../components/EventWizardActions"
 import { buildCreateEventPayload } from "../hooks/useEventWizard"
+import { EventWizardActionsProvider, useEventWizardActions } from "../hooks/useEventWizardActions"
 
 function WizardLoadingState() {
   return (
@@ -191,6 +192,14 @@ function WizardStepsRail({
 }
 
 export function EventWizardLayout() {
+  return (
+    <EventWizardActionsProvider>
+      <EventWizardLayoutContent />
+    </EventWizardActionsProvider>
+  )
+}
+
+function EventWizardLayoutContent() {
   const navigate = useNavigate()
   const location = useLocation()
   const { eventId } = useParams<{ eventId?: string }>()
@@ -203,6 +212,7 @@ export function EventWizardLayout() {
   const maxUnlockedStepIndex = eventId ? Math.min(lastCompletedStepNo, wizardSteps.length - 1) : 0
   const { activeStepIndex, activeStep, goToStep, goBack, goNext, isFirstStep, isLastStep } = useEventWizardNavigation(maxUnlockedStepIndex)
   const wizardDraftQuery = useEventWizardDraft(eventId, activeStep.slug)
+  const { runPrimaryAction, isPrimaryActionReady, canPrimaryActionProceed } = useEventWizardActions()
   const isMobile = useBreakpointValue({ base: true, lg: false }) ?? true
   const [isStepsCollapsedOverride, setIsStepsCollapsedOverride] = useState<boolean | null>(null)
   const isStepsCollapsed = isStepsCollapsedOverride ?? isMobile
@@ -224,7 +234,7 @@ export function EventWizardLayout() {
     },
   })
 
-  function setWizardStepCache(step: "name" | "description" | "terms-conditions" | "theme-color" | "venue" | "advanced-settings", value: unknown) {
+  function setWizardStepCache(step: "name" | "description" | "terms-conditions" | "banner" | "theme-color" | "venue" | "advanced-settings", value: unknown) {
     if (!eventId) {
       return
     }
@@ -272,8 +282,8 @@ export function EventWizardLayout() {
     activeStep.slug === "questions" ||
     activeStep.slug === "thank-you-email" ||
     activeStep.slug === "advanced-settings"
-  const isUiOnlyStep = activeStep.slug === "banner"
   const isPaymentAccountStep = activeStep.slug === "payment-account"
+  const isBannerStep = activeStep.slug === "banner"
   const isLastWizardStep = isLastStep
   const resolvedStepIndex = eventId ? Math.min(lastCompletedStepNo, wizardSteps.length - 1) : -1
   const resolvedStepPath = eventId ? wizardSteps[resolvedStepIndex]?.path : undefined
@@ -292,6 +302,12 @@ export function EventWizardLayout() {
         form.setValue("description", draftData.description ?? "", { shouldDirty: false, shouldTouch: false, shouldValidate: false })
       } else if ("termsConditions" in draftData) {
         form.setValue("termsConditions", draftData.termsConditions ?? "", {
+          shouldDirty: false,
+          shouldTouch: false,
+          shouldValidate: false,
+        })
+      } else if ("bannerUrl" in draftData) {
+        form.setValue("bannerUrl", draftData.bannerUrl ?? "", {
           shouldDirty: false,
           shouldTouch: false,
           shouldValidate: false,
@@ -393,7 +409,12 @@ export function EventWizardLayout() {
       return
     }
 
-    if (isUiOnlyStep) {
+    if (activeStep.slug === "banner") {
+      try {
+        await runPrimaryAction()
+      } catch {
+        return
+      }
       goNext()
       return
     }
@@ -478,7 +499,12 @@ export function EventWizardLayout() {
       return
     }
 
-    if (isUiOnlyStep) {
+    if (activeStep.slug === "banner") {
+      try {
+        await runPrimaryAction()
+      } catch {
+        return
+      }
       navigate(APP_ROUTES.events)
       return
     }
@@ -723,10 +749,24 @@ export function EventWizardLayout() {
                   <EventWizardActions
                     showBack={!isFirstStep}
                     showSkip={isOptionalStep && !isLastWizardStep}
-                    isPrimaryDisabled={isPaymentAccountStep && (!paymentAccountId || (paymentMethods?.length ?? 0) === 0)}
-                    isSecondaryDisabled={isPaymentAccountStep && (!paymentAccountId || (paymentMethods?.length ?? 0) === 0)}
-                    isPrimaryLoading={createEventDraftMutation.isPending || finalSaveMutation.isPending}
-                    isSecondaryLoading={createEventDraftMutation.isPending || finalSaveMutation.isPending}
+                    isPrimaryDisabled={
+                      (isPaymentAccountStep && (!paymentAccountId || (paymentMethods?.length ?? 0) === 0)) ||
+                      (isBannerStep && !canPrimaryActionProceed)
+                    }
+                    isSecondaryDisabled={
+                      (isPaymentAccountStep && (!paymentAccountId || (paymentMethods?.length ?? 0) === 0)) ||
+                      (isBannerStep && !canPrimaryActionProceed)
+                    }
+                    isPrimaryLoading={
+                      createEventDraftMutation.isPending ||
+                      finalSaveMutation.isPending ||
+                      (isBannerStep && !isPrimaryActionReady)
+                    }
+                    isSecondaryLoading={
+                      createEventDraftMutation.isPending ||
+                      finalSaveMutation.isPending ||
+                      (isBannerStep && !isPrimaryActionReady)
+                    }
                     primaryLabel={!eventId && activeStep.slug === "name" ? "Create Event" : isReviewStep ? "Save Changes" : "Save & Continue"}
                     secondaryLabel="Save & Exit"
                     onBack={goBack}
