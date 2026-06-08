@@ -212,7 +212,7 @@ function EventWizardLayoutContent() {
   const maxUnlockedStepIndex = eventId ? Math.min(lastCompletedStepNo, wizardSteps.length - 1) : 0
   const { activeStepIndex, activeStep, goToStep, goBack, goNext, isFirstStep, isLastStep } = useEventWizardNavigation(maxUnlockedStepIndex)
   const wizardDraftQuery = useEventWizardDraft(eventId, activeStep.slug)
-  const { runPrimaryAction, isPrimaryActionReady, canPrimaryActionProceed } = useEventWizardActions()
+  const { runPrimaryAction, isPrimaryActionReady } = useEventWizardActions()
   const isMobile = useBreakpointValue({ base: true, lg: false }) ?? true
   const [isStepsCollapsedOverride, setIsStepsCollapsedOverride] = useState<boolean | null>(null)
   const isStepsCollapsed = isStepsCollapsedOverride ?? isMobile
@@ -750,12 +750,10 @@ function EventWizardLayoutContent() {
                     showBack={!isFirstStep}
                     showSkip={isOptionalStep && !isLastWizardStep}
                     isPrimaryDisabled={
-                      (isPaymentAccountStep && (!paymentAccountId || (paymentMethods?.length ?? 0) === 0)) ||
-                      (isBannerStep && !canPrimaryActionProceed)
+                      isPaymentAccountStep && (!paymentAccountId || (paymentMethods?.length ?? 0) === 0)
                     }
                     isSecondaryDisabled={
-                      (isPaymentAccountStep && (!paymentAccountId || (paymentMethods?.length ?? 0) === 0)) ||
-                      (isBannerStep && !canPrimaryActionProceed)
+                      isPaymentAccountStep && (!paymentAccountId || (paymentMethods?.length ?? 0) === 0)
                     }
                     isPrimaryLoading={
                       createEventDraftMutation.isPending ||

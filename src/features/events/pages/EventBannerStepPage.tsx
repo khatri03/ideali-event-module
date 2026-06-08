@@ -270,8 +270,8 @@ export function EventBannerStepPage() {
 
     setPrimaryAction(async () => {
       if (!previewBannerUrl) {
-        setBannerUploadError("Banner is required.")
-        throw new Error("Banner is required.")
+        setBannerUploadError("Please choose a banner image before continuing.")
+        throw new Error("Please choose a banner image before continuing.")
       }
 
       setPrimaryActionReady(false)
