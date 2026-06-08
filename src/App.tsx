@@ -23,7 +23,7 @@ import {
   EventTimeZoneStepPage,
   EventWizardLayout,
 } from "./features/events"
-import { SessionWizardLayout, SessionWizardStepPage } from "./features/sessions"
+import { SessionListPage, SessionWizardLayout, SessionWizardStepPage } from "./features/sessions"
 import { APP_ROUTES } from "@/utils/routes"
 
 export default function App() {
@@ -80,6 +80,7 @@ export default function App() {
           <Route path={APP_ROUTES.sessionWizard.slugs.eTicketing} element={<SessionWizardStepPage />} />
           <Route path={APP_ROUTES.sessionWizard.slugs.review} element={<SessionWizardStepPage />} />
         </Route>
+        <Route path={APP_ROUTES.sessionWizard.list} element={<SessionListPage />} />
 
         {/* App */}
         <Route element={<AppLayout />}>

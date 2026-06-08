@@ -78,6 +78,7 @@ const eventWizardVenueResponseSchema = z.object({
 const eventWizardSessionItemSchema = z.object({
   uniqueId: z.string().min(1),
   name: z.string().min(1),
+  setupState: z.string().min(1),
 })
 
 const eventWizardProgressResponseSchema = z.object({

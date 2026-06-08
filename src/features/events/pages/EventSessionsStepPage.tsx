@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import {
+  Badge,
   Box,
   Button,
   CloseButton,
@@ -12,11 +13,37 @@ import {
   Text,
   Tooltip,
 } from "@chakra-ui/react"
-import { PencilLine, Plus, Sparkles, Settings2 } from "lucide-react"
+import { CheckCircle2, PencilLine, Plus, Sparkles, Settings2, X } from "lucide-react"
 import { useParams } from "react-router-dom"
 import { useCreateEventWizardSession, useEventWizardSessions } from "../hooks/useEventWizardSessions"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
+
+function getSessionSetupStateTheme(setupState: string) {
+  const normalizedSetupState = setupState.replace(/[^a-z]/gi, "").toLowerCase()
+
+  if (normalizedSetupState === "readyforsale") {
+    return {
+      colorPalette: "green" as const,
+      label: "Ready for sale",
+      icon: CheckCircle2,
+    }
+  }
+
+  if (normalizedSetupState === "readyforreview") {
+    return {
+      colorPalette: "orange" as const,
+      label: "Ready for review",
+      icon: CheckCircle2,
+    }
+  }
+
+  return {
+    colorPalette: "gray" as const,
+    label: "Incomplete",
+    icon: X,
+  }
+}
 
 export function EventSessionsStepPage() {
   const { eventId } = useParams<{ eventId?: string }>()
@@ -39,6 +66,30 @@ export function EventSessionsStepPage() {
     return () => window.cancelAnimationFrame(frameId)
   }, [isOpen])
 
+  useEffect(() => {
+    function handleSessionWizardMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) {
+        return
+      }
+
+      if (!event.data || typeof event.data !== "object") {
+        return
+      }
+
+      if ((event.data as { type?: string }).type !== "session-wizard:finished") {
+        return
+      }
+
+      void refetch()
+    }
+
+    window.addEventListener("message", handleSessionWizardMessage)
+
+    return () => {
+      window.removeEventListener("message", handleSessionWizardMessage)
+    }
+  }, [refetch])
+
   async function handleCreateSession(navigateToWizard = false) {
     const trimmedName = sessionName.trim()
     if (!trimmedName) {
@@ -59,7 +110,6 @@ export function EventSessionsStepPage() {
             APP_ROUTES.sessionWizard.slugs.description,
           ),
           "_blank",
-          "noopener,noreferrer",
         )
       }
     } catch (mutationError: unknown) {
@@ -105,6 +155,9 @@ export function EventSessionsStepPage() {
                 <Table.ColumnHeader px={6} py={3} fontSize="xs" fontWeight="700" color="text.secondary" textTransform="uppercase" letterSpacing="0.05em">
                   Session name
                 </Table.ColumnHeader>
+                <Table.ColumnHeader px={4} py={3} fontSize="xs" fontWeight="700" color="text.secondary" textTransform="uppercase" letterSpacing="0.05em">
+                  Setup State
+                </Table.ColumnHeader>
                 <Table.ColumnHeader px={4} py={3} textAlign="right" fontSize="xs" fontWeight="700" color="text.secondary" textTransform="uppercase" letterSpacing="0.05em">
                   Action
                 </Table.ColumnHeader>
@@ -118,6 +171,9 @@ export function EventSessionsStepPage() {
                     <Table.Cell px={6} py={4}>
                       <Skeleton h="16px" maxW="200px" />
                     </Table.Cell>
+                    <Table.Cell px={4} py={4}>
+                      <Skeleton h="22px" maxW="140px" borderRadius="full" />
+                    </Table.Cell>
                     <Table.Cell px={4} py={4} textAlign="right">
                       <Skeleton h="36px" w="36px" borderRadius="full" ml="auto" />
                     </Table.Cell>
@@ -130,6 +186,23 @@ export function EventSessionsStepPage() {
                       <Text fontSize="sm" fontWeight="600" color="text.primary" lineClamp={1}>
                         {session.name}
                       </Text>
+                    </Table.Cell>
+                    <Table.Cell px={4} py={4}>
+                      {(() => {
+                        const setupStateTheme = getSessionSetupStateTheme(session.setupState)
+                        const SetupStateIcon = setupStateTheme.icon
+
+                        return (
+                          <Badge variant="subtle" colorPalette={setupStateTheme.colorPalette} borderRadius="999px" px={3} py={1}>
+                            <Flex align="center" gap={1.5}>
+                              <SetupStateIcon size={14} />
+                              <Text as="span" fontSize="xs" fontWeight="800">
+                                {setupStateTheme.label}
+                              </Text>
+                            </Flex>
+                          </Badge>
+                        )
+                      })()}
                     </Table.Cell>
                     <Table.Cell px={4} py={4} textAlign="right">
                       <Button
@@ -145,7 +218,7 @@ export function EventSessionsStepPage() {
                         borderColor="border.subtle"
                         bg="white"
                         onClick={() => {
-                          window.open(APP_ROUTES.sessionWizard.edit(session.uniqueId), "_blank", "noopener,noreferrer")
+                          window.open(APP_ROUTES.sessionWizard.edit(session.uniqueId), "_blank")
                         }}
                       >
                         <PencilLine size={16} />
@@ -155,7 +228,7 @@ export function EventSessionsStepPage() {
                 ))
               ) : (
                 <Table.Row borderColor="border.subtle">
-                  <Table.Cell px={6} py={6} colSpan={2}>
+                  <Table.Cell px={6} py={6} colSpan={3}>
                     <Text fontSize="sm" color="text.secondary">
                       No sessions added yet.
                     </Text>

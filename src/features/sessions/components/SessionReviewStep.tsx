@@ -143,6 +143,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   const [finishSetupState, setFinishSetupState] = useState<"ReadyForReview" | "ReadyForSale">("ReadyForReview")
   const [isInitialised, setIsInitialised] = useState(false)
   const [isFinishConfirmOpen, setIsFinishConfirmOpen] = useState(false)
+  const isOpenedFromEventWizard = useMemo(() => typeof window !== "undefined" && Boolean(window.opener), [])
   const requestedSetupStateSessionIdRef = useRef<string | null>(null)
   const finishConfirmationDeferredRef = useRef<FinishConfirmationDeferred | null>(null)
   const finishSetupStateLabel = finishSetupState === "ReadyForSale" ? "Ready For Sale" : "Ready for review"
@@ -272,10 +273,15 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
       finishConfirmationDeferredRef.current = null
       setIsFinishConfirmOpen(false)
       pending.resolve()
+
+      if (isOpenedFromEventWizard && window.opener && !window.opener.closed) {
+        window.opener.postMessage({ type: "session-wizard:finished", sessionId }, window.location.origin)
+        window.close()
+      }
     } catch (error) {
       pending.reject(error instanceof Error ? error : new Error("Unable to finish review."))
     }
-  }, [finishMutation, finishSetupState, setPrimaryActionReady])
+  }, [finishMutation, finishSetupState, isOpenedFromEventWizard, sessionId, setPrimaryActionReady])
 
   useEffect(() => {
     if (requestedSetupStateSessionIdRef.current === sessionId) {

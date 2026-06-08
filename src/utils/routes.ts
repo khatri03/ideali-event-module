@@ -35,6 +35,7 @@ export const APP_ROUTES = {
     editStep: (eventId: string, step: string) => `/organizer/events/${eventId}/${step}`,
   },
   sessionWizard: {
+    list: "/organizer/sessions",
     edit: (sessionId: string) => `/organizer/sessions/${sessionId}`,
     editStep: (sessionId: string, step: string) => `/organizer/sessions/${sessionId}/${step}`,
     slugs: {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Box, Button, Flex, Grid, Heading, Skeleton, SkeletonText, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
 import { Navigate, Outlet, useLocation, useNavigate, useParams } from "react-router-dom"
@@ -102,6 +102,7 @@ function SessionWizardLayoutContent() {
   const wizardProgressQuery = useSessionWizardProgress(sessionId)
   const setupStateQuery = useSessionWizardSetupState(sessionId)
   const { runPrimaryAction, isPrimaryActionReady } = useSessionWizardActions()
+  const isOpenedFromEventWizard = useMemo(() => typeof window !== "undefined" && Boolean(window.opener), [])
   const isSkippableStep =
     activeStep?.slug === "description" ||
     activeStep?.slug === "banner" ||
@@ -405,7 +406,11 @@ function SessionWizardLayoutContent() {
                     try {
                       await runPrimaryAction()
                       if (isReviewStep) {
-                        navigate(returnUrl ?? APP_ROUTES.events)
+                        if (isOpenedFromEventWizard) {
+                          return
+                        }
+
+                        navigate(APP_ROUTES.sessionWizard.list)
                         return
                       }
 
