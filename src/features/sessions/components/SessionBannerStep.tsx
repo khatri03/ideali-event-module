@@ -16,64 +16,21 @@ import {
 } from "@chakra-ui/react"
 import { FileImage, ImagePlus, RefreshCcw, Search, Sparkles, Trash2, Upload, X } from "lucide-react"
 import { fetchSessionWizardBanner, fetchSessionWizardGenres, updateSessionWizardBanner } from "@/api/sessions"
-import { searchUnsplashPhotos, type UnsplashOrientation, type UnsplashPhoto } from "@/api/unsplash"
+import { type UnsplashOrientation, type UnsplashPhoto } from "@/api/unsplash"
 import { extractApiError } from "@/utils/errors"
+import { buildImageFileFromUrl } from "@/utils/image"
 import { getSessionWizardStepNumber } from "../hooks/useSessionWizard"
 import { useSessionWizardActions } from "../hooks/useSessionWizardActions"
+import { useUnsplashSearch } from "../hooks/useUnsplashSearch"
 
 type BannerSourceMode = "upload" | "unsplash"
 
-const UNSPLASH_SEARCH_DEBOUNCE_MS = 1000
 const UNSPLASH_ORIENTATION_OPTIONS: Array<{ label: string; value: UnsplashOrientation }> = [
   { label: "Landscape", value: "landscape" },
   { label: "Portrait", value: "portrait" },
   { label: "Square", value: "squarish" },
   { label: "Any", value: "any" },
 ]
-
-function mimeTypeToExtension(mimeType: string | null | undefined, fallbackUrl?: string) {
-  const normalizedMimeType = mimeType?.split(";")[0]?.trim().toLowerCase()
-
-  switch (normalizedMimeType) {
-    case "image/jpeg":
-    case "image/jpg":
-      return ".jpg"
-    case "image/png":
-      return ".png"
-    case "image/webp":
-      return ".webp"
-    case "image/gif":
-      return ".gif"
-    default: {
-      if (fallbackUrl) {
-        try {
-          const fallbackPath = new URL(fallbackUrl).pathname
-          const match = fallbackPath.match(/\.[a-z0-9]+$/i)
-          if (match?.[0]) {
-            return match[0].toLowerCase()
-          }
-        } catch {
-          return ".png"
-        }
-      }
-
-      return ".png"
-    }
-  }
-}
-
-async function buildImageFileFromUrl(imageUrl: string, fallbackName: string) {
-  const response = await fetch(imageUrl)
-  if (!response.ok) {
-    throw new Error("Unable to read the selected image.")
-  }
-
-  const blob = await response.blob()
-  const mimeTypeHeader = response.headers.get("content-type") || blob.type || "image/png"
-  const mimeType = (mimeTypeHeader.split(";")[0] || "image/png").trim()
-  const extension = mimeTypeToExtension(mimeType, imageUrl)
-  return new File([blob], `${fallbackName}${extension}`, { type: mimeType })
-}
 
 interface SessionBannerStepProps {
   sessionId: string
@@ -131,9 +88,6 @@ export function SessionBannerStep({ sessionId }: SessionBannerStepProps) {
   const unsplashQueryInputRef = useRef<HTMLInputElement | null>(null)
   const uploadDragDepthRef = useRef(0)
   const objectUrlRef = useRef<string | null>(null)
-  const unsplashSearchAbortControllerRef = useRef<AbortController | null>(null)
-  const unsplashSearchDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const suppressNextUnsplashDebounceRef = useRef(false)
   const [draftBannerFile, setDraftBannerFile] = useState<File | null>(null)
   const [draftBannerPreviewUrl, setDraftBannerPreviewUrl] = useState<string | null>(null)
   const [clearRequested, setClearRequested] = useState(false)
@@ -141,17 +95,27 @@ export function SessionBannerStep({ sessionId }: SessionBannerStepProps) {
   const [bannerSource, setBannerSource] = useState<BannerSourceMode>("upload")
   const [bannerUploadError, setBannerUploadError] = useState("")
   const [isUnsplashModalOpen, setIsUnsplashModalOpen] = useState(false)
-  const [unsplashQuery, setUnsplashQuery] = useState("")
-  const [unsplashOrientation, setUnsplashOrientation] = useState<UnsplashOrientation>("landscape")
-  const [unsplashResults, setUnsplashResults] = useState<UnsplashPhoto[]>([])
-  const [unsplashTotalResults, setUnsplashTotalResults] = useState(0)
-  const [isSearchingUnsplash, setIsSearchingUnsplash] = useState(false)
-  const [isLoadingMoreUnsplash, setIsLoadingMoreUnsplash] = useState(false)
-  const [unsplashSearchError, setUnsplashSearchError] = useState("")
-  const [selectedUnsplashPhoto, setSelectedUnsplashPhoto] = useState<UnsplashPhoto | null>(null)
-  const [unsplashPage, setUnsplashPage] = useState(1)
   const [isPreparingUnsplashSelection, setIsPreparingUnsplashSelection] = useState(false)
   const [activeUnsplashGenreUniqueId, setActiveUnsplashGenreUniqueId] = useState<string | null>(null)
+
+  const {
+    query: unsplashQuery,
+    setQuery: setUnsplashQuery,
+    orientation: unsplashOrientation,
+    setOrientation: setUnsplashOrientation,
+    results: unsplashResults,
+    totalResults: unsplashTotalResults,
+    isSearching: isSearchingUnsplash,
+    isLoadingMore: isLoadingMoreUnsplash,
+    searchError: unsplashSearchError,
+    selectedPhoto: selectedUnsplashPhoto,
+    setSelectedPhoto: setSelectedUnsplashPhoto,
+    hasResults: hasUnsplashResults,
+    hasMore: hasMoreUnsplashResults,
+    search: searchUnsplash,
+    loadMore: loadMoreUnsplash,
+    clearResults: clearUnsplashSearchResults,
+  } = useUnsplashSearch({ isOpen: isUnsplashModalOpen })
 
   const bannerQuery = useQuery({
     queryKey: ["sessions", { sessionId, step: "banner" }],
@@ -195,8 +159,6 @@ export function SessionBannerStep({ sessionId }: SessionBannerStepProps) {
   const previewBannerUrl = draftBannerPreviewUrl ?? (clearRequested ? null : savedBannerUrl)
   const hasSavedBanner = Boolean(savedBannerUrl)
   const hasStagedBanner = Boolean(draftBannerFile)
-  const hasUnsplashResults = unsplashResults.length > 0
-  const hasMoreUnsplashResults = unsplashTotalResults > 0 && unsplashResults.length < unsplashTotalResults
   const selectedGenres = useMemo(
     () => (genresQuery.data ?? []).filter((genre) => genre.isSelected),
     [genresQuery.data],
@@ -253,109 +215,7 @@ export function SessionBannerStep({ sessionId }: SessionBannerStepProps) {
       setSelectedUnsplashPhoto(null)
       stageBannerFile(file)
     },
-    [stageBannerFile],
-  )
-
-  const mergeUnsplashResults = useCallback((existing: UnsplashPhoto[], incoming: UnsplashPhoto[]) => {
-    const seen = new Set(existing.map((photo) => photo.id))
-    const merged = [...existing]
-
-    for (const photo of incoming) {
-      if (!seen.has(photo.id)) {
-        seen.add(photo.id)
-        merged.push(photo)
-      }
-    }
-
-    return merged
-  }, [])
-
-  const clearUnsplashSearchDebounce = useCallback(() => {
-    if (unsplashSearchDebounceTimerRef.current !== null) {
-      clearTimeout(unsplashSearchDebounceTimerRef.current)
-      unsplashSearchDebounceTimerRef.current = null
-    }
-  }, [])
-
-  const executeUnsplashSearch = useCallback(
-    async ({
-      query,
-      page,
-      append,
-      orientation,
-    }: {
-      query: string
-      page: number
-      append: boolean
-      orientation: UnsplashOrientation
-    }) => {
-      const normalizedQuery = query.trim()
-
-      if (!normalizedQuery) {
-        setUnsplashSearchError("Enter a search term to browse Unsplash images.")
-        setUnsplashResults([])
-        setUnsplashPage(1)
-        setUnsplashTotalResults(0)
-        setSelectedUnsplashPhoto(null)
-        return
-      }
-
-      unsplashSearchAbortControllerRef.current?.abort()
-      const abortController = new AbortController()
-      unsplashSearchAbortControllerRef.current = abortController
-
-      setUnsplashSearchError("")
-      if (append) {
-        setIsLoadingMoreUnsplash(true)
-      } else {
-        setIsSearchingUnsplash(true)
-        setUnsplashPage(1)
-        setUnsplashTotalResults(0)
-        setUnsplashResults([])
-        setSelectedUnsplashPhoto(null)
-      }
-
-      try {
-        const response = await searchUnsplashPhotos(normalizedQuery, {
-          page,
-          perPage: 12,
-          orientation,
-          signal: abortController.signal,
-        })
-        setUnsplashTotalResults(response.totalResults)
-        setUnsplashPage(page)
-        setUnsplashResults((current) => (append ? mergeUnsplashResults(current, response.results) : response.results))
-      } catch (searchError) {
-        if (abortController.signal.aborted) {
-          return
-        }
-
-        if (!append) {
-          setUnsplashResults([])
-          setUnsplashTotalResults(0)
-        }
-
-        setUnsplashSearchError(searchError instanceof Error ? searchError.message : "Unable to search Unsplash.")
-      } finally {
-        if (!abortController.signal.aborted) {
-          setIsSearchingUnsplash(false)
-          setIsLoadingMoreUnsplash(false)
-        }
-      }
-    },
-    [mergeUnsplashResults],
-  )
-
-  const searchUnsplash = useCallback(
-    async (queryOverride?: string, orientationOverride?: UnsplashOrientation, options?: { suppressNextDebounce?: boolean }) => {
-      clearUnsplashSearchDebounce()
-      suppressNextUnsplashDebounceRef.current = options?.suppressNextDebounce ?? false
-
-      const query = (queryOverride ?? unsplashQuery).trim()
-      const orientation = orientationOverride ?? unsplashOrientation
-      await executeUnsplashSearch({ query, page: 1, append: false, orientation })
-    },
-    [clearUnsplashSearchDebounce, executeUnsplashSearch, unsplashOrientation, unsplashQuery],
+    [setSelectedUnsplashPhoto, stageBannerFile],
   )
 
   useEffect(() => {
@@ -369,60 +229,6 @@ export function SessionBannerStep({ sessionId }: SessionBannerStepProps) {
 
     return () => window.cancelAnimationFrame(frameId)
   }, [isUnsplashModalOpen])
-
-  useEffect(() => {
-    clearUnsplashSearchDebounce()
-
-    if (!isUnsplashModalOpen) {
-      return
-    }
-
-    if (suppressNextUnsplashDebounceRef.current) {
-      suppressNextUnsplashDebounceRef.current = false
-      return
-    }
-
-    const normalizedQuery = unsplashQuery.trim()
-    if (!normalizedQuery) {
-      setUnsplashSearchError("")
-      setUnsplashResults([])
-      setUnsplashPage(1)
-      setUnsplashTotalResults(0)
-      setSelectedUnsplashPhoto(null)
-      return
-    }
-
-    unsplashSearchDebounceTimerRef.current = window.setTimeout(() => {
-      void executeUnsplashSearch({
-        query: normalizedQuery,
-        page: 1,
-        append: false,
-        orientation: unsplashOrientation,
-      })
-    }, UNSPLASH_SEARCH_DEBOUNCE_MS)
-  }, [clearUnsplashSearchDebounce, executeUnsplashSearch, isUnsplashModalOpen, unsplashOrientation, unsplashQuery])
-
-  const loadMoreUnsplash = useCallback(async () => {
-    const query = unsplashQuery.trim()
-    if (!query || isSearchingUnsplash || isLoadingMoreUnsplash || !hasMoreUnsplashResults) {
-      return
-    }
-
-    await executeUnsplashSearch({
-      query,
-      page: unsplashPage + 1,
-      append: true,
-      orientation: unsplashOrientation,
-    })
-  }, [
-    executeUnsplashSearch,
-    hasMoreUnsplashResults,
-    isLoadingMoreUnsplash,
-    isSearchingUnsplash,
-    unsplashOrientation,
-    unsplashPage,
-    unsplashQuery,
-  ])
 
   const selectUnsplashPhoto = useCallback(
     async (photo: UnsplashPhoto) => {
@@ -446,18 +252,14 @@ export function SessionBannerStep({ sessionId }: SessionBannerStepProps) {
         setIsPreparingUnsplashSelection(false)
       }
     },
-    [stageBannerFile],
+    [setSelectedUnsplashPhoto, stageBannerFile],
   )
 
   const clearUnsplashSearch = useCallback(() => {
     setActiveUnsplashGenreUniqueId(null)
-    setUnsplashQuery("")
-    setUnsplashResults([])
-    setUnsplashTotalResults(0)
-    setUnsplashPage(1)
-    setUnsplashSearchError("")
+    clearUnsplashSearchResults()
     unsplashQueryInputRef.current?.focus()
-  }, [])
+  }, [clearUnsplashSearchResults])
 
   useEffect(() => {
     if (!bannerQuery.isSuccess) {
@@ -492,10 +294,8 @@ export function SessionBannerStep({ sessionId }: SessionBannerStepProps) {
   useEffect(() => {
     return () => {
       revokeStagedPreview()
-      unsplashSearchAbortControllerRef.current?.abort()
-      clearUnsplashSearchDebounce()
     }
-  }, [clearUnsplashSearchDebounce, revokeStagedPreview])
+  }, [revokeStagedPreview])
 
   const handleOpenUnsplashModal = useCallback(() => {
     setBannerSource("unsplash")
@@ -909,9 +709,6 @@ export function SessionBannerStep({ sessionId }: SessionBannerStepProps) {
         open={isUnsplashModalOpen}
         onOpenChange={(details) => {
           setIsUnsplashModalOpen(details.open)
-          if (!details.open) {
-            setUnsplashSearchError("")
-          }
         }}
         size="xl"
       >
@@ -958,10 +755,17 @@ export function SessionBannerStep({ sessionId }: SessionBannerStepProps) {
                       <Input
                         ref={unsplashQueryInputRef}
                         value={unsplashQuery}
-                      onChange={(event) => {
-                        setActiveUnsplashGenreUniqueId(null)
-                        setUnsplashQuery(event.target.value)
-                      }}
+                        onChange={(event) => {
+                          const nextQuery = event.target.value
+                          setActiveUnsplashGenreUniqueId(null)
+
+                          if (!nextQuery.trim()) {
+                            clearUnsplashSearchResults()
+                            return
+                          }
+
+                          setUnsplashQuery(nextQuery)
+                        }}
                       onKeyDown={(event) => {
                         if (event.key === "Enter") {
                           event.preventDefault()

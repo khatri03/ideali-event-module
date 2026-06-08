@@ -250,20 +250,10 @@ export const SessionTicketPricePeriodsSection = forwardRef<
     [pricePeriods],
   )
 
-  useEffect(() => {
-    if (!ticket?.uniqueId) {
-      return
-    }
-
-    setTicketIdOverride(ticket.uniqueId)
-    setPricePeriods(ticket.pricePeriods ?? [])
-    setIsDraftMode(false)
-  }, [ticket?.uniqueId, ticket?.pricePeriods])
-
   const createMutation = useMutation({
     mutationFn: (payload: { name: string | null; amount: number; startDateTime: string; endDateTime: string }) =>
       createSessionWizardTicketPricePeriod(sessionId, effectiveTicketId ?? "", payload),
-    onSuccess: async () => {
+    onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "ticket" }] })
     },
   })
@@ -282,7 +272,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
         startDateTime: payload.startDateTime,
         endDateTime: payload.endDateTime,
       }),
-    onSuccess: async () => {
+    onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "ticket" }] })
     },
   })
@@ -290,7 +280,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
   const deleteMutation = useMutation({
     mutationFn: (pricePeriodUniqueId: string) =>
       deleteSessionWizardTicketPricePeriod(sessionId, effectiveTicketId ?? "", pricePeriodUniqueId),
-    onSuccess: async () => {
+    onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "ticket" }] })
     },
   })

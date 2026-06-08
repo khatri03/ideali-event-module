@@ -232,6 +232,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
   const [maximumPurchaseError, setMaximumPurchaseError] = useState("")
   const [editingTicketId, setEditingTicketId] = useState<string | null>(null)
   const [editingTicket, setEditingTicket] = useState<SessionWizardTicket | null>(null)
+  const [ticketEditorInstanceId, setTicketEditorInstanceId] = useState(0)
   const [ticketToDelete, setTicketToDelete] = useState<{ uniqueId: string; name: string } | null>(null)
   const ticketNameInputRef = useRef<HTMLInputElement>(null)
   const tenurePricingSectionRef = useRef<SessionTicketPricePeriodsSectionHandle>(null)
@@ -269,22 +270,6 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
       ),
     [ticketsQuery.data],
   )
-  const selectedTicket = useMemo(
-    () => sortedTickets.find((ticket) => ticket.uniqueId === editingTicketId) ?? null,
-    [editingTicketId, sortedTickets],
-  )
-
-  useEffect(() => {
-    if (!editingTicketId) {
-      setEditingTicket(null)
-      return
-    }
-
-    if (selectedTicket) {
-      setEditingTicket(selectedTicket)
-    }
-  }, [editingTicketId, selectedTicket])
-
   const createTicketMutation = useMutation({
     mutationFn: (payload: {
       name: string
@@ -295,7 +280,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
       maxPurchase: number | null
       isActive: boolean
     }) => createSessionWizardTicket(sessionId, payload),
-    onSuccess: async () => {
+    onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "ticket" }] })
     },
   })
@@ -320,14 +305,14 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
         maxPurchase: payload.maxPurchase,
         isActive: payload.isActive,
       }),
-    onSuccess: async () => {
+    onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "ticket" }] })
     },
   })
 
   const deleteTicketMutation = useMutation({
     mutationFn: (ticketUniqueId: string) => deleteSessionWizardTicket(sessionId, ticketUniqueId),
-    onSuccess: async () => {
+    onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "ticket" }] })
     },
   })
@@ -335,7 +320,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
   const sortTicketsMutation = useMutation({
     mutationFn: (payload: SessionWizardTicketDisplayOrderRequest) =>
       updateSessionWizardTicketDisplayOrder(sessionId, payload),
-    onSuccess: async () => {
+    onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "ticket" }] })
     },
   })
@@ -362,14 +347,6 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
 
     return () => window.cancelAnimationFrame(frameId)
   }, [isOpen])
-
-  useEffect(() => {
-    if (!isSortOpen) {
-      return
-    }
-
-    setSortedTicketDraft(sortedTickets)
-  }, [isSortOpen, sortedTickets])
 
   function openSortTicketsDialog() {
     setSortedTicketDraft(sortedTickets)
@@ -433,10 +410,12 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
     resetTicketForm()
     keepDraftTenureOnCloseRef.current = false
     tenurePricingSectionRef.current?.resetDrafts()
+    setTicketEditorInstanceId((current) => current + 1)
     setIsOpen(true)
   }
 
   function openEditTicketDialog(ticket: SessionWizardTicket) {
+    setTicketEditorInstanceId((current) => current + 1)
     setEditingTicket(ticket)
     setEditingTicketId(ticket.uniqueId)
     setTicketName(ticket.name)
@@ -1113,7 +1092,12 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                 </Stack>
 
                 <Box pl={{ base: 0, lg: 2 }}>
-                  <SessionTicketPricePeriodsSection ref={tenurePricingSectionRef} sessionId={sessionId} ticket={editingTicket} />
+                  <SessionTicketPricePeriodsSection
+                    key={ticketEditorInstanceId}
+                    ref={tenurePricingSectionRef}
+                    sessionId={sessionId}
+                    ticket={editingTicket}
+                  />
                 </Box>
               </SimpleGrid>
             </Dialog.Body>

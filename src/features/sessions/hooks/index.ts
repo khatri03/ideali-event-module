@@ -2,3 +2,4 @@ export { buildSessionWizardSteps, getSessionWizardStepIndex, getSessionWizardSte
 export { useSessionWizardActions, SessionWizardActionsProvider } from "./useSessionWizardActions"
 export { useSessionWizardProgress } from "./useSessionWizardProgress"
 export { useSessionWizardSetupState } from "./useSessionWizardSetupState"
+export { useUnsplashSearch } from "./useUnsplashSearch"

@@ -78,7 +78,7 @@ export function SessionGenreStep({ sessionId }: SessionGenreStepProps) {
 
   const createGenreMutation = useMutation({
     mutationFn: (payload: { name: string }) => createSessionWizardGenre(sessionId, payload),
-    onSuccess: async (createdGenre) => {
+    onSuccess: (createdGenre) => {
       if (createdGenre.uniqueId && currentSelectedGenreUniqueIds.length < 5) {
         setDraftGenreUniqueIds((current) => {
           const nextSelected = new Set(
@@ -95,6 +95,9 @@ export function SessionGenreStep({ sessionId }: SessionGenreStepProps) {
 
       setCreateGenreName("")
       setIsCreateGenreOpen(false)
+    },
+    onError: () => {},
+    onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "genre" }] })
       await queryClient.invalidateQueries({ queryKey: ["sessions", "review", sessionId] })
     },
@@ -266,6 +269,7 @@ export function SessionGenreStep({ sessionId }: SessionGenreStepProps) {
           if (!details.open) {
             setIsCreateGenreOpen(false)
             setCreateGenreName("")
+            createGenreMutation.reset()
             return
           }
 
@@ -300,7 +304,11 @@ export function SessionGenreStep({ sessionId }: SessionGenreStepProps) {
 
             <Box as="form" onSubmit={async (event) => {
               event.preventDefault()
-              await createGenreMutation.mutateAsync({ name: createGenreName })
+              try {
+                await createGenreMutation.mutateAsync({ name: createGenreName })
+              } catch {
+                // error displayed inline via createGenreMutation.isError
+              }
             }} px={5} py={5}>
               <Stack gap={4}>
                 <Box>
@@ -336,6 +344,7 @@ export function SessionGenreStep({ sessionId }: SessionGenreStepProps) {
                     onClick={() => {
                       setIsCreateGenreOpen(false)
                       setCreateGenreName("")
+                      createGenreMutation.reset()
                     }}
                   >
                     Close
@@ -349,7 +358,7 @@ export function SessionGenreStep({ sessionId }: SessionGenreStepProps) {
                     style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
                     loading={createGenreMutation.isPending}
                     loadingText="Saving..."
-                    disabled={createGenreMutation.isPending}
+                    disabled={createGenreMutation.isPending || !createGenreName.trim()}
                   >
                     Save
                   </Button>
