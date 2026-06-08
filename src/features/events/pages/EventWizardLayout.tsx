@@ -480,6 +480,8 @@ function EventWizardLayoutContent() {
           const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 13)
           setWizardStepCache("advanced-settings", result)
           setWizardProgressCache(13)
+        } else if (activeStep.slug === "sessions") {
+          await persistSkippedStep(activeStep.slug)
         } else if (
           activeStep.slug === "discount-coupon" ||
           activeStep.slug === "questions" ||
@@ -578,6 +580,8 @@ function EventWizardLayoutContent() {
           const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 13)
           setWizardStepCache("advanced-settings", result)
           setWizardProgressCache(13)
+        } else if (activeStep.slug === "sessions") {
+          await persistSkippedStep(activeStep.slug)
         } else if (
           activeStep.slug === "discount-coupon" ||
           activeStep.slug === "questions" ||
