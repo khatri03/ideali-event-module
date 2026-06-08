@@ -68,6 +68,7 @@ export const API_ROUTES = {
   sessionWizardDescription: (id: string) => `/api/organizer/sessions/${id}/description`,
   sessionWizardBanner: (id: string) => `/api/organizer/sessions/${id}/banner`,
   sessionWizardGenre: (id: string) => `/api/organizer/sessions/${id}/genre`,
+  sessionWizardGenreCreate: (id: string) => `/api/organizer/sessions/${id}/genre/create`,
   sessionWizardSkip: (id: string) => `/api/organizer/sessions/${id}/skip`,
   sessionWizardEvent: (id: string) => `/api/organizer/sessions/${id}/event`,
   sessionWizardVenue: (id: string) => `/api/organizer/sessions/${id}/venue`,

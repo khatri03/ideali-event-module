@@ -210,6 +210,10 @@ export interface SessionWizardGenreRequest {
   genreUniqueIds: string[]
 }
 
+export interface SessionWizardGenreCreateRequest {
+  name: string
+}
+
 export interface SessionWizardVenue {
   venueUniqueId: string
 }
@@ -482,6 +486,22 @@ export async function updateSessionWizardGenres(
     isSystem: genre.IsSystem ?? genre.isSystem ?? false,
     isSelected: genre.IsSelected ?? genre.isSelected ?? false,
   }))
+}
+
+export async function createSessionWizardGenre(
+  uniqueId: string,
+  payload: SessionWizardGenreCreateRequest,
+): Promise<SessionWizardGenre> {
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardGenreCreate(uniqueId), payload)
+  const responseData = parseServicePayload(res.data)
+  const genre = sessionGenreSchema.parse(responseData)
+
+  return {
+    uniqueId: genre.UniqueId ?? genre.uniqueId ?? "",
+    name: genre.Name ?? genre.name ?? "",
+    isSystem: genre.IsSystem ?? genre.isSystem ?? false,
+    isSelected: genre.IsSelected ?? genre.isSelected ?? false,
+  }
 }
 
 export async function skipSessionWizardStep(uniqueId: string, stepNo: number): Promise<SessionWizardProgressResponse> {

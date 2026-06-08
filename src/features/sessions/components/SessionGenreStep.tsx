@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Badge, Box, Button, Flex, Input, SimpleGrid, Skeleton, Stack, Text } from "@chakra-ui/react"
-import { Check, Sparkles } from "lucide-react"
-import { fetchSessionWizardGenres, updateSessionWizardGenres } from "@/api/sessions"
+import { Badge, Box, Button, CloseButton, Dialog, Flex, Input, SimpleGrid, Skeleton, Stack, Text } from "@chakra-ui/react"
+import { Check, Plus, Sparkles } from "lucide-react"
+import { createSessionWizardGenre, fetchSessionWizardGenres, updateSessionWizardGenres } from "@/api/sessions"
 import { extractApiError } from "@/utils/errors"
 import { useSessionWizardActions } from "../hooks/useSessionWizardActions"
 
@@ -29,6 +29,8 @@ export function SessionGenreStep({ sessionId }: SessionGenreStepProps) {
   const { setPrimaryAction, setPrimaryActionReady } = useSessionWizardActions()
   const [draftGenreUniqueIds, setDraftGenreUniqueIds] = useState<string[] | null>(null)
   const [genreSearch, setGenreSearch] = useState("")
+  const [isCreateGenreOpen, setIsCreateGenreOpen] = useState(false)
+  const [createGenreName, setCreateGenreName] = useState("")
 
   const genresQuery = useQuery({
     queryKey: ["sessions", { sessionId, step: "genre" }],
@@ -71,6 +73,30 @@ export function SessionGenreStep({ sessionId }: SessionGenreStepProps) {
     },
     onSettled: () => {
       setPrimaryActionReady(true)
+    },
+  })
+
+  const createGenreMutation = useMutation({
+    mutationFn: (payload: { name: string }) => createSessionWizardGenre(sessionId, payload),
+    onSuccess: async (createdGenre) => {
+      if (createdGenre.uniqueId && currentSelectedGenreUniqueIds.length < 5) {
+        setDraftGenreUniqueIds((current) => {
+          const nextSelected = new Set(
+            current ?? currentGenres.filter((item) => item.isSelected).map((item) => item.uniqueId),
+          )
+
+          if (nextSelected.size < 5) {
+            nextSelected.add(createdGenre.uniqueId)
+          }
+
+          return Array.from(nextSelected)
+        })
+      }
+
+      setCreateGenreName("")
+      setIsCreateGenreOpen(false)
+      await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "genre" }] })
+      await queryClient.invalidateQueries({ queryKey: ["sessions", "review", sessionId] })
     },
   })
 
@@ -122,14 +148,16 @@ export function SessionGenreStep({ sessionId }: SessionGenreStepProps) {
             </Text>
           </Box>
 
-          <Badge variant="subtle" colorPalette="brand" borderRadius="999px" px={3} py={1} alignSelf="flex-start">
-            <Flex align="center" gap={1.5}>
-              <Check size={14} />
-              <Text as="span" fontSize="xs" fontWeight="800">
-                {selectedGenreCount}/5 selected
-              </Text>
-            </Flex>
-          </Badge>
+          <Flex align="center" gap={2} alignSelf="flex-start">
+            <Badge variant="subtle" colorPalette="brand" borderRadius="999px" px={3} py={1}>
+              <Flex align="center" gap={1.5}>
+                <Check size={14} />
+                <Text as="span" fontSize="xs" fontWeight="800">
+                  {selectedGenreCount}/5 selected
+                </Text>
+              </Flex>
+            </Badge>
+          </Flex>
         </Flex>
       </Box>
 
@@ -137,9 +165,26 @@ export function SessionGenreStep({ sessionId }: SessionGenreStepProps) {
         <SessionGenreSkeleton />
       ) : (
         <Stack gap={4}>
-          <Text fontSize="sm" fontWeight="700" color="gray.700">
-            Select genres
-          </Text>
+          <Flex align="center" justify="space-between" gap={3}>
+            <Text fontSize="sm" fontWeight="700" color="gray.700">
+              Select genres
+            </Text>
+
+            <Button
+              type="button"
+              aria-label="Add genre"
+              variant="solid"
+              colorPalette="brand"
+              borderRadius="full"
+              h="38px"
+              w="38px"
+              minW="38px"
+              p={0}
+              onClick={() => setIsCreateGenreOpen(true)}
+            >
+              <Plus size={16} />
+            </Button>
+          </Flex>
 
           <Input
             value={genreSearch}
@@ -214,6 +259,106 @@ export function SessionGenreStep({ sessionId }: SessionGenreStepProps) {
           </Text>
         </Flex>
       ) : null}
+
+      <Dialog.Root
+        open={isCreateGenreOpen}
+        onOpenChange={(details) => {
+          if (!details.open) {
+            setIsCreateGenreOpen(false)
+            setCreateGenreName("")
+            return
+          }
+
+          setIsCreateGenreOpen(true)
+        }}
+      >
+        <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
+        <Dialog.Positioner>
+          <Dialog.Content
+            bg="white"
+            borderRadius={{ base: 0, md: "24px" }}
+            maxW={{ base: "100vw", md: "560px" }}
+            m={{ base: 0, md: "auto" }}
+            overflow="hidden"
+          >
+            <Box px={5} pt={5} pb={4} borderBottom="1px solid" borderColor="gray.200">
+              <Flex align="flex-start" justify="space-between" gap={4}>
+                <Box>
+                  <Text fontSize="lg" fontWeight="900" color="gray.900" lineHeight="1.1">
+                    Add Genre
+                  </Text>
+                  <Text mt={1} fontSize="sm" color="gray.600">
+                    Keep it short and organizer-friendly.
+                  </Text>
+                </Box>
+
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton aria-label="Close genre dialog" />
+                </Dialog.CloseTrigger>
+              </Flex>
+            </Box>
+
+            <Box as="form" onSubmit={async (event) => {
+              event.preventDefault()
+              await createGenreMutation.mutateAsync({ name: createGenreName })
+            }} px={5} py={5}>
+              <Stack gap={4}>
+                <Box>
+                  <Text fontSize="sm" fontWeight="700" color="gray.700" mb={2}>
+                    Genre
+                  </Text>
+                  <Input
+                    value={createGenreName}
+                    onChange={(event) => setCreateGenreName(event.target.value)}
+                    placeholder="e.g. Health"
+                    borderRadius="14px"
+                    h="11"
+                    px={4}
+                    bg="white"
+                    borderColor="gray.200"
+                    autoFocus
+                  />
+                </Box>
+
+                {createGenreMutation.isError ? (
+                  <Text fontSize="sm" color="red.500">
+                    {extractApiError(createGenreMutation.error)}
+                  </Text>
+                ) : null}
+
+                <Flex gap={3} justify="flex-end" flexWrap="wrap" pt={1}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    borderRadius="14px"
+                    h="44px"
+                    px={6}
+                    onClick={() => {
+                      setIsCreateGenreOpen(false)
+                      setCreateGenreName("")
+                    }}
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    type="submit"
+                    borderRadius="14px"
+                    h="44px"
+                    px={6}
+                    color="white"
+                    style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+                    loading={createGenreMutation.isPending}
+                    loadingText="Saving..."
+                    disabled={createGenreMutation.isPending}
+                  >
+                    Save
+                  </Button>
+                </Flex>
+              </Stack>
+            </Box>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </Stack>
   )
 }
