@@ -12,6 +12,10 @@ export function EventWizardStepSkeleton({ step }: EventWizardStepSkeletonProps) 
       return <NameSkeleton />
     case "description":
       return <DescriptionSkeleton />
+    case "terms-conditions":
+      return <TermsConditionsSkeleton />
+    case "banner":
+      return <BannerSkeleton />
     case "theme-color":
       return <ThemeColorSkeleton />
     case "payment-account":
@@ -69,6 +73,39 @@ function DescriptionSkeleton() {
         <Skeleton height="180px" borderRadius="16px" />
       </Stack>
       <SkeletonText noOfLines={2} width="75%" />
+    </PanelSkeleton>
+  )
+}
+
+function TermsConditionsSkeleton() {
+  return (
+    <PanelSkeleton>
+      <Stack gap={3}>
+        <Skeleton height="18px" width="190px" />
+        <SkeletonText noOfLines={4} width="86%" />
+      </Stack>
+      <Stack gap={3}>
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Skeleton key={index} height="64px" borderRadius="18px" />
+        ))}
+      </Stack>
+    </PanelSkeleton>
+  )
+}
+
+function BannerSkeleton() {
+  return (
+    <PanelSkeleton>
+      <Stack gap={3}>
+        <Skeleton height="18px" width="120px" />
+        <Skeleton height="320px" borderRadius="22px" />
+        <Flex gap={3} wrap="wrap">
+          <Skeleton height="44px" width="140px" borderRadius="14px" />
+          <Skeleton height="44px" width="160px" borderRadius="14px" />
+          <Skeleton height="44px" width="120px" borderRadius="14px" />
+        </Flex>
+      </Stack>
+      <SkeletonText noOfLines={2} width="78%" />
     </PanelSkeleton>
   )
 }

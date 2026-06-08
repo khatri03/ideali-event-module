@@ -9,6 +9,7 @@ import { Events } from "./pages/Events"
 import { CalendarPage } from "./pages/CalendarPage"
 import { Settings } from "./pages/Settings"
 import {
+  EventBannerStepPage,
   EventDescriptionStepPage,
   EventDiscountCouponStepPage,
   EventNameStepPage,
@@ -21,6 +22,7 @@ import {
   EventThankYouEmailStepPage,
   EventThemeColorStepPage,
   EventTimeZoneStepPage,
+  EventTermsConditionsStepPage,
   EventWizardLayout,
 } from "./features/events"
 import { SessionListPage, SessionWizardLayout, SessionWizardStepPage } from "./features/sessions"
@@ -39,6 +41,8 @@ export default function App() {
         <Route path={APP_ROUTES.eventWizard.createBase} element={<EventWizardLayout />}>
           <Route index element={<EventNameStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.description} element={<EventDescriptionStepPage />} />
+          <Route path={APP_ROUTES.eventWizard.slugs.termsConditions} element={<EventTermsConditionsStepPage />} />
+          <Route path={APP_ROUTES.eventWizard.slugs.banner} element={<EventBannerStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.themeColor} element={<EventThemeColorStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.paymentAccount} element={<EventPaymentAccountStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.timeZone} element={<EventTimeZoneStepPage />} />
@@ -54,6 +58,8 @@ export default function App() {
           <Route index element={<Navigate to={APP_ROUTES.eventWizard.slugs.name} replace />} />
           <Route path={APP_ROUTES.eventWizard.slugs.name} element={<EventNameStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.description} element={<EventDescriptionStepPage />} />
+          <Route path={APP_ROUTES.eventWizard.slugs.termsConditions} element={<EventTermsConditionsStepPage />} />
+          <Route path={APP_ROUTES.eventWizard.slugs.banner} element={<EventBannerStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.themeColor} element={<EventThemeColorStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.paymentAccount} element={<EventPaymentAccountStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.timeZone} element={<EventTimeZoneStepPage />} />

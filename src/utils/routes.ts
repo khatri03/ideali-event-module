@@ -20,6 +20,8 @@ export const APP_ROUTES = {
     slugs: {
       name: "name",
       description: "description",
+      termsConditions: "terms-conditions",
+      banner: "banner",
       themeColor: "theme-color",
       paymentAccount: "payment-account",
       timeZone: "time-zone",

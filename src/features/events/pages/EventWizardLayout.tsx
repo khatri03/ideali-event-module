@@ -22,7 +22,7 @@ import { queryClient } from "@/lib/queryClient"
 import { APP_ROUTES } from "@/utils/routes"
 import { useEventWizardProgress } from "../hooks/useEventWizardProgress"
 import { useEventWizardDraft } from "../hooks/useEventWizardDraft"
-import { getEventWizardStepNumber, useCreateEventDraft, useEventWizardNavigation, type EventWizardStep } from "../hooks/useEventWizard"
+import { buildEventWizardSteps, getEventWizardStepNumber, useCreateEventDraft, useEventWizardNavigation, type EventWizardStep } from "../hooks/useEventWizard"
 import { defaultEventWizardValues, eventWizardFieldGroups, eventWizardSchema, type EventWizardValues } from "../schemas/eventWizard.schemas"
 import { EventWizardStepper } from "../components/EventWizardStepper"
 import { EventWizardStepSkeleton } from "../components/EventWizardStepSkeleton"
@@ -197,9 +197,10 @@ export function EventWizardLayout() {
   const currentUser = auth.getUser() ?? (sessionQuery.data ? sessionDataToUser(sessionQuery.data) : null)
   const wizardProgressQuery = useEventWizardProgress(eventId)
   const lastCompletedStepNo = eventId ? wizardProgressQuery.data?.stepNo ?? 0 : 0
-  const completedStepCount = eventId ? Math.min(lastCompletedStepNo, 11) : 0
-  const maxUnlockedStepIndex = eventId ? Math.min(lastCompletedStepNo, 11) : 0
-  const { steps, activeStepIndex, activeStep, goToStep, goBack, goNext, isFirstStep, isLastStep } = useEventWizardNavigation(maxUnlockedStepIndex)
+  const wizardSteps = buildEventWizardSteps(eventId)
+  const completedStepCount = eventId ? Math.min(lastCompletedStepNo, wizardSteps.length - 1) : 0
+  const maxUnlockedStepIndex = eventId ? Math.min(lastCompletedStepNo, wizardSteps.length - 1) : 0
+  const { activeStepIndex, activeStep, goToStep, goBack, goNext, isFirstStep, isLastStep } = useEventWizardNavigation(maxUnlockedStepIndex)
   const wizardDraftQuery = useEventWizardDraft(eventId, activeStep.slug)
   const isMobile = useBreakpointValue({ base: true, lg: false }) ?? true
   const [isStepsCollapsedOverride, setIsStepsCollapsedOverride] = useState<boolean | null>(null)
@@ -262,6 +263,7 @@ export function EventWizardLayout() {
   const isReviewStep = activeStep.slug === "review"
   const isOptionalStep =
     activeStep.slug === "description" ||
+    activeStep.slug === "terms-conditions" ||
     activeStep.slug === "time-zone" ||
     activeStep.slug === "venue" ||
     activeStep.slug === "sessions" ||
@@ -269,11 +271,12 @@ export function EventWizardLayout() {
     activeStep.slug === "questions" ||
     activeStep.slug === "thank-you-email" ||
     activeStep.slug === "advanced-settings"
+  const isUiOnlyStep = activeStep.slug === "terms-conditions" || activeStep.slug === "banner"
   const isPaymentAccountStep = activeStep.slug === "payment-account"
   const isLastWizardStep = isLastStep
-  const resolvedStepIndex = eventId ? Math.min(lastCompletedStepNo, steps.length - 1) : -1
-  const resolvedStepPath = eventId ? steps[resolvedStepIndex]?.path : undefined
-  const currentStepIndex = eventId ? steps.findIndex((step) => step.path === location.pathname) : -1
+  const resolvedStepIndex = eventId ? Math.min(lastCompletedStepNo, wizardSteps.length - 1) : -1
+  const resolvedStepPath = eventId ? wizardSteps[resolvedStepIndex]?.path : undefined
+  const currentStepIndex = eventId ? wizardSteps.findIndex((step) => step.path === location.pathname) : -1
   const shouldRedirectToResolvedStep =
     Boolean(eventId) &&
     wizardProgressQuery.isSuccess &&
@@ -333,6 +336,9 @@ export function EventWizardLayout() {
         return eventWizardFieldGroups.name
       case "description":
         return eventWizardFieldGroups.description
+      case "terms-conditions":
+      case "banner":
+        return []
       case "theme-color":
         return eventWizardFieldGroups.theme
       case "payment-account":
@@ -378,6 +384,11 @@ export function EventWizardLayout() {
       return
     }
 
+    if (isUiOnlyStep) {
+      goNext()
+      return
+    }
+
     const isValid = await form.trigger(getStepValidationFields())
     if (isValid) {
       if (eventId) {
@@ -390,9 +401,9 @@ export function EventWizardLayout() {
           setWizardStepCache("description", result)
           setWizardProgressCache(2)
         } else if (activeStep.slug === "theme-color") {
-          const result = await updateEventWizardThemeColor(eventId, { themeColor }, 3)
+          const result = await updateEventWizardThemeColor(eventId, { themeColor }, 5)
           setWizardStepCache("theme-color", result)
-          setWizardProgressCache(3)
+          setWizardProgressCache(5)
         } else if (activeStep.slug === "payment-account") {
           const result = await updateEventWizardPaymentAccount(
             eventId,
@@ -400,22 +411,22 @@ export function EventWizardLayout() {
               paymentAccountUniqueId: paymentAccountId,
               paymentMethods: paymentMethods ?? [],
             },
-            4,
+            6,
           )
           setPaymentAccountStepCache(result)
-          setWizardProgressCache(4)
+          setWizardProgressCache(6)
         } else if (activeStep.slug === "venue") {
           if (venueUniqueId.trim()) {
-            const result = await updateEventWizardVenue(eventId, { venueUniqueId }, 6)
+            const result = await updateEventWizardVenue(eventId, { venueUniqueId }, 8)
             setWizardStepCache("venue", result)
-            setWizardProgressCache(6)
+            setWizardProgressCache(8)
           } else {
             await persistSkippedStep(activeStep.slug)
           }
         } else if (activeStep.slug === "advanced-settings") {
-          const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 11)
+          const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 13)
           setWizardStepCache("advanced-settings", result)
-          setWizardProgressCache(11)
+          setWizardProgressCache(13)
         } else if (
           activeStep.slug === "time-zone" ||
           activeStep.slug === "discount-coupon" ||
@@ -453,6 +464,11 @@ export function EventWizardLayout() {
       return
     }
 
+    if (isUiOnlyStep) {
+      navigate(APP_ROUTES.events)
+      return
+    }
+
     const isValid = await form.trigger(getStepValidationFields())
     if (isValid) {
       if (eventId) {
@@ -465,9 +481,9 @@ export function EventWizardLayout() {
           setWizardStepCache("description", result)
           setWizardProgressCache(2)
         } else if (activeStep.slug === "theme-color") {
-          const result = await updateEventWizardThemeColor(eventId, { themeColor }, 3)
+          const result = await updateEventWizardThemeColor(eventId, { themeColor }, 5)
           setWizardStepCache("theme-color", result)
-          setWizardProgressCache(3)
+          setWizardProgressCache(5)
         } else if (activeStep.slug === "payment-account") {
           const result = await updateEventWizardPaymentAccount(
             eventId,
@@ -475,22 +491,22 @@ export function EventWizardLayout() {
               paymentAccountUniqueId: paymentAccountId,
               paymentMethods: paymentMethods ?? [],
             },
-            4,
+            6,
           )
           setPaymentAccountStepCache(result)
-          setWizardProgressCache(4)
+          setWizardProgressCache(6)
         } else if (activeStep.slug === "venue") {
           if (venueUniqueId.trim()) {
-            const result = await updateEventWizardVenue(eventId, { venueUniqueId }, 6)
+            const result = await updateEventWizardVenue(eventId, { venueUniqueId }, 8)
             setWizardStepCache("venue", result)
-            setWizardProgressCache(6)
+            setWizardProgressCache(8)
           } else {
             await persistSkippedStep(activeStep.slug)
           }
         } else if (activeStep.slug === "advanced-settings") {
-          const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 11)
+          const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 13)
           setWizardStepCache("advanced-settings", result)
-          setWizardProgressCache(11)
+          setWizardProgressCache(13)
         } else if (
           activeStep.slug === "time-zone" ||
           activeStep.slug === "discount-coupon" ||
@@ -505,6 +521,11 @@ export function EventWizardLayout() {
   }
 
   async function handleSkip() {
+    if (activeStep.slug === "terms-conditions") {
+      goNext()
+      return
+    }
+
     await persistSkippedStep(activeStep.slug)
     goNext()
   }
@@ -596,7 +617,7 @@ export function EventWizardLayout() {
               <WizardStepsRail
                 activeStepIndex={activeStepIndex}
                 completedStepCount={completedStepCount}
-                steps={steps}
+                steps={wizardSteps}
                 isCollapsed={isStepsCollapsed}
                 maxUnlockedStepIndex={maxUnlockedStepIndex}
                 onToggle={() => setIsStepsCollapsedOverride((current) => !(current ?? isMobile))}

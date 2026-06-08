@@ -10,12 +10,14 @@ export interface EventWizardStep {
   slug:
     | "name"
     | "description"
-  | "theme-color"
-  | "payment-account"
-  | "venue"
-  | "advanced-settings"
-  | "time-zone"
-  | "sessions"
+    | "terms-conditions"
+    | "banner"
+    | "theme-color"
+    | "payment-account"
+    | "venue"
+    | "advanced-settings"
+    | "time-zone"
+    | "sessions"
     | "discount-coupon"
     | "questions"
     | "thank-you-email"
@@ -27,6 +29,8 @@ export interface EventWizardStep {
 const EVENT_WIZARD_STEP_DEFINITIONS: Array<Omit<EventWizardStep, "path">> = [
   { slug: "name", label: "Name" },
   { slug: "description", label: "Description" },
+  { slug: "terms-conditions", label: "Terms & Conditions" },
+  { slug: "banner", label: "Banner" },
   { slug: "theme-color", label: "Theme Color" },
   { slug: "payment-account", label: "Payment Account" },
   { slug: "time-zone", label: "Time Zone" },
@@ -47,26 +51,30 @@ export function getEventWizardStepNumber(stepSlug: EventWizardStepSlug) {
       return 1
     case "description":
       return 2
-    case "theme-color":
+    case "terms-conditions":
       return 3
-    case "payment-account":
+    case "banner":
       return 4
-    case "time-zone":
+    case "theme-color":
       return 5
-    case "venue":
+    case "payment-account":
       return 6
-    case "sessions":
+    case "time-zone":
       return 7
-    case "discount-coupon":
+    case "venue":
       return 8
-    case "questions":
+    case "sessions":
       return 9
-    case "thank-you-email":
+    case "discount-coupon":
       return 10
-    case "advanced-settings":
+    case "questions":
       return 11
-    case "review":
+    case "thank-you-email":
       return 12
+    case "advanced-settings":
+      return 13
+    case "review":
+      return 14
   }
 }
 
