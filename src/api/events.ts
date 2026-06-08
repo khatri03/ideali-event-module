@@ -64,6 +64,21 @@ const eventWizardTermsConditionsResponseSchema = z.object({
   termsConditions: z.string().nullable().optional(),
 })
 
+const eventWizardTimeZoneResponseSchema = z.object({
+  timeZoneId: z.number().int().positive().nullable().optional(),
+})
+
+const eventWizardTimeZoneOptionSchema = z.object({
+  id: z.number().int().positive(),
+  displayName: z.string().min(1),
+  baseUtcOffsetMinutes: z.number().int(),
+})
+
+const eventWizardTimeZoneOptionsEnvelopeSchema = z.object({
+  data: z.array(eventWizardTimeZoneOptionSchema).nullable().optional(),
+  success: z.boolean().optional(),
+})
+
 const eventWizardBannerResponseSchema = z.object({
   uniqueId: z.string().min(1),
   bannerUrl: z.string().nullable().optional(),
@@ -209,6 +224,39 @@ export async function updateEventWizardTermsConditions(
   })
 
   return eventWizardTermsConditionsResponseSchema.parse(res.data)
+}
+
+export interface EventWizardTimeZoneResponse {
+  timeZoneId?: number | null
+}
+
+export interface EventWizardTimeZoneOption {
+  id: number
+  displayName: string
+  baseUtcOffsetMinutes: number
+}
+
+export async function fetchEventWizardTimeZone(uniqueId: string): Promise<EventWizardTimeZoneResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "time-zone")}`)
+  return eventWizardTimeZoneResponseSchema.parse(res.data)
+}
+
+export async function updateEventWizardTimeZone(
+  uniqueId: string,
+  payload: { timeZoneId: number | null },
+  stepNo = 7,
+): Promise<EventWizardTimeZoneResponse> {
+  const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "time-zone")}`, payload, {
+    params: { stepNo },
+  })
+
+  return eventWizardTimeZoneResponseSchema.parse(res.data)
+}
+
+export async function fetchEventWizardTimeZones(): Promise<EventWizardTimeZoneOption[]> {
+  const res = await client.get<unknown>(API_ROUTES.adminTimeZones)
+  const parsed = eventWizardTimeZoneOptionsEnvelopeSchema.parse(res.data)
+  return parsed.data ?? []
 }
 
 export interface EventWizardBannerResponse {

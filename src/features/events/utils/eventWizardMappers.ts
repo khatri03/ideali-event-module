@@ -11,6 +11,7 @@ export function eventToWizardValues(event: AppEvent): EventWizardValues {
     description: event.description,
     termsConditions: event.termsConditions ?? "",
     bannerUrl: event.bannerUrl ?? "",
+    timeZoneId: undefined,
     themeColor: event.coverColor,
     paymentAccountId: event.paymentAccountId ?? defaultPaymentAccountId,
     paymentMethods: [],

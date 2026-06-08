@@ -13,6 +13,7 @@ import {
   updateEventWizardDescription,
   updateEventWizardName,
   updateEventWizardPaymentAccount,
+  updateEventWizardTimeZone,
   updateEventWizardTermsConditions,
   updateEventWizardVenue,
   updateEventWizardThemeColor,
@@ -234,7 +235,10 @@ function EventWizardLayoutContent() {
     },
   })
 
-  function setWizardStepCache(step: "name" | "description" | "terms-conditions" | "banner" | "theme-color" | "venue" | "advanced-settings", value: unknown) {
+  function setWizardStepCache(
+    step: "name" | "description" | "terms-conditions" | "banner" | "time-zone" | "theme-color" | "venue" | "advanced-settings",
+    value: unknown,
+  ) {
     if (!eventId) {
       return
     }
@@ -312,6 +316,12 @@ function EventWizardLayoutContent() {
           shouldTouch: false,
           shouldValidate: false,
         })
+      } else if ("timeZoneId" in draftData) {
+        form.setValue("timeZoneId", draftData.timeZoneId ?? undefined, {
+          shouldDirty: false,
+          shouldTouch: false,
+          shouldValidate: false,
+        })
       } else if ("themeColor" in draftData) {
         form.setValue("themeColor", draftData.themeColor ?? "", { shouldDirty: false, shouldTouch: false, shouldValidate: false })
       } else if ("paymentAccountUniqueId" in draftData) {
@@ -363,14 +373,14 @@ function EventWizardLayoutContent() {
         return eventWizardFieldGroups.termsConditions
       case "banner":
         return []
+      case "time-zone":
+        return []
       case "theme-color":
         return eventWizardFieldGroups.theme
       case "payment-account":
         return eventWizardFieldGroups.paymentAccount
       case "venue":
         return eventWizardFieldGroups.venue
-      case "time-zone":
-        return eventWizardFieldGroups.timeZone
       case "sessions":
         return []
       case "discount-coupon":
@@ -389,6 +399,7 @@ function EventWizardLayoutContent() {
     const description = form.getValues("description").trim()
     const termsConditions = form.getValues("termsConditions").trim()
     const themeColor = form.getValues("themeColor").trim()
+    const timeZoneId = form.getValues("timeZoneId") ?? null
     const purchaseTimeLimitHours = form.getValues("purchaseTimeLimitHours") ?? null
 
     if (activeStep.slug === "name") {
@@ -438,6 +449,14 @@ function EventWizardLayoutContent() {
           const result = await updateEventWizardThemeColor(eventId, { themeColor }, 5)
           setWizardStepCache("theme-color", result)
           setWizardProgressCache(5)
+        } else if (activeStep.slug === "time-zone") {
+          if (timeZoneId) {
+            const result = await updateEventWizardTimeZone(eventId, { timeZoneId }, 7)
+            setWizardStepCache("time-zone", result)
+            setWizardProgressCache(7)
+          } else {
+            await persistSkippedStep(activeStep.slug)
+          }
         } else if (activeStep.slug === "payment-account") {
           const result = await updateEventWizardPaymentAccount(
             eventId,
@@ -462,7 +481,6 @@ function EventWizardLayoutContent() {
           setWizardStepCache("advanced-settings", result)
           setWizardProgressCache(13)
         } else if (
-          activeStep.slug === "time-zone" ||
           activeStep.slug === "discount-coupon" ||
           activeStep.slug === "questions" ||
           activeStep.slug === "thank-you-email"
@@ -479,6 +497,7 @@ function EventWizardLayoutContent() {
     const description = form.getValues("description").trim()
     const termsConditions = form.getValues("termsConditions").trim()
     const themeColor = form.getValues("themeColor").trim()
+    const timeZoneId = form.getValues("timeZoneId") ?? null
     const purchaseTimeLimitHours = form.getValues("purchaseTimeLimitHours") ?? null
 
     if (activeStep.slug === "name") {
@@ -528,6 +547,14 @@ function EventWizardLayoutContent() {
           const result = await updateEventWizardThemeColor(eventId, { themeColor }, 5)
           setWizardStepCache("theme-color", result)
           setWizardProgressCache(5)
+        } else if (activeStep.slug === "time-zone") {
+          if (timeZoneId) {
+            const result = await updateEventWizardTimeZone(eventId, { timeZoneId }, 7)
+            setWizardStepCache("time-zone", result)
+            setWizardProgressCache(7)
+          } else {
+            await persistSkippedStep(activeStep.slug)
+          }
         } else if (activeStep.slug === "payment-account") {
           const result = await updateEventWizardPaymentAccount(
             eventId,
@@ -552,7 +579,6 @@ function EventWizardLayoutContent() {
           setWizardStepCache("advanced-settings", result)
           setWizardProgressCache(13)
         } else if (
-          activeStep.slug === "time-zone" ||
           activeStep.slug === "discount-coupon" ||
           activeStep.slug === "questions" ||
           activeStep.slug === "thank-you-email"
@@ -565,6 +591,11 @@ function EventWizardLayoutContent() {
   }
 
   async function handleSkip() {
+    if (activeStep.slug === "time-zone") {
+      form.setValue("timeZoneId", undefined, { shouldDirty: false, shouldTouch: false, shouldValidate: false })
+      form.setValue("timeZone", "", { shouldDirty: false, shouldTouch: false, shouldValidate: false })
+    }
+
     await persistSkippedStep(activeStep.slug)
     goNext()
   }
