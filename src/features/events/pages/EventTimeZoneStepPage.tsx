@@ -3,7 +3,7 @@ import { useEffect, useMemo } from "react"
 import { useFormContext, useWatch } from "react-hook-form"
 import { StyledSelect } from "@/components/common"
 import { fetchEventWizardTimeZones } from "@/api/events"
-import { formatUtcOffset, stripUtcPrefix } from "@/utils/timeZone"
+import { formatUtcOffset } from "@/utils/timeZone"
 import { StepFieldLabel } from "../components/StepFieldLabel"
 import type { EventWizardValues } from "../schemas/eventWizard.schemas"
 import { useQuery } from "@tanstack/react-query"
@@ -22,7 +22,7 @@ export function EventTimeZoneStepPage() {
     () =>
       (timeZonesQuery.data ?? []).map((timeZone) => ({
         value: String(timeZone.id),
-        label: `${formatUtcOffset(timeZone.baseUtcOffsetMinutes)} ${stripUtcPrefix(timeZone.displayName)}`,
+        label: timeZone.displayName,
       })),
     [timeZonesQuery.data],
   )
@@ -83,9 +83,14 @@ export function EventTimeZoneStepPage() {
         </Field.Root>
 
         {selectedTimeZone ? (
-          <Text fontSize="sm" color="text.secondary">
-            Selected: {formatUtcOffset(selectedTimeZone.baseUtcOffsetMinutes)} {stripUtcPrefix(selectedTimeZone.displayName)}
-          </Text>
+          <Stack gap={1}>
+            <Text fontSize="sm" color="text.secondary">
+              Selected: {selectedTimeZone.displayName}
+            </Text>
+            <Text fontSize="sm" color="text.secondary">
+              UTC offset: {formatUtcOffset(selectedTimeZone.baseUtcOffsetMinutes)}
+            </Text>
+          </Stack>
         ) : (
           <Text fontSize="sm" color="text.secondary">
             We default to a matching UTC offset from your browser when possible.
