@@ -13,6 +13,7 @@ import {
   updateEventWizardDescription,
   updateEventWizardName,
   updateEventWizardPaymentAccount,
+  updateEventWizardTermsConditions,
   updateEventWizardVenue,
   updateEventWizardThemeColor,
 } from "@/api/events"
@@ -223,7 +224,7 @@ export function EventWizardLayout() {
     },
   })
 
-  function setWizardStepCache(step: "name" | "description" | "theme-color" | "venue" | "advanced-settings", value: unknown) {
+  function setWizardStepCache(step: "name" | "description" | "terms-conditions" | "theme-color" | "venue" | "advanced-settings", value: unknown) {
     if (!eventId) {
       return
     }
@@ -271,7 +272,7 @@ export function EventWizardLayout() {
     activeStep.slug === "questions" ||
     activeStep.slug === "thank-you-email" ||
     activeStep.slug === "advanced-settings"
-  const isUiOnlyStep = activeStep.slug === "terms-conditions" || activeStep.slug === "banner"
+  const isUiOnlyStep = activeStep.slug === "banner"
   const isPaymentAccountStep = activeStep.slug === "payment-account"
   const isLastWizardStep = isLastStep
   const resolvedStepIndex = eventId ? Math.min(lastCompletedStepNo, wizardSteps.length - 1) : -1
@@ -289,6 +290,12 @@ export function EventWizardLayout() {
         form.setValue("name", draftData.name, { shouldDirty: false, shouldTouch: false, shouldValidate: false })
       } else if ("description" in draftData) {
         form.setValue("description", draftData.description ?? "", { shouldDirty: false, shouldTouch: false, shouldValidate: false })
+      } else if ("termsConditions" in draftData) {
+        form.setValue("termsConditions", draftData.termsConditions ?? "", {
+          shouldDirty: false,
+          shouldTouch: false,
+          shouldValidate: false,
+        })
       } else if ("themeColor" in draftData) {
         form.setValue("themeColor", draftData.themeColor ?? "", { shouldDirty: false, shouldTouch: false, shouldValidate: false })
       } else if ("paymentAccountUniqueId" in draftData) {
@@ -337,6 +344,7 @@ export function EventWizardLayout() {
       case "description":
         return eventWizardFieldGroups.description
       case "terms-conditions":
+        return eventWizardFieldGroups.termsConditions
       case "banner":
         return []
       case "theme-color":
@@ -363,6 +371,7 @@ export function EventWizardLayout() {
   async function handleSaveContinue() {
     const name = form.getValues("name").trim()
     const description = form.getValues("description").trim()
+    const termsConditions = form.getValues("termsConditions").trim()
     const themeColor = form.getValues("themeColor").trim()
     const purchaseTimeLimitHours = form.getValues("purchaseTimeLimitHours") ?? null
 
@@ -400,6 +409,10 @@ export function EventWizardLayout() {
           const result = await updateEventWizardDescription(eventId, { description }, 2)
           setWizardStepCache("description", result)
           setWizardProgressCache(2)
+        } else if (activeStep.slug === "terms-conditions") {
+          const result = await updateEventWizardTermsConditions(eventId, { termsConditions }, 3)
+          setWizardStepCache("terms-conditions", result)
+          setWizardProgressCache(3)
         } else if (activeStep.slug === "theme-color") {
           const result = await updateEventWizardThemeColor(eventId, { themeColor }, 5)
           setWizardStepCache("theme-color", result)
@@ -443,6 +456,7 @@ export function EventWizardLayout() {
   async function handleSaveExit() {
     const name = form.getValues("name").trim()
     const description = form.getValues("description").trim()
+    const termsConditions = form.getValues("termsConditions").trim()
     const themeColor = form.getValues("themeColor").trim()
     const purchaseTimeLimitHours = form.getValues("purchaseTimeLimitHours") ?? null
 
@@ -480,6 +494,10 @@ export function EventWizardLayout() {
           const result = await updateEventWizardDescription(eventId, { description }, 2)
           setWizardStepCache("description", result)
           setWizardProgressCache(2)
+        } else if (activeStep.slug === "terms-conditions") {
+          const result = await updateEventWizardTermsConditions(eventId, { termsConditions }, 3)
+          setWizardStepCache("terms-conditions", result)
+          setWizardProgressCache(3)
         } else if (activeStep.slug === "theme-color") {
           const result = await updateEventWizardThemeColor(eventId, { themeColor }, 5)
           setWizardStepCache("theme-color", result)
@@ -521,11 +539,6 @@ export function EventWizardLayout() {
   }
 
   async function handleSkip() {
-    if (activeStep.slug === "terms-conditions") {
-      goNext()
-      return
-    }
-
     await persistSkippedStep(activeStep.slug)
     goNext()
   }

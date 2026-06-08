@@ -14,6 +14,7 @@ const appEventSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string(),
+  termsConditions: z.string().nullable().optional(),
   startDate: z.string(),
   endDate: z.string(),
   location: z.string(),
@@ -56,6 +57,10 @@ const eventWizardNameResponseSchema = z.object({
 
 const eventWizardDescriptionResponseSchema = z.object({
   description: z.string().nullable().optional(),
+})
+
+const eventWizardTermsConditionsResponseSchema = z.object({
+  termsConditions: z.string().nullable().optional(),
 })
 
 const eventWizardThemeColorResponseSchema = z.object({
@@ -178,6 +183,27 @@ export async function updateEventWizardDescription(
   return eventWizardDescriptionResponseSchema.parse(res.data)
 }
 
+export interface EventWizardTermsConditionsResponse {
+  termsConditions?: string | null
+}
+
+export async function fetchEventWizardTermsConditions(uniqueId: string): Promise<EventWizardTermsConditionsResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "terms-conditions")}`)
+  return eventWizardTermsConditionsResponseSchema.parse(res.data)
+}
+
+export async function updateEventWizardTermsConditions(
+  uniqueId: string,
+  payload: { termsConditions: string },
+  stepNo = 3
+): Promise<EventWizardTermsConditionsResponse> {
+  const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "terms-conditions")}`, payload, {
+    params: { stepNo },
+  })
+
+  return eventWizardTermsConditionsResponseSchema.parse(res.data)
+}
+
 export interface EventWizardThemeColorResponse {
   themeColor?: string | null
 }
@@ -190,7 +216,7 @@ export async function fetchEventWizardThemeColor(uniqueId: string): Promise<Even
 export async function updateEventWizardThemeColor(
   uniqueId: string,
   payload: { themeColor: string | null },
-  stepNo = 3
+  stepNo = 5
 ): Promise<EventWizardThemeColorResponse> {
   const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "theme-color")}`, payload, {
     params: { stepNo },
@@ -211,7 +237,7 @@ export async function fetchEventWizardAdvancedSettings(uniqueId: string): Promis
 export async function updateEventWizardAdvancedSettings(
   uniqueId: string,
   payload: { purchaseTimeLimit: number | null },
-  stepNo = 10
+  stepNo = 13
 ): Promise<EventWizardAdvancedSettingsResponse> {
   const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "advanced-settings")}`, payload, {
     params: { stepNo },
@@ -242,7 +268,7 @@ export async function fetchEventWizardVenue(uniqueId: string): Promise<EventWiza
 export async function updateEventWizardVenue(
   uniqueId: string,
   payload: { venueUniqueId: string },
-  stepNo = 6
+  stepNo = 8
 ): Promise<EventWizardVenueResponse> {
   const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "venue")}`, payload, {
     params: { stepNo },
@@ -274,7 +300,7 @@ export async function createEventWizardSession(
 export async function updateEventWizardPaymentAccount(
   uniqueId: string,
   payload: { paymentAccountUniqueId: string; paymentMethods: number[] },
-  stepNo = 4
+  stepNo = 6
 ): Promise<EventWizardPaymentAccountResponse> {
   const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "payment-account")}`, payload, {
     params: { stepNo },

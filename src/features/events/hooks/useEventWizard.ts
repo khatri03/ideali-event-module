@@ -150,6 +150,7 @@ export function buildCreateEventPayload(values: EventWizardValues): Omit<AppEven
   return {
     title: values.name.trim(),
     description: values.description.trim(),
+    termsConditions: values.termsConditions.trim() || null,
     startDate: firstSession?.startsAt || new Date().toISOString(),
     endDate: lastSession?.endsAt || new Date().toISOString(),
     location: "TBD",

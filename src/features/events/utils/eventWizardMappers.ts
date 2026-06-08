@@ -9,6 +9,7 @@ export function eventToWizardValues(event: AppEvent): EventWizardValues {
   return {
     name: event.title,
     description: event.description,
+    termsConditions: event.termsConditions ?? "",
     themeColor: event.coverColor,
     paymentAccountId: event.paymentAccountId ?? defaultPaymentAccountId,
     paymentMethods: [],

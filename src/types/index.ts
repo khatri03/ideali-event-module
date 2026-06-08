@@ -21,6 +21,7 @@ export interface AppEvent {
   id: string
   title: string
   description: string
+  termsConditions?: string | null
   startDate: string
   endDate: string
   location: string

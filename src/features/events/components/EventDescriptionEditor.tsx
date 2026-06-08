@@ -9,6 +9,7 @@ import { Bold, Italic, List, ListOrdered, Quote, Redo2, Undo2 } from "lucide-rea
 interface EventDescriptionEditorProps {
   value: string
   onChange: (value: string) => void
+  placeholder?: string
 }
 
 function ToolbarButton({
@@ -41,17 +42,17 @@ function ToolbarButton({
   )
 }
 
-export function EventDescriptionEditor({ onChange, value }: EventDescriptionEditorProps) {
+export function EventDescriptionEditor({ onChange, placeholder, value }: EventDescriptionEditorProps) {
   const extensions = useMemo(
     () => [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
       }),
       Placeholder.configure({
-        placeholder: "Write a clear, engaging description for attendees, speakers, and internal teams...",
+        placeholder: placeholder ?? "Write a clear, engaging description for attendees, speakers, and internal teams...",
       }),
     ],
-    []
+    [placeholder]
   )
 
   const editor = useEditor({
