@@ -5,6 +5,7 @@ import {
   Dialog,
   Flex,
   Input,
+  Switch,
   Stack,
   Text,
 } from "@chakra-ui/react"
@@ -331,34 +332,15 @@ function EventDiscountCouponModalContent({
               <Text fontSize="sm" fontWeight="700" color="gray.800">
                 Active
               </Text>
-              <Flex mt={2} align="center" justify="space-between" gap={3} border="1px solid" borderColor="gray.200" borderRadius="16px" bg="gray.50" px={4} py={3}>
-                <Text fontSize="sm" color="gray.600">
-                  {draft.isActive ? "Available to use?" : "Inactive?"}
-                </Text>
-                <Button
-                  type="button"
-                  role="switch"
-                  aria-checked={draft.isActive}
-                  aria-label="Toggle coupon active state"
-                  onClick={() => updateDraft("isActive", !draft.isActive)}
-                  borderRadius="full"
-                  h="34px"
-                  w="58px"
-                  minW="58px"
-                  p={0}
-                  bg={draft.isActive ? "green.500" : "gray.200"}
-                  color="white"
-                  _hover={{ bg: draft.isActive ? "green.600" : "gray.300" }}
+              <Flex mt={2} align="center" justifyContent="flex-end" gap={3} border="1px solid" borderColor="gray.200" borderRadius="16px" bg="gray.50" px={4} py={3}>
+                <Switch.Root
+                  checked={draft.isActive}
+                  onCheckedChange={(details) => updateDraft("isActive", Boolean(details.checked))}
+                  colorPalette="brand"
                 >
-                  <Box
-                    h="24px"
-                    w="24px"
-                    borderRadius="full"
-                    bg="white"
-                    transform={draft.isActive ? "translateX(13px)" : "translateX(-13px)"}
-                    transition="transform 0.15s ease"
-                  />
-                </Button>
+                  <Switch.HiddenInput />
+                  <Switch.Control />
+                </Switch.Root>
               </Flex>
             </Box>
 

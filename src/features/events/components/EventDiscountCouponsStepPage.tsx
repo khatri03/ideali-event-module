@@ -458,30 +458,17 @@ export function EventDiscountCouponsStepPage() {
                           </Text>
                         </Table.Cell>
                         <Table.Cell px={4} py={4} textAlign="center">
-                          <Button
-                            type="button"
-                            role="switch"
-                            aria-checked={coupon.isActive}
-                            aria-label={`Toggle ${coupon.code} active state`}
-                            onClick={() => handleToggleCouponActive(coupon.uniqueId)}
-                            disabled={!discountsEnabled}
-                            borderRadius="full"
-                            h="32px"
-                            w="56px"
-                            minW="56px"
-                            p={0}
-                            bg={coupon.isActive ? "green.500" : "gray.200"}
-                            color="white"
-                          >
-                            <Box
-                              h="24px"
-                              w="24px"
-                              borderRadius="full"
-                              bg="white"
-                              transform={coupon.isActive ? "translateX(13px)" : "translateX(-13px)"}
-                              transition="transform 0.15s ease"
-                            />
-                          </Button>
+                          <Flex justify="center">
+                            <Switch.Root
+                              checked={coupon.isActive}
+                              disabled={!discountsEnabled}
+                              onCheckedChange={() => handleToggleCouponActive(coupon.uniqueId)}
+                              colorPalette="brand"
+                            >
+                              <Switch.HiddenInput />
+                              <Switch.Control />
+                            </Switch.Root>
+                          </Flex>
                         </Table.Cell>
                         <Table.Cell px={4} py={4}>
                           <Flex justify="flex-end" gap={2}>
