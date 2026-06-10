@@ -425,6 +425,7 @@ function EventWizardLayoutContent() {
     if (isPageManagedSaveStep) {
       try {
         await runPrimaryAction()
+        await persistSkippedStep(activeStep.slug)
       } catch {
         return
       }
@@ -525,6 +526,7 @@ function EventWizardLayoutContent() {
     if (isPageManagedSaveStep) {
       try {
         await runPrimaryAction()
+        await persistSkippedStep(activeStep.slug)
       } catch {
         return
       }
