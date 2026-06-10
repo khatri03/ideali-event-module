@@ -328,32 +328,27 @@ export function EventDiscountCouponsStepPage() {
             </Text>
           </Box>
 
-          <Flex align="center" justify="space-between" gap={3} border="1px solid" borderColor="gray.200" borderRadius="18px" bg="gray.50" px={4} py={3}>
-            <Text fontSize="sm" color="gray.600">
-              {discountsEnabled ? "Enabled" : "Disabled"}
-            </Text>
-            <Switch.Root
-              checked={discountsEnabled}
-              disabled={isLoading || saveMutation.isPending}
-              onCheckedChange={(details) => {
-                if (isLoading || saveMutation.isPending) {
-                  return
-                }
+          <Switch.Root
+            checked={discountsEnabled}
+            disabled={isLoading || saveMutation.isPending}
+            onCheckedChange={(details) => {
+              if (isLoading || saveMutation.isPending) {
+                return
+              }
 
-                const nextValue = Boolean(details.checked)
-                if (nextValue && coupons.length === 0) {
-                  setEditingCouponId(null)
-                  setIsCouponModalOpen(true)
-                }
+              const nextValue = Boolean(details.checked)
+              if (nextValue && coupons.length === 0) {
+                setEditingCouponId(null)
+                setIsCouponModalOpen(true)
+              }
 
-                setDiscountsEnabled(nextValue)
-              }}
-              colorPalette="brand"
-            >
-              <Switch.HiddenInput />
-              <Switch.Control />
-            </Switch.Root>
-          </Flex>
+              setDiscountsEnabled(nextValue)
+            }}
+            colorPalette="brand"
+          >
+            <Switch.HiddenInput />
+            <Switch.Control />
+          </Switch.Root>
         </Flex>
       </Box>
 
