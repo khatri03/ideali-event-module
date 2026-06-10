@@ -16,6 +16,7 @@ const appEventSchema = z.object({
   description: z.string(),
   termsConditions: z.string().nullable().optional(),
   bannerUrl: z.string().nullable().optional(),
+  discountsEnabled: z.boolean().optional(),
   startDate: z.string(),
   endDate: z.string(),
   location: z.string(),

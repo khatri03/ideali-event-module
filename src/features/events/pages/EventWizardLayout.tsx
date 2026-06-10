@@ -288,6 +288,8 @@ function EventWizardLayoutContent() {
     activeStep.slug === "advanced-settings"
   const isPaymentAccountStep = activeStep.slug === "payment-account"
   const isBannerStep = activeStep.slug === "banner"
+  const isDiscountCouponStep = activeStep.slug === "discount-coupon"
+  const isPageManagedSaveStep = isBannerStep || isDiscountCouponStep
   const isLastWizardStep = isLastStep
   const resolvedStepIndex = eventId ? Math.min(lastCompletedStepNo, wizardSteps.length - 1) : -1
   const resolvedStepPath = eventId ? wizardSteps[resolvedStepIndex]?.path : undefined
@@ -420,7 +422,7 @@ function EventWizardLayoutContent() {
       return
     }
 
-    if (activeStep.slug === "banner") {
+    if (isPageManagedSaveStep) {
       try {
         await runPrimaryAction()
       } catch {
@@ -520,7 +522,7 @@ function EventWizardLayoutContent() {
       return
     }
 
-    if (activeStep.slug === "banner") {
+    if (isPageManagedSaveStep) {
       try {
         await runPrimaryAction()
       } catch {
@@ -785,20 +787,22 @@ function EventWizardLayoutContent() {
                     showBack={!isFirstStep}
                     showSkip={isOptionalStep && !isLastWizardStep}
                     isPrimaryDisabled={
-                      isPaymentAccountStep && (!paymentAccountId || (paymentMethods?.length ?? 0) === 0)
+                      (isPaymentAccountStep && (!paymentAccountId || (paymentMethods?.length ?? 0) === 0)) ||
+                      (isPageManagedSaveStep && !isPrimaryActionReady)
                     }
                     isSecondaryDisabled={
-                      isPaymentAccountStep && (!paymentAccountId || (paymentMethods?.length ?? 0) === 0)
+                      (isPaymentAccountStep && (!paymentAccountId || (paymentMethods?.length ?? 0) === 0)) ||
+                      (isPageManagedSaveStep && !isPrimaryActionReady)
                     }
                     isPrimaryLoading={
                       createEventDraftMutation.isPending ||
                       finalSaveMutation.isPending ||
-                      (isBannerStep && !isPrimaryActionReady)
+                      (isPageManagedSaveStep && !isPrimaryActionReady)
                     }
                     isSecondaryLoading={
                       createEventDraftMutation.isPending ||
                       finalSaveMutation.isPending ||
-                      (isBannerStep && !isPrimaryActionReady)
+                      (isPageManagedSaveStep && !isPrimaryActionReady)
                     }
                     primaryLabel={!eventId && activeStep.slug === "name" ? "Create Event" : isReviewStep ? "Save Changes" : "Save & Continue"}
                     secondaryLabel="Save & Exit"

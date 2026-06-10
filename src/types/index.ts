@@ -23,6 +23,7 @@ export interface AppEvent {
   description: string
   termsConditions?: string | null
   bannerUrl?: string | null
+  discountsEnabled?: boolean
   startDate: string
   endDate: string
   location: string

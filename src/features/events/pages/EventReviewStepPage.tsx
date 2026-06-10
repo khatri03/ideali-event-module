@@ -2,14 +2,25 @@ import { Badge, Box, Flex, Image, Stack, Text } from "@chakra-ui/react"
 import { format } from "date-fns"
 import type { ReactNode } from "react"
 import { useWatch } from "react-hook-form"
+import { useParams } from "react-router-dom"
 import { auth } from "@/lib/auth"
+import { useEventDiscountCoupons } from "../hooks/useEventDiscountCoupons"
 import { htmlToPlainText } from "@/utils/html"
 import { defaultEventWizardValues, type EventWizardValues } from "../schemas/eventWizard.schemas"
 
 export function EventReviewStepPage() {
+  const { eventId } = useParams<{ eventId?: string }>()
   const values = useWatch({ defaultValue: defaultEventWizardValues }) as EventWizardValues
+  const discountCouponsQuery = useEventDiscountCoupons(eventId)
   const organizer = auth.getOrganizer()
   const paymentAccount = organizer?.paymentAccounts?.find((account) => account.uniqueId === values.paymentAccountId)
+  const discountCouponValue = discountCouponsQuery.isLoading
+    ? "Loading..."
+    : discountCouponsQuery.data
+      ? discountCouponsQuery.data.discountsEnabled
+        ? `${discountCouponsQuery.data.coupons.length} coupon${discountCouponsQuery.data.coupons.length === 1 ? "" : "s"} configured`
+        : "Disabled"
+      : "Not configured"
 
   return (
     <Stack h="full" gap={5}>
@@ -56,7 +67,7 @@ export function EventReviewStepPage() {
             value={values.paymentMethods.length > 0 ? `${values.paymentMethods.length} selected` : "Not selected"}
             isRequired
           />
-          <ReviewRow label="Discount coupon" value="Not configured" />
+          <ReviewRow label="Discount coupon" value={discountCouponValue} />
           <ReviewRow label="Questions" value="Not configured" />
           <ReviewRow label="Thank you Email" value="Not configured" />
           <ReviewRow

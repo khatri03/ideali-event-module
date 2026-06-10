@@ -66,6 +66,7 @@ export const API_ROUTES = {
   eventWizardStep: (id: string, step: string) => `/api/organizer/events/${id}/${step}`,
   eventWizardName: (id: string) => `/api/organizer/events/${id}/name`,
   eventWizardSessions: (id: string) => `/api/organizer/events/${id}/sessions`,
+  eventWizardDiscountCoupon: (id: string) => `/api/organizer/events/${id}/discount-coupon`,
   adminTimeZones: "/api/admin/list-items/time-zones",
   organizerEvents: "/api/organizer/events/list",
   sessionWizardName: (id: string) => `/api/organizer/sessions/${id}/name`,
