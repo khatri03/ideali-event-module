@@ -1,4 +1,4 @@
-import { Badge, Box, Button, Flex, SimpleGrid, Skeleton, Stack, Table, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, Flex, SimpleGrid, Skeleton, Stack, Switch, Table, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useParams } from "react-router-dom"
 import { Check, Copy, Pencil, Plus, Trash2 } from "lucide-react"
@@ -162,23 +162,6 @@ export function EventDiscountCouponsStepPage() {
   }, [])
 
   const activeCouponCount = useMemo(() => coupons.filter((coupon) => coupon.isActive).length, [coupons])
-
-  function handleToggleDiscounts() {
-    if (isLoading || saveMutation.isPending) {
-      return
-    }
-
-    setDiscountsEnabled((currentValue) => {
-      const nextValue = !currentValue
-
-      if (nextValue && coupons.length === 0) {
-        setEditingCouponId(null)
-        setIsCouponModalOpen(true)
-      }
-
-      return nextValue
-    })
-  }
 
   function handleCreateDiscountCoupon(draft: DiscountCouponDraft) {
     const discountValue = Number(draft.discountValue)
@@ -345,31 +328,32 @@ export function EventDiscountCouponsStepPage() {
             </Text>
           </Box>
 
-          <Button
-            type="button"
-            role="switch"
-            aria-checked={discountsEnabled}
-            aria-label="Toggle event discounts"
-            onClick={handleToggleDiscounts}
-            disabled={isLoading || saveMutation.isPending}
-            borderRadius="full"
-            h="40px"
-            w="68px"
-            minW="68px"
-            p={0}
-            bg={discountsEnabled ? "green.500" : "gray.200"}
-            color="white"
-            _hover={{ bg: discountsEnabled ? "green.600" : "gray.300" }}
-          >
-            <Box
-              h="28px"
-              w="28px"
-              borderRadius="full"
-              bg="white"
-              transform={discountsEnabled ? "translateX(17px)" : "translateX(-17px)"}
-              transition="transform 0.15s ease"
-            />
-          </Button>
+          <Flex align="center" justify="space-between" gap={3} border="1px solid" borderColor="gray.200" borderRadius="18px" bg="gray.50" px={4} py={3}>
+            <Text fontSize="sm" color="gray.600">
+              {discountsEnabled ? "Enabled" : "Disabled"}
+            </Text>
+            <Switch.Root
+              checked={discountsEnabled}
+              disabled={isLoading || saveMutation.isPending}
+              onCheckedChange={(details) => {
+                if (isLoading || saveMutation.isPending) {
+                  return
+                }
+
+                const nextValue = Boolean(details.checked)
+                if (nextValue && coupons.length === 0) {
+                  setEditingCouponId(null)
+                  setIsCouponModalOpen(true)
+                }
+
+                setDiscountsEnabled(nextValue)
+              }}
+              colorPalette="brand"
+            >
+              <Switch.HiddenInput />
+              <Switch.Control />
+            </Switch.Root>
+          </Flex>
         </Flex>
       </Box>
 
