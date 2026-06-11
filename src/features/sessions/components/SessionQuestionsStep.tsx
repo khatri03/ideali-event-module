@@ -798,10 +798,14 @@ function QuestionEditorModal({
 
 function CustomFormPreviewModal({
   preview,
+  isLoading,
+  error,
   formName,
   onClose,
 }: {
   preview: CustomFormPreview | undefined
+  isLoading: boolean
+  error: string
   formName: string
   onClose: () => void
 }) {
@@ -836,7 +840,11 @@ function CustomFormPreviewModal({
           </Box>
 
           <Dialog.Body px={6} py={6} overflowY="auto">
-            {preview ? (
+            {isLoading ? (
+              <SessionQuestionsEmpty title="Preview loading" description="We are loading the custom form preview." />
+            ) : error ? (
+              <SessionQuestionsEmpty title="Preview unavailable" description={error} />
+            ) : preview ? (
               <Stack gap={4}>
                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                   <Box>
@@ -886,8 +894,8 @@ function CustomFormPreviewModal({
               </Stack>
             ) : (
               <SessionQuestionsEmpty
-                title="Preview loading"
-                description="We are loading the custom form preview."
+                title="Preview unavailable"
+                description="No preview data was returned for this form."
               />
             )}
           </Dialog.Body>
@@ -1256,6 +1264,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
   }
 
   const previewFormDetails = previewQuery.data ?? undefined
+  const previewError = previewQuery.error ? extractApiError(previewQuery.error) : ""
 
   if (!sessionId) {
     return (
@@ -1581,6 +1590,8 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
       {previewCustomFormUniqueId ? (
         <CustomFormPreviewModal
           preview={previewFormDetails}
+          isLoading={previewQuery.isLoading || previewQuery.isFetching}
+          error={previewError}
           formName={previewForm?.label ?? "Custom form preview"}
           onClose={() => setPreviewCustomFormUniqueId("")}
         />
