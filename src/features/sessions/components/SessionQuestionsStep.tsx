@@ -997,12 +997,14 @@ function QuestionEditorModal({
 }
 
 function CustomFormPreviewModal({
+  isOpen,
   preview,
   isLoading,
   error,
   formName,
   onClose,
 }: {
+  isOpen: boolean
   preview: CustomFormPreview | undefined
   isLoading: boolean
   error: string
@@ -1010,7 +1012,14 @@ function CustomFormPreviewModal({
   onClose: () => void
 }) {
   return (
-    <Dialog.Root open onOpenChange={(details) => !details.open && onClose()}>
+    <Dialog.Root
+      open={isOpen}
+      onOpenChange={(details) => {
+        if (!details.open) {
+          onClose()
+        }
+      }}
+    >
       <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
       <Dialog.Positioner>
         <Dialog.Content
@@ -1800,15 +1809,14 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
         </Dialog.Root>
       ) : null}
 
-      {previewCustomFormUniqueId ? (
-        <CustomFormPreviewModal
-          preview={previewCustomFormDetails}
-          isLoading={previewCustomFormLoading}
-          error={previewCustomFormError}
-          formName={previewCustomFormName || "Custom form preview"}
-          onClose={closeCustomFormPreview}
-        />
-      ) : null}
+      <CustomFormPreviewModal
+        isOpen={Boolean(previewCustomFormUniqueId)}
+        preview={previewCustomFormDetails}
+        isLoading={previewCustomFormLoading}
+        error={previewCustomFormError}
+        formName={previewCustomFormName || "Custom form preview"}
+        onClose={closeCustomFormPreview}
+      />
     </Stack>
   )
 }
