@@ -40,6 +40,65 @@ function parseServicePayload(payload: unknown): unknown {
   return readResponseData(serviceResponse)
 }
 
+function asBoolean(value: unknown) {
+  return typeof value === "boolean" ? value : false
+}
+
+function asNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0
+}
+
+function asOptionalNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null
+}
+
+function asString(value: unknown) {
+  return typeof value === "string" ? value : ""
+}
+
+function splitAcceptValues(value: unknown) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return []
+  }
+
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function resolveAcceptedFileTypes(value: unknown, availableOptions: Array<{ value: string }>) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return []
+  }
+
+  if (availableOptions.length === 0) {
+    return splitAcceptValues(value)
+  }
+
+  const selectedTokens = new Set(splitAcceptValues(value))
+
+  return availableOptions
+    .map((option) => option.value.trim())
+    .filter((optionValue) => {
+      if (!optionValue) {
+        return false
+      }
+
+      const optionTokens = optionValue
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+
+      return optionTokens.length > 0 && optionTokens.every((token) => selectedTokens.has(token))
+    })
+}
+
+function normalizeFieldLayoutColumn(value: unknown) {
+  const normalized = asOptionalNumber(value)
+  return normalized === null ? null : Math.max(1, Math.min(4, normalized))
+}
+
 const customFormListItemSchema = z.object({
   Text: z.string().optional(),
   text: z.string().optional(),
@@ -70,121 +129,6 @@ const customFormControlSchema = z.object({
   canHaveMaxLength: z.boolean().optional(),
   AcceptedFileTypes: z.array(customFormListItemSchema).nullable().optional(),
   acceptedFileTypes: z.array(customFormListItemSchema).nullable().optional(),
-})
-
-const customFormPreviewOptionSchema = z.object({
-  Id: z.number().int().optional(),
-  id: z.number().int().optional(),
-  Value: z.string().optional(),
-  value: z.string().optional(),
-  DisplayText: z.string().optional(),
-  displayText: z.string().optional(),
-})
-
-const customFormPreviewFieldSchema = z.object({
-  Id: z.number().int().optional(),
-  id: z.number().int().optional(),
-  UniqueId: z.string().optional(),
-  uniqueId: z.string().optional(),
-  FormId: z.number().int().optional(),
-  formId: z.number().int().optional(),
-  FormControlTypeId: z.number().int().optional(),
-  formControlTypeId: z.number().int().optional(),
-  ControlUniqueId: z.string().nullable().optional(),
-  controlUniqueId: z.string().nullable().optional(),
-  DisplayOrder: z.number().int().optional(),
-  displayOrder: z.number().int().optional(),
-  LayoutColumn: z.number().int().nullable().optional(),
-  layoutColumn: z.number().int().nullable().optional(),
-  ControlLabel: z.string().optional(),
-  controlLabel: z.string().optional(),
-  PlaceHolder: z.string().nullable().optional(),
-  placeHolder: z.string().nullable().optional(),
-  Tooltip: z.string().nullable().optional(),
-  tooltip: z.string().nullable().optional(),
-  IsMandatory: z.boolean().optional(),
-  isMandatory: z.boolean().optional(),
-  RequiredMessage: z.string().nullable().optional(),
-  requiredMessage: z.string().nullable().optional(),
-  AcceptedFileTypes: z.array(z.string()).nullable().optional(),
-  acceptedFileTypes: z.array(z.string()).nullable().optional(),
-  MinLength: z.string().nullable().optional(),
-  minLength: z.string().nullable().optional(),
-  MaxLength: z.string().nullable().optional(),
-  maxLength: z.string().nullable().optional(),
-  DefaultValue: z.string().nullable().optional(),
-  defaultValue: z.string().nullable().optional(),
-  Options: z.array(customFormPreviewOptionSchema).optional(),
-  options: z.array(customFormPreviewOptionSchema).optional(),
-  FormControl: z
-    .object({
-      Id: z.number().int().optional(),
-      id: z.number().int().optional(),
-      Name: z.string().optional(),
-      name: z.string().optional(),
-      CanBeRequired: z.boolean().optional(),
-      canBeRequired: z.boolean().optional(),
-      CanHaveMaxLength: z.boolean().optional(),
-      canHaveMaxLength: z.boolean().optional(),
-      CanHaveMinLength: z.boolean().optional(),
-      canHaveMinLength: z.boolean().optional(),
-      CanHavePlaceHolder: z.boolean().optional(),
-      canHavePlaceHolder: z.boolean().optional(),
-      ControlType: z.string().optional(),
-      controlType: z.string().optional(),
-      DefaultLabel: z.string().optional(),
-      defaultLabel: z.string().optional(),
-      HasOptions: z.boolean().optional(),
-      hasOptions: z.boolean().optional(),
-      IconClass: z.string().optional(),
-      iconClass: z.string().optional(),
-      AcceptedFileTypes: z.array(customFormListItemSchema).nullable().optional(),
-      acceptedFileTypes: z.array(customFormListItemSchema).nullable().optional(),
-    })
-    .nullable()
-    .optional(),
-  formControl: z
-    .object({
-      Id: z.number().int().optional(),
-      id: z.number().int().optional(),
-      Name: z.string().optional(),
-      name: z.string().optional(),
-      CanBeRequired: z.boolean().optional(),
-      canBeRequired: z.boolean().optional(),
-      CanHaveMaxLength: z.boolean().optional(),
-      canHaveMaxLength: z.boolean().optional(),
-      CanHaveMinLength: z.boolean().optional(),
-      canHaveMinLength: z.boolean().optional(),
-      CanHavePlaceHolder: z.boolean().optional(),
-      canHavePlaceHolder: z.boolean().optional(),
-      ControlType: z.string().optional(),
-      controlType: z.string().optional(),
-      DefaultLabel: z.string().optional(),
-      defaultLabel: z.string().optional(),
-      HasOptions: z.boolean().optional(),
-      hasOptions: z.boolean().optional(),
-      IconClass: z.string().optional(),
-      iconClass: z.string().optional(),
-      AcceptedFileTypes: z.array(customFormListItemSchema).nullable().optional(),
-      acceptedFileTypes: z.array(customFormListItemSchema).nullable().optional(),
-    })
-    .nullable()
-    .optional(),
-})
-
-const customFormPreviewSchema = z.object({
-  UniqueId: z.string().optional(),
-  uniqueId: z.string().optional(),
-  Name: z.string().optional(),
-  name: z.string().optional(),
-  HeaderText: z.string().nullable().optional(),
-  headerText: z.string().nullable().optional(),
-  Description: z.string().nullable().optional(),
-  description: z.string().nullable().optional(),
-  LayoutColumn: z.number().int().nullable().optional(),
-  layoutColumn: z.number().int().nullable().optional(),
-  Fields: z.array(customFormPreviewFieldSchema).optional(),
-  fields: z.array(customFormPreviewFieldSchema).optional(),
 })
 
 export interface CustomFormListItem {
@@ -295,83 +239,83 @@ export async function fetchCustomFormControls(): Promise<CustomFormControl[]> {
 export async function fetchCustomFormPreview(customFormUniqueId: string): Promise<CustomFormPreview> {
   const res = await client.get<unknown>(API_ROUTES.organizerCustomFormPreview(customFormUniqueId))
   const responseData = parseServicePayload(res.data)
-  const preview = customFormPreviewSchema.parse(responseData)
+  const preview = responseData as Record<string, unknown> | null
+
+  if (!preview) {
+    throw new Error("Unexpected custom form response.")
+  }
 
   return {
-    uniqueId: preview.UniqueId ?? preview.uniqueId ?? "",
-    name: preview.Name ?? preview.name ?? "",
-    headerText: preview.HeaderText ?? preview.headerText ?? "",
-    description: preview.Description ?? preview.description ?? null,
-    layoutColumn: preview.LayoutColumn ?? preview.layoutColumn ?? null,
-    fields: (preview.Fields ?? preview.fields ?? []).map((field) => ({
-      id: field.Id ?? field.id ?? 0,
-      uniqueId: field.UniqueId ?? field.uniqueId ?? "",
-      formId: field.FormId ?? field.formId ?? 0,
-      formControlTypeId: field.FormControlTypeId ?? field.formControlTypeId ?? 0,
-      controlUniqueId: field.ControlUniqueId ?? field.controlUniqueId ?? null,
-      displayOrder: field.DisplayOrder ?? field.displayOrder ?? 0,
-      layoutColumn: field.LayoutColumn ?? field.layoutColumn ?? null,
-      controlLabel: field.ControlLabel ?? field.controlLabel ?? "",
-      placeHolder: field.PlaceHolder ?? field.placeHolder ?? null,
-      tooltip: field.Tooltip ?? field.tooltip ?? null,
-      isMandatory: field.IsMandatory ?? field.isMandatory ?? false,
-      requiredMessage: field.RequiredMessage ?? field.requiredMessage ?? null,
-      acceptedFileTypes: field.AcceptedFileTypes ?? field.acceptedFileTypes ?? null,
-      minLength: field.MinLength ?? field.minLength ?? null,
-      maxLength: field.MaxLength ?? field.maxLength ?? null,
-      defaultValue: field.DefaultValue ?? field.defaultValue ?? null,
-      options: (field.Options ?? field.options ?? []).map((option) => ({
-        id: option.Id ?? option.id ?? 0,
-        value: option.Value ?? option.value ?? "",
-        displayText: option.DisplayText ?? option.displayText ?? "",
-      })),
-      formControl:
-        field.FormControl ?? field.formControl
-          ? {
-              id: (field.FormControl ?? field.formControl)?.Id ?? (field.FormControl ?? field.formControl)?.id ?? 0,
-              name: (field.FormControl ?? field.formControl)?.Name ?? (field.FormControl ?? field.formControl)?.name ?? "",
-              canBeRequired:
-                (field.FormControl ?? field.formControl)?.CanBeRequired ??
-                (field.FormControl ?? field.formControl)?.canBeRequired ??
-                false,
-              canHaveMaxLength:
-                (field.FormControl ?? field.formControl)?.CanHaveMaxLength ??
-                (field.FormControl ?? field.formControl)?.canHaveMaxLength ??
-                false,
-              canHaveMinLength:
-                (field.FormControl ?? field.formControl)?.CanHaveMinLength ??
-                (field.FormControl ?? field.formControl)?.canHaveMinLength ??
-                false,
-              canHavePlaceHolder:
-                (field.FormControl ?? field.formControl)?.CanHavePlaceHolder ??
-                (field.FormControl ?? field.formControl)?.canHavePlaceHolder ??
-                false,
-              controlType:
-                (field.FormControl ?? field.formControl)?.ControlType ??
-                (field.FormControl ?? field.formControl)?.controlType ??
-                "",
-              defaultLabel:
-                (field.FormControl ?? field.formControl)?.DefaultLabel ??
-                (field.FormControl ?? field.formControl)?.defaultLabel ??
-                "",
-              hasOptions:
-                (field.FormControl ?? field.formControl)?.HasOptions ??
-                (field.FormControl ?? field.formControl)?.hasOptions ??
-                false,
-              iconClass:
-                (field.FormControl ?? field.formControl)?.IconClass ??
-                (field.FormControl ?? field.formControl)?.iconClass ??
-                "",
-              acceptedFileTypes: (
-                (field.FormControl ?? field.formControl)?.AcceptedFileTypes ??
-                (field.FormControl ?? field.formControl)?.acceptedFileTypes ??
-                []
-              ).map((item) => ({
-                text: item.Text ?? item.text ?? "",
-                value: item.Value ?? item.value ?? "",
-              })),
-            }
-          : null,
-    })),
+    uniqueId: asString(preview.UniqueId ?? preview.uniqueId),
+    name: asString(preview.Name ?? preview.name),
+    headerText: asString(preview.HeaderText ?? preview.headerText),
+    description: asString(preview.Description ?? preview.description) || null,
+    layoutColumn: asOptionalNumber(preview.LayoutColumn ?? preview.layoutColumn),
+    fields: Array.isArray(preview.Fields ?? preview.fields)
+      ? ((preview.Fields ?? preview.fields) as unknown[]).map((field) => {
+          const candidate = field as Record<string, unknown>
+          const controlCandidate = (candidate.FormControl ?? candidate.formControl) as Record<string, unknown> | null
+          const controlAcceptedFileTypes = Array.isArray(controlCandidate?.AcceptedFileTypes ?? controlCandidate?.acceptedFileTypes)
+            ? ((controlCandidate?.AcceptedFileTypes ?? controlCandidate?.acceptedFileTypes) as unknown[])
+                .map((item) => {
+                  const acceptCandidate = item as Record<string, unknown>
+                  return {
+                    text: asString(acceptCandidate.Text ?? acceptCandidate.text),
+                    value: asString(acceptCandidate.Value ?? acceptCandidate.value),
+                  }
+                })
+                .filter((item) => item.text && item.value)
+            : []
+
+          const options = Array.isArray(candidate.Options ?? candidate.options)
+            ? ((candidate.Options ?? candidate.options) as unknown[]).map((option) => {
+                const optionCandidate = option as Record<string, unknown>
+                return {
+                  id: asNumber(optionCandidate.Id ?? optionCandidate.id),
+                  value: asString(optionCandidate.Value ?? optionCandidate.value),
+                  displayText: asString(optionCandidate.DisplayText ?? optionCandidate.displayText),
+                }
+              })
+            : []
+
+          return {
+            id: asNumber(candidate.Id ?? candidate.id),
+            uniqueId: asString(candidate.UniqueId ?? candidate.uniqueId),
+            formId: asNumber(candidate.FormId ?? candidate.formId),
+            formControlTypeId: asNumber(candidate.FormControlTypeId ?? candidate.formControlTypeId),
+            controlUniqueId: asString(candidate.ControlUniqueId ?? candidate.controlUniqueId) || null,
+            displayOrder: asNumber(candidate.DisplayOrder ?? candidate.displayOrder),
+            layoutColumn: normalizeFieldLayoutColumn(candidate.LayoutColumn ?? candidate.layoutColumn),
+            controlLabel: asString(candidate.ControlLabel ?? candidate.controlLabel),
+            placeHolder: asString(candidate.PlaceHolder ?? candidate.placeHolder) || null,
+            tooltip: asString(candidate.Tooltip ?? candidate.tooltip) || null,
+            isMandatory: asBoolean(candidate.IsMandatory ?? candidate.isMandatory),
+            requiredMessage: asString(candidate.RequiredMessage ?? candidate.requiredMessage) || null,
+            acceptedFileTypes: resolveAcceptedFileTypes(
+              candidate.AcceptedFileTypes ?? candidate.acceptedFileTypes,
+              controlAcceptedFileTypes,
+            ),
+            minLength: asOptionalNumber(candidate.MinLength ?? candidate.minLength)?.toString() ?? null,
+            maxLength: asOptionalNumber(candidate.MaxLength ?? candidate.maxLength)?.toString() ?? null,
+            defaultValue: asString(candidate.DefaultValue ?? candidate.defaultValue) || null,
+            options,
+            formControl: controlCandidate
+              ? {
+                  id: asNumber(controlCandidate.Id ?? controlCandidate.id),
+                  name: asString(controlCandidate.Name ?? controlCandidate.name),
+                  canBeRequired: asBoolean(controlCandidate.CanBeRequired ?? controlCandidate.canBeRequired),
+                  canHaveMaxLength: asBoolean(controlCandidate.CanHaveMaxLength ?? controlCandidate.canHaveMaxLength),
+                  canHaveMinLength: asBoolean(controlCandidate.CanHaveMinLength ?? controlCandidate.canHaveMinLength),
+                  canHavePlaceHolder: asBoolean(controlCandidate.CanHavePlaceHolder ?? controlCandidate.canHavePlaceHolder),
+                  controlType: asString(controlCandidate.ControlType ?? controlCandidate.controlType),
+                  defaultLabel: asString(controlCandidate.DefaultLabel ?? controlCandidate.defaultLabel),
+                  hasOptions: asBoolean(controlCandidate.HasOptions ?? controlCandidate.hasOptions),
+                  iconClass: asString(controlCandidate.IconClass ?? controlCandidate.iconClass),
+                  acceptedFileTypes: controlAcceptedFileTypes,
+                }
+              : null,
+          }
+        })
+      : [],
   }
 }

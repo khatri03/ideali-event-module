@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   Badge,
   Box,
@@ -191,6 +191,206 @@ function SessionQuestionsEmpty({ title, description }: { title: string; descript
       <Text mt={2} fontSize="sm" color="gray.600">
         {description}
       </Text>
+    </Box>
+  )
+}
+
+function clampPreviewColumns(value: number | null | undefined) {
+  if (!value || value < 1) {
+    return 1
+  }
+
+  return Math.min(4, value)
+}
+
+function getPreviewColumnSpan(fieldColumn: number | null | undefined, formColumn: number) {
+  if (!fieldColumn || fieldColumn < 1) {
+    return 1
+  }
+
+  return Math.max(1, Math.min(fieldColumn, clampPreviewColumns(formColumn)))
+}
+
+function parseDelimitedValues(value: string | null | undefined) {
+  if (!value) {
+    return []
+  }
+
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function getPreviewDefaultOptionValue(
+  options: CustomFormPreview["fields"][number]["options"],
+  defaultValue: string | null,
+) {
+  if (!defaultValue) {
+    return ""
+  }
+
+  const match = options.find((option) => option.value === defaultValue)
+  return match?.value ?? ""
+}
+
+function CustomFormPreviewField({
+  field,
+  formLayoutColumn,
+}: {
+  field: CustomFormPreview["fields"][number]
+  formLayoutColumn: number
+}) {
+  const controlType = field.formControl?.controlType.toLowerCase() || "text"
+  const layoutSpan = getPreviewColumnSpan(field.layoutColumn, formLayoutColumn)
+  const defaultOptionValue = getPreviewDefaultOptionValue(field.options, field.defaultValue)
+  const previewMultiSelectValue = parseDelimitedValues(field.defaultValue).map((value) => {
+    const match = field.options.find((option) => option.value === value)
+    return {
+      value,
+      label: match?.displayText || value,
+    }
+  })
+
+  return (
+    <Box
+      border="1px solid"
+      borderColor="gray.200"
+      bg="gray.50"
+      borderRadius="24px"
+      p={4}
+      gridColumn={{ base: "span 1", md: `span ${layoutSpan}` }}
+    >
+      <Flex align="center" gap={2} mb={3} wrap="wrap">
+        <Text fontSize="sm" fontWeight="700" color="gray.900">
+          {field.controlLabel}
+        </Text>
+        {field.isMandatory ? (
+          <Text fontSize="sm" fontWeight="800" color="red.500">
+            *
+          </Text>
+        ) : null}
+      </Flex>
+
+      {controlType === "textarea" ? (
+        <Textarea
+          value={field.defaultValue ?? ""}
+          placeholder={field.placeHolder || field.controlLabel}
+          borderRadius="16px"
+          px={4}
+          py={3}
+          minH="112px"
+          resize="none"
+          readOnly
+        />
+      ) : controlType === "select" && field.options.length > 0 ? (
+        <Box
+          as="select"
+          value={defaultOptionValue}
+          disabled
+          w="100%"
+          h="44px"
+          px={4}
+          borderRadius="16px"
+          border="1px solid"
+          borderColor="gray.200"
+          bg="white"
+          color="gray.700"
+        >
+          <option value="">{field.placeHolder || "Select one"}</option>
+          {field.options.map((option) => (
+            <option key={option.id} value={option.value}>
+              {option.displayText}
+            </option>
+          ))}
+        </Box>
+      ) : controlType === "radio" && field.options.length > 0 ? (
+        <Stack gap={3}>
+          {field.options.map((option) => (
+            <label key={option.id}>
+              <Flex align="center" gap={3}>
+                <input type="radio" checked={defaultOptionValue === option.value} readOnly />
+                <Text fontSize="sm" color="gray.700">
+                  {option.displayText}
+                </Text>
+              </Flex>
+            </label>
+          ))}
+        </Stack>
+      ) : controlType === "multiselect" ? (
+        <ReactSelect
+          isMulti
+          isDisabled
+          value={previewMultiSelectValue}
+          options={field.options.map((option) => ({
+            label: option.displayText,
+            value: option.value,
+          }))}
+          placeholder={field.placeHolder || "Select one or more"}
+          styles={
+            {
+              control: (base) => ({
+                ...base,
+                minHeight: 44,
+                borderRadius: 16,
+                borderColor: "#E2E8F0",
+                backgroundColor: "#fff",
+              }),
+              menu: (base) => ({
+                ...base,
+                zIndex: 30,
+                borderRadius: 14,
+              }),
+            } satisfies StylesConfig<SelectOption, true>
+          }
+        />
+      ) : controlType === "checkbox" ? (
+        <label>
+          <Flex align="center" gap={3}>
+            <input type="checkbox" checked={field.defaultValue === "true"} readOnly />
+            <Text fontSize="sm" fontWeight="600" color="gray.800">
+              {field.controlLabel}
+            </Text>
+          </Flex>
+        </label>
+      ) : controlType === "file" ? (
+        <Input type="file" borderRadius="16px" bg="white" disabled />
+      ) : controlType === "number" ? (
+        <Input
+          type="number"
+          value={field.defaultValue ?? ""}
+          placeholder={field.placeHolder || field.controlLabel}
+          borderRadius="16px"
+          px={4}
+          readOnly
+        />
+      ) : controlType === "date" ? (
+        <Input type="date" value={field.defaultValue ?? ""} borderRadius="16px" px={4} readOnly />
+      ) : controlType === "phone" ? (
+        <Input
+          type="tel"
+          value={field.defaultValue ?? ""}
+          placeholder={field.placeHolder || field.controlLabel}
+          borderRadius="16px"
+          px={4}
+          readOnly
+        />
+      ) : (
+        <Input
+          type="text"
+          value={field.defaultValue ?? ""}
+          placeholder={field.placeHolder || field.controlLabel}
+          borderRadius="16px"
+          px={4}
+          readOnly
+        />
+      )}
+
+      {field.tooltip ? (
+        <Text mt={2} fontSize="xs" color="gray.500">
+          {field.tooltip}
+        </Text>
+      ) : null}
     </Box>
   )
 }
@@ -419,7 +619,7 @@ function QuestionEditorModal({
         <Dialog.Content
           bg="white"
           borderRadius={{ base: 0, md: "24px" }}
-          maxW={{ base: "100vw", md: "760px" }}
+          maxW={{ base: "100vw", md: "1280px" }}
           maxH={{ base: "100dvh", md: "90vh" }}
           m={{ base: 0, md: "auto" }}
           overflow="hidden"
@@ -810,13 +1010,14 @@ function CustomFormPreviewModal({
   onClose: () => void
 }) {
   return (
-    <Dialog.Root open onOpenChange={(details) => !details.open && onClose()} size="lg">
+    <Dialog.Root open onOpenChange={(details) => !details.open && onClose()}>
       <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
       <Dialog.Positioner>
         <Dialog.Content
           bg="white"
           borderRadius={{ base: 0, md: "24px" }}
-          maxW={{ base: "100vw", md: "760px" }}
+          w={{ base: "100vw", md: "92vw" }}
+          maxW={{ base: "100vw", md: "1440px" }}
           maxH={{ base: "100dvh", md: "90vh" }}
           m={{ base: 0, md: "auto" }}
           overflow="hidden"
@@ -865,24 +1066,14 @@ function CustomFormPreviewModal({
                   </Box>
                 </SimpleGrid>
 
-                <Stack gap={4}>
+                <SimpleGrid columns={{ base: 1, md: clampPreviewColumns(preview.layoutColumn || 2) }} gap={4}>
                   {preview.fields.length > 0 ? (
                     preview.fields.map((field) => (
-                      <Box key={field.uniqueId} border="1px solid" borderColor="gray.200" borderRadius="20px" p={4}>
-                        <Text fontSize="sm" fontWeight="700" color="gray.900" mb={3}>
-                          {field.controlLabel}
-                          {field.isMandatory ? <Text as="span" color="red.500"> *</Text> : null}
-                        </Text>
-
-                        <Box border="1px solid" borderColor="gray.200" borderRadius="14px" bg="gray.50" px={4} py={3}>
-                          <Text fontSize="sm" color="gray.600">
-                            {field.formControl?.controlType || "text"} field preview
-                          </Text>
-                          <Text mt={1} fontSize="xs" color="gray.500">
-                            {field.placeHolder || field.controlLabel}
-                          </Text>
-                        </Box>
-                      </Box>
+                      <CustomFormPreviewField
+                        key={field.uniqueId || `${field.id}-${field.displayOrder}`}
+                        field={field}
+                        formLayoutColumn={clampPreviewColumns(preview.layoutColumn || 2)}
+                      />
                     ))
                   ) : (
                     <SessionQuestionsEmpty
@@ -890,7 +1081,7 @@ function CustomFormPreviewModal({
                       description="This custom form does not contain any fields."
                     />
                   )}
-                </Stack>
+                </SimpleGrid>
               </Stack>
             ) : (
               <SessionQuestionsEmpty
@@ -915,6 +1106,10 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [previewCustomFormUniqueId, setPreviewCustomFormUniqueId] = useState("")
+  const [previewCustomFormName, setPreviewCustomFormName] = useState("")
+  const [previewCustomFormLoading, setPreviewCustomFormLoading] = useState(false)
+  const [previewCustomFormError, setPreviewCustomFormError] = useState("")
+  const [previewCustomFormDetails, setPreviewCustomFormDetails] = useState<CustomFormPreview | undefined>(undefined)
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false)
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null)
   const [questionDraft, setQuestionDraft] = useState<QuestionDraft | null>(null)
@@ -927,13 +1122,6 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
   )
 
   const selectedCustomForms = selectedFormOptions
-
-  const previewQuery = useQuery({
-    queryKey: ["organizer", "custom-form", "preview", previewCustomFormUniqueId],
-    queryFn: () => fetchCustomFormPreview(previewCustomFormUniqueId),
-    enabled: Boolean(previewCustomFormUniqueId),
-    retry: false,
-  })
 
   const saveMutation = useMutation({
     mutationFn: (payload: { customFormUniqueIds: string[] | null; customQuestions: QuestionDraft[] | null }) =>
@@ -1086,11 +1274,6 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
     setPrimaryActionReady,
   ])
 
-  const previewForm = useMemo(
-    () => selectedCustomForms.find((form) => form.value === previewCustomFormUniqueId),
-    [previewCustomFormUniqueId, selectedCustomForms],
-  )
-
   const saveError = saveMutation.error ? extractApiError(saveMutation.error) : ""
 
   function openQuestionEditor(questionId?: string) {
@@ -1204,7 +1387,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
 
     setSelectedCustomFormUniqueIds((current) => current.filter((value) => value !== pendingFormRemoval.id))
     if (previewCustomFormUniqueId === pendingFormRemoval.id) {
-      setPreviewCustomFormUniqueId("")
+      closeCustomFormPreview()
     }
     setPendingFormRemoval(null)
   }
@@ -1254,17 +1437,49 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
     })
   }
 
-  function handleFormPreview(formUniqueId: string) {
+  function closeCustomFormPreview() {
+    setPreviewCustomFormUniqueId("")
+    setPreviewCustomFormName("")
+    setPreviewCustomFormLoading(false)
+    setPreviewCustomFormError("")
+    setPreviewCustomFormDetails(undefined)
+  }
+
+  async function handleFormPreview(formUniqueId: string) {
+    const formItem =
+      selectedCustomForms.find((form) => form.value === formUniqueId) ??
+      customForms.find((form) => form.value === formUniqueId)
+
+    if (!formItem) {
+      setPreviewCustomFormUniqueId(formUniqueId)
+      setPreviewCustomFormName("Custom form preview")
+      setPreviewCustomFormLoading(false)
+      setPreviewCustomFormError("Custom form not found.")
+      setPreviewCustomFormDetails(undefined)
+      return
+    }
+
     setPreviewCustomFormUniqueId(formUniqueId)
+    setPreviewCustomFormName(formItem.label)
+    setPreviewCustomFormLoading(true)
+    setPreviewCustomFormError("")
+    setPreviewCustomFormDetails(undefined)
+
+    try {
+      const preview = await fetchCustomFormPreview(formUniqueId)
+      setPreviewCustomFormDetails(preview)
+      setPreviewCustomFormName(preview.headerText || preview.name || formItem.label)
+    } catch (previewError) {
+      setPreviewCustomFormError(previewError instanceof Error ? previewError.message : "Unable to load custom form preview.")
+    } finally {
+      setPreviewCustomFormLoading(false)
+    }
   }
 
   function onSelectChange(values: MultiValue<SelectOption>) {
     setSelectedCustomFormUniqueIds(values.map((item) => item.value))
     setError("")
   }
-
-  const previewFormDetails = previewQuery.data ?? undefined
-  const previewError = previewQuery.error ? extractApiError(previewQuery.error) : ""
 
   if (!sessionId) {
     return (
@@ -1321,9 +1536,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
                 borderRadius="full"
                 h="38px"
                 px={4}
-                onClick={() => {
-                  setPreviewCustomFormUniqueId(selectedCustomFormUniqueIds[0] ?? "")
-                }}
+                onClick={() => void handleFormPreview(selectedCustomFormUniqueIds[0] ?? "")}
                 disabled={selectedCustomFormUniqueIds.length === 0}
               >
                 Preview first form
@@ -1407,7 +1620,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
                         <SortableCard key={form.value} id={form.value}>
                           <SelectedFormCard
                             form={form}
-                            onPreview={() => handleFormPreview(form.value)}
+                            onPreview={() => void handleFormPreview(form.value)}
                             onRemove={() => requestFormRemoval(form.value)}
                           />
                         </SortableCard>
@@ -1589,11 +1802,11 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
 
       {previewCustomFormUniqueId ? (
         <CustomFormPreviewModal
-          preview={previewFormDetails}
-          isLoading={previewQuery.isLoading || previewQuery.isFetching}
-          error={previewError}
-          formName={previewForm?.label ?? "Custom form preview"}
-          onClose={() => setPreviewCustomFormUniqueId("")}
+          preview={previewCustomFormDetails}
+          isLoading={previewCustomFormLoading}
+          error={previewCustomFormError}
+          formName={previewCustomFormName || "Custom form preview"}
+          onClose={closeCustomFormPreview}
         />
       ) : null}
     </Stack>
