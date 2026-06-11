@@ -112,7 +112,8 @@ function SessionWizardLayoutContent() {
     activeStep?.slug === "description" ||
     activeStep?.slug === "banner" ||
     activeStep?.slug === "genre" ||
-    activeStep?.slug === "schedule"
+    activeStep?.slug === "schedule" ||
+    activeStep?.slug === "questions"
   const isReviewStep = activeStep?.slug === "review"
   const returnUrl = new URLSearchParams(location.search).get("returnUrl") ?? undefined
   const currentStepIndex = sessionId ? steps.findIndex((step) => step.path === location.pathname) : -1

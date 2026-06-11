@@ -170,6 +170,65 @@ const sessionTicketSchema = z.object({
 
 const sessionTicketListSchema = z.array(sessionTicketSchema)
 
+const sessionQuestionOptionSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  DisplayText: z.string().optional(),
+  displayText: z.string().optional(),
+  Value: z.string().optional(),
+  value: z.string().optional(),
+  IsDefault: z.boolean().optional(),
+  isDefault: z.boolean().optional(),
+})
+
+const sessionQuestionSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  ControlId: z.number().int().optional(),
+  controlId: z.number().int().optional(),
+  ControlName: z.string().optional(),
+  controlName: z.string().optional(),
+  ControlType: z.string().optional(),
+  controlType: z.string().optional(),
+  IconClass: z.string().optional(),
+  iconClass: z.string().optional(),
+  Label: z.string().optional(),
+  label: z.string().optional(),
+  PlaceHolder: z.string().nullable().optional(),
+  placeHolder: z.string().nullable().optional(),
+  Tooltip: z.string().nullable().optional(),
+  tooltip: z.string().nullable().optional(),
+  Required: z.boolean().optional(),
+  required: z.boolean().optional(),
+  RequiredMessage: z.string().nullable().optional(),
+  requiredMessage: z.string().nullable().optional(),
+  AcceptedFileTypes: z.string().nullable().optional(),
+  acceptedFileTypes: z.string().nullable().optional(),
+  MinLength: z.string().nullable().optional(),
+  minLength: z.string().nullable().optional(),
+  MaxLength: z.string().nullable().optional(),
+  maxLength: z.string().nullable().optional(),
+  DefaultValue: z.string().nullable().optional(),
+  defaultValue: z.string().nullable().optional(),
+  IsActive: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  DisplayOrder: z.number().int().optional(),
+  displayOrder: z.number().int().optional(),
+  Options: z.array(sessionQuestionOptionSchema).optional(),
+  options: z.array(sessionQuestionOptionSchema).optional(),
+})
+
+const sessionQuestionsInfoSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  CustomFormUniqueIds: z.array(z.string()).optional(),
+  customFormUniqueIds: z.array(z.string()).optional(),
+  CustomQuestions: z.array(sessionQuestionSchema).optional(),
+  customQuestions: z.array(sessionQuestionSchema).optional(),
+  StepNo: z.number().int().optional(),
+  stepNo: z.number().int().optional(),
+})
+
 function readResponseData(payload: unknown): unknown {
   if (!payload || typeof payload !== "object") {
     return payload
@@ -254,6 +313,44 @@ export interface SessionWizardDescriptionRequest {
 export interface SessionWizardBannerRequest {
   bannerFile: File | null
   clearBanner: boolean
+}
+
+export interface SessionWizardQuestionOption {
+  id: string
+  displayText: string
+  value: string
+  isDefault: boolean
+}
+
+export interface SessionWizardQuestion {
+  id: string
+  controlId: number
+  controlName: string
+  controlType: string
+  iconClass: string
+  label: string
+  placeHolder: string | null
+  tooltip: string | null
+  required: boolean
+  requiredMessage: string | null
+  acceptedFileTypes: string[]
+  minLength: string | null
+  maxLength: string | null
+  defaultValue: string | null
+  displayOrder: number
+  options: SessionWizardQuestionOption[]
+}
+
+export interface SessionWizardQuestionsInfo {
+  uniqueId: string
+  customFormUniqueIds: string[]
+  customQuestions: SessionWizardQuestion[]
+  stepNo: number
+}
+
+export interface SessionWizardQuestionsRequest {
+  customFormUniqueIds: string[] | null
+  customQuestions: SessionWizardQuestion[] | null
 }
 
 export interface SessionWizardVenueRequest {
@@ -471,6 +568,88 @@ export async function updateSessionWizardBanner(
     uniqueId: banner.UniqueId ?? banner.uniqueId ?? "",
     bannerUrl: banner.BannerUrl ?? banner.bannerUrl ?? null,
     stepNo: banner.StepNo ?? banner.stepNo ?? stepNo,
+  }
+}
+
+export async function fetchSessionWizardQuestions(uniqueId: string): Promise<SessionWizardQuestionsInfo> {
+  const res = await client.get<unknown>(API_ROUTES.sessionWizardQuestions(uniqueId))
+  const responseData = parseServicePayload(res.data)
+  const questions = sessionQuestionsInfoSchema.parse(responseData)
+
+  return {
+    uniqueId: questions.UniqueId ?? questions.uniqueId ?? "",
+    customFormUniqueIds: questions.CustomFormUniqueIds ?? questions.customFormUniqueIds ?? [],
+    customQuestions: (questions.CustomQuestions ?? questions.customQuestions ?? []).map((question) => ({
+      id: question.UniqueId ?? question.uniqueId ?? "",
+      controlId: question.ControlId ?? question.controlId ?? 0,
+      controlName: question.ControlName ?? question.controlName ?? "",
+      controlType: question.ControlType ?? question.controlType ?? "",
+      iconClass: question.IconClass ?? question.iconClass ?? "",
+      label: question.Label ?? question.label ?? "",
+      placeHolder: question.PlaceHolder ?? question.placeHolder ?? null,
+      tooltip: question.Tooltip ?? question.tooltip ?? null,
+      required: question.Required ?? question.required ?? false,
+      requiredMessage: question.RequiredMessage ?? question.requiredMessage ?? null,
+      acceptedFileTypes: (question.AcceptedFileTypes ?? question.acceptedFileTypes ?? "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0),
+      minLength: question.MinLength ?? question.minLength ?? null,
+      maxLength: question.MaxLength ?? question.maxLength ?? null,
+      defaultValue: question.DefaultValue ?? question.defaultValue ?? null,
+      displayOrder: question.DisplayOrder ?? question.displayOrder ?? 0,
+      options: (question.Options ?? question.options ?? []).map((option) => ({
+        id: option.UniqueId ?? option.uniqueId ?? "",
+        displayText: option.DisplayText ?? option.displayText ?? "",
+        value: option.Value ?? option.value ?? "",
+        isDefault: option.IsDefault ?? option.isDefault ?? false,
+      })),
+    })),
+    stepNo: questions.StepNo ?? questions.stepNo ?? 12,
+  }
+}
+
+export async function updateSessionWizardQuestions(
+  uniqueId: string,
+  payload: SessionWizardQuestionsRequest,
+  stepNo = 12,
+): Promise<SessionWizardQuestionsInfo> {
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardQuestions(uniqueId), payload, {
+    params: { stepNo },
+  })
+  const responseData = parseServicePayload(res.data)
+  const questions = sessionQuestionsInfoSchema.parse(responseData)
+
+  return {
+    uniqueId: questions.UniqueId ?? questions.uniqueId ?? "",
+    customFormUniqueIds: questions.CustomFormUniqueIds ?? questions.customFormUniqueIds ?? [],
+    customQuestions: (questions.CustomQuestions ?? questions.customQuestions ?? []).map((question) => ({
+      id: question.UniqueId ?? question.uniqueId ?? "",
+      controlId: question.ControlId ?? question.controlId ?? 0,
+      controlName: question.ControlName ?? question.controlName ?? "",
+      controlType: question.ControlType ?? question.controlType ?? "",
+      iconClass: question.IconClass ?? question.iconClass ?? "",
+      label: question.Label ?? question.label ?? "",
+      placeHolder: question.PlaceHolder ?? question.placeHolder ?? null,
+      tooltip: question.Tooltip ?? question.tooltip ?? null,
+      required: question.Required ?? question.required ?? false,
+      requiredMessage: question.RequiredMessage ?? question.requiredMessage ?? null,
+      acceptedFileTypes: (question.AcceptedFileTypes ?? question.acceptedFileTypes ?? "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0),
+      minLength: question.MinLength ?? question.minLength ?? null,
+      maxLength: question.MaxLength ?? question.maxLength ?? null,
+      defaultValue: question.DefaultValue ?? question.defaultValue ?? null,
+      displayOrder: question.DisplayOrder ?? question.displayOrder ?? 0,
+      options: (question.Options ?? question.options ?? []).map((option) => ({
+        id: option.UniqueId ?? option.uniqueId ?? "",
+        displayText: option.DisplayText ?? option.displayText ?? "",
+        value: option.Value ?? option.value ?? "",
+        isDefault: option.IsDefault ?? option.isDefault ?? false,
+      })),
+    })),
+    stepNo: questions.StepNo ?? questions.stepNo ?? stepNo,
   }
 }
 

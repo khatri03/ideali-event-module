@@ -75,6 +75,7 @@ export const API_ROUTES = {
   sessionWizardBanner: (id: string) => `/api/organizer/sessions/${id}/banner`,
   sessionWizardGenre: (id: string) => `/api/organizer/sessions/${id}/genre`,
   sessionWizardGenreCreate: (id: string) => `/api/organizer/sessions/${id}/genre/create`,
+  sessionWizardQuestions: (id: string) => `/api/organizer/sessions/${id}/questions`,
   sessionWizardSkip: (id: string) => `/api/organizer/sessions/${id}/skip`,
   sessionWizardEvent: (id: string) => `/api/organizer/sessions/${id}/event`,
   sessionWizardVenue: (id: string) => `/api/organizer/sessions/${id}/venue`,
@@ -97,6 +98,9 @@ export const API_ROUTES = {
   sessionWizardProgress: (id: string) => `/api/organizer/sessions/${id}/wizard-progress`,
   organizerVenues: "/api/organizer/venues/list",
   organizerVenueCreate: "/api/organizer/venues/create",
+  organizerCustomFormControls: "/api/organizer/custom-form/controls",
+  organizerCustomFormListItems: "/api/organizer/custom-form/list-items",
+  organizerCustomFormPreview: (id: string) => `/api/organizer/custom-form/${id}/edit`,
 } as const
 
 export const API_AUTH_ROUTES = {

@@ -12,6 +12,7 @@ import {
   fetchSessionWizardETicketing,
   fetchSessionWizardGenres,
   fetchSessionWizardName,
+  fetchSessionWizardQuestions,
   fetchSessionWizardSetupStateOptions,
   fetchSessionWizardSchedule,
   fetchSessionWizardTickets,
@@ -259,6 +260,12 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     enabled: !!sessionId,
     retry: false,
   })
+  const questionsQuery = useQuery({
+    queryKey: ["sessions", "review", sessionId, "questions"],
+    queryFn: () => fetchSessionWizardQuestions(sessionId),
+    enabled: !!sessionId,
+    retry: false,
+  })
   const schedulesQuery = useQuery({
     queryKey: ["sessions", "review", sessionId, "schedule"],
     queryFn: () => fetchSessionWizardSchedule(sessionId),
@@ -351,20 +358,27 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     organizerVenuesQuery.error ??
     bookingQuery.error ??
     genreQuery.error ??
+    questionsQuery.error ??
     durationQuery.error ??
     schedulesQuery.error ??
     ticketsQuery.error
 
-  function buildEditUrl(step: "name" | "genre" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket" | "e-ticketing") {
+  function buildEditUrl(
+    step: "name" | "genre" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket" | "e-ticketing" | "questions",
+  ) {
     const target = APP_ROUTES.sessionWizard.editStep(sessionId, step)
     return `${target}?returnUrl=${encodeURIComponent(reviewReturnUrl)}`
   }
 
-  function handleEdit(step: "name" | "genre" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket" | "e-ticketing") {
+  function handleEdit(
+    step: "name" | "genre" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket" | "e-ticketing" | "questions",
+  ) {
     navigate(buildEditUrl(step))
   }
 
   const selectedGenres = genreQuery.data?.filter((genre) => genre.isSelected) ?? []
+  const selectedFormCount = questionsQuery.data?.customFormUniqueIds.length ?? 0
+  const customQuestionCount = questionsQuery.data?.customQuestions.length ?? 0
 
   return (
     <Stack gap={5}>
@@ -534,8 +548,21 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
           isLoading={schedulesQuery.isLoading}
         />
         <ReviewItem
-          label="Number of tickets defined"
+          label="Questions"
           value={
+            selectedFormCount > 0 || customQuestionCount > 0
+              ? `${selectedFormCount} custom form${selectedFormCount === 1 ? "" : "s"} and ${customQuestionCount} question${
+                  customQuestionCount === 1 ? "" : "s"
+                }`
+              : "Not configured"
+          }
+          onEdit={() => handleEdit("questions")}
+          editLabel="Edit questions"
+          isLoading={questionsQuery.isLoading}
+        />
+        <ReviewItem
+          label="Number of tickets defined"
+          value={ 
             <Text fontSize="sm" fontWeight="800" color="gray.900">
               {ticketsCount}
             </Text>
