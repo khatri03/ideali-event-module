@@ -19,7 +19,7 @@ import { DndContext, PointerSensor, closestCenter, type DragEndEvent, type Modif
 import { CSS } from "@dnd-kit/utilities"
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { Eye, GripVertical, PencilLine, Plus, Trash2, X } from "lucide-react"
-import ReactSelect, { type MultiValue, type StylesConfig } from "react-select"
+import ReactSelect, { components, type MultiValue, type OptionProps, type StylesConfig } from "react-select"
 import { extractApiError } from "@/utils/errors"
 import {
   fetchCustomFormControls,
@@ -52,6 +52,34 @@ interface SortableCardProps {
 interface SelectOption {
   value: string
   label: string
+}
+
+function CustomFormSelectOption(props: OptionProps<SelectOption, true>) {
+  return (
+    <components.Option {...props}>
+      <Flex align="center" gap={3}>
+        <Box
+          flexShrink={0}
+          boxSize="18px"
+          borderRadius="6px"
+          border="1px solid"
+          borderColor={props.isSelected ? "brand.500" : "gray.300"}
+          bg={props.isSelected ? "brand.500" : "white"}
+          color="white"
+          display="inline-flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          {props.isSelected ? "✓" : null}
+        </Box>
+        <Box minW={0}>
+          <Text fontSize="sm" fontWeight="600" color="gray.800" lineClamp={1}>
+            {props.label}
+          </Text>
+        </Box>
+      </Flex>
+    </components.Option>
+  )
 }
 
 function toSentenceCase(value: string | null | undefined) {
@@ -399,10 +427,12 @@ function SelectedFormCard({
   form,
   onRemove,
   onPreview,
+  showDragHandle,
 }: {
   form: SelectOption
   onRemove: () => void
   onPreview: () => void
+  showDragHandle: boolean
 }) {
   return (
     <Flex
@@ -415,26 +445,14 @@ function SelectedFormCard({
       px={4}
       py={3}
     >
-      <Flex align="center" gap={3} flex={1} minW={0}>
-        <Box
-          aria-label="Drag selected custom form"
-          cursor="grab"
-          color="brand.500"
-          display="inline-flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <GripVertical size={16} />
-        </Box>
-        <Box minW={0} flex={1}>
-          <Text fontSize="sm" fontWeight="700" color="gray.900" lineClamp={1}>
-            {form.label}
-          </Text>
-          <Text fontSize="xs" color="gray.600">
-            Attached custom form
-          </Text>
-        </Box>
-      </Flex>
+      <Box minW={0} flex={1}>
+        <Text fontSize="sm" fontWeight="700" color="gray.900" lineClamp={1}>
+          {form.label}
+        </Text>
+        <Text fontSize="xs" color="gray.600">
+          Attached custom form
+        </Text>
+      </Box>
 
       <Flex gap={2}>
         <Button
@@ -462,6 +480,25 @@ function SelectedFormCard({
         >
           <X size={14} />
         </Button>
+        {showDragHandle ? (
+          <Box
+            aria-label="Drag selected custom form"
+            cursor="grab"
+            color="brand.500"
+            display="inline-flex"
+            alignItems="center"
+            justifyContent="center"
+            border="1px solid"
+            borderColor="brand.200"
+            bg="white"
+            borderRadius="full"
+            h="36px"
+            w="36px"
+            minW="36px"
+          >
+            <GripVertical size={16} />
+          </Box>
+        ) : null}
       </Flex>
     </Flex>
   )
@@ -471,10 +508,12 @@ function QuestionCard({
   question,
   onEdit,
   onDelete,
+  showDragHandle,
 }: {
   question: QuestionDraft
   onEdit: () => void
   onDelete: () => void
+  showDragHandle: boolean
 }) {
   const hasOptions = question.options.length > 0
 
@@ -482,17 +521,19 @@ function QuestionCard({
     <Box border="1px solid" borderColor="gray.200" bg="white" borderRadius="20px" px={4} py={4}>
       <Flex align="flex-start" justify="space-between" gap={4}>
         <Flex align="flex-start" gap={3} minW={0} flex={1}>
-          <Box
-            aria-label="Drag custom question"
-            cursor="grab"
-            color="gray.500"
-            display="inline-flex"
-            alignItems="center"
-            justifyContent="center"
-            pt={0.5}
-          >
-            <GripVertical size={16} />
-          </Box>
+          {showDragHandle ? (
+            <Box
+              aria-label="Drag custom question"
+              cursor="grab"
+              color="gray.500"
+              display="inline-flex"
+              alignItems="center"
+              justifyContent="center"
+              pt={0.5}
+            >
+              <GripVertical size={16} />
+            </Box>
+          ) : null}
           <Box minW={0} flex={1}>
             <Text fontSize="sm" fontWeight="800" color="gray.900" lineClamp={1}>
               {question.label}
@@ -1109,6 +1150,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
   const queryClient = useQueryClient()
   const { setPrimaryAction, setPrimaryActionReady } = useSessionWizardActions()
   const [selectedCustomFormUniqueIds, setSelectedCustomFormUniqueIds] = useState<string[]>([])
+  const [selectedCustomFormOrder, setSelectedCustomFormOrder] = useState<string[]>([])
   const [customQuestions, setCustomQuestions] = useState<QuestionDraft[]>([])
   const [customForms, setCustomForms] = useState<SelectOption[]>([])
   const [customFormControls, setCustomFormControls] = useState<CustomFormControl[]>([])
@@ -1125,9 +1167,17 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
   const [pendingQuestionRemoval, setPendingQuestionRemoval] = useState<{ id: string; label: string } | null>(null)
   const [pendingFormRemoval, setPendingFormRemoval] = useState<{ id: string; label: string } | null>(null)
 
+  const customFormsById = useMemo(
+    () => new Map(customForms.map((form) => [form.value, form] as const)),
+    [customForms],
+  )
+
   const selectedFormOptions = useMemo(
-    () => customForms.filter((form) => selectedCustomFormUniqueIds.includes(form.value)),
-    [customForms, selectedCustomFormUniqueIds],
+    () =>
+      selectedCustomFormOrder
+        .map((formId) => customFormsById.get(formId))
+        .filter((item): item is SelectOption => Boolean(item)),
+    [customFormsById, selectedCustomFormOrder],
   )
 
   const selectedCustomForms = selectedFormOptions
@@ -1212,6 +1262,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
         )
         setCustomFormControls(nextControls)
         setSelectedCustomFormUniqueIds(nextQuestions?.customFormUniqueIds ?? [])
+        setSelectedCustomFormOrder(nextQuestions?.customFormUniqueIds ?? [])
         setCustomQuestions((nextQuestions?.customQuestions ?? []).map((question) => ({
           ...question,
           acceptedFileTypes: [...question.acceptedFileTypes],
@@ -1225,6 +1276,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
         setCustomForms([])
         setCustomFormControls([])
         setSelectedCustomFormUniqueIds([])
+        setSelectedCustomFormOrder([])
         setCustomQuestions([])
         setError(loadError instanceof Error ? loadError.message : "Unable to load session questions.")
       } finally {
@@ -1259,7 +1311,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
         }))
 
         await saveMutation.mutateAsync({
-          customFormUniqueIds: selectedCustomFormUniqueIds.length > 0 ? selectedCustomFormUniqueIds : null,
+          customFormUniqueIds: selectedCustomFormOrder.length > 0 ? selectedCustomFormOrder : null,
           customQuestions: normalizedQuestions.length > 0 ? normalizedQuestions : null,
         })
       } catch (saveError) {
@@ -1277,7 +1329,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
     customQuestions,
     isLoading,
     saveMutation,
-    selectedCustomFormUniqueIds,
+    selectedCustomFormOrder,
     sessionId,
     setPrimaryAction,
     setPrimaryActionReady,
@@ -1395,6 +1447,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
     }
 
     setSelectedCustomFormUniqueIds((current) => current.filter((value) => value !== pendingFormRemoval.id))
+    setSelectedCustomFormOrder((current) => current.filter((value) => value !== pendingFormRemoval.id))
     if (previewCustomFormUniqueId === pendingFormRemoval.id) {
       closeCustomFormPreview()
     }
@@ -1434,7 +1487,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
       return
     }
 
-    setSelectedCustomFormUniqueIds((current) => {
+    setSelectedCustomFormOrder((current) => {
       const oldIndex = current.indexOf(String(active.id))
       const newIndex = current.indexOf(String(over.id))
 
@@ -1486,7 +1539,14 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
   }
 
   function onSelectChange(values: MultiValue<SelectOption>) {
-    setSelectedCustomFormUniqueIds(values.map((item) => item.value))
+    const nextSelectedIds = values.map((item) => item.value)
+    setSelectedCustomFormUniqueIds(nextSelectedIds)
+    setSelectedCustomFormOrder((current) => {
+      const selectedSet = new Set(nextSelectedIds)
+      const preserved = current.filter((value) => selectedSet.has(value))
+      const appended = nextSelectedIds.filter((value) => !current.includes(value))
+      return [...preserved, ...appended]
+    })
     setError("")
   }
 
@@ -1534,22 +1594,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
                 <Text fontSize="sm" fontWeight="700" color="gray.900">
                   Custom forms
                 </Text>
-                <Text fontSize="sm" color="gray.600">
-                  Use react-select to map one or more reusable forms to this session.
-                </Text>
               </Box>
-
-              <Button
-                variant="outline"
-                colorPalette="brand"
-                borderRadius="full"
-                h="38px"
-                px={4}
-                onClick={() => void handleFormPreview(selectedCustomFormUniqueIds[0] ?? "")}
-                disabled={selectedCustomFormUniqueIds.length === 0}
-              >
-                Preview first form
-              </Button>
             </Flex>
 
             <Box mt={4}>
@@ -1561,6 +1606,8 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
                 placeholder={customForms.length > 0 ? "Select custom forms" : "No custom forms available"}
                 isDisabled={customForms.length === 0}
                 closeMenuOnSelect={false}
+                hideSelectedOptions={false}
+                components={{ Option: CustomFormSelectOption }}
                 styles={
                   {
                     control: (base, state) => ({
@@ -1623,7 +1670,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
                   modifiers={[restrictToParentBounds]}
                   onDragEnd={handleSelectedFormsDragEnd}
                 >
-                  <SortableContext items={selectedCustomFormUniqueIds} strategy={verticalListSortingStrategy}>
+                  <SortableContext items={selectedCustomFormOrder} strategy={verticalListSortingStrategy}>
                     <Stack mt={4} gap={3}>
                       {selectedCustomForms.map((form) => (
                         <SortableCard key={form.value} id={form.value}>
@@ -1631,6 +1678,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
                             form={form}
                             onPreview={() => void handleFormPreview(form.value)}
                             onRemove={() => requestFormRemoval(form.value)}
+                            showDragHandle={selectedCustomForms.length > 1}
                           />
                         </SortableCard>
                       ))}
@@ -1691,6 +1739,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
                             question={question}
                             onEdit={() => openQuestionEditor(question.id)}
                             onDelete={() => requestQuestionRemoval(question.id)}
+                            showDragHandle={customQuestions.length > 1}
                           />
                         </SortableCard>
                       ))}
