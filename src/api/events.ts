@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { client } from "@/api/client"
-import type { PaginatedResponse } from "@/api/types"
+import type { PaginatedResponse, ServiceResponse } from "@/api/types"
 import type { AppEvent, EventStatus, EventCategory } from "@/types"
 import { API_ROUTES } from "@/utils/routes"
 
@@ -101,7 +101,15 @@ const eventEmailPlaceholderItemSchema = z.object({
   placeHolderText: z.string().min(1),
 })
 
-const eventEmailPlaceHoldersResponseSchema = z.record(z.array(eventEmailPlaceholderItemSchema))
+const eventEmailPlaceHoldersResponseSchema = z.object({
+  data: z.record(z.string(), z.array(eventEmailPlaceholderItemSchema)).nullable().optional(),
+  success: z.boolean().optional(),
+  message: z.string().nullable().optional(),
+  errorCode: z.string().nullable().optional(),
+  validationErrors: z.record(z.string(), z.array(z.string())).nullable().optional(),
+  meta: z.record(z.string(), z.unknown()).nullable().optional(),
+  timestamp: z.string(),
+})
 
 const eventThankYouEmailResponseSchema = z.object({
   uniqueId: z.string().min(1),
@@ -110,6 +118,41 @@ const eventThankYouEmailResponseSchema = z.object({
   notifyOrganizer: z.boolean(),
   otherNotificationEmails: z.string().nullable().optional(),
   stepNo: z.number().int().min(0),
+})
+
+const serviceResponseSchema = z.object({
+  success: z.boolean().optional(),
+  message: z.string().nullable().optional(),
+  errorCode: z.string().nullable().optional(),
+  validationErrors: z.record(z.string(), z.array(z.string())).nullable().optional(),
+  meta: z.record(z.string(), z.unknown()).nullable().optional(),
+  timestamp: z.string().optional(),
+  data: z.unknown().nullable().optional(),
+  Data: z.unknown().nullable().optional(),
+})
+
+const eventEmailSnippetSchema = z.object({
+  uniqueId: z.string().nullable().optional(),
+  UniqueId: z.string().nullable().optional(),
+  name: z.string().optional(),
+  Name: z.string().optional(),
+  template: z.string().optional(),
+  Template: z.string().optional(),
+  description: z.string().nullable().optional(),
+  Description: z.string().nullable().optional(),
+})
+
+const eventEmailSnippetPageSchema = z.object({
+  PageNo: z.number().int().optional(),
+  pageNo: z.number().int().optional(),
+  PageSize: z.number().int().optional(),
+  pageSize: z.number().int().optional(),
+  PageCount: z.number().int().optional(),
+  pageCount: z.number().int().optional(),
+  TotalRecordsCount: z.number().int().optional(),
+  totalRecordsCount: z.number().int().optional(),
+  PageData: z.array(eventEmailSnippetSchema).optional(),
+  pageData: z.array(eventEmailSnippetSchema).optional(),
 })
 
 const eventWizardPaymentAccountResponseSchema = z.object({
@@ -440,7 +483,7 @@ export async function fetchEventEmailTemplatePlaceHolders(): Promise<EventEmailP
   const res = await client.get<unknown>(API_ROUTES.eventEmailTemplatePlaceHolders)
   const parsed = eventEmailPlaceHoldersResponseSchema.parse(res.data)
 
-  return Object.entries(parsed).map(([label, items]) => ({
+  return Object.entries(parsed.data ?? {}).map(([label, items]) => ({
     label,
     items: items.map((item) => ({
       id: item.id ?? null,
@@ -471,6 +514,121 @@ export async function updateEventWizardThankYouEmail(
   })
 
   return eventThankYouEmailResponseSchema.parse(res.data)
+}
+
+export interface EventEmailSnippet {
+  uniqueId: string
+  name: string
+  template: string
+  description: string | null
+}
+
+export interface EventEmailSnippetsPage {
+  pageNo: number
+  pageSize: number
+  pageCount: number
+  totalRecordsCount: number
+  pageData: EventEmailSnippet[]
+}
+
+export interface EventEmailSnippetCreateRequest {
+  name: string
+  template: string
+  description?: string | null
+}
+
+export interface EventEmailSnippetUpdateRequest extends EventEmailSnippetCreateRequest {
+  uniqueId?: string
+}
+
+function readServiceResponseData(payload: unknown): unknown {
+  if (!payload || typeof payload !== "object") {
+    return payload
+  }
+
+  if ("Data" in payload) {
+    return (payload as { Data?: unknown }).Data
+  }
+
+  if ("data" in payload) {
+    return (payload as { data?: unknown }).data
+  }
+
+  return payload
+}
+
+function parseServiceResponseData(payload: unknown): unknown {
+  const serviceResponse = serviceResponseSchema.parse(payload) as ServiceResponse<unknown> & {
+    Data?: unknown
+    data?: unknown
+  }
+
+  return readServiceResponseData(serviceResponse)
+}
+
+function normalizeEventEmailSnippet(item: z.infer<typeof eventEmailSnippetSchema>): EventEmailSnippet {
+  return {
+    uniqueId: item.UniqueId ?? item.uniqueId ?? "",
+    name: item.Name ?? item.name ?? "",
+    template: item.Template ?? item.template ?? "",
+    description: item.Description ?? item.description ?? null,
+  }
+}
+
+export async function fetchEventEmailSnippets(pageNo = 1, pageSize = 5000): Promise<EventEmailSnippetsPage> {
+  const res = await client.get<unknown>(API_ROUTES.eventEmailTemplateSnippetList, {
+    params: { pageNo, pageSize },
+  })
+  const responseData = parseServiceResponseData(res.data)
+  const parsed = eventEmailSnippetPageSchema.parse(responseData)
+  const pageData = (parsed.PageData ?? parsed.pageData ?? []).map(normalizeEventEmailSnippet)
+
+  return {
+    pageNo: parsed.PageNo ?? parsed.pageNo ?? pageNo,
+    pageSize: parsed.PageSize ?? parsed.pageSize ?? pageSize,
+    pageCount: parsed.PageCount ?? parsed.pageCount ?? 0,
+    totalRecordsCount: parsed.TotalRecordsCount ?? parsed.totalRecordsCount ?? pageData.length,
+    pageData,
+  }
+}
+
+export async function fetchEventEmailSnippetDetail(snippetId: string): Promise<EventEmailSnippet> {
+  const res = await client.get<unknown>(API_ROUTES.eventEmailTemplateSnippetDetail(snippetId))
+  const responseData = parseServiceResponseData(res.data)
+  return normalizeEventEmailSnippet(eventEmailSnippetSchema.parse(responseData))
+}
+
+export async function createEventEmailSnippet(payload: EventEmailSnippetCreateRequest): Promise<string> {
+  const res = await client.post<unknown>(API_ROUTES.eventEmailTemplateSnippetCreate, payload)
+  const responseData = parseServiceResponseData(res.data)
+
+  if (typeof responseData === "string") {
+    return responseData
+  }
+
+  if (responseData && typeof responseData === "object" && "uniqueId" in responseData) {
+    const value = (responseData as { uniqueId?: unknown }).uniqueId
+    if (typeof value === "string") {
+      return value
+    }
+  }
+
+  if (responseData && typeof responseData === "object" && "UniqueId" in responseData) {
+    const value = (responseData as { UniqueId?: unknown }).UniqueId
+    if (typeof value === "string") {
+      return value
+    }
+  }
+
+  throw new Error("Invalid event email snippet create response.")
+}
+
+export async function updateEventEmailSnippet(snippetId: string, payload: EventEmailSnippetUpdateRequest): Promise<void> {
+  await client.post<unknown>(API_ROUTES.eventEmailTemplateSnippetUpdate(snippetId), payload)
+}
+
+export async function deleteEventEmailSnippet(snippetId: string): Promise<void> {
+  await client.post<unknown>(API_ROUTES.eventEmailTemplateSnippetDelete(snippetId))
 }
 
 export interface EventWizardPaymentAccountResponse {

@@ -10,9 +10,12 @@ import TextAlign from "@tiptap/extension-text-align"
 import Underline from "@tiptap/extension-underline"
 import { extractApiError } from "@/utils/errors"
 import {
+  createEventEmailSnippet,
   fetchEventEmailTemplatePlaceHolders,
+  fetchEventEmailSnippets,
   fetchEventWizardThankYouEmail,
   updateEventWizardThankYouEmail,
+  type EventEmailSnippet,
   type EventEmailPlaceholderGroup,
   type EventThankYouEmailResponse,
 } from "@/api/events"
@@ -37,10 +40,12 @@ export interface EventThankYouEmailStepState {
   }
   notifyOrganizer: boolean
   otherNotificationEmails: string
+  savedSnippets: EventEmailSnippet[]
   setNotifyOrganizer: (value: boolean) => void
   setOtherNotificationEmails: (value: string) => void
   reload: () => void
   placeholders: EventEmailPlaceholderGroup[]
+  saveSnippet: (payload: { name: string; description: string; template: string }) => Promise<void>
 }
 
 function hasMeaningfulEditorContent(editor: ReturnType<typeof useEditor> | null) {
@@ -208,6 +213,13 @@ export function useEventThankYouEmailStep(): EventThankYouEmailStepState {
     retry: false,
   })
 
+  const savedSnippetsQuery = useQuery({
+    queryKey: ["events", "email-template", "snippets", { pageNo: 1, pageSize: 5000 }],
+    queryFn: () => fetchEventEmailSnippets(1, 5000),
+    enabled: !!currentEventId,
+    retry: false,
+  })
+
   const emailSubjectHtml = useMemo(() => {
     const info = thankYouEmailQuery.data
     const placeholderItems = placeholdersQuery.data ?? []
@@ -245,6 +257,24 @@ export function useEventThankYouEmailStep(): EventThankYouEmailStepState {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] })
+    },
+  })
+
+  const saveSnippetMutation = useMutation({
+    mutationFn: async (payload: { name: string; description: string; template: string }) =>
+      createEventEmailSnippet({
+        name: payload.name,
+        description: payload.description || null,
+        template: payload.template,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["events", "email-template", "snippets"] })
+    },
+    onError: () => {
+      return
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["events", "email-template", "snippets"] })
     },
   })
 
@@ -430,6 +460,7 @@ export function useEventThankYouEmailStep(): EventThankYouEmailStepState {
     validationErrors,
     notifyOrganizer: resolvedNotifyOrganizer,
     otherNotificationEmails: resolvedOtherNotificationEmails,
+    savedSnippets: savedSnippetsQuery.data?.pageData ?? [],
     setNotifyOrganizer: (value: boolean) => {
       setNotifyOrganizerOverride(value)
     },
@@ -437,6 +468,9 @@ export function useEventThankYouEmailStep(): EventThankYouEmailStepState {
       setOtherNotificationEmailsOverride(value)
     },
     placeholders: placeholdersQuery.data ?? [],
+    saveSnippet: async (payload) => {
+      await saveSnippetMutation.mutateAsync(payload)
+    },
     reload: () => {
       setError("")
       setValidationErrors({})
