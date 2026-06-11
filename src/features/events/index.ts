@@ -6,6 +6,7 @@ export { EventDiscountCouponStepPage } from "./pages/EventDiscountCouponStepPage
 export { EventNameStepPage } from "./pages/EventNameStepPage"
 export { EventPaymentAccountStepPage } from "./pages/EventPaymentAccountStepPage"
 export { EventPurchaseTimeLimitStepPage } from "./pages/EventPurchaseTimeLimitStepPage"
+export { EventQuestionsStep } from "./components/EventQuestionsStep"
 export { EventQuestionsStepPage } from "./pages/EventQuestionsStepPage"
 export { EventReviewStepPage } from "./pages/EventReviewStepPage"
 export { EventSessionsStepPage } from "./pages/EventSessionsStepPage"

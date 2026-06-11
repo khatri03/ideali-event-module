@@ -31,20 +31,20 @@ import {
   type CustomFormPreview,
 } from "@/api/customForms"
 import {
-  fetchSessionWizardQuestions,
-  updateSessionWizardQuestions,
-  type SessionWizardQuestion,
-  type SessionWizardQuestionOption,
-} from "@/api/sessions"
+  fetchEventWizardQuestions,
+  updateEventWizardQuestions,
+  type EventWizardQuestion,
+  type EventWizardQuestionOption,
+} from "@/api/events"
 import { StyledSelect } from "@/components/common/StyledSelect"
-import { useSessionWizardActions } from "../hooks/useSessionWizardActions"
-import { getSessionWizardStepNumber } from "../hooks/useSessionWizard"
+import { useEventWizardActions } from "../hooks/useEventWizardActions"
+import { getEventWizardStepNumber } from "../hooks/useEventWizard"
 
-interface SessionQuestionsStepProps {
-  sessionId: string
+interface EventQuestionsStepProps {
+  eventId: string
 }
 
-type QuestionDraft = SessionWizardQuestion
+type QuestionDraft = EventWizardQuestion
 
 interface SortableCardProps {
   id: string
@@ -112,7 +112,7 @@ function toSentenceCase(value: string | null | undefined) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1)
 }
 
-function createQuestionOptionDraft(index: number): SessionWizardQuestionOption {
+function createQuestionOptionDraft(index: number): EventWizardQuestionOption {
   return {
     id: globalThis.crypto?.randomUUID?.() ?? `question-option-${Date.now()}-${index}`,
     displayText: `Option ${index + 1}`,
@@ -125,7 +125,7 @@ function createQuestionDraft(control: CustomFormControl): QuestionDraft {
   const options = control.hasOptions ? [createQuestionOptionDraft(0)] : []
 
   return {
-    id: globalThis.crypto?.randomUUID?.() ?? `session-question-${Date.now()}`,
+    id: globalThis.crypto?.randomUUID?.() ?? `event-question-${Date.now()}`,
     controlId: control.id,
     controlName: control.name,
     controlType: control.controlType,
@@ -194,7 +194,7 @@ function normalizeQuestionDraft(draft: QuestionDraft): QuestionDraft {
 
   return {
     ...draft,
-    id: draft.id || globalThis.crypto?.randomUUID?.() || `session-question-${Date.now()}`,
+    id: draft.id || globalThis.crypto?.randomUUID?.() || `event-question-${Date.now()}`,
     controlName: draft.controlName.trim(),
     controlType: draft.controlType.trim(),
     iconClass: draft.iconClass.trim(),
@@ -247,7 +247,7 @@ const restrictToParentBounds: Modifier = ({ transform, activeNodeRect, container
   }
 }
 
-function SessionQuestionsSkeleton() {
+function EventQuestionsSkeleton() {
   return (
     <Stack gap={4}>
       <Skeleton height="88px" borderRadius="20px" />
@@ -259,7 +259,7 @@ function SessionQuestionsSkeleton() {
   )
 }
 
-function SessionQuestionsEmpty({ title, description }: { title: string; description: string }) {
+function EventQuestionsEmpty({ title, description }: { title: string; description: string }) {
   return (
     <Box border="1px dashed" borderColor="gray.200" bg="gray.50" borderRadius="20px" px={5} py={5}>
       <Text fontSize="sm" fontWeight="700" color="gray.900">
@@ -755,7 +755,7 @@ function QuestionEditorModal({
                     {isEditing ? "Edit question" : "Add question"}
                   </Text>
                   <Text fontSize="sm" color="gray.600">
-                    Configure the question that organizers will collect for this session.
+                    Configure the question that organizers will collect for this event.
                   </Text>
                 </Box>
 
@@ -1253,9 +1253,9 @@ function CustomFormPreviewModal({
 
           <Dialog.Body px={6} py={6} overflowY="auto">
             {isLoading ? (
-              <SessionQuestionsEmpty title="Preview loading" description="We are loading the custom form preview." />
+              <EventQuestionsEmpty title="Preview loading" description="We are loading the custom form preview." />
             ) : error ? (
-              <SessionQuestionsEmpty title="Preview unavailable" description={error} />
+              <EventQuestionsEmpty title="Preview unavailable" description={error} />
             ) : preview ? (
               <Stack gap={4}>
                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
@@ -1287,7 +1287,7 @@ function CustomFormPreviewModal({
                       />
                     ))
                   ) : (
-                    <SessionQuestionsEmpty
+                    <EventQuestionsEmpty
                       title="No fields"
                       description="This custom form does not contain any fields."
                     />
@@ -1295,7 +1295,7 @@ function CustomFormPreviewModal({
                 </SimpleGrid>
               </Stack>
             ) : (
-              <SessionQuestionsEmpty
+              <EventQuestionsEmpty
                 title="Preview unavailable"
                 description="No preview data was returned for this form."
               />
@@ -1307,9 +1307,9 @@ function CustomFormPreviewModal({
   )
 }
 
-export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
+export function EventQuestionsStep({ eventId }: EventQuestionsStepProps) {
   const queryClient = useQueryClient()
-  const { setPrimaryAction, setPrimaryActionReady } = useSessionWizardActions()
+  const { setPrimaryAction, setPrimaryActionReady } = useEventWizardActions()
   const questionModalCleanupTimerRef = useRef<number | null>(null)
   const [selectedCustomFormUniqueIds, setSelectedCustomFormUniqueIds] = useState<string[]>([])
   const [selectedCustomFormOrder, setSelectedCustomFormOrder] = useState<string[]>([])
@@ -1346,13 +1346,13 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
 
   const saveMutation = useMutation({
     mutationFn: (payload: { customFormUniqueIds: string[] | null; customQuestions: QuestionDraft[] | null }) =>
-      updateSessionWizardQuestions(sessionId, payload, getSessionWizardStepNumber("questions")),
+      updateEventWizardQuestions(eventId, payload, getEventWizardStepNumber("questions")),
     onSuccess: async (data) => {
-      queryClient.setQueryData(["sessions", "questions", sessionId], data)
-      queryClient.setQueryData(["sessions", "wizard-progress", sessionId], (current: { stepNo?: number } | undefined) => ({
+      queryClient.setQueryData(["events", "questions", eventId], data)
+      queryClient.setQueryData(["events", "wizard-progress", eventId], (current: { stepNo?: number } | undefined) => ({
         stepNo: Math.max(current?.stepNo ?? 0, data.stepNo ?? 12),
       }))
-      await queryClient.invalidateQueries({ queryKey: ["sessions", "review", sessionId] })
+      await queryClient.invalidateQueries({ queryKey: ["events", "review", eventId] })
     },
     onSettled: () => {
       setPrimaryActionReady(true)
@@ -1379,7 +1379,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
   useEffect(() => {
-    if (!sessionId) {
+    if (!eventId) {
       return
     }
 
@@ -1402,8 +1402,8 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
             retry: false,
           }),
           queryClient.fetchQuery({
-            queryKey: ["sessions", "questions", sessionId],
-            queryFn: () => fetchSessionWizardQuestions(sessionId),
+            queryKey: ["events", "questions", eventId],
+            queryFn: () => fetchEventWizardQuestions(eventId),
             retry: false,
           }),
         ])
@@ -1440,7 +1440,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
         setSelectedCustomFormUniqueIds([])
         setSelectedCustomFormOrder([])
         setCustomQuestions([])
-        setError(loadError instanceof Error ? loadError.message : "Unable to load session questions.")
+        setError(loadError instanceof Error ? loadError.message : "Unable to load event questions.")
       } finally {
         if (isMounted) {
           setIsLoading(false)
@@ -1453,10 +1453,10 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
     return () => {
       isMounted = false
     }
-  }, [queryClient, sessionId])
+  }, [queryClient, eventId])
 
   useEffect(() => {
-    if (isLoading || !sessionId) {
+    if (isLoading || !eventId) {
       setPrimaryAction(null)
       setPrimaryActionReady(false)
       return
@@ -1477,7 +1477,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
           customQuestions: normalizedQuestions.length > 0 ? normalizedQuestions : null,
         })
       } catch (saveError) {
-        setError(saveError instanceof Error ? saveError.message : "Unable to save session questions.")
+        setError(saveError instanceof Error ? saveError.message : "Unable to save event questions.")
         throw saveError
       }
     })
@@ -1492,7 +1492,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
     isLoading,
     saveMutation,
     selectedCustomFormOrder,
-    sessionId,
+    eventId,
     setPrimaryAction,
     setPrimaryActionReady,
   ])
@@ -1741,11 +1741,11 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
     setError("")
   }
 
-  if (!sessionId) {
+  if (!eventId) {
     return (
-      <SessionQuestionsEmpty
-        title="Session id missing"
-        description="Open this step from a valid session route."
+      <EventQuestionsEmpty
+        title="Event id missing"
+        description="Open this step from a valid event route."
       />
     )
   }
@@ -1765,7 +1765,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
               Questions
             </Text>
             <Text mt={2} fontSize={{ base: "sm", md: "md" }} fontWeight="700" color="gray.800">
-              Attach custom forms and standalone questions that will be captured for this session.
+              Attach custom forms and standalone questions that will be captured for this event.
             </Text>
           </Box>
 
@@ -1776,7 +1776,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
       </Box>
 
       {isLoading ? (
-        <SessionQuestionsSkeleton />
+        <EventQuestionsSkeleton />
       ) : (
         <Stack gap={5}>
           <Box border="1px solid" borderColor="gray.200" borderRadius="20px" p={{ base: 4, md: 5 }} bg="white">
@@ -1879,9 +1879,9 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
               </Box>
             ) : (
               <Box mt={4}>
-                <SessionQuestionsEmpty
+                <EventQuestionsEmpty
                   title="No custom forms selected"
-                  description="Choose forms above to attach them to the session."
+                  description="Choose forms above to attach them to the event."
                 />
               </Box>
             )}
@@ -1940,7 +1940,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
               </Box>
             ) : (
               <Box mt={4}>
-                <SessionQuestionsEmpty
+                <EventQuestionsEmpty
                   title="No questions added"
                   description="Use the plus button to add standalone questions."
                 />
@@ -2065,3 +2065,4 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
     </Stack>
   )
 }
+

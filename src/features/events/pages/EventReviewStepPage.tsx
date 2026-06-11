@@ -1,8 +1,10 @@
 import { Badge, Box, Flex, Image, Stack, Text } from "@chakra-ui/react"
 import { format } from "date-fns"
 import type { ReactNode } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { useWatch } from "react-hook-form"
 import { useParams } from "react-router-dom"
+import { fetchEventWizardQuestions } from "@/api/events"
 import { auth } from "@/lib/auth"
 import { useEventDiscountCoupons } from "../hooks/useEventDiscountCoupons"
 import { htmlToPlainText } from "@/utils/html"
@@ -12,6 +14,18 @@ export function EventReviewStepPage() {
   const { eventId } = useParams<{ eventId?: string }>()
   const values = useWatch({ defaultValue: defaultEventWizardValues }) as EventWizardValues
   const discountCouponsQuery = useEventDiscountCoupons(eventId)
+  const questionsQuery = useQuery({
+    queryKey: ["events", "review", eventId, "questions"],
+    queryFn: () => {
+      if (!eventId) {
+        throw new Error("Event id is required.")
+      }
+
+      return fetchEventWizardQuestions(eventId)
+    },
+    enabled: !!eventId,
+    retry: false,
+  })
   const organizer = auth.getOrganizer()
   const paymentAccount = organizer?.paymentAccounts?.find((account) => account.uniqueId === values.paymentAccountId)
   const discountCouponValue = discountCouponsQuery.isLoading
@@ -21,6 +35,27 @@ export function EventReviewStepPage() {
         ? `${discountCouponsQuery.data.coupons.length} coupon${discountCouponsQuery.data.coupons.length === 1 ? "" : "s"} configured`
         : "Disabled"
       : "Not configured"
+
+  const selectedFormCount = questionsQuery.data?.customFormUniqueIds.length ?? 0
+  const customQuestionCount = questionsQuery.data?.customQuestions.length ?? 0
+  const selectedQuestionsSummary = (() => {
+    const formLabel = `${selectedFormCount} Custom Form${selectedFormCount === 1 ? "" : "s"}`
+    const questionLabel = `${customQuestionCount} Question${customQuestionCount === 1 ? "" : "s"}`
+
+    if (selectedFormCount > 0 && customQuestionCount > 0) {
+      return `${formLabel} and ${questionLabel}`
+    }
+
+    if (selectedFormCount > 0) {
+      return formLabel
+    }
+
+    if (customQuestionCount > 0) {
+      return questionLabel
+    }
+
+    return "None"
+  })()
 
   return (
     <Stack h="full" gap={5}>
@@ -68,7 +103,7 @@ export function EventReviewStepPage() {
             isRequired
           />
           <ReviewRow label="Discount coupon" value={discountCouponValue} />
-          <ReviewRow label="Questions" value="Not configured" />
+          <ReviewRow label="Questions" value={questionsQuery.isLoading ? "Loading..." : selectedQuestionsSummary} />
           <ReviewRow label="Thank you Email" value="Not configured" />
           <ReviewRow
             label="Advanced settings"
