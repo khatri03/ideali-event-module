@@ -903,27 +903,6 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
 
   const selectedCustomForms = selectedFormOptions
 
-  const formListQuery = useQuery({
-    queryKey: ["organizer", "custom-form", "list-items"],
-    queryFn: fetchCustomFormListItems,
-    enabled: false,
-    retry: false,
-  })
-
-  const controlsQuery = useQuery({
-    queryKey: ["organizer", "custom-form", "controls"],
-    queryFn: fetchCustomFormControls,
-    enabled: false,
-    retry: false,
-  })
-
-  const questionsQuery = useQuery({
-    queryKey: ["sessions", "questions", sessionId],
-    queryFn: () => fetchSessionWizardQuestions(sessionId),
-    enabled: false,
-    retry: false,
-  })
-
   const previewQuery = useQuery({
     queryKey: ["organizer", "custom-form", "preview", previewCustomFormUniqueId],
     queryFn: () => fetchCustomFormPreview(previewCustomFormUniqueId),
@@ -978,18 +957,30 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
 
       try {
         const [forms, controls, questions] = await Promise.all([
-          formListQuery.refetch(),
-          controlsQuery.refetch(),
-          questionsQuery.refetch(),
+          queryClient.fetchQuery({
+            queryKey: ["organizer", "custom-form", "list-items"],
+            queryFn: fetchCustomFormListItems,
+            retry: false,
+          }),
+          queryClient.fetchQuery({
+            queryKey: ["organizer", "custom-form", "controls"],
+            queryFn: fetchCustomFormControls,
+            retry: false,
+          }),
+          queryClient.fetchQuery({
+            queryKey: ["sessions", "questions", sessionId],
+            queryFn: () => fetchSessionWizardQuestions(sessionId),
+            retry: false,
+          }),
         ])
 
         if (!isMounted) {
           return
         }
 
-        const nextForms = forms.data ?? []
-        const nextControls = controls.data ?? []
-        const nextQuestions = questions.data
+        const nextForms = forms ?? []
+        const nextControls = controls ?? []
+        const nextQuestions = questions
 
         setCustomForms(
           nextForms.map((form) => ({
@@ -1026,7 +1017,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
     return () => {
       isMounted = false
     }
-  }, [controlsQuery, formListQuery, questionsQuery, sessionId])
+  }, [queryClient, sessionId])
 
   useEffect(() => {
     if (isLoading || !sessionId) {
