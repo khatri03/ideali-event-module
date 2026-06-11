@@ -15,7 +15,7 @@ import {
   Text,
   Textarea,
 } from "@chakra-ui/react"
-import { DndContext, PointerSensor, closestCenter, type DragEndEvent, useSensor, useSensors } from "@dnd-kit/core"
+import { DndContext, PointerSensor, closestCenter, type DragEndEvent, type Modifier, useSensor, useSensors } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { Eye, GripVertical, PencilLine, Plus, Trash2, X } from "lucide-react"
@@ -151,6 +151,23 @@ function SortableCard({ id, children }: SortableCardProps) {
       {children}
     </Box>
   )
+}
+
+const restrictToParentBounds: Modifier = ({ transform, activeNodeRect, containerNodeRect }) => {
+  if (!activeNodeRect || !containerNodeRect) {
+    return transform
+  }
+
+  const minX = containerNodeRect.left - activeNodeRect.left
+  const maxX = containerNodeRect.right - activeNodeRect.right
+  const minY = containerNodeRect.top - activeNodeRect.top
+  const maxY = containerNodeRect.bottom - activeNodeRect.bottom
+
+  return {
+    ...transform,
+    x: Math.min(Math.max(transform.x, minX), maxX),
+    y: Math.min(Math.max(transform.y, minY), maxY),
+  }
 }
 
 function SessionQuestionsSkeleton() {
@@ -1369,7 +1386,12 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
                   </Badge>
                 </Flex>
 
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSelectedFormsDragEnd}>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  modifiers={[restrictToParentBounds]}
+                  onDragEnd={handleSelectedFormsDragEnd}
+                >
                   <SortableContext items={selectedCustomFormUniqueIds} strategy={verticalListSortingStrategy}>
                     <Stack mt={4} gap={3}>
                       {selectedCustomForms.map((form) => (
@@ -1424,7 +1446,12 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
 
             {customQuestions.length > 0 ? (
               <Box mt={4}>
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleQuestionsDragEnd}>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  modifiers={[restrictToParentBounds]}
+                  onDragEnd={handleQuestionsDragEnd}
+                >
                   <SortableContext items={customQuestions.map((question) => question.id)} strategy={verticalListSortingStrategy}>
                     <Stack gap={3}>
                       {customQuestions.map((question) => (
