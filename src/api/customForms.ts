@@ -68,8 +68,8 @@ const customFormControlSchema = z.object({
   canHaveMinLength: z.boolean().optional(),
   CanHaveMaxLength: z.boolean().optional(),
   canHaveMaxLength: z.boolean().optional(),
-  AcceptedFileTypes: z.array(customFormListItemSchema).optional(),
-  acceptedFileTypes: z.array(customFormListItemSchema).optional(),
+  AcceptedFileTypes: z.array(customFormListItemSchema).nullable().optional(),
+  acceptedFileTypes: z.array(customFormListItemSchema).nullable().optional(),
 })
 
 const customFormPreviewOptionSchema = z.object({
@@ -138,8 +138,8 @@ const customFormPreviewFieldSchema = z.object({
       hasOptions: z.boolean().optional(),
       IconClass: z.string().optional(),
       iconClass: z.string().optional(),
-      AcceptedFileTypes: z.array(customFormListItemSchema).optional(),
-      acceptedFileTypes: z.array(customFormListItemSchema).optional(),
+      AcceptedFileTypes: z.array(customFormListItemSchema).nullable().optional(),
+      acceptedFileTypes: z.array(customFormListItemSchema).nullable().optional(),
     })
     .nullable()
     .optional(),
@@ -165,8 +165,8 @@ const customFormPreviewFieldSchema = z.object({
       hasOptions: z.boolean().optional(),
       IconClass: z.string().optional(),
       iconClass: z.string().optional(),
-      AcceptedFileTypes: z.array(customFormListItemSchema).optional(),
-      acceptedFileTypes: z.array(customFormListItemSchema).optional(),
+      AcceptedFileTypes: z.array(customFormListItemSchema).nullable().optional(),
+      acceptedFileTypes: z.array(customFormListItemSchema).nullable().optional(),
     })
     .nullable()
     .optional(),
