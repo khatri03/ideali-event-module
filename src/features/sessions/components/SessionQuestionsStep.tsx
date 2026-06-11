@@ -19,7 +19,7 @@ import {
 import { DndContext, PointerSensor, closestCenter, type DragEndEvent, type Modifier, useSensor, useSensors } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
-import { Eye, GripVertical, PencilLine, Plus, Trash2, X } from "lucide-react"
+import { Eye, GripVertical, PencilLine, Plus, Trash2 } from "lucide-react"
 import ReactSelect, { components, type MultiValue, type OptionProps, type StylesConfig } from "react-select"
 import { extractApiError } from "@/utils/errors"
 import {
@@ -526,7 +526,7 @@ function SelectedFormCard({
           aria-label={`Remove ${form.label}`}
           onClick={onRemove}
         >
-          <X size={14} />
+          <Trash2 size={14} />
         </Button>
         {showDragHandle ? (
           <Box
@@ -553,46 +553,58 @@ function SelectedFormCard({
 }
 
 function QuestionCard({
+  id,
   question,
   onEdit,
   onDelete,
   showDragHandle,
 }: {
+  id: string
   question: QuestionDraft
   onEdit: () => void
   onDelete: () => void
   showDragHandle: boolean
 }) {
-  const hasOptions = question.options.length > 0
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
 
   return (
-    <Box border="1px solid" borderColor="gray.200" bg="white" borderRadius="20px" px={4} py={4}>
-      <Flex align="flex-start" justify="space-between" gap={4}>
-        <Flex align="flex-start" gap={3} minW={0} flex={1}>
-          {showDragHandle ? (
-            <Box
-              aria-label="Drag custom question"
-              cursor="grab"
-              color="gray.500"
-              display="inline-flex"
-              alignItems="center"
-              justifyContent="center"
-              pt={0.5}
-            >
-              <GripVertical size={16} />
-            </Box>
-          ) : null}
-          <Box minW={0} flex={1}>
-            <Text fontSize="sm" fontWeight="800" color="gray.900" lineClamp={1}>
-              {question.label}
-            </Text>
-            <Text fontSize="xs" color="gray.500">
-              {question.controlName} {hasOptions ? "• options enabled" : "• free-form"}
-            </Text>
-          </Box>
-        </Flex>
+    <Box
+      ref={setNodeRef}
+      border="1px solid"
+      borderColor="gray.200"
+      bg="white"
+      borderRadius="20px"
+      px={4}
+      py={4}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.72 : 1,
+      }}
+    >
+      <SimpleGrid columns={{ base: 1, md: 4 }} gap={4} alignItems="center">
+        <Box minW={0}>
+          <Text fontSize="sm" fontWeight="800" color="gray.900" lineClamp={1}>
+            {question.label}
+          </Text>
+        </Box>
 
-        <Flex gap={2}>
+        <Box minW={0}>
+          <Text fontSize="sm" fontWeight="700" color="gray.900" lineClamp={1}>
+            {question.controlName}
+          </Text>
+          <Text fontSize="xs" color="gray.500">
+            {question.controlType}
+          </Text>
+        </Box>
+
+        <Box>
+          <Badge colorPalette={question.required ? "green" : "gray"} variant="subtle" borderRadius="999px" px={3} py={1}>
+            {question.required ? "Required" : "Not Required"}
+          </Badge>
+        </Box>
+
+        <Flex gap={2} justify={{ base: "flex-start", md: "flex-end" }} wrap="wrap">
           <Button
             variant="outline"
             borderRadius="full"
@@ -618,27 +630,28 @@ function QuestionCard({
           >
             <Trash2 size={14} />
           </Button>
+          {showDragHandle ? (
+            <Box
+              {...attributes}
+              {...listeners}
+              aria-label="Drag custom question"
+              cursor="grab"
+              color="gray.500"
+              display="inline-flex"
+              alignItems="center"
+              justifyContent="center"
+              border="1px solid"
+              borderColor="gray.200"
+              bg="white"
+              borderRadius="full"
+              h="36px"
+              w="36px"
+              minW="36px"
+            >
+              <GripVertical size={16} />
+            </Box>
+          ) : null}
         </Flex>
-      </Flex>
-
-      <SimpleGrid mt={4} columns={{ base: 1, md: 2 }} gap={3}>
-        <Box>
-          <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
-            Required
-          </Text>
-          <Badge mt={1} colorPalette={question.required ? "green" : "gray"} variant="subtle" borderRadius="999px" px={3} py={1}>
-            {question.required ? "Yes" : "No"}
-          </Badge>
-        </Box>
-
-        <Box>
-          <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
-            Default
-          </Text>
-          <Text mt={1} fontSize="sm" color="gray.700" lineClamp={1}>
-            {question.defaultValue || "Not set"}
-          </Text>
-        </Box>
       </SimpleGrid>
     </Box>
   )
@@ -1913,14 +1926,14 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
                   <SortableContext items={customQuestions.map((question) => question.id)} strategy={verticalListSortingStrategy}>
                     <Stack gap={3}>
                       {customQuestions.map((question) => (
-                        <SortableCard key={question.id} id={question.id}>
-                          <QuestionCard
-                            question={question}
-                            onEdit={() => openQuestionEditor(question.id)}
-                            onDelete={() => requestQuestionRemoval(question.id)}
-                            showDragHandle={customQuestions.length > 1}
-                          />
-                        </SortableCard>
+                        <QuestionCard
+                          key={question.id}
+                          id={question.id}
+                          question={question}
+                          onEdit={() => openQuestionEditor(question.id)}
+                          onDelete={() => requestQuestionRemoval(question.id)}
+                          showDragHandle={customQuestions.length > 1}
+                        />
                       ))}
                     </Stack>
                   </SortableContext>
