@@ -15,6 +15,7 @@ export interface SessionWizardStep {
     | "schedule"
     | "ticket"
     | "e-ticketing"
+    | "questions"
     | "review"
   label: string
   path: string
@@ -32,6 +33,7 @@ const SESSION_WIZARD_STEP_DEFINITIONS: Array<Omit<SessionWizardStep, "path">> = 
   { slug: "schedule", label: "Schedule" },
   { slug: "ticket", label: "Tickets" },
   { slug: "e-ticketing", label: "e-Ticketing" },
+  { slug: "questions", label: "Questions" },
   { slug: "review", label: "Review" },
 ]
 
@@ -64,7 +66,8 @@ const SESSION_WIZARD_STEP_NUMBER: Record<SessionWizardStep["slug"], number> = {
   schedule: 9,
   ticket: 10,
   "e-ticketing": 11,
-  review: 12,
+  questions: 12,
+  review: 13,
 }
 
 export function getSessionWizardStepNumber(step: SessionWizardStep["slug"]) {
