@@ -379,6 +379,24 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   const selectedGenres = genreQuery.data?.filter((genre) => genre.isSelected) ?? []
   const selectedFormCount = questionsQuery.data?.customFormUniqueIds.length ?? 0
   const customQuestionCount = questionsQuery.data?.customQuestions.length ?? 0
+  const selectedQuestionsSummary = (() => {
+    const formLabel = `${selectedFormCount} Custom Form${selectedFormCount === 1 ? "" : "s"}`
+    const questionLabel = `${customQuestionCount} Question${customQuestionCount === 1 ? "" : "s"}`
+
+    if (selectedFormCount > 0 && customQuestionCount > 0) {
+      return `${formLabel} and ${questionLabel}`
+    }
+
+    if (selectedFormCount > 0) {
+      return formLabel
+    }
+
+    if (customQuestionCount > 0) {
+      return questionLabel
+    }
+
+    return "None"
+  })()
 
   return (
     <Stack gap={5}>
@@ -549,13 +567,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
         />
         <ReviewItem
           label="Questions"
-          value={
-            selectedFormCount > 0 || customQuestionCount > 0
-              ? `${selectedFormCount} custom form${selectedFormCount === 1 ? "" : "s"} and ${customQuestionCount} question${
-                  customQuestionCount === 1 ? "" : "s"
-                }`
-              : "Not configured"
-          }
+          value={selectedQuestionsSummary}
           onEdit={() => handleEdit("questions")}
           editLabel="Edit questions"
           isLoading={questionsQuery.isLoading}
