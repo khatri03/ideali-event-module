@@ -548,14 +548,15 @@ export function EventThankYouEmailStepPage() {
             <Dialog.Content
               bg="white"
               borderRadius={{ base: 0, md: "24px" }}
-              maxW={{ base: "100vw", md: "760px" }}
+              w={{ base: "100vw", md: "42rem" }}
+              maxW={{ base: "100vw", md: "42rem" }}
               maxH={{ base: "100dvh", md: "90vh" }}
               m={{ base: 0, md: "auto" }}
               overflow="hidden"
               display="flex"
               flexDirection="column"
             >
-              <Box px={6} pt={6} pb={4} borderBottom="1px solid" borderColor="gray.200">
+              <Box px={{ base: 4, md: 6 }} pt={{ base: 4, md: 6 }} pb={4} borderBottom="1px solid" borderColor="gray.200">
                 <Flex align="flex-start" justify="space-between" gap={4}>
                   <Box minW={0}>
                     <Text fontSize="xs" fontWeight="800" color="gray.500" textTransform="uppercase" letterSpacing="0.12em">
@@ -575,79 +576,89 @@ export function EventThankYouEmailStepPage() {
                 </Flex>
               </Box>
 
-              <Dialog.Body px={6} py={6} overflowY="auto" bg="gray.50">
-                <Stack gap={4}>
-                  <Box border="1px solid" borderColor="gray.200" borderRadius="22px" bg="white" p={{ base: 4, md: 6 }} shadow="sm">
-                    <Stack gap={4}>
-                      <Box>
-                        <Text fontSize="sm" fontWeight="700" color="gray.800">
-                          Snippet name <Text as="span" color="red.500">*</Text>
-                        </Text>
-                        <Input
-                          mt={2}
-                          value={snippetName}
-                          onChange={(event) => {
-                            setSnippetName(event.target.value)
-                            setSnippetDialogError("")
-                          }}
-                          placeholder="Welcome email body"
-                          borderRadius="14px"
-                          h="11"
-                          borderColor="gray.200"
-                        />
-                      </Box>
-
-                      <Box>
-                        <Text fontSize="sm" fontWeight="700" color="gray.800">
-                          Description
-                        </Text>
-                        <Textarea
-                          mt={2}
-                          value={snippetDescription}
-                          onChange={(event) => {
-                            setSnippetDescription(event.target.value)
-                            setSnippetDialogError("")
-                          }}
-                          placeholder="Optional note about when to use this snippet"
-                          borderRadius="14px"
-                          minH="120px"
-                          borderColor="gray.200"
-                          resize="vertical"
-                        />
-                      </Box>
-
-                      {snippetDialogError ? (
-                        <Text fontSize="sm" fontWeight="600" color="red.500">
-                          {snippetDialogError}
-                        </Text>
-                      ) : null}
-
-                      <Flex justify="flex-end" gap={3} flexWrap="wrap">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          borderRadius="999px"
-                          onClick={() => setIsSaveSnippetOpen(false)}
-                          disabled={isSavingSnippet}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="button"
-                          colorPalette="cyan"
-                          borderRadius="999px"
-                          onClick={() => void handleSaveSnippet()}
-                          disabled={isSavingSnippet}
-                          loading={isSavingSnippet}
-                          loadingText="Saving..."
-                        >
-                          Save Snippet
-                        </Button>
-                      </Flex>
-                    </Stack>
+              <Dialog.Body px={{ base: 4, md: 6 }} py={{ base: 4, md: 6 }} overflowY="auto" bg="gray.50">
+                <Stack gap={5}>
+                  <Box>
+                    <Text fontSize="sm" fontWeight="700" color="gray.800">
+                      Snippet name <Text as="span" color="red.500">*</Text>
+                    </Text>
+                    <Input
+                      mt={2}
+                      value={snippetName}
+                      onChange={(event) => {
+                        setSnippetName(event.target.value)
+                        setSnippetDialogError("")
+                      }}
+                      placeholder="Welcome email body"
+                      borderRadius="14px"
+                      h="11"
+                      borderColor="gray.200"
+                      bg="white"
+                      px={4}
+                    />
                   </Box>
+
+                  <Box>
+                    <Text fontSize="sm" fontWeight="700" color="gray.800">
+                      Description
+                    </Text>
+                    <Textarea
+                      mt={2}
+                      value={snippetDescription}
+                      onChange={(event) => {
+                        setSnippetDescription(event.target.value)
+                        setSnippetDialogError("")
+                      }}
+                      placeholder="Optional note about when to use this snippet"
+                      borderRadius="14px"
+                      minH="140px"
+                      borderColor="gray.200"
+                      resize="vertical"
+                      bg="white"
+                      px={4}
+                      py={3}
+                    />
+                  </Box>
+
+                  {snippetDialogError ? (
+                    <Box borderRadius="14px" border="1px solid" borderColor="red.200" bg="red.50" px={4} py={3}>
+                      <Text fontSize="sm" fontWeight="600" color="red.600">
+                        {snippetDialogError}
+                      </Text>
+                    </Box>
+                  ) : null}
                 </Stack>
               </Dialog.Body>
+
+              <Box px={{ base: 4, md: 6 }} py={4} borderTop="1px solid" borderColor="gray.200" bg="white">
+                <Flex justify="flex-end" gap={3} flexWrap="wrap">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    colorPalette="gray"
+                    borderRadius="999px"
+                    borderColor="gray.200"
+                    bg="white"
+                    onClick={() => setIsSaveSnippetOpen(false)}
+                    disabled={isSavingSnippet}
+                    minW="7rem"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    colorPalette="cyan"
+                    borderRadius="999px"
+                    onClick={() => void handleSaveSnippet()}
+                    disabled={isSavingSnippet}
+                    loading={isSavingSnippet}
+                    loadingText="Saving..."
+                    minW="9rem"
+                  >
+                    Save Snippet
+                  </Button>
+                </Flex>
+              </Box>
             </Dialog.Content>
           ) : null}
         </Dialog.Positioner>
