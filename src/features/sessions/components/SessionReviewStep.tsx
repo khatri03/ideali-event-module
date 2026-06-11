@@ -573,7 +573,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
           isLoading={questionsQuery.isLoading}
         />
         <ReviewItem
-          label="Number of tickets defined"
+          label="Number Of Tickets"
           value={ 
             <Text fontSize="sm" fontWeight="800" color="gray.900">
               {ticketsCount}
