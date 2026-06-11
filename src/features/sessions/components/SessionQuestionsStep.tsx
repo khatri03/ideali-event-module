@@ -55,6 +55,18 @@ interface SelectOption {
   label: string
 }
 
+interface FileTypeOption {
+  label: string
+  value: string
+}
+
+const FILE_TYPE_OPTIONS: FileTypeOption[] = [
+  { label: "Images", value: "image/*" },
+  { label: "PDF", value: "application/pdf" },
+  { label: "Word Documents", value: ".doc,.docx" },
+  { label: "Excel", value: ".xls,.xlsx" },
+]
+
 function CustomFormSelectOption(props: OptionProps<SelectOption, true>) {
   return (
     <components.Option {...props}>
@@ -121,12 +133,41 @@ function createQuestionDraft(control: CustomFormControl): QuestionDraft {
     placeHolder: control.canHavePlaceHolder ? control.defaultLabel || control.name : null,
     tooltip: null,
     required: false,
-    requiredMessage: `${toSentenceCase(control.defaultLabel || control.name)} is required.`,
+    requiredMessage: null,
     acceptedFileTypes: [],
     minLength: null,
     maxLength: null,
     defaultValue: control.hasOptions ? options[0]?.value ?? null : null,
     displayOrder: 0,
+    options,
+  }
+}
+
+function syncQuestionDraftToControl(draft: QuestionDraft, control: CustomFormControl): QuestionDraft {
+  const options = control.hasOptions ? (draft.options.length > 0 ? draft.options : [createQuestionOptionDraft(0)]) : []
+  const currentLabel = draft.label.trim()
+  const nextLabel = currentLabel.length > 0 ? currentLabel : control.defaultLabel || control.name
+  const controlType = control.controlType.toLowerCase()
+
+  return {
+    ...draft,
+    controlId: control.id,
+    controlName: control.name,
+    controlType: control.controlType,
+    iconClass: control.iconClass,
+    label: nextLabel,
+    placeHolder: control.canHavePlaceHolder ? draft.placeHolder ?? (control.defaultLabel || control.name) : null,
+    tooltip: draft.tooltip,
+    required: control.canBeRequired ? draft.required : false,
+    requiredMessage: control.canBeRequired
+      ? draft.required
+        ? draft.requiredMessage ?? `${toSentenceCase(nextLabel)} is required.`
+        : null
+      : null,
+    acceptedFileTypes: controlType === "file" || controlType === "upload" ? draft.acceptedFileTypes : [],
+    minLength: control.canHaveMinLength ? draft.minLength : null,
+    maxLength: control.canHaveMaxLength ? draft.maxLength : null,
+    defaultValue: control.hasOptions ? options[0]?.value ?? null : draft.defaultValue,
     options,
   }
 }
@@ -159,7 +200,7 @@ function normalizeQuestionDraft(draft: QuestionDraft): QuestionDraft {
     label: draft.label.trim(),
     placeHolder: draft.placeHolder?.trim() || null,
     tooltip: draft.tooltip?.trim() || null,
-    requiredMessage: draft.requiredMessage?.trim() || `${toSentenceCase(draft.label)} is required.`,
+    requiredMessage: draft.required ? draft.requiredMessage?.trim() || `${toSentenceCase(draft.label)} is required.` : null,
     acceptedFileTypes: draft.acceptedFileTypes.map((item) => item.trim()).filter((item) => item.length > 0),
     minLength: draft.minLength?.trim() || null,
     maxLength: draft.maxLength?.trim() || null,
@@ -625,6 +666,7 @@ function QuestionEditorModal({
   onUpdateDraft: (updater: (current: QuestionDraft) => QuestionDraft) => void
 }) {
   const [localError, setLocalError] = useState("")
+  const [labelError, setLabelError] = useState("")
 
   if (!draft) {
     return null
@@ -632,17 +674,27 @@ function QuestionEditorModal({
 
   const currentDraft = draft
   const selectedControl = controls.find((control) => control.id === draft.controlId) ?? controls[0] ?? null
+  const selectedControlType = selectedControl?.controlType.toLowerCase() ?? "text"
   const canShowOptions = selectedControl?.hasOptions ?? currentDraft.options.length > 0
+  const requiresOptions = selectedControl?.hasOptions ?? false
+  const canShowAcceptedFileTypes = selectedControlType === "file" || selectedControlType === "upload"
+  const canShowRequired = selectedControl?.canBeRequired ?? false
+  const canShowPlaceHolder = selectedControl?.canHavePlaceHolder ?? false
+  const canShowMinLength = selectedControl?.canHaveMinLength ?? false
+  const canShowMaxLength = selectedControl?.canHaveMaxLength ?? false
+  const acceptedFileTypeSet = new Set(draft.acceptedFileTypes)
 
   function handleSubmit(keepOpen: boolean) {
     const normalized = normalizeQuestionDraft(currentDraft)
 
     if (!normalized.label) {
-      setLocalError("Question label is required.")
+      setLabelError("Label field is required.")
       return
     }
 
-    if (normalized.options.length === 0 && canShowOptions) {
+    setLabelError("")
+
+    if (requiresOptions && normalized.options.length === 0) {
       setLocalError("Add at least one option for this control.")
       return
     }
@@ -732,6 +784,9 @@ function QuestionEditorModal({
                     value={draft.label}
                     onChange={(event) => {
                       setLocalError("")
+                      if (labelError) {
+                        setLabelError("")
+                      }
                       onUpdateDraft((current) => ({ ...current, label: event.target.value }))
                     }}
                     placeholder="Question label"
@@ -739,8 +794,14 @@ function QuestionEditorModal({
                     h="44px"
                     px={4}
                   />
+                  {labelError ? (
+                    <Text mt={2} fontSize="sm" color="red.500">
+                      {labelError}
+                    </Text>
+                  ) : null}
                 </Box>
 
+              {canShowPlaceHolder ? (
                 <Box>
                   <Text fontSize="sm" fontWeight="700" color="gray.900" mb={2}>
                     Placeholder
@@ -754,91 +815,111 @@ function QuestionEditorModal({
                     borderRadius="14px"
                     h="44px"
                     px={4}
-                    disabled={!(selectedControl?.canHavePlaceHolder ?? false)}
                   />
                 </Box>
+              ) : null}
               </SimpleGrid>
 
               <Box>
                 <Text fontSize="sm" fontWeight="700" color="gray.900" mb={2}>
                   Tooltip
                 </Text>
-                <Textarea
+                <Input
                   value={draft.tooltip ?? ""}
                   onChange={(event) => onUpdateDraft((current) => ({ ...current, tooltip: event.target.value || null }))}
                   placeholder="Helpful guidance for organizers"
-                  borderRadius="14px"
-                  minH="100px"
-                  resize="vertical"
-                  px={4}
-                  py={3}
-                />
-              </Box>
-
-              <Flex align="center" justify="space-between" gap={4} wrap="wrap">
-                <Box>
-                  <Text fontSize="sm" fontWeight="700" color="gray.900">
-                    Required
-                  </Text>
-                  <Text fontSize="sm" color="gray.600">
-                    Mark this question as mandatory.
-                  </Text>
-                </Box>
-                <Switch.Root
-                  checked={draft.required}
-                  onCheckedChange={(details) => onUpdateDraft((current) => ({ ...current, required: details.checked }))}
-                  colorPalette="brand"
-                >
-                  <Switch.HiddenInput />
-                  <Switch.Control />
-                </Switch.Root>
-              </Flex>
-
-              <Box>
-                <Text fontSize="sm" fontWeight="700" color="gray.900" mb={2}>
-                  Required message
-                </Text>
-                <Input
-                  value={draft.requiredMessage ?? ""}
-                  onChange={(event) =>
-                    onUpdateDraft((current) => ({ ...current, requiredMessage: event.target.value || null }))
-                  }
-                  placeholder="Leave blank to auto-generate"
                   borderRadius="14px"
                   h="44px"
                   px={4}
                 />
               </Box>
 
-              <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                <Box>
-                  <Text fontSize="sm" fontWeight="700" color="gray.900" mb={2}>
-                    Min length
-                  </Text>
-                  <Input
-                    value={draft.minLength ?? ""}
-                    onChange={(event) => onUpdateDraft((current) => ({ ...current, minLength: event.target.value || null }))}
-                    placeholder="Optional minimum"
-                    borderRadius="14px"
-                    h="44px"
-                    px={4}
-                  />
-                </Box>
+              {canShowRequired ? (
+                <Flex align="center" justify="space-between" gap={4} wrap="wrap">
+                  <Box>
+                    <Text fontSize="sm" fontWeight="700" color="gray.900">
+                      Required
+                    </Text>
+                    <Text fontSize="sm" color="gray.600">
+                      Mark this question as mandatory.
+                    </Text>
+                  </Box>
+                  <Switch.Root
+                    checked={draft.required}
+                    onCheckedChange={(details) => {
+                      onUpdateDraft((current) => ({
+                        ...current,
+                        required: details.checked,
+                        requiredMessage: details.checked
+                          ? current.requiredMessage ?? `${toSentenceCase(current.label)} is required.`
+                          : null,
+                      }))
+                    }}
+                    colorPalette="brand"
+                  >
+                    <Switch.HiddenInput />
+                    <Switch.Control />
+                  </Switch.Root>
+                </Flex>
+              ) : null}
 
+              {canShowRequired && draft.required ? (
                 <Box>
                   <Text fontSize="sm" fontWeight="700" color="gray.900" mb={2}>
-                    Max length
+                    Required message
                   </Text>
                   <Input
-                    value={draft.maxLength ?? ""}
-                    onChange={(event) => onUpdateDraft((current) => ({ ...current, maxLength: event.target.value || null }))}
-                    placeholder="Optional maximum"
+                    value={draft.requiredMessage ?? ""}
+                    onChange={(event) =>
+                      onUpdateDraft((current) => ({ ...current, requiredMessage: event.target.value || null }))
+                    }
+                    placeholder="Leave blank to auto-generate"
                     borderRadius="14px"
                     h="44px"
                     px={4}
                   />
                 </Box>
-              </SimpleGrid>
+              ) : null}
+
+              {canShowMinLength || canShowMaxLength ? (
+                <SimpleGrid columns={{ base: 1, md: canShowMinLength && canShowMaxLength ? 2 : 1 }} gap={4}>
+                  {canShowMinLength ? (
+                    <Box>
+                      <Text fontSize="sm" fontWeight="700" color="gray.900" mb={2}>
+                        Min length
+                      </Text>
+                      <Input
+                        value={draft.minLength ?? ""}
+                        onChange={(event) =>
+                          onUpdateDraft((current) => ({ ...current, minLength: event.target.value || null }))
+                        }
+                        placeholder="Optional minimum"
+                        borderRadius="14px"
+                        h="44px"
+                        px={4}
+                      />
+                    </Box>
+                  ) : null}
+
+                  {canShowMaxLength ? (
+                    <Box>
+                      <Text fontSize="sm" fontWeight="700" color="gray.900" mb={2}>
+                        Max length
+                      </Text>
+                      <Input
+                        value={draft.maxLength ?? ""}
+                        onChange={(event) =>
+                          onUpdateDraft((current) => ({ ...current, maxLength: event.target.value || null }))
+                        }
+                        placeholder="Optional maximum"
+                        borderRadius="14px"
+                        h="44px"
+                        px={4}
+                      />
+                    </Box>
+                  ) : null}
+                </SimpleGrid>
+              ) : null}
 
               <Box>
                 <Text fontSize="sm" fontWeight="700" color="gray.900" mb={2}>
@@ -958,16 +1039,22 @@ function QuestionEditorModal({
                               <Switch.Control />
                             </Switch.Root>
 
-                            <Button
-                              variant="outline"
-                              colorPalette="red"
-                              borderRadius="full"
-                              h="36px"
+                              <Button
+                                variant="outline"
+                                colorPalette="red"
+                                borderRadius="full"
+                                h="36px"
                               w="36px"
                               minW="36px"
                               p={0}
                               aria-label={`Remove option ${index + 1}`}
-                              onClick={() =>
+                              onClick={() => {
+                                if (requiresOptions && draft.options.length <= 1) {
+                                  setLocalError("Add at least one option for this control.")
+                                  return
+                                }
+
+                                setLocalError("")
                                 onUpdateDraft((current) => ({
                                   ...current,
                                   options: current.options
@@ -977,7 +1064,7 @@ function QuestionEditorModal({
                                       isDefault: candidateIndex === 0 ? candidate.isDefault : candidate.isDefault,
                                     })),
                                 }))
-                              }
+                              }}
                             >
                               <Trash2 size={14} />
                             </Button>
@@ -989,28 +1076,62 @@ function QuestionEditorModal({
                 </Stack>
               ) : null}
 
-              <Box>
-                <Text fontSize="sm" fontWeight="700" color="gray.900" mb={2}>
-                  Accepted file types
-                </Text>
-                <Input
-                  value={draft.acceptedFileTypes.join(", ")}
-                  onChange={(event) =>
-                    onUpdateDraft((current) => ({
-                      ...current,
-                      acceptedFileTypes: event.target.value
-                        .split(",")
-                        .map((item) => item.trim())
-                        .filter((item) => item.length > 0),
-                    }))
-                  }
-                  placeholder="Image, PDF, docx..."
-                  borderRadius="14px"
-                  h="44px"
-                  px={4}
-                  disabled={!(selectedControl?.controlType.toLowerCase() === "file" || selectedControl?.controlType.toLowerCase() === "upload")}
-                />
-              </Box>
+              {canShowAcceptedFileTypes ? (
+                <Box>
+                  <Text fontSize="sm" fontWeight="700" color="gray.900" mb={2}>
+                    Accepted file types
+                  </Text>
+                  <Text fontSize="sm" color="gray.600" mb={3}>
+                    Leave all unchecked to accept any file type.
+                  </Text>
+                  <Flex gap={6} align="center" wrap="nowrap" overflowX="auto" pb={1}>
+                    {FILE_TYPE_OPTIONS.map((option) => {
+                      const checked = acceptedFileTypeSet.has(option.value)
+
+                      return (
+                        <Box
+                          key={option.value}
+                          as="label"
+                          display="inline-flex"
+                          alignItems="center"
+                          gap={2}
+                          cursor="pointer"
+                          flexShrink={0}
+                        >
+                          <Box
+                            as="input"
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(event) =>
+                              onUpdateDraft((current) => {
+                                const nextSet = new Set(current.acceptedFileTypes)
+
+                                if (event.target.checked) {
+                                  nextSet.add(option.value)
+                                } else {
+                                  nextSet.delete(option.value)
+                                }
+
+                                return {
+                                  ...current,
+                                  acceptedFileTypes: Array.from(nextSet),
+                                }
+                              })
+                            }
+                            accentColor="#422AFB"
+                            w="16px"
+                            h="16px"
+                            m={0}
+                          />
+                          <Text fontSize="sm" fontWeight="600" color="gray.900" whiteSpace="nowrap">
+                            {option.label}
+                          </Text>
+                        </Box>
+                      )
+                    })}
+                  </Flex>
+                </Box>
+              ) : null}
 
               {localError ? (
                 <Text fontSize="sm" color="red.500">
@@ -1468,10 +1589,12 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
         .map((question, index) => ({ ...question, displayOrder: index + 1 })),
     )
     setPendingQuestionRemoval(null)
+    restoreBodyInteractionStyles()
   }
 
   function cancelQuestionRemoval() {
     setPendingQuestionRemoval(null)
+    restoreBodyInteractionStyles()
   }
 
   function requestFormRemoval(formUniqueId: string) {
@@ -1497,10 +1620,12 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
       closeCustomFormPreview()
     }
     setPendingFormRemoval(null)
+    restoreBodyInteractionStyles()
   }
 
   function cancelFormRemoval() {
     setPendingFormRemoval(null)
+    restoreBodyInteractionStyles()
   }
 
   function handleQuestionsDragEnd(event: DragEndEvent) {
@@ -1835,7 +1960,7 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
           }}
           onSelectControl={(controlId) => {
             const selectedControl = customFormControls.find((control) => control.id === controlId)
-            setQuestionDraft(selectedControl ? createQuestionDraft(selectedControl) : null)
+            setQuestionDraft((current) => (current && selectedControl ? syncQuestionDraftToControl(current, selectedControl) : current))
           }}
           onUpdateDraft={(updater) => {
             setQuestionDraft((current) => (current ? updater(current) : current))
@@ -1844,72 +1969,76 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
       ) : null}
 
       {pendingQuestionRemoval ? (
-        <Dialog.Root open onOpenChange={(details) => !details.open && cancelQuestionRemoval()} size="sm">
-          <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
-          <Dialog.Positioner>
-            <Dialog.Content bg="white" borderRadius="20px" maxW="480px" m="auto">
-              <Box px={6} pt={6} pb={4}>
-                <Text fontSize="lg" fontWeight="800" color="gray.900">
-                  Delete question?
-                </Text>
-                <Text mt={2} fontSize="sm" color="gray.600">
-                  {pendingQuestionRemoval.label}
-                </Text>
-              </Box>
-              <Box px={6} pb={6}>
-                <Flex gap={3} justify="space-between" wrap="wrap">
-                  <Button variant="outline" borderRadius="14px" h="44px" px={6} onClick={cancelQuestionRemoval}>
-                    Cancel
-                  </Button>
-                  <Button
-                    borderRadius="14px"
-                    h="44px"
-                    px={6}
-                    color="white"
-                    style={{ background: "linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)" }}
-                    onClick={confirmQuestionRemoval}
-                  >
-                    Delete
-                  </Button>
-                </Flex>
-              </Box>
-            </Dialog.Content>
-          </Dialog.Positioner>
+        <Dialog.Root open onOpenChange={(details) => !details.open && cancelQuestionRemoval()} size="sm" lazyMount unmountOnExit>
+          <Portal>
+            <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
+            <Dialog.Positioner>
+              <Dialog.Content bg="white" borderRadius="20px" maxW="480px" m="auto">
+                <Box px={6} pt={6} pb={4}>
+                  <Text fontSize="lg" fontWeight="800" color="gray.900">
+                    Delete question?
+                  </Text>
+                  <Text mt={2} fontSize="sm" color="gray.600">
+                    {pendingQuestionRemoval.label}
+                  </Text>
+                </Box>
+                <Box px={6} pb={6}>
+                  <Flex gap={3} justify="space-between" wrap="wrap">
+                    <Button variant="outline" borderRadius="14px" h="44px" px={6} onClick={cancelQuestionRemoval}>
+                      Cancel
+                    </Button>
+                    <Button
+                      borderRadius="14px"
+                      h="44px"
+                      px={6}
+                      color="white"
+                      style={{ background: "linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)" }}
+                      onClick={confirmQuestionRemoval}
+                    >
+                      Delete
+                    </Button>
+                  </Flex>
+                </Box>
+              </Dialog.Content>
+            </Dialog.Positioner>
+          </Portal>
         </Dialog.Root>
       ) : null}
 
       {pendingFormRemoval ? (
-        <Dialog.Root open onOpenChange={(details) => !details.open && cancelFormRemoval()} size="sm">
-          <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
-          <Dialog.Positioner>
-            <Dialog.Content bg="white" borderRadius="20px" maxW="480px" m="auto">
-              <Box px={6} pt={6} pb={4}>
-                <Text fontSize="lg" fontWeight="800" color="gray.900">
-                  Remove custom form?
-                </Text>
-                <Text mt={2} fontSize="sm" color="gray.600">
-                  {pendingFormRemoval.label}
-                </Text>
-              </Box>
-              <Box px={6} pb={6}>
-                <Flex gap={3} justify="space-between" wrap="wrap">
-                  <Button variant="outline" borderRadius="14px" h="44px" px={6} onClick={cancelFormRemoval}>
-                    Cancel
-                  </Button>
-                  <Button
-                    borderRadius="14px"
-                    h="44px"
-                    px={6}
-                    color="white"
-                    style={{ background: "linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)" }}
-                    onClick={confirmFormRemoval}
-                  >
-                    Remove
-                  </Button>
-                </Flex>
-              </Box>
-            </Dialog.Content>
-          </Dialog.Positioner>
+        <Dialog.Root open onOpenChange={(details) => !details.open && cancelFormRemoval()} size="sm" lazyMount unmountOnExit>
+          <Portal>
+            <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
+            <Dialog.Positioner>
+              <Dialog.Content bg="white" borderRadius="20px" maxW="480px" m="auto">
+                <Box px={6} pt={6} pb={4}>
+                  <Text fontSize="lg" fontWeight="800" color="gray.900">
+                    Remove custom form?
+                  </Text>
+                  <Text mt={2} fontSize="sm" color="gray.600">
+                    {pendingFormRemoval.label}
+                  </Text>
+                </Box>
+                <Box px={6} pb={6}>
+                  <Flex gap={3} justify="space-between" wrap="wrap">
+                    <Button variant="outline" borderRadius="14px" h="44px" px={6} onClick={cancelFormRemoval}>
+                      Cancel
+                    </Button>
+                    <Button
+                      borderRadius="14px"
+                      h="44px"
+                      px={6}
+                      color="white"
+                      style={{ background: "linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)" }}
+                      onClick={confirmFormRemoval}
+                    >
+                      Remove
+                    </Button>
+                  </Flex>
+                </Box>
+              </Dialog.Content>
+            </Dialog.Positioner>
+          </Portal>
         </Dialog.Root>
       ) : null}
 

@@ -478,6 +478,39 @@ function normalizeDateTime(value: string | undefined): string {
   return value
 }
 
+function serializeQuestionForRequest(question: SessionWizardQuestion): Record<string, unknown> {
+  const controlType = question.controlType.toLowerCase()
+  const acceptedFileTypes = controlType === "file" || controlType === "upload"
+    ? question.acceptedFileTypes.length > 0
+      ? question.acceptedFileTypes.join(", ")
+      : null
+    : null
+
+  return {
+    id: question.id,
+    controlId: question.controlId,
+    controlName: question.controlName,
+    controlType: question.controlType,
+    iconClass: question.iconClass,
+    label: question.label,
+    placeHolder: question.placeHolder,
+    tooltip: question.tooltip,
+    required: question.required,
+    requiredMessage: question.requiredMessage,
+    acceptedFileTypes,
+    minLength: question.minLength,
+    maxLength: question.maxLength,
+    defaultValue: question.defaultValue,
+    displayOrder: question.displayOrder,
+    options: question.options.map((option) => ({
+      id: option.id,
+      displayText: option.displayText,
+      value: option.value,
+      isDefault: option.isDefault,
+    })),
+  }
+}
+
 export async function fetchSessionWizardName(uniqueId: string): Promise<SessionWizardName> {
   const res = await client.get<unknown>(API_ROUTES.sessionWizardName(uniqueId))
   const responseData = parseServicePayload(res.data)
@@ -614,7 +647,12 @@ export async function updateSessionWizardQuestions(
   payload: SessionWizardQuestionsRequest,
   stepNo = 12,
 ): Promise<SessionWizardQuestionsInfo> {
-  const res = await client.post<unknown>(API_ROUTES.sessionWizardQuestions(uniqueId), payload, {
+  const requestPayload = {
+    customFormUniqueIds: payload.customFormUniqueIds,
+    customQuestions: payload.customQuestions?.map(serializeQuestionForRequest) ?? null,
+  }
+
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardQuestions(uniqueId), requestPayload, {
     params: { stepNo },
   })
   const responseData = parseServicePayload(res.data)
