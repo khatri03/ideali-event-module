@@ -22,10 +22,12 @@ import {
   List,
   ListOrdered,
   Quote,
+  PencilLine,
   Redo2,
   Strikethrough,
   Underline,
   Undo2,
+  Trash2,
   Type,
   Rows3,
 } from "lucide-react"
@@ -211,6 +213,8 @@ export function EventThankYouEmailToolbar({
   onInsertVariable,
   onOpenSaveSnippet,
   onLoadSavedSnippet,
+  onEditSavedSnippet,
+  onDeleteSavedSnippet,
   savedSnippets,
   placeholders,
 }: {
@@ -218,6 +222,8 @@ export function EventThankYouEmailToolbar({
   onInsertVariable: (value: { label: string; token: string }) => void
   onOpenSaveSnippet: () => void
   onLoadSavedSnippet: (snippet: EventEmailSnippet) => void
+  onEditSavedSnippet: (snippet: EventEmailSnippet) => void
+  onDeleteSavedSnippet: (snippet: EventEmailSnippet) => void
   savedSnippets: EventEmailSnippet[]
   placeholders: EventEmailPlaceholderGroup[]
 }) {
@@ -541,10 +547,10 @@ export function EventThankYouEmailToolbar({
 
                   <Menu.Separator borderColor="gray.100" mx={1} my={1} />
 
-                  {savedSnippets.length > 0 ? (
-                    savedSnippets.map((snippet) => (
+                {savedSnippets.length > 0 ? (
+                  savedSnippets.map((snippet) => (
+                    <Box key={snippet.uniqueId} mb={1}>
                       <Menu.Item
-                        key={snippet.uniqueId}
                         value={`snippet:${snippet.uniqueId}`}
                         borderRadius="10px"
                         fontSize="sm"
@@ -557,17 +563,64 @@ export function EventThankYouEmailToolbar({
                         _hover={{ bg: "gray.50" }}
                         onClick={() => onLoadSavedSnippet(snippet)}
                       >
-                        <Box textAlign="left">
-                          <Text fontSize="sm" fontWeight="600" color="gray.800">
-                            {snippet.name}
-                          </Text>
-                          <Text fontSize="xs" color="gray.500" lineClamp={2}>
-                            {snippet.description || "Load this saved template into the editor."}
-                          </Text>
-                        </Box>
+                        <Flex align="flex-start" justify="space-between" gap={3} w="full">
+                          <Box textAlign="left" minW={0} flex={1}>
+                            <Text fontSize="sm" fontWeight="600" color="gray.800">
+                              {snippet.name}
+                            </Text>
+                            {snippet.description ? (
+                              <Text fontSize="xs" color="gray.500" lineClamp={2}>
+                                {snippet.description}
+                              </Text>
+                            ) : null}
+                          </Box>
+                          <Flex align="center" gap={1} flexShrink={0}>
+                            <IconButton
+                              type="button"
+                              aria-label={`Edit ${snippet.name}`}
+                              title={`Edit ${snippet.name}`}
+                              size="xs"
+                              variant="ghost"
+                              colorPalette="gray"
+                              borderRadius="999px"
+                              h="8"
+                              w="8"
+                              minW="8"
+                              onClick={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                onEditSavedSnippet(snippet)
+                              }}
+                              _hover={{ bg: "gray.100" }}
+                            >
+                              <PencilLine size={14} />
+                            </IconButton>
+                            <IconButton
+                              type="button"
+                              aria-label={`Delete ${snippet.name}`}
+                              title={`Delete ${snippet.name}`}
+                              size="xs"
+                              variant="ghost"
+                              colorPalette="red"
+                              borderRadius="999px"
+                              h="8"
+                              w="8"
+                              minW="8"
+                              onClick={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                onDeleteSavedSnippet(snippet)
+                              }}
+                              _hover={{ bg: "red.50" }}
+                            >
+                              <Trash2 size={14} />
+                            </IconButton>
+                          </Flex>
+                        </Flex>
                       </Menu.Item>
-                    ))
-                  ) : (
+                    </Box>
+                  ))
+                ) : (
                     <Menu.Item
                       value="no-saved-snippets"
                       disabled

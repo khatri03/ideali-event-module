@@ -284,12 +284,12 @@ function EventWizardLayoutContent() {
     activeStep.slug === "sessions" ||
     activeStep.slug === "discount-coupon" ||
     activeStep.slug === "questions" ||
-    activeStep.slug === "thank-you-email" ||
     activeStep.slug === "advanced-settings"
   const isPaymentAccountStep = activeStep.slug === "payment-account"
   const isBannerStep = activeStep.slug === "banner"
   const isDiscountCouponStep = activeStep.slug === "discount-coupon"
-  const isPageManagedSaveStep = isBannerStep || isDiscountCouponStep || activeStep.slug === "questions"
+  const isPageManagedSaveStep =
+    isBannerStep || isDiscountCouponStep || activeStep.slug === "questions" || activeStep.slug === "thank-you-email"
   const isLastWizardStep = isLastStep
   const resolvedStepIndex = eventId ? Math.min(lastCompletedStepNo, wizardSteps.length - 1) : -1
   const resolvedStepPath = eventId ? wizardSteps[resolvedStepIndex]?.path : undefined

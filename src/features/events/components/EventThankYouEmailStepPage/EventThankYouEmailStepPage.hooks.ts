@@ -10,10 +10,12 @@ import TextAlign from "@tiptap/extension-text-align"
 import Underline from "@tiptap/extension-underline"
 import { extractApiError } from "@/utils/errors"
 import {
+  deleteEventEmailSnippet,
   createEventEmailSnippet,
   fetchEventEmailTemplatePlaceHolders,
   fetchEventEmailSnippets,
   fetchEventWizardThankYouEmail,
+  updateEventEmailSnippet,
   updateEventWizardThankYouEmail,
   type EventEmailSnippet,
   type EventEmailPlaceholderGroup,
@@ -46,6 +48,8 @@ export interface EventThankYouEmailStepState {
   reload: () => void
   placeholders: EventEmailPlaceholderGroup[]
   saveSnippet: (payload: { name: string; description: string; template: string }) => Promise<void>
+  updateSnippet: (snippetId: string, payload: { name: string; description: string; template: string }) => Promise<void>
+  deleteSnippet: (snippetId: string) => Promise<void>
 }
 
 function hasMeaningfulEditorContent(editor: ReturnType<typeof useEditor> | null) {
@@ -187,7 +191,7 @@ export function useEventThankYouEmailStep(): EventThankYouEmailStepState {
   const { eventId } = useParams<{ eventId?: string }>()
   const currentEventId = eventId ?? ""
   const queryClient = useQueryClient()
-  const { setPrimaryAction, setSkipAction, setPrimaryActionReady, setPrimaryActionEnabled } = useEventWizardActions()
+  const { setPrimaryAction, setPrimaryActionReady, setPrimaryActionEnabled } = useEventWizardActions()
   const [error, setError] = useState("")
   const [isSaving, setIsSaving] = useState(false)
   const [validationErrors, setValidationErrors] = useState<{ emailBody?: string; emailSubject?: string }>({})
@@ -272,6 +276,31 @@ export function useEventThankYouEmailStep(): EventThankYouEmailStepState {
     },
     onError: () => {
       return
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["events", "email-template", "snippets"] })
+    },
+  })
+
+  const updateSnippetMutation = useMutation({
+    mutationFn: async (payload: { snippetId: string; name: string; description: string; template: string }) =>
+      updateEventEmailSnippet(payload.snippetId, {
+        name: payload.name,
+        description: payload.description || null,
+        template: payload.template,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["events", "email-template", "snippets"] })
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["events", "email-template", "snippets"] })
+    },
+  })
+
+  const deleteSnippetMutation = useMutation({
+    mutationFn: async (snippetId: string) => deleteEventEmailSnippet(snippetId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["events", "email-template", "snippets"] })
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["events", "email-template", "snippets"] })
@@ -369,7 +398,6 @@ export function useEventThankYouEmailStep(): EventThankYouEmailStepState {
       placeholdersQuery.isError
     ) {
       setPrimaryAction(null)
-      setSkipAction(null)
       setPrimaryActionReady(false)
       setPrimaryActionEnabled(false)
       return
@@ -402,30 +430,10 @@ export function useEventThankYouEmailStep(): EventThankYouEmailStepState {
       }
     })
 
-    setSkipAction(async () => {
-      setError("")
-      setValidationErrors({})
-      setIsSaving(true)
-      setPrimaryActionReady(false)
-
-      try {
-        await saveMutation.mutateAsync({
-          emailSubject: null,
-          emailTemplate: null,
-          notifyOrganizer: resolvedNotifyOrganizer,
-          otherNotificationEmails: resolvedOtherNotificationEmails,
-        })
-      } finally {
-        setIsSaving(false)
-        setPrimaryActionReady(true)
-      }
-    })
-
     setPrimaryActionReady(true)
 
     return () => {
       setPrimaryAction(null)
-      setSkipAction(null)
       setPrimaryActionReady(false)
       setPrimaryActionEnabled(false)
     }
@@ -438,7 +446,6 @@ export function useEventThankYouEmailStep(): EventThankYouEmailStepState {
     setPrimaryAction,
     setPrimaryActionEnabled,
     setPrimaryActionReady,
-    setSkipAction,
     subjectEditor,
     thankYouEmailQuery.isError,
     thankYouEmailQuery.isLoading,
@@ -470,6 +477,12 @@ export function useEventThankYouEmailStep(): EventThankYouEmailStepState {
     placeholders: placeholdersQuery.data ?? [],
     saveSnippet: async (payload) => {
       await saveSnippetMutation.mutateAsync(payload)
+    },
+    updateSnippet: async (snippetId, payload) => {
+      await updateSnippetMutation.mutateAsync({ snippetId, ...payload })
+    },
+    deleteSnippet: async (snippetId) => {
+      await deleteSnippetMutation.mutateAsync(snippetId)
     },
     reload: () => {
       setError("")

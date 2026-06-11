@@ -2,6 +2,7 @@ import { Box, Button, CloseButton, Dialog, Flex, Input, Menu, Portal, Stack, Swi
 import { EditorContent } from "@tiptap/react"
 import { useMemo, useState } from "react"
 import { extractApiError } from "@/utils/errors"
+import type { EventEmailSnippet } from "@/api/events"
 import { EventThankYouEmailToolbar } from "./EventThankYouEmailStepPage.toolbar"
 import { EVENT_THANK_YOU_EMAIL_CONTENT } from "./EventThankYouEmailStepPage.fields"
 import { useEventThankYouEmailStep } from "./EventThankYouEmailStepPage.hooks"
@@ -11,6 +12,10 @@ function splitNotificationEmails(value: string) {
     .split(/[;,\n]/g)
     .map((item) => item.trim())
     .filter((item) => item.length > 0)
+}
+
+function isValidEmailAddress(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
 }
 
 function NotificationEmailTagsField({
@@ -34,13 +39,21 @@ function NotificationEmailTagsField({
     }
 
     const nextTags = [...tags]
+    const invalidItems: string[] = []
+
     nextItems.forEach((item) => {
+      if (!isValidEmailAddress(item)) {
+        invalidItems.push(item)
+        return
+      }
+
       if (!nextTags.includes(item)) {
         nextTags.push(item)
       }
     })
 
     commitTags(nextTags)
+    setDraftValue(invalidItems.join(", "))
   }
 
   return (
@@ -104,7 +117,11 @@ function NotificationEmailTagsField({
 
             if (nextValue.includes(",") || nextValue.includes("\n")) {
               addDraftValue(nextValue)
-              setDraftValue("")
+              return
+            }
+
+            if (isValidEmailAddress(nextValue.trim())) {
+              addDraftValue(nextValue)
               return
             }
 
@@ -114,7 +131,6 @@ function NotificationEmailTagsField({
             if (event.key === "Enter") {
               event.preventDefault()
               addDraftValue(draftValue)
-              setDraftValue("")
               return
             }
 
@@ -125,7 +141,6 @@ function NotificationEmailTagsField({
           }}
           onBlur={() => {
             addDraftValue(draftValue)
-            setDraftValue("")
           }}
         />
       </Flex>
@@ -165,6 +180,7 @@ export function EventThankYouEmailStepPage() {
     notifyOrganizer,
     placeholders,
     otherNotificationEmails,
+    deleteSnippet,
     saveSnippet,
     savedSnippets,
     reload,
@@ -172,7 +188,30 @@ export function EventThankYouEmailStepPage() {
     validationErrors,
     setNotifyOrganizer,
     setOtherNotificationEmails,
+    updateSnippet,
   } = useEventThankYouEmailStep()
+  const [lastLoadedSnippetId, setLastLoadedSnippetId] = useState<string | null>(null)
+  const [editingSnippet, setEditingSnippet] = useState<EventEmailSnippet | null>(null)
+  const [snippetPendingDelete, setSnippetPendingDelete] = useState<EventEmailSnippet | null>(null)
+  const [snippetActionError, setSnippetActionError] = useState("")
+
+  function replaceBodyWithSnippet(snippet: EventEmailSnippet) {
+    const nextTemplate = snippet.template || "<p></p>"
+
+    if (!editor) {
+      return
+    }
+
+    if (lastLoadedSnippetId === snippet.uniqueId) {
+      const currentHtml = editor.getHTML().trim()
+      const nextHtml = currentHtml && currentHtml !== "<p></p>" ? `${currentHtml}<p></p>${nextTemplate}` : nextTemplate
+      editor.commands.setContent(nextHtml, { emitUpdate: false })
+      return
+    }
+
+    editor.commands.setContent(nextTemplate, { emitUpdate: false })
+    setLastLoadedSnippetId(snippet.uniqueId)
+  }
   const subjectVariableGroups = useMemo(
     () =>
       placeholders.map((group) => ({
@@ -189,12 +228,51 @@ export function EventThankYouEmailStepPage() {
   const [snippetDescription, setSnippetDescription] = useState("")
   const [snippetDialogError, setSnippetDialogError] = useState("")
   const [isSavingSnippet, setIsSavingSnippet] = useState(false)
+  const hasValidationErrors = Boolean(validationErrors.emailSubject || validationErrors.emailBody)
 
   function openSaveSnippetDialog() {
+    setEditingSnippet(null)
     setSnippetName("")
     setSnippetDescription("")
     setSnippetDialogError("")
+    setSnippetActionError("")
     setIsSaveSnippetOpen(true)
+  }
+
+  function openEditSnippetDialog(snippet: EventEmailSnippet) {
+    setEditingSnippet(snippet)
+    setSnippetName(snippet.name)
+    setSnippetDescription(snippet.description ?? "")
+    setSnippetDialogError("")
+    setSnippetActionError("")
+    setIsSaveSnippetOpen(true)
+  }
+
+  function openDeleteSnippetDialog(snippet: EventEmailSnippet) {
+    setSnippetActionError("")
+    setSnippetPendingDelete(snippet)
+  }
+
+  async function handleDeleteSnippet() {
+    if (!snippetPendingDelete) {
+      return
+    }
+
+    setSnippetActionError("")
+
+    try {
+      await deleteSnippet(snippetPendingDelete.uniqueId)
+      if (lastLoadedSnippetId === snippetPendingDelete.uniqueId) {
+        setLastLoadedSnippetId(null)
+      }
+      if (editingSnippet?.uniqueId === snippetPendingDelete.uniqueId) {
+        setEditingSnippet(null)
+        setIsSaveSnippetOpen(false)
+      }
+      setSnippetPendingDelete(null)
+    } catch (error) {
+      setSnippetActionError(extractApiError(error))
+    }
   }
 
   async function handleSaveSnippet() {
@@ -213,14 +291,25 @@ export function EventThankYouEmailStepPage() {
 
     setIsSavingSnippet(true)
     setSnippetDialogError("")
+    setSnippetActionError("")
 
     try {
-      await saveSnippet({
-        name: trimmedName,
-        description: snippetDescription.trim(),
-        template,
-      })
+      if (editingSnippet) {
+        await updateSnippet(editingSnippet.uniqueId, {
+          name: trimmedName,
+          description: snippetDescription.trim(),
+          template,
+        })
+        setLastLoadedSnippetId(editingSnippet.uniqueId)
+      } else {
+        await saveSnippet({
+          name: trimmedName,
+          description: snippetDescription.trim(),
+          template,
+        })
+      }
       setIsSaveSnippetOpen(false)
+      setEditingSnippet(null)
     } catch (error) {
       setSnippetDialogError(extractApiError(error))
     } finally {
@@ -231,6 +320,22 @@ export function EventThankYouEmailStepPage() {
   return (
     <Stack gap={5}>
       {error ? <ThankYouEmailError message={error} onRetry={reload} /> : null}
+
+      {hasValidationErrors ? (
+        <Box border="1px solid" borderColor="orange.200" bg="orange.50" px={4} py={3} borderRadius="18px">
+          <Text fontSize="sm" fontWeight="700" color="orange.800">
+            Please fill in the required email subject and body before saving.
+          </Text>
+        </Box>
+      ) : null}
+
+      {snippetActionError ? (
+        <Box border="1px solid" borderColor="red.200" bg="red.50" px={4} py={3} borderRadius="18px">
+          <Text fontSize="sm" fontWeight="700" color="red.700">
+            {snippetActionError}
+          </Text>
+        </Box>
+      ) : null}
 
       <Stack gap={3}>
         <Text fontSize={{ base: "2xl", md: "3xl" }} fontWeight="800" color="gray.900" letterSpacing="-0.03em">
@@ -438,9 +543,9 @@ export function EventThankYouEmailStepPage() {
               placeholders={placeholders}
               savedSnippets={savedSnippets}
               onOpenSaveSnippet={openSaveSnippetDialog}
-              onLoadSavedSnippet={(snippet) => {
-                editor?.commands.setContent(snippet.template || "<p></p>", { emitUpdate: false })
-              }}
+              onLoadSavedSnippet={replaceBodyWithSnippet}
+              onEditSavedSnippet={openEditSnippetDialog}
+              onDeleteSavedSnippet={openDeleteSnippetDialog}
               onInsertVariable={(placeholder) => {
                 editor
                   ?.chain()
@@ -541,6 +646,82 @@ export function EventThankYouEmailStepPage() {
         )}
       </Stack>
 
+      <Dialog.Root
+        open={Boolean(snippetPendingDelete)}
+        onOpenChange={(details) => {
+          if (!details.open) {
+            setSnippetPendingDelete(null)
+          }
+        }}
+        size="sm"
+        lazyMount
+        unmountOnExit
+      >
+        <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
+        <Dialog.Positioner>
+          {snippetPendingDelete ? (
+            <Dialog.Content bg="white" borderRadius="24px" maxW="480px" m="auto" overflow="hidden">
+              <Box px={6} pt={6} pb={4} borderBottom="1px solid" borderColor="gray.200">
+                <Flex align="flex-start" justify="space-between" gap={4}>
+                  <Box minW={0}>
+                    <Text fontSize="xs" fontWeight="800" color="red.500" textTransform="uppercase" letterSpacing="0.12em">
+                      Delete snippet
+                    </Text>
+                    <Text mt={2} fontSize="xl" fontWeight="800" color="gray.900" lineHeight="1.2">
+                      Remove "{snippetPendingDelete.name}"?
+                    </Text>
+                  </Box>
+                  <Dialog.CloseTrigger asChild>
+                    <CloseButton size="sm" borderRadius="full" />
+                  </Dialog.CloseTrigger>
+                </Flex>
+              </Box>
+              <Dialog.Body px={6} py={5}>
+                <Stack gap={3}>
+                  <Text fontSize="sm" color="gray.600" lineHeight="1.7">
+                    This action will permanently delete the saved snippet. If you remove it now, it will no longer appear in the snippets
+                    menu or be available for reuse.
+                  </Text>
+                  {snippetActionError ? (
+                    <Box border="1px solid" borderColor="red.200" bg="red.50" px={4} py={3} borderRadius="16px">
+                      <Text fontSize="sm" fontWeight="700" color="red.700">
+                        {snippetActionError}
+                      </Text>
+                    </Box>
+                  ) : null}
+                </Stack>
+              </Dialog.Body>
+              <Box px={6} pb={6} pt={2}>
+                <Flex justify="flex-end" gap={3} flexWrap="wrap">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    colorPalette="gray"
+                    borderRadius="999px"
+                    borderColor="gray.200"
+                    bg="white"
+                    onClick={() => setSnippetPendingDelete(null)}
+                    disabled={false}
+                    minW="7rem"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    colorPalette="red"
+                    borderRadius="999px"
+                    onClick={() => void handleDeleteSnippet()}
+                    minW="9rem"
+                  >
+                    Delete Snippet
+                  </Button>
+                </Flex>
+              </Box>
+            </Dialog.Content>
+          ) : null}
+        </Dialog.Positioner>
+      </Dialog.Root>
+
       <Dialog.Root open={isSaveSnippetOpen} onOpenChange={(details) => !details.open && setIsSaveSnippetOpen(false)} size="lg">
         <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
         <Dialog.Positioner>
@@ -560,13 +741,15 @@ export function EventThankYouEmailStepPage() {
                 <Flex align="flex-start" justify="space-between" gap={4}>
                   <Box minW={0}>
                     <Text fontSize="xs" fontWeight="800" color="gray.500" textTransform="uppercase" letterSpacing="0.12em">
-                      Save snippet
+                      {editingSnippet ? "Edit snippet" : "Save snippet"}
                     </Text>
                     <Text mt={2} fontSize="lg" fontWeight="800" color="gray.900">
-                      Save the current email body as a reusable snippet
+                      {editingSnippet ? "Update the saved snippet details" : "Save the current email body as a reusable snippet"}
                     </Text>
                     <Text mt={1} fontSize="sm" color="gray.600" lineHeight="1.6">
-                      We’ll store the current rich-text body, then you can load it again from the snippets menu.
+                      {editingSnippet
+                        ? "Change the name, description, or current body content for this saved template."
+                        : "We’ll store the current rich-text body, then you can load it again from the snippets menu."}
                     </Text>
                   </Box>
 
@@ -582,9 +765,9 @@ export function EventThankYouEmailStepPage() {
                     <Text fontSize="sm" fontWeight="700" color="gray.800">
                       Snippet name <Text as="span" color="red.500">*</Text>
                     </Text>
-                    <Input
-                      mt={2}
-                      value={snippetName}
+                        <Input
+                          mt={2}
+                          value={snippetName}
                       onChange={(event) => {
                         setSnippetName(event.target.value)
                         setSnippetDialogError("")
@@ -602,9 +785,9 @@ export function EventThankYouEmailStepPage() {
                     <Text fontSize="sm" fontWeight="700" color="gray.800">
                       Description
                     </Text>
-                    <Textarea
-                      mt={2}
-                      value={snippetDescription}
+                        <Textarea
+                          mt={2}
+                          value={snippetDescription}
                       onChange={(event) => {
                         setSnippetDescription(event.target.value)
                         setSnippetDialogError("")
@@ -620,11 +803,11 @@ export function EventThankYouEmailStepPage() {
                     />
                   </Box>
 
-                  {snippetDialogError ? (
-                    <Box borderRadius="14px" border="1px solid" borderColor="red.200" bg="red.50" px={4} py={3}>
-                      <Text fontSize="sm" fontWeight="600" color="red.600">
-                        {snippetDialogError}
-                      </Text>
+                      {snippetDialogError ? (
+                        <Box borderRadius="14px" border="1px solid" borderColor="red.200" bg="red.50" px={4} py={3}>
+                          <Text fontSize="sm" fontWeight="600" color="red.600">
+                            {snippetDialogError}
+                          </Text>
                     </Box>
                   ) : null}
                 </Stack>
@@ -652,10 +835,10 @@ export function EventThankYouEmailStepPage() {
                     onClick={() => void handleSaveSnippet()}
                     disabled={isSavingSnippet}
                     loading={isSavingSnippet}
-                    loadingText="Saving..."
+                    loadingText={editingSnippet ? "Updating..." : "Saving..."}
                     minW="9rem"
                   >
-                    Save Snippet
+                    {editingSnippet ? "Update Snippet" : "Save Snippet"}
                   </Button>
                 </Flex>
               </Box>
