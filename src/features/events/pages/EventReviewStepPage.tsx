@@ -4,7 +4,7 @@ import type { ReactNode } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useWatch } from "react-hook-form"
 import { useParams } from "react-router-dom"
-import { fetchEventWizardQuestions } from "@/api/events"
+import { fetchEventWizardQuestions, fetchEventWizardThankYouEmail } from "@/api/events"
 import { auth } from "@/lib/auth"
 import { useEventDiscountCoupons } from "../hooks/useEventDiscountCoupons"
 import { htmlToPlainText } from "@/utils/html"
@@ -22,6 +22,18 @@ export function EventReviewStepPage() {
       }
 
       return fetchEventWizardQuestions(eventId)
+    },
+    enabled: !!eventId,
+    retry: false,
+  })
+  const thankYouEmailQuery = useQuery({
+    queryKey: ["events", "review", eventId, "thank-you-email"],
+    queryFn: () => {
+      if (!eventId) {
+        throw new Error("Event id is required.")
+      }
+
+      return fetchEventWizardThankYouEmail(eventId)
     },
     enabled: !!eventId,
     retry: false,
@@ -56,6 +68,24 @@ export function EventReviewStepPage() {
 
     return "None"
   })()
+
+  const thankYouEmailSummary = thankYouEmailQuery.isLoading
+    ? "Loading..."
+    : thankYouEmailQuery.data
+      ? (() => {
+          const hasEmailContent = Boolean(thankYouEmailQuery.data?.emailSubject || thankYouEmailQuery.data?.emailTemplate)
+          const notificationRecipients = thankYouEmailQuery.data?.otherNotificationEmails?.trim() ?? ""
+          const hasNotifications =
+            thankYouEmailQuery.data?.notifyOrganizer ||
+            notificationRecipients.length > 0
+
+          if (!hasEmailContent) {
+            return "Skipped"
+          }
+
+          return hasNotifications ? "Configured with notifications" : "Configured"
+        })()
+      : "Not configured"
 
   return (
     <Stack h="full" gap={5}>
@@ -104,7 +134,7 @@ export function EventReviewStepPage() {
           />
           <ReviewRow label="Discount coupon" value={discountCouponValue} />
           <ReviewRow label="Questions" value={questionsQuery.isLoading ? "Loading..." : selectedQuestionsSummary} />
-          <ReviewRow label="Thank you Email" value="Not configured" />
+          <ReviewRow label="Thank you Email" value={thankYouEmailSummary} />
           <ReviewRow
             label="Advanced settings"
             value={values.purchaseTimeLimitHours ? `${values.purchaseTimeLimitHours} hours before start` : "Not set"}

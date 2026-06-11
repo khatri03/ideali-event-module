@@ -5,6 +5,7 @@ import {
   fetchEventWizardDescription,
   fetchEventWizardName,
   fetchEventWizardPaymentAccount,
+  fetchEventWizardThankYouEmail,
   fetchEventWizardVenue,
   fetchEventWizardThemeColor,
   fetchEventWizardTimeZone,
@@ -22,6 +23,7 @@ export type EventWizardDraftData =
   | Awaited<ReturnType<typeof fetchEventWizardAdvancedSettings>>
   | Awaited<ReturnType<typeof fetchEventWizardPaymentAccount>>
   | Awaited<ReturnType<typeof fetchEventWizardVenue>>
+  | Awaited<ReturnType<typeof fetchEventWizardThankYouEmail>>
 
 export function useEventWizardDraft(eventId?: string, stepSlug?: EventWizardStepSlug) {
   const isSupportedStep =
@@ -33,7 +35,8 @@ export function useEventWizardDraft(eventId?: string, stepSlug?: EventWizardStep
     stepSlug === "theme-color" ||
     stepSlug === "payment-account" ||
     stepSlug === "venue" ||
-    stepSlug === "advanced-settings"
+    stepSlug === "advanced-settings" ||
+    stepSlug === "thank-you-email"
 
   return useQuery<EventWizardDraftData>({
     queryKey: ["events", "wizard-draft", eventId, stepSlug],
@@ -76,6 +79,10 @@ export function useEventWizardDraft(eventId?: string, stepSlug?: EventWizardStep
 
       if (stepSlug === "advanced-settings") {
         return fetchEventWizardAdvancedSettings(eventId)
+      }
+
+      if (stepSlug === "thank-you-email") {
+        return fetchEventWizardThankYouEmail(eventId)
       }
 
       throw new Error("Draft loading is not implemented for this step yet.")

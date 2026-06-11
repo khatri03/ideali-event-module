@@ -213,7 +213,7 @@ function EventWizardLayoutContent() {
   const maxUnlockedStepIndex = eventId ? Math.min(lastCompletedStepNo, wizardSteps.length - 1) : 0
   const { activeStepIndex, activeStep, goToStep, goBack, goNext, isFirstStep, isLastStep } = useEventWizardNavigation(maxUnlockedStepIndex)
   const wizardDraftQuery = useEventWizardDraft(eventId, activeStep.slug)
-  const { runPrimaryAction, isPrimaryActionReady } = useEventWizardActions()
+  const { runPrimaryAction, runSkipAction, isPrimaryActionReady } = useEventWizardActions()
   const isMobile = useBreakpointValue({ base: true, lg: false }) ?? true
   const [isStepsCollapsedOverride, setIsStepsCollapsedOverride] = useState<boolean | null>(null)
   const isStepsCollapsed = isStepsCollapsedOverride ?? isMobile
@@ -236,7 +236,7 @@ function EventWizardLayoutContent() {
   })
 
   function setWizardStepCache(
-    step: "name" | "description" | "terms-conditions" | "banner" | "time-zone" | "theme-color" | "venue" | "advanced-settings",
+    step: "name" | "description" | "terms-conditions" | "banner" | "time-zone" | "theme-color" | "venue" | "advanced-settings" | "thank-you-email",
     value: unknown,
   ) {
     if (!eventId) {
@@ -289,7 +289,7 @@ function EventWizardLayoutContent() {
   const isPaymentAccountStep = activeStep.slug === "payment-account"
   const isBannerStep = activeStep.slug === "banner"
   const isDiscountCouponStep = activeStep.slug === "discount-coupon"
-  const isPageManagedSaveStep = isBannerStep || isDiscountCouponStep
+  const isPageManagedSaveStep = isBannerStep || isDiscountCouponStep || activeStep.slug === "questions"
   const isLastWizardStep = isLastStep
   const resolvedStepIndex = eventId ? Math.min(lastCompletedStepNo, wizardSteps.length - 1) : -1
   const resolvedStepPath = eventId ? wizardSteps[resolvedStepIndex]?.path : undefined
@@ -425,7 +425,6 @@ function EventWizardLayoutContent() {
     if (isPageManagedSaveStep) {
       try {
         await runPrimaryAction()
-        await persistSkippedStep(activeStep.slug)
       } catch {
         return
       }
@@ -487,8 +486,7 @@ function EventWizardLayoutContent() {
           await persistSkippedStep(activeStep.slug)
         } else if (
           activeStep.slug === "discount-coupon" ||
-          activeStep.slug === "questions" ||
-          activeStep.slug === "thank-you-email"
+          activeStep.slug === "questions"
         ) {
           await persistSkippedStep(activeStep.slug)
         }
@@ -526,7 +524,6 @@ function EventWizardLayoutContent() {
     if (isPageManagedSaveStep) {
       try {
         await runPrimaryAction()
-        await persistSkippedStep(activeStep.slug)
       } catch {
         return
       }
@@ -588,8 +585,7 @@ function EventWizardLayoutContent() {
           await persistSkippedStep(activeStep.slug)
         } else if (
           activeStep.slug === "discount-coupon" ||
-          activeStep.slug === "questions" ||
-          activeStep.slug === "thank-you-email"
+          activeStep.slug === "questions"
         ) {
           await persistSkippedStep(activeStep.slug)
         }
@@ -602,6 +598,17 @@ function EventWizardLayoutContent() {
     if (activeStep.slug === "time-zone") {
       form.setValue("timeZoneId", undefined, { shouldDirty: false, shouldTouch: false, shouldValidate: false })
       form.setValue("timeZone", "", { shouldDirty: false, shouldTouch: false, shouldValidate: false })
+    }
+
+    if (activeStep.slug === "thank-you-email") {
+      try {
+        await runSkipAction()
+      } catch {
+        return
+      }
+
+      goNext()
+      return
     }
 
     await persistSkippedStep(activeStep.slug)

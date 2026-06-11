@@ -5,9 +5,11 @@ type EventWizardAction = () => Promise<void> | void
 
 interface EventWizardActionsContextValue {
   setPrimaryAction: (action: EventWizardAction | null) => void
+  setSkipAction: (action: EventWizardAction | null) => void
   setPrimaryActionReady: (ready: boolean) => void
   setPrimaryActionEnabled: (enabled: boolean) => void
   runPrimaryAction: () => Promise<void>
+  runSkipAction: () => Promise<void>
   isPrimaryActionReady: boolean
   canPrimaryActionProceed: boolean
 }
@@ -16,11 +18,16 @@ const EventWizardActionsContext = createContext<EventWizardActionsContextValue |
 
 export function EventWizardActionsProvider({ children }: { children: ReactNode }) {
   const primaryActionRef = useRef<EventWizardAction | null>(null)
+  const skipActionRef = useRef<EventWizardAction | null>(null)
   const [isPrimaryActionReady, setIsPrimaryActionReady] = useState(false)
   const [canPrimaryActionProceed, setCanPrimaryActionProceed] = useState(false)
 
   const setPrimaryAction = useCallback((action: EventWizardAction | null) => {
     primaryActionRef.current = action
+  }, [])
+
+  const setSkipAction = useCallback((action: EventWizardAction | null) => {
+    skipActionRef.current = action
   }, [])
 
   const setPrimaryActionReady = useCallback((ready: boolean) => {
@@ -37,16 +44,33 @@ export function EventWizardActionsProvider({ children }: { children: ReactNode }
     }
   }, [])
 
+  const runSkipAction = useCallback(async () => {
+    if (skipActionRef.current) {
+      await skipActionRef.current()
+    }
+  }, [])
+
   const value = useMemo(
     () => ({
       setPrimaryAction,
+      setSkipAction,
       setPrimaryActionReady,
       setPrimaryActionEnabled,
       runPrimaryAction,
+      runSkipAction,
       isPrimaryActionReady,
       canPrimaryActionProceed,
     }),
-    [canPrimaryActionProceed, isPrimaryActionReady, runPrimaryAction, setPrimaryAction, setPrimaryActionEnabled, setPrimaryActionReady],
+    [
+      canPrimaryActionProceed,
+      isPrimaryActionReady,
+      runPrimaryAction,
+      runSkipAction,
+      setPrimaryAction,
+      setPrimaryActionEnabled,
+      setPrimaryActionReady,
+      setSkipAction,
+    ],
   )
 
   return <EventWizardActionsContext.Provider value={value}>{children}</EventWizardActionsContext.Provider>

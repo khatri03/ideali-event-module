@@ -94,6 +94,24 @@ const eventWizardAdvancedSettingsResponseSchema = z.object({
   purchaseTimeLimit: z.number().int().positive().nullable().optional(),
 })
 
+const eventEmailPlaceholderItemSchema = z.object({
+  id: z.number().int().positive().nullable().optional(),
+  uniqueId: z.string().nullable().optional(),
+  displayText: z.string().min(1),
+  placeHolderText: z.string().min(1),
+})
+
+const eventEmailPlaceHoldersResponseSchema = z.record(z.array(eventEmailPlaceholderItemSchema))
+
+const eventThankYouEmailResponseSchema = z.object({
+  uniqueId: z.string().min(1),
+  emailSubject: z.string().nullable().optional(),
+  emailTemplate: z.string().nullable().optional(),
+  notifyOrganizer: z.boolean(),
+  otherNotificationEmails: z.string().nullable().optional(),
+  stepNo: z.number().int().min(0),
+})
+
 const eventWizardPaymentAccountResponseSchema = z.object({
   paymentAccountUniqueId: z.string().nullable().optional(),
   paymentMethods: z.array(z.number().int().positive()).nullable().optional(),
@@ -395,6 +413,64 @@ export async function updateEventWizardAdvancedSettings(
   })
 
   return eventWizardAdvancedSettingsResponseSchema.parse(res.data)
+}
+
+export interface EventEmailPlaceholderItem {
+  id?: number | null
+  uniqueId?: string | null
+  displayText: string
+  placeHolderText: string
+}
+
+export interface EventEmailPlaceholderGroup {
+  label: string
+  items: EventEmailPlaceholderItem[]
+}
+
+export interface EventThankYouEmailResponse {
+  uniqueId: string
+  emailSubject?: string | null
+  emailTemplate?: string | null
+  notifyOrganizer: boolean
+  otherNotificationEmails?: string | null
+  stepNo: number
+}
+
+export async function fetchEventEmailTemplatePlaceHolders(): Promise<EventEmailPlaceholderGroup[]> {
+  const res = await client.get<unknown>(API_ROUTES.eventEmailTemplatePlaceHolders)
+  const parsed = eventEmailPlaceHoldersResponseSchema.parse(res.data)
+
+  return Object.entries(parsed).map(([label, items]) => ({
+    label,
+    items: items.map((item) => ({
+      id: item.id ?? null,
+      uniqueId: item.uniqueId ?? null,
+      displayText: item.displayText,
+      placeHolderText: item.placeHolderText,
+    })),
+  }))
+}
+
+export async function fetchEventWizardThankYouEmail(uniqueId: string): Promise<EventThankYouEmailResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "thank-you-email")}`)
+  return eventThankYouEmailResponseSchema.parse(res.data)
+}
+
+export async function updateEventWizardThankYouEmail(
+  uniqueId: string,
+  payload: {
+    emailSubject: string | null
+    emailTemplate: string | null
+    notifyOrganizer: boolean
+    otherNotificationEmails: string | null
+  },
+  stepNo = 12,
+): Promise<EventThankYouEmailResponse> {
+  const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "thank-you-email")}`, payload, {
+    params: { stepNo },
+  })
+
+  return eventThankYouEmailResponseSchema.parse(res.data)
 }
 
 export interface EventWizardPaymentAccountResponse {
