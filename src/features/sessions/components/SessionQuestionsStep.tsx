@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   Badge,
@@ -8,6 +8,7 @@ import {
   Dialog,
   Flex,
   Input,
+  Portal,
   SimpleGrid,
   Skeleton,
   Stack,
@@ -80,6 +81,12 @@ function CustomFormSelectOption(props: OptionProps<SelectOption, true>) {
       </Flex>
     </components.Option>
   )
+}
+
+function restoreBodyInteractionStyles() {
+  document.body.style.overflow = ""
+  document.body.style.pointerEvents = ""
+  document.body.style.paddingRight = ""
 }
 
 function toSentenceCase(value: string | null | undefined) {
@@ -597,6 +604,7 @@ function QuestionCard({
 }
 
 function QuestionEditorModal({
+  isOpen,
   controls,
   draft,
   isEditing,
@@ -606,6 +614,7 @@ function QuestionEditorModal({
   onSelectControl,
   onUpdateDraft,
 }: {
+  isOpen: boolean
   controls: CustomFormControl[]
   draft: QuestionDraft | null
   isEditing: boolean
@@ -654,38 +663,45 @@ function QuestionEditorModal({
   }
 
   return (
-    <Dialog.Root open onOpenChange={(details) => !details.open && onClose()} size="lg">
-      <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
-      <Dialog.Positioner>
-        <Dialog.Content
-          bg="white"
-          borderRadius={{ base: 0, md: "24px" }}
-          maxW={{ base: "100vw", md: "1280px" }}
-          maxH={{ base: "100dvh", md: "90vh" }}
-          m={{ base: 0, md: "auto" }}
-          overflow="hidden"
-          display="flex"
-          flexDirection="column"
-        >
-          <Box px={6} pt={6} pb={4} borderBottom="1px solid" borderColor="gray.200">
-            <Flex align="flex-start" justify="space-between" gap={4}>
-              <Box>
-                <Text fontSize="lg" fontWeight="800" color="gray.900">
-                  {isEditing ? "Edit question" : "Add question"}
-                </Text>
-                <Text fontSize="sm" color="gray.600">
-                  Configure the question that organizers will collect for this session.
-                </Text>
-              </Box>
+    <Dialog.Root
+      open={isOpen}
+      onOpenChange={(details) => !details.open && onClose()}
+      size="lg"
+      lazyMount
+      unmountOnExit
+    >
+      <Portal>
+        <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
+        <Dialog.Positioner>
+          <Dialog.Content
+            bg="white"
+            borderRadius={{ base: 0, md: "24px" }}
+            maxW={{ base: "100vw", md: "1280px" }}
+            maxH={{ base: "100dvh", md: "90vh" }}
+            m={{ base: 0, md: "auto" }}
+            overflow="hidden"
+            display="flex"
+            flexDirection="column"
+          >
+            <Box px={6} pt={6} pb={4} borderBottom="1px solid" borderColor="gray.200">
+              <Flex align="flex-start" justify="space-between" gap={4}>
+                <Box>
+                  <Text fontSize="lg" fontWeight="800" color="gray.900">
+                    {isEditing ? "Edit question" : "Add question"}
+                  </Text>
+                  <Text fontSize="sm" color="gray.600">
+                    Configure the question that organizers will collect for this session.
+                  </Text>
+                </Box>
 
-              <Dialog.CloseTrigger asChild>
-                <CloseButton aria-label="Close question modal" />
-              </Dialog.CloseTrigger>
-            </Flex>
-          </Box>
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton aria-label="Close question modal" />
+                </Dialog.CloseTrigger>
+              </Flex>
+            </Box>
 
-          <Dialog.Body px={6} py={6} overflowY="auto">
-            <Stack gap={5}>
+            <Dialog.Body px={6} py={6} overflowY="auto">
+              <Stack gap={5}>
               <Box>
                 <Text fontSize="sm" fontWeight="700" color="gray.900" mb={2}>
                   Control
@@ -721,6 +737,7 @@ function QuestionEditorModal({
                     placeholder="Question label"
                     borderRadius="14px"
                     h="44px"
+                    px={4}
                   />
                 </Box>
 
@@ -736,7 +753,8 @@ function QuestionEditorModal({
                     placeholder="Optional placeholder text"
                     borderRadius="14px"
                     h="44px"
-                  disabled={!(selectedControl?.canHavePlaceHolder ?? false)}
+                    px={4}
+                    disabled={!(selectedControl?.canHavePlaceHolder ?? false)}
                   />
                 </Box>
               </SimpleGrid>
@@ -752,6 +770,8 @@ function QuestionEditorModal({
                   borderRadius="14px"
                   minH="100px"
                   resize="vertical"
+                  px={4}
+                  py={3}
                 />
               </Box>
 
@@ -786,6 +806,7 @@ function QuestionEditorModal({
                   placeholder="Leave blank to auto-generate"
                   borderRadius="14px"
                   h="44px"
+                  px={4}
                 />
               </Box>
 
@@ -800,6 +821,7 @@ function QuestionEditorModal({
                     placeholder="Optional minimum"
                     borderRadius="14px"
                     h="44px"
+                    px={4}
                   />
                 </Box>
 
@@ -813,6 +835,7 @@ function QuestionEditorModal({
                     placeholder="Optional maximum"
                     borderRadius="14px"
                     h="44px"
+                    px={4}
                   />
                 </Box>
               </SimpleGrid>
@@ -827,6 +850,7 @@ function QuestionEditorModal({
                   placeholder="Optional default value"
                   borderRadius="14px"
                   h="44px"
+                  px={4}
                 />
               </Box>
 
@@ -882,6 +906,7 @@ function QuestionEditorModal({
                               placeholder="Option label"
                               borderRadius="14px"
                               h="44px"
+                              px={4}
                             />
                           </Box>
 
@@ -906,6 +931,7 @@ function QuestionEditorModal({
                               placeholder="Stored value"
                               borderRadius="14px"
                               h="44px"
+                              px={4}
                             />
                           </Box>
 
@@ -981,6 +1007,7 @@ function QuestionEditorModal({
                   placeholder="Image, PDF, docx..."
                   borderRadius="14px"
                   h="44px"
+                  px={4}
                   disabled={!(selectedControl?.controlType.toLowerCase() === "file" || selectedControl?.controlType.toLowerCase() === "upload")}
                 />
               </Box>
@@ -991,48 +1018,49 @@ function QuestionEditorModal({
                 </Text>
               ) : null}
             </Stack>
-          </Dialog.Body>
+            </Dialog.Body>
 
-          <Box px={6} pb={6} pt={4} borderTop="1px solid" borderColor="gray.200">
-            <Flex gap={3} justify="space-between" flexWrap="wrap">
-              <Button
-                variant="outline"
-                borderRadius="14px"
-                h="44px"
-                px={6}
-                minW={{ base: "full", md: "140px" }}
-                onClick={onClose}
-              >
-                Cancel
-              </Button>
-
-              <Flex gap={3} flexWrap="wrap" ml="auto">
+            <Box px={6} pb={6} pt={4} borderTop="1px solid" borderColor="gray.200">
+              <Flex gap={3} justify="space-between" flexWrap="wrap">
                 <Button
                   variant="outline"
                   borderRadius="14px"
                   h="44px"
                   px={6}
                   minW={{ base: "full", md: "140px" }}
-                  onClick={() => handleSubmit(true)}
+                  onClick={onClose}
                 >
-                  Add & Continue
+                  Cancel
                 </Button>
-                <Button
-                  borderRadius="14px"
-                  h="44px"
-                  px={6}
-                  minW={{ base: "full", md: "140px" }}
-                  onClick={() => handleSubmit(false)}
-                  color="white"
-                  style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
-                >
-                  Add & Close
-                </Button>
+
+                <Flex gap={3} flexWrap="wrap" ml="auto">
+                  <Button
+                    variant="outline"
+                    borderRadius="14px"
+                    h="44px"
+                    px={6}
+                    minW={{ base: "full", md: "140px" }}
+                    onClick={() => handleSubmit(true)}
+                  >
+                    Add & Continue
+                  </Button>
+                  <Button
+                    borderRadius="14px"
+                    h="44px"
+                    px={6}
+                    minW={{ base: "full", md: "140px" }}
+                    onClick={() => handleSubmit(false)}
+                    color="white"
+                    style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+                  >
+                    Add & Close
+                  </Button>
+                </Flex>
               </Flex>
-            </Flex>
-          </Box>
-        </Dialog.Content>
-      </Dialog.Positioner>
+            </Box>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Portal>
     </Dialog.Root>
   )
 }
@@ -1149,6 +1177,7 @@ function CustomFormPreviewModal({
 export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
   const queryClient = useQueryClient()
   const { setPrimaryAction, setPrimaryActionReady } = useSessionWizardActions()
+  const questionModalCleanupTimerRef = useRef<number | null>(null)
   const [selectedCustomFormUniqueIds, setSelectedCustomFormUniqueIds] = useState<string[]>([])
   const [selectedCustomFormOrder, setSelectedCustomFormOrder] = useState<string[]>([])
   const [customQuestions, setCustomQuestions] = useState<QuestionDraft[]>([])
@@ -1338,6 +1367,13 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
   const saveError = saveMutation.error ? extractApiError(saveMutation.error) : ""
 
   function openQuestionEditor(questionId?: string) {
+    if (questionModalCleanupTimerRef.current) {
+      window.clearTimeout(questionModalCleanupTimerRef.current)
+      questionModalCleanupTimerRef.current = null
+    }
+
+    restoreBodyInteractionStyles()
+
     if (questionId) {
       const existingQuestion = customQuestions.find((question) => question.id === questionId)
 
@@ -1359,8 +1395,17 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
 
   function closeQuestionEditor() {
     setIsQuestionModalOpen(false)
-    setEditingQuestionId(null)
-    setQuestionDraft(null)
+
+    if (questionModalCleanupTimerRef.current) {
+      window.clearTimeout(questionModalCleanupTimerRef.current)
+    }
+
+    questionModalCleanupTimerRef.current = window.setTimeout(() => {
+      setEditingQuestionId(null)
+      setQuestionDraft(null)
+      restoreBodyInteractionStyles()
+      questionModalCleanupTimerRef.current = null
+    }, 250)
   }
 
   function persistQuestionDraft(nextDraft: QuestionDraft, keepOpen: boolean) {
@@ -1506,6 +1551,15 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
     setPreviewCustomFormError("")
     setPreviewCustomFormDetails(undefined)
   }
+
+  useEffect(() => {
+    return () => {
+      if (questionModalCleanupTimerRef.current) {
+        window.clearTimeout(questionModalCleanupTimerRef.current)
+      }
+      restoreBodyInteractionStyles()
+    }
+  }, [])
 
   async function handleFormPreview(formUniqueId: string) {
     const formItem =
@@ -1765,8 +1819,9 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
         </Stack>
       )}
 
-      {isQuestionModalOpen ? (
+      {questionDraft ? (
         <QuestionEditorModal
+          isOpen={isQuestionModalOpen}
           key={questionDraft?.id ?? "question-modal"}
           controls={customFormControls}
           draft={questionDraft}
