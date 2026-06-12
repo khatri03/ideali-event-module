@@ -8,13 +8,14 @@ export interface SessionWizardStep {
     | "description"
     | "banner"
     | "genre"
-    | "event"
-    | "venue"
-    | "booking"
-    | "start-end"
-    | "schedule"
-    | "ticket"
-    | "e-ticketing"
+  | "event"
+  | "venue"
+  | "dates-time"
+  | "booking"
+  | "start-end"
+  | "schedule"
+  | "ticket"
+  | "e-ticketing"
     | "questions"
     | "review"
   label: string
@@ -28,8 +29,7 @@ const SESSION_WIZARD_STEP_DEFINITIONS: Array<Omit<SessionWizardStep, "path">> = 
   { slug: "banner", label: "Banner" },
   { slug: "event", label: "Event" },
   { slug: "venue", label: "Venue" },
-  { slug: "booking", label: "Booking Window" },
-  { slug: "start-end", label: "Session Date/Time" },
+  { slug: "dates-time", label: "Dates & Time" },
   { slug: "schedule", label: "Schedule" },
   { slug: "ticket", label: "Tickets" },
   { slug: "e-ticketing", label: "e-Ticketing" },
@@ -63,6 +63,7 @@ const SESSION_WIZARD_STEP_NUMBER: Record<SessionWizardStep["slug"], number> = {
   venue: 6,
   booking: 7,
   "start-end": 8,
+  "dates-time": 8,
   schedule: 9,
   ticket: 10,
   "e-ticketing": 11,

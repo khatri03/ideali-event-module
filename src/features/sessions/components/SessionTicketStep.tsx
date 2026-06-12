@@ -26,6 +26,7 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import { ArrowUpDown, GripVertical, PencilLine, Plus, Trash2 } from "lucide-react"
 import { extractApiError } from "@/utils/errors"
+import { useSessionWizardActions } from "../hooks/useSessionWizardActions"
 import {
   createSessionWizardTicket,
   deleteSessionWizardTicket,
@@ -234,10 +235,12 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
   const [editingTicket, setEditingTicket] = useState<SessionWizardTicket | null>(null)
   const [ticketEditorInstanceId, setTicketEditorInstanceId] = useState(0)
   const [ticketToDelete, setTicketToDelete] = useState<{ uniqueId: string; name: string } | null>(null)
+  const [ticketListError, setTicketListError] = useState("")
   const ticketNameInputRef = useRef<HTMLInputElement>(null)
   const tenurePricingSectionRef = useRef<SessionTicketPricePeriodsSectionHandle>(null)
   const keepDraftTenureOnCloseRef = useRef(false)
   const queryClient = useQueryClient()
+  const { setPrimaryAction, setPrimaryActionReady } = useSessionWizardActions()
   const bookingQuery = queryClient.getQueryData(["sessions", { sessionId, step: "booking" }]) as
     | { bookingStartDate?: string | null; bookingEndDate?: string | null }
     | undefined
@@ -328,6 +331,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
   const ticketActionError = createTicketMutation.error ?? updateTicketMutation.error
   const deleteActionError = deleteTicketMutation.error
   const sortActionError = sortTicketsMutation.error
+  const visibleTicketListError = sortedTickets.length === 0 ? ticketListError : ""
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -347,6 +351,23 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
 
     return () => window.cancelAnimationFrame(frameId)
   }, [isOpen])
+
+  useEffect(() => {
+    setPrimaryActionReady(!ticketsQuery.isLoading && !ticketsQuery.isError)
+    setPrimaryAction(async () => {
+      if (sortedTickets.length === 0) {
+        setTicketListError("At least one ticket is required before continuing.")
+        throw new Error("At least one ticket is required before continuing.")
+      }
+
+      setTicketListError("")
+    })
+
+    return () => {
+      setPrimaryAction(null)
+      setPrimaryActionReady(true)
+    }
+  }, [setPrimaryAction, setPrimaryActionReady, sortedTickets.length, ticketsQuery.isError, ticketsQuery.isLoading])
 
   function openSortTicketsDialog() {
     setSortedTicketDraft(sortedTickets)
@@ -564,19 +585,21 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
         </Box>
 
         <Flex gap={2}>
-          <Button
-            variant="outline"
-            aria-label="Change display order"
-            title="Change display order"
-            borderRadius="999px"
-            h="44px"
-            w="44px"
-            minW="44px"
-            p={0}
-            onClick={openSortTicketsDialog}
-          >
-            <ArrowUpDown size={18} />
-          </Button>
+          {sortedTickets.length > 2 ? (
+            <Button
+              variant="outline"
+              aria-label="Change display order"
+              title="Change display order"
+              borderRadius="999px"
+              h="44px"
+              w="44px"
+              minW="44px"
+              p={0}
+              onClick={openSortTicketsDialog}
+            >
+              <ArrowUpDown size={18} />
+            </Button>
+          ) : null}
           <Button
             variant="outline"
             aria-label="Add ticket"
@@ -792,6 +815,12 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
       {ticketActionError ? (
         <Text fontSize="sm" color="red.500">
           {extractApiError(ticketActionError)}
+        </Text>
+      ) : null}
+
+      {visibleTicketListError ? (
+        <Text fontSize="sm" color="red.500">
+          {visibleTicketListError}
         </Text>
       ) : null}
 

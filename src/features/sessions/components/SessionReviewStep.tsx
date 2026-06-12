@@ -364,14 +364,14 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     ticketsQuery.error
 
   function buildEditUrl(
-    step: "name" | "genre" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket" | "e-ticketing" | "questions",
+    step: "name" | "genre" | "event" | "venue" | "booking" | "start-end" | "dates-time" | "schedule" | "ticket" | "e-ticketing" | "questions",
   ) {
     const target = APP_ROUTES.sessionWizard.editStep(sessionId, step)
     return `${target}?returnUrl=${encodeURIComponent(reviewReturnUrl)}`
   }
 
   function handleEdit(
-    step: "name" | "genre" | "event" | "venue" | "booking" | "start-end" | "schedule" | "ticket" | "e-ticketing" | "questions",
+    step: "name" | "genre" | "event" | "venue" | "booking" | "start-end" | "dates-time" | "schedule" | "ticket" | "e-ticketing" | "questions",
   ) {
     navigate(buildEditUrl(step))
   }
@@ -521,15 +521,15 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
         <ReviewItem
           label="Booking Window"
           value={bookingWindow}
-          onEdit={() => handleEdit("booking")}
+          onEdit={() => handleEdit("dates-time")}
           editLabel="Edit booking window"
           isLoading={bookingQuery.isLoading}
         />
         <ReviewItem
-          label="Session Date Time"
+          label="Session Start/End"
           value={sessionDateTime}
-          onEdit={() => handleEdit("start-end")}
-          editLabel="Edit session date time"
+          onEdit={() => handleEdit("dates-time")}
+          editLabel="Edit session start/end"
           isLoading={durationQuery.isLoading}
         />
         <ReviewItem

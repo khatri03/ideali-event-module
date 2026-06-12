@@ -497,36 +497,33 @@ function SelectedFormCard({
         <Text fontSize="sm" fontWeight="700" color="gray.900" lineClamp={1}>
           {form.label}
         </Text>
-        <Text fontSize="xs" color="gray.600">
-          Attached custom form
-        </Text>
       </Box>
 
-      <Flex gap={2}>
+      <Flex gap={1.5}>
         <Button
           variant="outline"
           borderRadius="full"
-          h="36px"
-          w="36px"
-          minW="36px"
+          h="32px"
+          w="32px"
+          minW="32px"
           p={0}
           aria-label={`Preview ${form.label}`}
           onClick={onPreview}
         >
-          <Eye size={14} />
+          <Eye size={12} />
         </Button>
         <Button
           variant="outline"
           colorPalette="red"
           borderRadius="full"
-          h="36px"
-          w="36px"
-          minW="36px"
+          h="32px"
+          w="32px"
+          minW="32px"
           p={0}
           aria-label={`Remove ${form.label}`}
           onClick={onRemove}
         >
-          <Trash2 size={14} />
+          <Trash2 size={12} />
         </Button>
         {showDragHandle ? (
           <Box
@@ -540,11 +537,11 @@ function SelectedFormCard({
             borderColor="brand.200"
             bg="white"
             borderRadius="full"
-            h="36px"
-            w="36px"
-            minW="36px"
+            h="32px"
+            w="32px"
+            minW="32px"
           >
-            <GripVertical size={16} />
+            <GripVertical size={14} />
           </Box>
         ) : null}
       </Flex>
@@ -608,27 +605,27 @@ function QuestionCard({
           <Button
             variant="outline"
             borderRadius="full"
-            h="36px"
-            w="36px"
-            minW="36px"
+            h="32px"
+            w="32px"
+            minW="32px"
             p={0}
             aria-label={`Edit ${question.label}`}
             onClick={onEdit}
           >
-            <PencilLine size={14} />
+            <PencilLine size={12} />
           </Button>
           <Button
             variant="outline"
             colorPalette="red"
             borderRadius="full"
-            h="36px"
-            w="36px"
-            minW="36px"
+            h="32px"
+            w="32px"
+            minW="32px"
             p={0}
             aria-label={`Delete ${question.label}`}
             onClick={onDelete}
           >
-            <Trash2 size={14} />
+            <Trash2 size={12} />
           </Button>
           {showDragHandle ? (
             <Box
@@ -644,11 +641,11 @@ function QuestionCard({
               borderColor="gray.200"
               bg="white"
               borderRadius="full"
-              h="36px"
-              w="36px"
-              minW="36px"
+              h="32px"
+              w="32px"
+              minW="32px"
             >
-              <GripVertical size={16} />
+              <GripVertical size={14} />
             </Box>
           ) : null}
         </Flex>
@@ -1346,11 +1343,11 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
 
   const saveMutation = useMutation({
     mutationFn: (payload: { customFormUniqueIds: string[] | null; customQuestions: QuestionDraft[] | null }) =>
-      updateSessionWizardQuestions(sessionId, payload, getSessionWizardStepNumber("questions")),
+      updateSessionWizardQuestions(sessionId, payload, getSessionWizardStepNumber("review")),
     onSuccess: async (data) => {
       queryClient.setQueryData(["sessions", "questions", sessionId], data)
       queryClient.setQueryData(["sessions", "wizard-progress", sessionId], (current: { stepNo?: number } | undefined) => ({
-        stepNo: Math.max(current?.stepNo ?? 0, data.stepNo ?? 12),
+        stepNo: Math.max(current?.stepNo ?? 0, data.stepNo ?? getSessionWizardStepNumber("review")),
       }))
       await queryClient.invalidateQueries({ queryKey: ["sessions", "review", sessionId] })
     },
@@ -1902,15 +1899,15 @@ export function SessionQuestionsStep({ sessionId }: SessionQuestionsStepProps) {
                 variant="outline"
                 colorPalette="brand"
                 borderRadius="full"
-                h="38px"
-                w="38px"
-                minW="38px"
+                h="34px"
+                w="34px"
+                minW="34px"
                 p={0}
                 aria-label="Add question"
                 onClick={() => openQuestionEditor()}
                 disabled={customFormControls.length === 0}
               >
-                <Plus size={16} />
+                <Plus size={14} />
               </Button>
             </Flex>
 

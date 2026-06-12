@@ -120,13 +120,25 @@ function SessionWizardLayoutContent() {
   const lastCompletedStepNo = sessionId ? wizardProgressQuery.data?.stepNo ?? 0 : 0
   const finalSetupState = setupStateOptionsQuery.data?.find((option) => option.isFinal)?.value ?? ""
   const isReviewDone = setupStateQuery.data?.setupState === finalSetupState
-  const completedStepCount = sessionId
-    ? isReviewDone
-      ? steps.length
-      : Math.min(lastCompletedStepNo, steps.length - 1)
-    : 0
-  const maxUnlockedStepIndex = sessionId ? Math.min(lastCompletedStepNo, steps.length - 1) : 0
-  const resolvedStepIndex = sessionId ? Math.min(lastCompletedStepNo, steps.length - 1) : -1
+  function mapProgressToVisibleStepIndex(stepNo: number) {
+    if (stepNo <= 0) {
+      return -1
+    }
+
+    if (stepNo <= 6) {
+      return stepNo - 1
+    }
+
+    if (stepNo <= 8) {
+      return 6
+    }
+
+    return stepNo - 2
+  }
+
+  const resolvedStepIndex = sessionId ? Math.min(mapProgressToVisibleStepIndex(lastCompletedStepNo), steps.length - 1) : -1
+  const completedStepCount = sessionId ? (isReviewDone ? steps.length : Math.max(resolvedStepIndex + 1, 0)) : 0
+  const maxUnlockedStepIndex = sessionId ? Math.max(resolvedStepIndex, 0) : 0
   const resolvedStepPath = sessionId ? steps[resolvedStepIndex]?.path : undefined
   const shouldRedirectToResolvedStep =
     Boolean(sessionId) &&

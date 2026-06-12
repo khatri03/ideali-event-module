@@ -61,6 +61,19 @@ const sessionBookingSchema = z.object({
   bookingEndDate: z.string().nullable().optional(),
 })
 
+const sessionDateTimeSchema = z.object({
+  BookingStartDate: z.string().nullable().optional(),
+  bookingStartDate: z.string().nullable().optional(),
+  BookingEndDate: z.string().nullable().optional(),
+  bookingEndDate: z.string().nullable().optional(),
+  StartDate: z.string().nullable().optional(),
+  startDate: z.string().nullable().optional(),
+  EndDate: z.string().nullable().optional(),
+  endDate: z.string().nullable().optional(),
+  StepNo: z.number().int().optional(),
+  stepNo: z.number().int().optional(),
+})
+
 const sessionDurationSchema = z.object({
   StartDate: z.string().nullable().optional(),
   startDate: z.string().nullable().optional(),
@@ -302,6 +315,14 @@ export interface SessionWizardDuration {
   endDate: string | null
 }
 
+export interface SessionWizardDateTime {
+  bookingStartDate: string | null
+  bookingEndDate: string | null
+  startDate: string | null
+  endDate: string | null
+  stepNo: number
+}
+
 export interface SessionWizardNameRequest {
   name: string
 }
@@ -367,6 +388,13 @@ export interface SessionWizardBookingRequest {
 }
 
 export interface SessionWizardDurationRequest {
+  startDate: string | null
+  endDate: string | null
+}
+
+export interface SessionWizardDateTimeRequest {
+  bookingStartDate: string | null
+  bookingEndDate: string | null
   startDate: string | null
   endDate: string | null
 }
@@ -796,6 +824,40 @@ export async function updateSessionWizardVenue(
 
   return {
     venueUniqueId: venue.VenueUniqueId ?? venue.venueUniqueId ?? "",
+  }
+}
+
+export async function fetchSessionWizardDateTime(uniqueId: string): Promise<SessionWizardDateTime> {
+  const res = await client.get<unknown>(API_ROUTES.sessionWizardDateTime(uniqueId))
+  const responseData = parseServicePayload(res.data)
+  const dateTime = sessionDateTimeSchema.parse(responseData)
+
+  return {
+    bookingStartDate: dateTime.BookingStartDate ?? dateTime.bookingStartDate ?? null,
+    bookingEndDate: dateTime.BookingEndDate ?? dateTime.bookingEndDate ?? null,
+    startDate: dateTime.StartDate ?? dateTime.startDate ?? null,
+    endDate: dateTime.EndDate ?? dateTime.endDate ?? null,
+    stepNo: dateTime.StepNo ?? dateTime.stepNo ?? 0,
+  }
+}
+
+export async function updateSessionWizardDateTime(
+  uniqueId: string,
+  payload: SessionWizardDateTimeRequest,
+  stepNo = 8,
+): Promise<SessionWizardDateTime> {
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardDateTime(uniqueId), payload, {
+    params: { stepNo },
+  })
+  const responseData = parseServicePayload(res.data)
+  const dateTime = sessionDateTimeSchema.parse(responseData)
+
+  return {
+    bookingStartDate: dateTime.BookingStartDate ?? dateTime.bookingStartDate ?? null,
+    bookingEndDate: dateTime.BookingEndDate ?? dateTime.bookingEndDate ?? null,
+    startDate: dateTime.StartDate ?? dateTime.startDate ?? null,
+    endDate: dateTime.EndDate ?? dateTime.endDate ?? null,
+    stepNo: dateTime.StepNo ?? dateTime.stepNo ?? stepNo,
   }
 }
 

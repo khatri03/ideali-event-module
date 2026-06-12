@@ -40,16 +40,21 @@ export const APP_ROUTES = {
   sessionWizard: {
     list: "/organizer/sessions",
     edit: (sessionId: string) => `/organizer/sessions/${sessionId}`,
-    editStep: (sessionId: string, step: string) => `/organizer/sessions/${sessionId}/${step}`,
+    editStep: (sessionId: string, step: string) => {
+      const normalizedStep = step === "booking" || step === "start-end" ? "dates-time" : step
+      return `/organizer/sessions/${sessionId}/${normalizedStep}`
+    },
     slugs: {
       name: "name",
       description: "description",
       banner: "banner",
       genre: "genre",
       venue: "venue",
+      datesTime: "dates-time",
       event: "event",
       booking: "booking",
       startEnd: "start-end",
+      dateTime: "dates-time",
       schedule: "schedule",
       ticket: "ticket",
       eTicketing: "e-ticketing",
@@ -91,6 +96,7 @@ export const API_ROUTES = {
   sessionWizardSkip: (id: string) => `/api/organizer/sessions/${id}/skip`,
   sessionWizardEvent: (id: string) => `/api/organizer/sessions/${id}/event`,
   sessionWizardVenue: (id: string) => `/api/organizer/sessions/${id}/venue`,
+  sessionWizardDateTime: (id: string) => `/api/organizer/sessions/${id}/dates-time`,
   sessionWizardBooking: (id: string) => `/api/organizer/sessions/${id}/booking`,
   sessionWizardDuration: (id: string) => `/api/organizer/sessions/${id}/start-end`,
   sessionWizardSchedule: (id: string) => `/api/organizer/sessions/${id}/schedule`,

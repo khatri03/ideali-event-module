@@ -32,6 +32,7 @@ import {
 import {
   createSessionWizardSchedule,
   deleteSessionWizardSchedule,
+  fetchSessionWizardDateTime,
   fetchSessionWizardDescription,
   fetchSessionWizardBooking,
   fetchSessionWizardDuration,
@@ -41,6 +42,7 @@ import {
   fetchSessionWizardVenue,
   updateSessionWizardSchedule,
   updateSessionWizardDescription,
+  updateSessionWizardDateTime,
   updateSessionWizardBooking,
   updateSessionWizardDuration,
   updateSessionWizardEvent,
@@ -79,6 +81,10 @@ export function SessionWizardStepPage() {
 
   if (activeStep?.slug === "venue") {
     return <SessionVenueStep sessionId={sessionId} />
+  }
+
+  if (activeStep?.slug === "dates-time") {
+    return <SessionDatesTimeStep sessionId={sessionId} />
   }
 
   if (activeStep?.slug === "booking") {
@@ -1214,6 +1220,273 @@ function SessionVenueStep({ sessionId }: { sessionId: string }) {
       refetchVenues={venuesQuery.refetch}
       venuesError={venuesQuery.isError ? extractApiError(venuesQuery.error) : ""}
     />
+  )
+}
+
+function SessionDatesTimeStep({ sessionId }: { sessionId: string }) {
+  const dateTimeQuery = useQuery({
+    queryKey: ["sessions", { sessionId, step: "dates-time" }],
+    queryFn: () => fetchSessionWizardDateTime(sessionId),
+    enabled: !!sessionId,
+    retry: false,
+  })
+
+  if (dateTimeQuery.isLoading) {
+    return <LoadingState label="Loading the dates and time..." />
+  }
+
+  if (dateTimeQuery.isError) {
+    return (
+      <SessionStepShell label="Dates & Time">
+        <Text fontSize="lg" fontWeight="800" color="gray.900">
+          Dates & Time
+        </Text>
+        <Text fontSize="sm" color="red.500">
+          {extractApiError(dateTimeQuery.error)}
+        </Text>
+      </SessionStepShell>
+    )
+  }
+
+  return (
+    <SessionDatesTimeEditor
+      sessionId={sessionId}
+      initialBookingStartDate={dateTimeQuery.data?.bookingStartDate ?? null}
+      initialBookingEndDate={dateTimeQuery.data?.bookingEndDate ?? null}
+      initialStartDate={dateTimeQuery.data?.startDate ?? null}
+      initialEndDate={dateTimeQuery.data?.endDate ?? null}
+      initialStepNo={dateTimeQuery.data?.stepNo ?? getSessionWizardStepNumber("dates-time")}
+    />
+  )
+}
+
+function SessionDatesTimeEditor({
+  sessionId,
+  initialBookingStartDate,
+  initialBookingEndDate,
+  initialStartDate,
+  initialEndDate,
+  initialStepNo,
+}: {
+  sessionId: string
+  initialBookingStartDate: string | null
+  initialBookingEndDate: string | null
+  initialStartDate: string | null
+  initialEndDate: string | null
+  initialStepNo: number
+}) {
+  const { setPrimaryAction, setPrimaryActionReady } = useSessionWizardActions()
+  const queryClient = useQueryClient()
+  const [bookingStartDate, setBookingStartDate] = useState<Date | null>(toDateTimeInputValue(initialBookingStartDate))
+  const [bookingEndDate, setBookingEndDate] = useState<Date | null>(toDateTimeInputValue(initialBookingEndDate))
+  const [sessionStartDate, setSessionStartDate] = useState<Date | null>(toDateTimeInputValue(initialStartDate))
+  const [sessionEndDate, setSessionEndDate] = useState<Date | null>(toDateTimeInputValue(initialEndDate))
+  const [bookingError, setBookingError] = useState("")
+  const [sessionError, setSessionError] = useState("")
+
+  useEffect(() => {
+    setPrimaryAction(async () => {
+      const missingBookingFields = [
+        !bookingStartDate ? "Booking start date/time is required." : null,
+        !bookingEndDate ? "Booking end date/time is required." : null,
+      ].filter(Boolean)
+      const missingSessionFields = [
+        !sessionStartDate ? "Session start date/time is required." : null,
+        !sessionEndDate ? "Session end date/time is required." : null,
+      ].filter(Boolean)
+
+      if (bookingStartDate && bookingEndDate && bookingEndDate <= bookingStartDate) {
+        setBookingError("Booking end date/time must be after the start date/time.")
+        throw new Error("Booking end date/time must be after the start date/time.")
+      }
+
+      if (sessionStartDate && sessionEndDate && sessionEndDate <= sessionStartDate) {
+        setSessionError("Session end date/time must be after the start date/time.")
+        throw new Error("Session end date/time must be after the start date/time.")
+      }
+
+      const bookingMessage = missingBookingFields.join(" ")
+      const sessionMessage = missingSessionFields.join(" ")
+
+      setBookingError(bookingMessage)
+      setSessionError(sessionMessage)
+
+      if (bookingMessage || sessionMessage) {
+        throw new Error([bookingMessage, sessionMessage].filter(Boolean).join(" "))
+      }
+
+      setBookingError("")
+      setSessionError("")
+
+      try {
+        setPrimaryActionReady(false)
+        const result = await updateSessionWizardDateTime(
+          sessionId,
+          {
+            bookingStartDate: toBookingDateString(bookingStartDate),
+            bookingEndDate: toBookingDateString(bookingEndDate),
+            startDate: toBookingDateString(sessionStartDate),
+            endDate: toBookingDateString(sessionEndDate),
+          },
+          getSessionWizardStepNumber("dates-time"),
+        )
+
+        setBookingStartDate(toDateTimeInputValue(result.bookingStartDate))
+        setBookingEndDate(toDateTimeInputValue(result.bookingEndDate))
+        setSessionStartDate(toDateTimeInputValue(result.startDate))
+        setSessionEndDate(toDateTimeInputValue(result.endDate))
+        updateWizardProgressCache(queryClient, sessionId, result.stepNo || initialStepNo || getSessionWizardStepNumber("dates-time"))
+        await invalidateSessionReviewQueries(queryClient, sessionId)
+      } catch (saveError: unknown) {
+        const message = extractApiError(saveError)
+        if (message.toLowerCase().includes("booking")) {
+          setBookingError(message)
+        } else if (message.toLowerCase().includes("session")) {
+          setSessionError(message)
+        }
+        throw saveError
+      } finally {
+        setPrimaryActionReady(true)
+      }
+    })
+
+    setPrimaryActionReady(true)
+
+    return () => {
+      setPrimaryAction(null)
+      setPrimaryActionReady(true)
+    }
+  }, [bookingEndDate, bookingStartDate, initialStepNo, queryClient, sessionEndDate, sessionId, sessionStartDate, setPrimaryAction, setPrimaryActionReady])
+
+  return (
+    <SessionStepShell label="Dates & Time">
+      <Stack gap={2}>
+        <Text fontSize="lg" fontWeight="800" color="gray.900">
+          Dates & Time
+        </Text>
+        <Text fontSize="sm" color="text.secondary">
+          Choose when booking opens and closes, then define the session start and end times. UTC Date/Time recommended.
+        </Text>
+      </Stack>
+
+      <Stack gap={6} maxW="760px">
+        <Stack gap={3}>
+          <Box>
+            <Text fontSize="sm" fontWeight="700" color="gray.900">
+              Booking Window <Text as="span" color="red.500">*</Text>
+            </Text>
+            <Text fontSize="xs" color="gray.500" mt={1}>
+              When registrations open and close for the session.
+            </Text>
+          </Box>
+          <SimpleGrid columns={{ base: 1, lg: 2 }} gap={5}>
+            <Stack gap={3}>
+              <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
+                Start
+              </Text>
+              <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
+                <BookingDateTimeField
+                  key={`booking-start-${bookingStartDate?.toISOString() ?? "empty"}`}
+                  value={bookingStartDate}
+                  error={bookingError.includes("Booking start date/time is required.") ? "Booking start date/time is required." : ""}
+                  onChange={(nextStart) => {
+                    setBookingStartDate(nextStart)
+                    if (bookingEndDate && nextStart && bookingEndDate <= nextStart) {
+                      setBookingEndDate(null)
+                    }
+                    if (bookingError) setBookingError("")
+                  }}
+                />
+              </Box>
+            </Stack>
+
+            <Stack gap={3}>
+              <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
+                End
+              </Text>
+              <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
+                <BookingDateTimeField
+                  key={`booking-end-${bookingEndDate?.toISOString() ?? "empty"}-${bookingStartDate?.toISOString() ?? "nostart"}`}
+                  value={bookingEndDate}
+                  minDate={bookingStartDate ?? undefined}
+                  error={bookingError.includes("Booking end date/time is required.") ? "Booking end date/time is required." : ""}
+                  onChange={(value) => {
+                    setBookingEndDate(value)
+                    if (bookingError) setBookingError("")
+                  }}
+                />
+              </Box>
+            </Stack>
+          </SimpleGrid>
+
+          {bookingError ? (
+            <Text fontSize="sm" color="red.500" maxW="760px">
+              {bookingError}
+            </Text>
+          ) : null}
+        </Stack>
+
+        <Stack gap={3}>
+          <Box>
+            <Text fontSize="sm" fontWeight="700" color="gray.900">
+              Session Date/Time <Text as="span" color="red.500">*</Text>
+            </Text>
+            <Text fontSize="xs" color="gray.500" mt={1}>
+              When the session itself begins and ends.
+            </Text>
+          </Box>
+          <SimpleGrid columns={{ base: 1, lg: 2 }} gap={5}>
+            <Stack gap={3}>
+              <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
+                Start
+              </Text>
+              <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
+                <BookingDateTimeField
+                  key={`session-start-${sessionStartDate?.toISOString() ?? "empty"}`}
+                  value={sessionStartDate}
+                  error={sessionError.includes("Session start date/time is required.") ? "Session start date/time is required." : ""}
+                  onChange={(nextStart) => {
+                    setSessionStartDate(nextStart)
+                    if (sessionEndDate && nextStart && sessionEndDate <= nextStart) {
+                      setSessionEndDate(null)
+                    }
+                    if (sessionError) setSessionError("")
+                  }}
+                />
+              </Box>
+            </Stack>
+
+            <Stack gap={3}>
+              <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
+                End
+              </Text>
+              <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
+                <BookingDateTimeField
+                  key={`session-end-${sessionEndDate?.toISOString() ?? "empty"}-${sessionStartDate?.toISOString() ?? "nostart"}`}
+                  value={sessionEndDate}
+                  minDate={sessionStartDate ?? undefined}
+                  error={sessionError.includes("Session end date/time is required.") ? "Session end date/time is required." : ""}
+                  onChange={(value) => {
+                    setSessionEndDate(value)
+                    if (sessionError) setSessionError("")
+                  }}
+                />
+              </Box>
+            </Stack>
+          </SimpleGrid>
+
+          {sessionError ? (
+            <Text fontSize="sm" color="red.500" maxW="760px">
+              {sessionError}
+            </Text>
+          ) : null}
+        </Stack>
+      </Stack>
+
+      <Text fontSize="sm" color="text.secondary">
+        Choose when booking opens and closes, and when the session runs. UTC Date/Time recommended.
+      </Text>
+    </SessionStepShell>
   )
 }
 
