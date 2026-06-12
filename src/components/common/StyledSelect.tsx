@@ -45,10 +45,12 @@ export function StyledSelect({
       value={value ? [value] : []}
       onValueChange={({ value: val }) => onChange(val[0] ?? "")}
       disabled={disabled}
+      w="full"
     >
       <Select.HiddenSelect />
       <Select.Trigger
         h={h}
+        w="full"
         borderRadius={radius}
         px={4}
         bg="app.bg"

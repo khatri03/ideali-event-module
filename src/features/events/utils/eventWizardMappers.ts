@@ -14,7 +14,7 @@ export function eventToWizardValues(event: AppEvent): EventWizardValues {
     timeZoneId: undefined,
     themeColor: event.coverColor,
     visibility: event.visibility ?? "Public",
-    purchaseTimeLimitMinutes: event.purchaseTimeLimitMinutes ?? undefined,
+    purchaseTimeLimitMinutes: event.purchaseTimeLimitMinutes ?? 15,
     paymentAccountId: event.paymentAccountId ?? defaultPaymentAccountId,
     paymentMethods: [],
     venueUniqueId: "",

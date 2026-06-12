@@ -47,7 +47,7 @@ export const defaultEventWizardValues: EventWizardValues = {
   timeZoneId: undefined,
   themeColor: "#7551FF",
   visibility: "Public",
-  purchaseTimeLimitMinutes: undefined,
+  purchaseTimeLimitMinutes: 15,
   paymentAccountId: "",
   paymentMethods: [],
   venueUniqueId: "",

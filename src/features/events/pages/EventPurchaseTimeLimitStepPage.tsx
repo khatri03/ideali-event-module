@@ -12,7 +12,6 @@ import type { EventWizardValues } from "../schemas/eventWizard.schemas"
 export function EventPurchaseTimeLimitStepPage() {
   const { control } = useFormContext<EventWizardValues>()
   const visibilityValue = useWatch({ control, name: "visibility" })
-  const purchaseTimeLimitValue = useWatch({ control, name: "purchaseTimeLimitMinutes" })
 
   const visibilityQuery = useQuery({
     queryKey: ["events", "visibility-options"],
@@ -29,7 +28,6 @@ export function EventPurchaseTimeLimitStepPage() {
   const visibilityOptions = visibilityQuery.data ?? []
   const purchaseTimeLimitOptions = purchaseTimeLimitQuery.data ?? []
   const selectedVisibility = visibilityOptions.find((option) => option.value === visibilityValue)
-  const selectedPurchaseTimeLimit = purchaseTimeLimitOptions.find((option) => option.value === String(purchaseTimeLimitValue ?? ""))
 
   return (
     <Stack h="full" gap={6}>
@@ -50,9 +48,7 @@ export function EventPurchaseTimeLimitStepPage() {
                 />
               )}
             />
-            <Field.HelperText>
-              Choose who can discover and register for the event. The backend returns both the raw enum value and a readable label.
-            </Field.HelperText>
+            <Field.HelperText>Choose who can discover and register for the event.</Field.HelperText>
             {selectedVisibility ? (
               <Text fontSize="sm" color="text.secondary">
                 {selectedVisibility.description}
@@ -69,7 +65,7 @@ export function EventPurchaseTimeLimitStepPage() {
               name="purchaseTimeLimitMinutes"
               render={({ field }) => (
                 <StyledSelect
-                  value={field.value ? String(field.value) : ""}
+                  value={String(field.value ?? 15)}
                   onChange={(value) => field.onChange(value ? Number(value) : undefined)}
                   options={purchaseTimeLimitOptions}
                   placeholder={purchaseTimeLimitQuery.isLoading ? "Loading purchase time limits..." : "Select purchase time limit"}
@@ -77,14 +73,7 @@ export function EventPurchaseTimeLimitStepPage() {
                 />
               )}
             />
-            <Field.HelperText>
-              Choose when sales should close before the event starts. The available values come from the backend in 5-minute increments.
-            </Field.HelperText>
-            {selectedPurchaseTimeLimit ? (
-              <Text fontSize="sm" color="text.secondary">
-                {selectedPurchaseTimeLimit.description}
-              </Text>
-            ) : null}
+            <Field.HelperText>Choose when sales should close before the event starts.</Field.HelperText>
           </Stack>
         </Field.Root>
       </Stack>

@@ -111,7 +111,6 @@ const eventVisibilityOptionsSchema = z.array(eventVisibilityOptionSchema)
 const eventPurchaseTimeLimitOptionSchema = z.object({
   value: z.string().min(1),
   label: z.string().min(1),
-  description: z.string().min(1),
 })
 
 const eventPurchaseTimeLimitOptionsSchema = z.array(eventPurchaseTimeLimitOptionSchema)
@@ -488,7 +487,6 @@ export async function fetchEventWizardVisibilityOptions(): Promise<EventVisibili
 export interface EventPurchaseTimeLimitOption {
   value: string
   label: string
-  description: string
 }
 
 export async function fetchEventWizardPurchaseTimeLimitOptions(): Promise<EventPurchaseTimeLimitOption[]> {

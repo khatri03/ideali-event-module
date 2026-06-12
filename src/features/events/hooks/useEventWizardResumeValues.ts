@@ -27,7 +27,7 @@ export function useEventWizardResumeValues(eventId?: string, lastCompletedStepNo
       return {
         description: descriptionResult?.description ?? "",
         themeColor: themeColorResult?.themeColor ?? "#7551FF",
-        purchaseTimeLimitMinutes: advancedSettingsResult?.purchaseTimeLimit ?? undefined,
+        purchaseTimeLimitMinutes: advancedSettingsResult?.purchaseTimeLimit ?? 15,
         visibility: advancedSettingsResult?.visibility ?? "Public",
       }
     },
