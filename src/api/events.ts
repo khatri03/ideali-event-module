@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { client } from "@/api/client"
 import type { PaginatedResponse, ServiceResponse } from "@/api/types"
-import type { AppEvent, EventStatus, EventCategory } from "@/types"
+import type { AppEvent, EventCategory, EventStatus, EventVisibility } from "@/types"
 import { API_ROUTES } from "@/utils/routes"
 
 export interface EventFilters {
@@ -26,6 +26,7 @@ const appEventSchema = z.object({
   attendees: z.number(),
   organizer: z.string(),
   coverColor: z.string(),
+  visibility: z.enum(["Public", "Member", "Invitation"]).optional(),
   price: z.number(),
   currency: z.string(),
   tags: z.array(z.string()),
@@ -90,8 +91,19 @@ const eventWizardThemeColorResponseSchema = z.object({
   themeColor: z.string().nullable().optional(),
 })
 
+const eventVisibilityValueSchema = z.enum(["Public", "Member", "Invitation"])
+
+const eventVisibilityOptionSchema = z.object({
+  value: eventVisibilityValueSchema,
+  label: z.string().min(1),
+  description: z.string().min(1),
+})
+
+const eventVisibilityOptionsSchema = z.array(eventVisibilityOptionSchema)
+
 const eventWizardAdvancedSettingsResponseSchema = z.object({
   purchaseTimeLimit: z.number().int().positive().nullable().optional(),
+  visibility: eventVisibilityValueSchema.nullable().optional(),
 })
 
 const eventEmailPlaceholderItemSchema = z.object({
@@ -439,6 +451,7 @@ export async function updateEventWizardThemeColor(
 
 export interface EventWizardAdvancedSettingsResponse {
   purchaseTimeLimit?: number | null
+  visibility?: EventVisibility | null
 }
 
 export async function fetchEventWizardAdvancedSettings(uniqueId: string): Promise<EventWizardAdvancedSettingsResponse> {
@@ -446,9 +459,20 @@ export async function fetchEventWizardAdvancedSettings(uniqueId: string): Promis
   return eventWizardAdvancedSettingsResponseSchema.parse(res.data)
 }
 
+export interface EventVisibilityOption {
+  value: EventVisibility
+  label: string
+  description: string
+}
+
+export async function fetchEventWizardVisibilityOptions(): Promise<EventVisibilityOption[]> {
+  const res = await client.get<unknown>(API_ROUTES.eventWizardVisibilityOptions)
+  return eventVisibilityOptionsSchema.parse(res.data)
+}
+
 export async function updateEventWizardAdvancedSettings(
   uniqueId: string,
-  payload: { purchaseTimeLimit: number | null },
+  payload: { purchaseTimeLimit: number | null; visibility: EventVisibility },
   stepNo = 13
 ): Promise<EventWizardAdvancedSettingsResponse> {
   const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "advanced-settings")}`, payload, {

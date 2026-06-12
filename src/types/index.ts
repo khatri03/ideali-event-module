@@ -10,6 +10,7 @@ export type EventCategory =
   | "other"
 
 export type EventStatus = "draft" | "published" | "ongoing" | "completed" | "cancelled"
+export type EventVisibility = "Public" | "Member" | "Invitation"
 
 export interface EventSession {
   title: string
@@ -33,6 +34,7 @@ export interface AppEvent {
   attendees: number
   organizer: string
   coverColor: string
+  visibility?: EventVisibility
   price: number
   currency: string
   tags: string[]

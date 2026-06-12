@@ -283,8 +283,7 @@ function EventWizardLayoutContent() {
     activeStep.slug === "venue" ||
     activeStep.slug === "sessions" ||
     activeStep.slug === "discount-coupon" ||
-    activeStep.slug === "questions" ||
-    activeStep.slug === "advanced-settings"
+    activeStep.slug === "questions"
   const isPaymentAccountStep = activeStep.slug === "payment-account"
   const isBannerStep = activeStep.slug === "banner"
   const isDiscountCouponStep = activeStep.slug === "discount-coupon"
@@ -343,8 +342,13 @@ function EventWizardLayoutContent() {
           shouldTouch: false,
           shouldValidate: false,
         })
-      } else if ("purchaseTimeLimit" in draftData) {
+      } else if ("purchaseTimeLimit" in draftData || "visibility" in draftData) {
         form.setValue("purchaseTimeLimitHours", draftData.purchaseTimeLimit ?? undefined, { shouldDirty: false, shouldTouch: false, shouldValidate: false })
+        form.setValue("visibility", draftData.visibility ?? "Public", {
+          shouldDirty: false,
+          shouldTouch: false,
+          shouldValidate: false,
+        })
       }
     }
   }, [form, wizardDraftQuery.data])
@@ -479,7 +483,11 @@ function EventWizardLayoutContent() {
             await persistSkippedStep(activeStep.slug)
           }
         } else if (activeStep.slug === "advanced-settings") {
-          const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 13)
+          const result = await updateEventWizardAdvancedSettings(
+            eventId,
+            { purchaseTimeLimit: purchaseTimeLimitHours, visibility: form.getValues("visibility") },
+            13,
+          )
           setWizardStepCache("advanced-settings", result)
           setWizardProgressCache(13)
         } else if (activeStep.slug === "sessions") {
@@ -578,7 +586,11 @@ function EventWizardLayoutContent() {
             await persistSkippedStep(activeStep.slug)
           }
         } else if (activeStep.slug === "advanced-settings") {
-          const result = await updateEventWizardAdvancedSettings(eventId, { purchaseTimeLimit: purchaseTimeLimitHours }, 13)
+          const result = await updateEventWizardAdvancedSettings(
+            eventId,
+            { purchaseTimeLimit: purchaseTimeLimitHours, visibility: form.getValues("visibility") },
+            13,
+          )
           setWizardStepCache("advanced-settings", result)
           setWizardProgressCache(13)
         } else if (activeStep.slug === "sessions") {

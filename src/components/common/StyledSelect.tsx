@@ -1,10 +1,11 @@
 import { useMemo } from "react"
-import { createListCollection, Select } from "@chakra-ui/react"
+import { Box, createListCollection, Select, Text } from "@chakra-ui/react"
 import { ChevronDown, Check } from "lucide-react"
 
 export interface SelectOption {
   label: string
   value: string
+  description?: string
 }
 
 interface StyledSelectProps {
@@ -107,7 +108,14 @@ export function StyledSelect({
               cursor="pointer"
               transition="background 0.1s ease"
             >
-              <Select.ItemText flex={1}>{item.label}</Select.ItemText>
+              <Box flex={1} minW={0}>
+                <Select.ItemText>{item.label}</Select.ItemText>
+                {item.description ? (
+                  <Text fontSize="xs" color="secondaryGray.500" lineHeight={1.4} mt={0.5}>
+                    {item.description}
+                  </Text>
+                ) : null}
+              </Box>
               <Select.ItemIndicator color="brand.500" _dark={{ color: "brand.400" }}>
                 <Check size={12} />
               </Select.ItemIndicator>

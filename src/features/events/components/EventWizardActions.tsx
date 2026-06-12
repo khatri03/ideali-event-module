@@ -1,4 +1,4 @@
-import { Button, Flex, Stack } from "@chakra-ui/react"
+import { Button, Flex } from "@chakra-ui/react"
 
 interface EventWizardActionsProps {
   backLabel?: string
@@ -38,23 +38,29 @@ export function EventWizardActions({
   onSkip,
 }: EventWizardActionsProps) {
   return (
-    <Stack gap={3}>
-      {showBack ? (
-        <Button
-          variant="outline"
-          borderRadius="14px"
-          h="44px"
-          px={6}
-          onClick={onBack}
-          disabled={isBackDisabled}
-          minW={{ base: "full", md: "auto" }}
-          alignSelf="flex-start"
-        >
-          {backLabel}
-        </Button>
-      ) : null}
+    <Flex
+      direction={{ base: "column", md: "row" }}
+      gap={3}
+      align={{ base: "stretch", md: "center" }}
+      justify="space-between"
+    >
+      <Flex gap={3} flex={1} align="center" justify={{ base: "stretch", md: "flex-start" }}>
+        {showBack ? (
+          <Button
+            variant="outline"
+            borderRadius="14px"
+            h="44px"
+            px={6}
+            onClick={onBack}
+            disabled={isBackDisabled}
+            minW={{ base: "full", md: "auto" }}
+          >
+            {backLabel}
+          </Button>
+        ) : null}
+      </Flex>
 
-      <Flex gap={3} justify="flex-end" flexWrap="wrap">
+      <Flex gap={3} justify={{ base: "stretch", md: "flex-end" }} flexWrap="wrap">
         {showSkip ? (
           <Button
             variant="outline"
@@ -100,6 +106,6 @@ export function EventWizardActions({
           {primaryLabel}
         </Button>
       </Flex>
-    </Stack>
+    </Flex>
   )
 }

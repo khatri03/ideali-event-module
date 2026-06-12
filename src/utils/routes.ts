@@ -66,6 +66,7 @@ export const API_ROUTES = {
   eventWizardSkip: (id: string) => `/api/organizer/events/${id}/skip`,
   eventWizardStep: (id: string, step: string) => `/api/organizer/events/${id}/${step}`,
   eventWizardName: (id: string) => `/api/organizer/events/${id}/name`,
+  eventWizardVisibilityOptions: "/api/organizer/events/visibility/options",
   eventEmailTemplatePlaceHolders: "/api/organizer/events/email-template/place-holders",
   eventEmailTemplateSnippetCreate: "/api/organizer/events/email-template/snippet/create",
   eventEmailTemplateSnippetList: "/api/organizer/events/email-template/snippet/list",

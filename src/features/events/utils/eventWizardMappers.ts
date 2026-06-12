@@ -13,6 +13,7 @@ export function eventToWizardValues(event: AppEvent): EventWizardValues {
     bannerUrl: event.bannerUrl ?? "",
     timeZoneId: undefined,
     themeColor: event.coverColor,
+    visibility: event.visibility ?? "Public",
     paymentAccountId: event.paymentAccountId ?? defaultPaymentAccountId,
     paymentMethods: [],
     venueUniqueId: "",

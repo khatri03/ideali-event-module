@@ -10,6 +10,18 @@ import { useEventDiscountCoupons } from "../hooks/useEventDiscountCoupons"
 import { htmlToPlainText } from "@/utils/html"
 import { defaultEventWizardValues, type EventWizardValues } from "../schemas/eventWizard.schemas"
 
+function getVisibilityLabel(visibility?: string | null) {
+  switch (visibility) {
+    case "Member":
+      return "Members only"
+    case "Invitation":
+      return "Invitation only"
+    case "Public":
+    default:
+      return "Public"
+  }
+}
+
 export function EventReviewStepPage() {
   const { eventId } = useParams<{ eventId?: string }>()
   const values = useWatch({ defaultValue: defaultEventWizardValues }) as EventWizardValues
@@ -126,6 +138,7 @@ export function EventReviewStepPage() {
             isRequired
           />
           <ReviewRow label="Theme color" value={<ColorPill color={values.themeColor} />} isRequired />
+          <ReviewRow label="Visibility" value={getVisibilityLabel(values.visibility)} />
           <ReviewRow label="Payment account" value={paymentAccount?.name || "Not selected"} isRequired />
           <ReviewRow
             label="Payment methods"

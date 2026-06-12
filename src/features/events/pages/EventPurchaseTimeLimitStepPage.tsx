@@ -1,16 +1,54 @@
+import { Controller, useFormContext, useWatch } from "react-hook-form"
 import { Field, Input, Stack, Text } from "@chakra-ui/react"
-import { useFormContext } from "react-hook-form"
+import { useQuery } from "@tanstack/react-query"
+import { fetchEventWizardVisibilityOptions } from "@/api/events"
+import { StyledSelect } from "@/components/common"
 import { StepFieldLabel } from "../components/StepFieldLabel"
 import type { EventWizardValues } from "../schemas/eventWizard.schemas"
 
 export function EventPurchaseTimeLimitStepPage() {
-  const { register } = useFormContext<EventWizardValues>()
+  const { control, register } = useFormContext<EventWizardValues>()
+  const visibilityValue = useWatch({ control, name: "visibility" })
+  const visibilityQuery = useQuery({
+    queryKey: ["events", "visibility-options"],
+    queryFn: fetchEventWizardVisibilityOptions,
+    retry: false,
+  })
+  const visibilityOptions = visibilityQuery.data ?? []
+  const selectedVisibility = visibilityOptions.find((option) => option.value === visibilityValue)
 
   return (
-    <Stack h="full" gap={4}>
-      <Stack flex="1" gap={4}>
+    <Stack h="full" gap={6}>
+      <Stack flex="1" gap={6}>
         <Field.Root>
-          <StepFieldLabel label="Advanced settings" />
+          <StepFieldLabel label="Visibility" />
+          <Stack gap={4}>
+            <Controller
+              control={control}
+              name="visibility"
+              render={({ field }) => (
+                <StyledSelect
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={visibilityOptions}
+                  placeholder={visibilityQuery.isLoading ? "Loading visibility options..." : "Select visibility"}
+                  disabled={visibilityQuery.isLoading}
+                />
+              )}
+            />
+            <Field.HelperText>
+              Choose who can discover and register for the event. The backend returns both the raw enum value and a readable label.
+            </Field.HelperText>
+            {selectedVisibility ? (
+              <Text fontSize="sm" color="text.secondary">
+                {selectedVisibility.description}
+              </Text>
+            ) : null}
+          </Stack>
+        </Field.Root>
+
+        <Field.Root>
+          <StepFieldLabel label="Purchase time limit" />
           <Input
             type="number"
             placeholder="e.g. 24"
