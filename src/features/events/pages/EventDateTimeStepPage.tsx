@@ -67,6 +67,18 @@ function toDateTimeString(value: Date | null) {
   return value ? format(value, "yyyy-MM-dd'T'HH:mm:ss") : null
 }
 
+function validateDateRange(
+  startDate: Date | null,
+  endDate: Date | null,
+  startMessage: string,
+  endMessage: string,
+) {
+  const startError = startDate ? "" : startMessage
+  const endError = endDate ? (startDate && endDate <= startDate ? "End date/time must be after the start date/time." : "") : endMessage
+
+  return { startError, endError }
+}
+
 function LoadingState({ label }: { label: string }) {
   return (
     <Stack gap={4}>
@@ -226,9 +238,13 @@ function EventDateTimeField({
 function EventDateTimeEditor({
   initialStartDate,
   initialEndDate,
+  initialBookingStartDate,
+  initialBookingEndDate,
 }: {
   initialStartDate: string | null
   initialEndDate: string | null
+  initialBookingStartDate: string | null
+  initialBookingEndDate: string | null
 }) {
   const { eventId } = useParams<{ eventId?: string }>()
   const currentEventId = eventId ?? ""
@@ -237,10 +253,30 @@ function EventDateTimeEditor({
   const { setPrimaryAction, setPrimaryActionReady, setPrimaryActionEnabled } = useEventWizardActions()
   const [eventStartDate, setEventStartDate] = useState<Date | null>(toDateTimeValue(initialStartDate))
   const [eventEndDate, setEventEndDate] = useState<Date | null>(toDateTimeValue(initialEndDate))
-  const [error, setError] = useState("")
+  const [bookingStartDate, setBookingStartDate] = useState<Date | null>(toDateTimeValue(initialBookingStartDate))
+  const [bookingEndDate, setBookingEndDate] = useState<Date | null>(toDateTimeValue(initialBookingEndDate))
+  const [errors, setErrors] = useState({
+    eventStart: "",
+    eventEnd: "",
+    bookingStart: "",
+    bookingEnd: "",
+  })
+
+  function clearEventErrors() {
+    setErrors((current) => ({ ...current, eventStart: "", eventEnd: "" }))
+  }
+
+  function clearBookingErrors() {
+    setErrors((current) => ({ ...current, bookingStart: "", bookingEnd: "" }))
+  }
 
   const saveMutation = useMutation({
-    mutationFn: async (payload: { startDate: string | null; endDate: string | null }) => {
+    mutationFn: async (payload: {
+      startDate: string | null
+      endDate: string | null
+      bookingStartDate: string | null
+      bookingEndDate: string | null
+    }) => {
       if (!currentEventId) {
         throw new Error("Event id is required.")
       }
@@ -254,6 +290,8 @@ function EventDateTimeEditor({
 
       setValue("startDate", result.startDate ?? "", { shouldDirty: false, shouldTouch: false, shouldValidate: false })
       setValue("endDate", result.endDate ?? "", { shouldDirty: false, shouldTouch: false, shouldValidate: false })
+      setValue("bookingStartDate", result.bookingStartDate ?? "", { shouldDirty: false, shouldTouch: false, shouldValidate: false })
+      setValue("bookingEndDate", result.bookingEndDate ?? "", { shouldDirty: false, shouldTouch: false, shouldValidate: false })
       queryClient.setQueryData(["events", "wizard-draft", currentEventId, "date-time"], result)
       queryClient.setQueryData(["events", "wizard-progress", currentEventId], (current: { stepNo?: number } | undefined) => ({
         stepNo: Math.max(current?.stepNo ?? 0, result.stepNo ?? 10),
@@ -274,31 +312,38 @@ function EventDateTimeEditor({
 
     setPrimaryActionEnabled(true)
     setPrimaryAction(async () => {
-      if (!eventStartDate || !eventEndDate) {
-        const message = [
-          !eventStartDate ? "Event start date/time is required." : null,
-          !eventEndDate ? "Event end date/time is required." : null,
-        ]
-          .filter(Boolean)
-          .join(" ")
+      const eventErrors = validateDateRange(
+        eventStartDate,
+        eventEndDate,
+        "Event start date/time is required.",
+        "Event end date/time is required.",
+      )
+      const bookingErrors = validateDateRange(
+        bookingStartDate,
+        bookingEndDate,
+        "Booking start date/time is required.",
+        "Booking end date/time is required.",
+      )
 
-        setError(message)
-        throw new Error(message)
+      setErrors({
+        eventStart: eventErrors.startError,
+        eventEnd: eventErrors.endError,
+        bookingStart: bookingErrors.startError,
+        bookingEnd: bookingErrors.endError,
+      })
+
+      if (eventErrors.startError || eventErrors.endError || bookingErrors.startError || bookingErrors.endError) {
+        throw new Error("Validation failed.")
       }
 
-      if (eventEndDate <= eventStartDate) {
-        const message = "Event end date/time must be after the start date/time."
-        setError(message)
-        throw new Error(message)
-      }
-
-      setError("")
       setPrimaryActionReady(false)
 
       try {
         await saveMutation.mutateAsync({
           startDate: toDateTimeString(eventStartDate),
           endDate: toDateTimeString(eventEndDate),
+          bookingStartDate: toDateTimeString(bookingStartDate),
+          bookingEndDate: toDateTimeString(bookingEndDate),
         })
       } finally {
         setPrimaryActionReady(true)
@@ -313,6 +358,8 @@ function EventDateTimeEditor({
       setPrimaryActionEnabled(false)
     }
   }, [
+    bookingEndDate,
+    bookingStartDate,
     currentEventId,
     eventEndDate,
     eventStartDate,
@@ -322,6 +369,8 @@ function EventDateTimeEditor({
     setPrimaryActionReady,
   ])
 
+  const hasAnyErrors = Boolean(errors.eventStart || errors.eventEnd || errors.bookingStart || errors.bookingEnd)
+
   return (
     <Stack h="full" gap={4}>
       <Stack flex="1" gap={4}>
@@ -329,56 +378,94 @@ function EventDateTimeEditor({
           Event Date/Time
         </Text>
         <Text fontSize="sm" color="text.secondary">
-          Choose when the event starts and ends. UTC Date/Time recommended.
+          Choose when the event and booking windows start and end. UTC Date/Time recommended.
         </Text>
 
-        <SimpleGrid columns={{ base: 1, lg: 2 }} gap={5} maxW="760px">
+        <Stack gap={5} maxW="760px">
           <Stack gap={3}>
-            <Text fontSize="sm" fontWeight="700" color="gray.900">
-              Event Starts <Text as="span" color="red.500">*</Text>
-            </Text>
-            <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
-              <EventDateTimeField
-                key={`event-start-${eventStartDate?.toISOString() ?? "empty"}`}
-                value={eventStartDate}
-                error={error.includes("Event start date/time is required.") ? "Event start date/time is required." : ""}
-                onChange={(nextStart) => {
-                  setEventStartDate(nextStart)
-                  if (eventEndDate && nextStart && eventEndDate <= nextStart) {
-                    setEventEndDate(null)
-                  }
-                  if (error) {
-                    setError("")
-                  }
-                }}
-              />
+            <Box>
+              <Text fontSize="sm" fontWeight="700" color="gray.900">
+                Event Window <Text as="span" color="red.500">*</Text>
+              </Text>
+              <Text fontSize="xs" color="gray.500" mt={1}>
+                When the event itself begins and ends.
+              </Text>
             </Box>
+            <SimpleGrid columns={{ base: 1, lg: 2 }} gap={5}>
+              <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
+                <EventDateTimeField
+                  key={`event-start-${eventStartDate?.toISOString() ?? "empty"}`}
+                  value={eventStartDate}
+                  error={errors.eventStart}
+                  onChange={(nextStart) => {
+                    setEventStartDate(nextStart)
+                    if (eventEndDate && nextStart && eventEndDate <= nextStart) {
+                      setEventEndDate(null)
+                    }
+                    clearEventErrors()
+                  }}
+                />
+              </Box>
+
+              <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
+                <EventDateTimeField
+                  key={`event-end-${eventEndDate?.toISOString() ?? "empty"}-${eventStartDate?.toISOString() ?? "nostart"}`}
+                  value={eventEndDate}
+                  minDate={eventStartDate ?? undefined}
+                  error={errors.eventEnd}
+                  onChange={(value) => {
+                    setEventEndDate(value)
+                    clearEventErrors()
+                  }}
+                />
+              </Box>
+            </SimpleGrid>
           </Stack>
 
           <Stack gap={3}>
-            <Text fontSize="sm" fontWeight="700" color="gray.900">
-              Event Ends <Text as="span" color="red.500">*</Text>
-            </Text>
-            <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
-              <EventDateTimeField
-                key={`event-end-${eventEndDate?.toISOString() ?? "empty"}-${eventStartDate?.toISOString() ?? "nostart"}`}
-                value={eventEndDate}
-                minDate={eventStartDate ?? undefined}
-                error={error.includes("Event end date/time is required.") ? "Event end date/time is required." : ""}
-                onChange={(value) => {
-                  setEventEndDate(value)
-                  if (error) {
-                    setError("")
-                  }
-                }}
-              />
+            <Box>
+              <Text fontSize="sm" fontWeight="700" color="gray.900">
+                Booking Window <Text as="span" color="red.500">*</Text>
+              </Text>
+              <Text fontSize="xs" color="gray.500" mt={1}>
+                When registrations open and close for the event.
+              </Text>
             </Box>
-          </Stack>
-        </SimpleGrid>
+            <SimpleGrid columns={{ base: 1, lg: 2 }} gap={5}>
+              <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
+                <EventDateTimeField
+                  key={`booking-start-${bookingStartDate?.toISOString() ?? "empty"}`}
+                  value={bookingStartDate}
+                  error={errors.bookingStart}
+                  onChange={(nextStart) => {
+                    setBookingStartDate(nextStart)
+                    if (bookingEndDate && nextStart && bookingEndDate <= nextStart) {
+                      setBookingEndDate(null)
+                    }
+                    clearBookingErrors()
+                  }}
+                />
+              </Box>
 
-        {error ? (
+              <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
+                <EventDateTimeField
+                  key={`booking-end-${bookingEndDate?.toISOString() ?? "empty"}-${bookingStartDate?.toISOString() ?? "nostart"}`}
+                  value={bookingEndDate}
+                  minDate={bookingStartDate ?? undefined}
+                  error={errors.bookingEnd}
+                  onChange={(value) => {
+                    setBookingEndDate(value)
+                    clearBookingErrors()
+                  }}
+                />
+              </Box>
+            </SimpleGrid>
+          </Stack>
+        </Stack>
+
+        {hasAnyErrors ? (
           <Text fontSize="sm" color="red.500" maxW="760px">
-            {error}
+            Please complete both date/time ranges before saving.
           </Text>
         ) : null}
       </Stack>
@@ -422,9 +509,11 @@ export function EventDateTimeStepPage() {
 
   return (
     <EventDateTimeEditor
-      key={`${currentEventId}:${dateTimeQuery.data?.startDate ?? ""}:${dateTimeQuery.data?.endDate ?? ""}`}
+      key={`${currentEventId}:${dateTimeQuery.data?.startDate ?? ""}:${dateTimeQuery.data?.endDate ?? ""}:${dateTimeQuery.data?.bookingStartDate ?? ""}:${dateTimeQuery.data?.bookingEndDate ?? ""}`}
       initialStartDate={dateTimeQuery.data?.startDate ?? null}
       initialEndDate={dateTimeQuery.data?.endDate ?? null}
+      initialBookingStartDate={dateTimeQuery.data?.bookingStartDate ?? null}
+      initialBookingEndDate={dateTimeQuery.data?.bookingEndDate ?? null}
     />
   )
 }

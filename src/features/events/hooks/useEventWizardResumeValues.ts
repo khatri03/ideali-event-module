@@ -8,9 +8,17 @@ import {
 import type { EventWizardValues } from "../schemas/eventWizard.schemas"
 
 type EventWizardResumeValues = Partial<
-  Pick<
-    EventWizardValues,
-    "name" | "description" | "themeColor" | "purchaseTimeLimitMinutes" | "visibility" | "startDate" | "endDate"
+    Pick<
+      EventWizardValues,
+    | "name"
+    | "description"
+    | "themeColor"
+    | "purchaseTimeLimitMinutes"
+    | "visibility"
+    | "startDate"
+    | "endDate"
+    | "bookingStartDate"
+    | "bookingEndDate"
   >
 >
 
@@ -34,6 +42,8 @@ export function useEventWizardResumeValues(eventId?: string, lastCompletedStepNo
         themeColor: themeColorResult?.themeColor ?? "#7551FF",
         startDate: dateTimeResult?.startDate ?? "",
         endDate: dateTimeResult?.endDate ?? "",
+        bookingStartDate: dateTimeResult?.bookingStartDate ?? "",
+        bookingEndDate: dateTimeResult?.bookingEndDate ?? "",
         purchaseTimeLimitMinutes: advancedSettingsResult?.purchaseTimeLimit ?? 15,
         visibility: advancedSettingsResult?.visibility ?? "Public",
       }

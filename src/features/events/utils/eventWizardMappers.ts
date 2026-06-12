@@ -15,6 +15,8 @@ export function eventToWizardValues(event: AppEvent): EventWizardValues {
     themeColor: event.coverColor,
     startDate: event.startDate ?? "",
     endDate: event.endDate ?? "",
+    bookingStartDate: event.bookingStartDate ?? "",
+    bookingEndDate: event.bookingEndDate ?? "",
     visibility: event.visibility ?? "Public",
     purchaseTimeLimitMinutes: event.purchaseTimeLimitMinutes ?? 15,
     paymentAccountId: event.paymentAccountId ?? defaultPaymentAccountId,

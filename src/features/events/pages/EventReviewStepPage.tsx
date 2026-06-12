@@ -402,6 +402,8 @@ export function EventReviewStepPage() {
   const selectedPaymentAccountCurrency = selectedPaymentAccount?.paymentCurrency ?? ""
   const selectedStartDate = dateTimeQuery.data?.startDate ?? values.startDate ?? ""
   const selectedEndDate = dateTimeQuery.data?.endDate ?? values.endDate ?? ""
+  const selectedBookingStartDate = dateTimeQuery.data?.bookingStartDate ?? values.bookingStartDate ?? ""
+  const selectedBookingEndDate = dateTimeQuery.data?.bookingEndDate ?? values.bookingEndDate ?? ""
   const summaryError =
     nameQuery.error ??
     termsConditionsQuery.error ??
@@ -581,13 +583,29 @@ export function EventReviewStepPage() {
         <ReviewItem
           label="Event Date/Time"
           value={
-            <Stack gap={1}>
-              <Text fontSize="sm" fontWeight="800" color="gray.900" wordBreak="break-word">
-                {selectedStartDate ? format(parseISO(selectedStartDate), "dd-MMM-yyyy hh:mm aa") : "Not set"}
-              </Text>
-              <Text fontSize="sm" fontWeight="800" color="gray.900" wordBreak="break-word">
-                {selectedEndDate ? format(parseISO(selectedEndDate), "dd-MMM-yyyy hh:mm aa") : "Not set"}
-              </Text>
+            <Stack gap={3}>
+              <Stack gap={1}>
+                <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
+                  Event window
+                </Text>
+                <Text fontSize="sm" fontWeight="800" color="gray.900" wordBreak="break-word">
+                  {selectedStartDate ? format(parseISO(selectedStartDate), "dd-MMM-yyyy hh:mm aa") : "Not set"}
+                </Text>
+                <Text fontSize="sm" fontWeight="800" color="gray.900" wordBreak="break-word">
+                  {selectedEndDate ? format(parseISO(selectedEndDate), "dd-MMM-yyyy hh:mm aa") : "Not set"}
+                </Text>
+              </Stack>
+              <Stack gap={1}>
+                <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
+                  Booking window
+                </Text>
+                <Text fontSize="sm" fontWeight="800" color="gray.900" wordBreak="break-word">
+                  {selectedBookingStartDate ? format(parseISO(selectedBookingStartDate), "dd-MMM-yyyy hh:mm aa") : "Not set"}
+                </Text>
+                <Text fontSize="sm" fontWeight="800" color="gray.900" wordBreak="break-word">
+                  {selectedBookingEndDate ? format(parseISO(selectedBookingEndDate), "dd-MMM-yyyy hh:mm aa") : "Not set"}
+                </Text>
+              </Stack>
             </Stack>
           }
           onEdit={() => editStep("date-time")}

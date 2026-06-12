@@ -17,6 +17,8 @@ export const eventWizardSchema = z.object({
   themeColor: z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Enter a valid hex color"),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  bookingStartDate: z.string().optional(),
+  bookingEndDate: z.string().optional(),
   visibility: eventVisibilitySchema,
   purchaseTimeLimitMinutes: z.number().int().min(5, "Choose a value between 5 and 60").max(60, "Choose a value between 5 and 60").optional(),
   paymentAccountId: z.string().trim().min(1, "Payment account is required"),
@@ -38,6 +40,7 @@ export const eventWizardFieldGroups = {
   venue: ["venueUniqueId"] as const,
   timeZone: ["timeZone"] as const,
   sessions: ["sessions"] as const,
+  dateTime: ["startDate", "endDate", "bookingStartDate", "bookingEndDate"] as const,
   advancedSettings: ["purchaseTimeLimitMinutes", "visibility"] as const,
 }
 
@@ -50,6 +53,8 @@ export const defaultEventWizardValues: EventWizardValues = {
   themeColor: "#7551FF",
   startDate: "",
   endDate: "",
+  bookingStartDate: "",
+  bookingEndDate: "",
   visibility: "Public",
   purchaseTimeLimitMinutes: 15,
   paymentAccountId: "",

@@ -361,13 +361,23 @@ function EventWizardLayoutContent() {
           shouldTouch: false,
           shouldValidate: false,
         })
-      } else if ("startDate" in draftData || "endDate" in draftData) {
+      } else if ("startDate" in draftData || "endDate" in draftData || "bookingStartDate" in draftData || "bookingEndDate" in draftData) {
         form.setValue("startDate", draftData.startDate ?? "", {
           shouldDirty: false,
           shouldTouch: false,
           shouldValidate: false,
         })
         form.setValue("endDate", draftData.endDate ?? "", {
+          shouldDirty: false,
+          shouldTouch: false,
+          shouldValidate: false,
+        })
+        form.setValue("bookingStartDate", draftData.bookingStartDate ?? "", {
+          shouldDirty: false,
+          shouldTouch: false,
+          shouldValidate: false,
+        })
+        form.setValue("bookingEndDate", draftData.bookingEndDate ?? "", {
           shouldDirty: false,
           shouldTouch: false,
           shouldValidate: false,
@@ -399,6 +409,22 @@ function EventWizardLayoutContent() {
 
     if (resumeValues.endDate !== undefined) {
       form.setValue("endDate", resumeValues.endDate ?? "", { shouldDirty: false, shouldTouch: false, shouldValidate: false })
+    }
+
+    if (resumeValues.bookingStartDate !== undefined) {
+      form.setValue("bookingStartDate", resumeValues.bookingStartDate ?? "", {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: false,
+      })
+    }
+
+    if (resumeValues.bookingEndDate !== undefined) {
+      form.setValue("bookingEndDate", resumeValues.bookingEndDate ?? "", {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: false,
+      })
     }
   }, [form, resumeValuesQuery.data])
 
@@ -459,6 +485,8 @@ function EventWizardLayoutContent() {
     const timeZoneId = form.getValues("timeZoneId") ?? null
     const startDate = form.getValues("startDate")?.trim() || null
     const endDate = form.getValues("endDate")?.trim() || null
+    const bookingStartDate = form.getValues("bookingStartDate")?.trim() || null
+    const bookingEndDate = form.getValues("bookingEndDate")?.trim() || null
     const purchaseTimeLimitMinutes = form.getValues("purchaseTimeLimitMinutes") ?? null
 
     if (activeStep.slug === "name") {
@@ -523,7 +551,7 @@ function EventWizardLayoutContent() {
             await persistSkippedStep(activeStep.slug)
           }
         } else if (activeStep.slug === "date-time") {
-          const result = await updateEventWizardDateTime(eventId, { startDate, endDate }, 10)
+          const result = await updateEventWizardDateTime(eventId, { startDate, endDate, bookingStartDate, bookingEndDate }, 10)
           setWizardStepCache("date-time", result)
           setWizardProgressCache(10)
         } else if (activeStep.slug === "payment-account") {
@@ -580,6 +608,8 @@ function EventWizardLayoutContent() {
     const timeZoneId = form.getValues("timeZoneId") ?? null
     const startDate = form.getValues("startDate")?.trim() || null
     const endDate = form.getValues("endDate")?.trim() || null
+    const bookingStartDate = form.getValues("bookingStartDate")?.trim() || null
+    const bookingEndDate = form.getValues("bookingEndDate")?.trim() || null
     const purchaseTimeLimitMinutes = form.getValues("purchaseTimeLimitMinutes") ?? null
 
     if (activeStep.slug === "name") {
@@ -644,7 +674,7 @@ function EventWizardLayoutContent() {
             await persistSkippedStep(activeStep.slug)
           }
         } else if (activeStep.slug === "date-time") {
-          const result = await updateEventWizardDateTime(eventId, { startDate, endDate }, 10)
+          const result = await updateEventWizardDateTime(eventId, { startDate, endDate, bookingStartDate, bookingEndDate }, 10)
           setWizardStepCache("date-time", result)
           setWizardProgressCache(10)
         } else if (activeStep.slug === "payment-account") {

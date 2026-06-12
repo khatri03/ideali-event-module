@@ -37,6 +37,8 @@ const appEventSchema = z
     purchaseTimeLimitMinutes: z.number().int().positive().nullable().optional(),
     purchaseTimeLimitHours: z.number().int().positive().nullable().optional(),
     purchaseTimeLimit: z.number().int().positive().nullable().optional(),
+    bookingStartDate: z.string().nullable().optional(),
+    bookingEndDate: z.string().nullable().optional(),
     sessions: z
       .array(
         z.object({
@@ -101,6 +103,8 @@ const eventWizardThemeColorResponseSchema = z.object({
 const eventWizardDateTimeResponseSchema = z.object({
   startDate: z.string().nullable().optional(),
   endDate: z.string().nullable().optional(),
+  bookingStartDate: z.string().nullable().optional(),
+  bookingEndDate: z.string().nullable().optional(),
   stepNo: z.number().int().min(0).optional(),
 })
 
@@ -472,6 +476,8 @@ export async function updateEventWizardThemeColor(
 export interface EventWizardDateTimeResponse {
   startDate?: string | null
   endDate?: string | null
+  bookingStartDate?: string | null
+  bookingEndDate?: string | null
   stepNo?: number
 }
 
@@ -482,7 +488,7 @@ export async function fetchEventWizardDateTime(uniqueId: string): Promise<EventW
 
 export async function updateEventWizardDateTime(
   uniqueId: string,
-  payload: { startDate: string | null; endDate: string | null },
+  payload: { startDate: string | null; endDate: string | null; bookingStartDate: string | null; bookingEndDate: string | null },
   stepNo = 10,
 ): Promise<EventWizardDateTimeResponse> {
   const res = await client.post<unknown>(API_ROUTES.eventWizardDateTime(uniqueId), payload, {

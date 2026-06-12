@@ -158,6 +158,8 @@ export function buildCreateEventPayload(values: EventWizardValues): Omit<AppEven
     bannerUrl: values.bannerUrl.trim() || null,
     startDate: values.startDate?.trim() || firstSession?.startsAt || new Date().toISOString(),
     endDate: values.endDate?.trim() || lastSession?.endsAt || new Date().toISOString(),
+    bookingStartDate: values.bookingStartDate?.trim() || values.startDate?.trim() || new Date().toISOString(),
+    bookingEndDate: values.bookingEndDate?.trim() || values.endDate?.trim() || new Date().toISOString(),
     location: "TBD",
     category: "other",
     status: "draft",
