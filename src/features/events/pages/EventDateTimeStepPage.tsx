@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react"
-import { Box, Flex, SimpleGrid, Skeleton, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, Flex, SimpleGrid, Skeleton, Stack, Text } from "@chakra-ui/react"
 import { useFormContext } from "react-hook-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Calendar } from "lucide-react"
+import { Calendar, Wand2 } from "lucide-react"
 import { Timepicker } from "timepicker-ui-react"
 import type { ConfirmEventData } from "timepicker-ui"
 import { useParams } from "react-router-dom"
 import { format, parseISO } from "date-fns"
 import { extractApiError } from "@/utils/errors"
-import { fetchEventWizardDateTime, updateEventWizardDateTime } from "@/api/events"
+import { fetchEventWizardDateTime, fetchEventWizardDateTimeAutofill, updateEventWizardDateTime } from "@/api/events"
 import { useEventWizardActions } from "../hooks/useEventWizardActions"
 import { type EventWizardValues } from "../schemas/eventWizard.schemas"
 
@@ -235,16 +235,70 @@ function EventDateTimeField({
   )
 }
 
+function AutofillButton({
+  disabled,
+  onClick,
+}: {
+  disabled: boolean
+  onClick: () => void
+}) {
+  return (
+    <Button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      minH="44px"
+      px={4}
+      py={2}
+      borderRadius="full"
+      border="1px solid"
+      borderColor="brand.200"
+      bg="linear-gradient(135deg, rgba(117, 81, 255, 0.12), rgba(66, 42, 251, 0.08))"
+      color="brand.700"
+      boxShadow="0 10px 24px rgba(66, 42, 251, 0.08)"
+      _hover={{
+        bg: "linear-gradient(135deg, rgba(117, 81, 255, 0.18), rgba(66, 42, 251, 0.12))",
+        borderColor: "brand.300",
+        transform: "translateY(-1px)",
+      }}
+      _active={{
+        transform: "translateY(0)",
+      }}
+      _disabled={{
+        bg: "gray.100",
+        borderColor: "gray.200",
+        color: "gray.400",
+        boxShadow: "none",
+        transform: "none",
+      }}
+    >
+      <Flex align="center" gap={2}>
+        <Wand2 size={16} />
+        <Text fontSize="sm" fontWeight="700" lineHeight={1}>
+          Autofill from sessions
+        </Text>
+      </Flex>
+    </Button>
+  )
+}
+
 function EventDateTimeEditor({
   initialStartDate,
   initialEndDate,
   initialBookingStartDate,
   initialBookingEndDate,
+  autofillData,
 }: {
   initialStartDate: string | null
   initialEndDate: string | null
   initialBookingStartDate: string | null
   initialBookingEndDate: string | null
+  autofillData: {
+    startDate?: string | null
+    endDate?: string | null
+    bookingStartDate?: string | null
+    bookingEndDate?: string | null
+  } | null
 }) {
   const { eventId } = useParams<{ eventId?: string }>()
   const currentEventId = eventId ?? ""
@@ -261,6 +315,8 @@ function EventDateTimeEditor({
     bookingStart: "",
     bookingEnd: "",
   })
+  const canAutofillBookingWindow = Boolean(autofillData?.bookingStartDate && autofillData?.bookingEndDate)
+  const canAutofillEventWindow = Boolean(autofillData?.startDate && autofillData?.endDate)
 
   function clearEventErrors() {
     setErrors((current) => ({ ...current, eventStart: "", eventEnd: "" }))
@@ -268,6 +324,26 @@ function EventDateTimeEditor({
 
   function clearBookingErrors() {
     setErrors((current) => ({ ...current, bookingStart: "", bookingEnd: "" }))
+  }
+
+  function applyBookingWindowFromSessions() {
+    if (!autofillData?.bookingStartDate || !autofillData?.bookingEndDate) {
+      return
+    }
+
+    setBookingStartDate(toDateTimeValue(autofillData.bookingStartDate))
+    setBookingEndDate(toDateTimeValue(autofillData.bookingEndDate))
+    clearBookingErrors()
+  }
+
+  function applyEventWindowFromSessions() {
+    if (!autofillData?.startDate || !autofillData?.endDate) {
+      return
+    }
+
+    setEventStartDate(toDateTimeValue(autofillData.startDate))
+    setEventEndDate(toDateTimeValue(autofillData.endDate))
+    clearEventErrors()
   }
 
   const saveMutation = useMutation({
@@ -382,15 +458,18 @@ function EventDateTimeEditor({
         </Text>
 
         <Stack gap={5} maxW="760px">
-          <Stack gap={3}>
-            <Box>
-              <Text fontSize="sm" fontWeight="700" color="gray.900">
-                Booking Window <Text as="span" color="red.500">*</Text>
-              </Text>
-              <Text fontSize="xs" color="gray.500" mt={1}>
-                When registrations open and close for the event.
-              </Text>
-            </Box>
+        <Stack gap={3}>
+            <Flex align="start" justify="space-between" gap={4} flexWrap="wrap">
+              <Box>
+                <Text fontSize="sm" fontWeight="700" color="gray.900">
+                  Booking Window <Text as="span" color="red.500">*</Text>
+                </Text>
+                <Text fontSize="xs" color="gray.500" mt={1}>
+                  When registrations open and close for the event.
+                </Text>
+              </Box>
+              <AutofillButton disabled={!canAutofillBookingWindow} onClick={applyBookingWindowFromSessions} />
+            </Flex>
             <SimpleGrid columns={{ base: 1, lg: 2 }} gap={5}>
               <Stack gap={2}>
                 <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
@@ -432,15 +511,18 @@ function EventDateTimeEditor({
             </SimpleGrid>
           </Stack>
 
-          <Stack gap={3}>
-            <Box>
-              <Text fontSize="sm" fontWeight="700" color="gray.900">
-                Event Window <Text as="span" color="red.500">*</Text>
-              </Text>
-              <Text fontSize="xs" color="gray.500" mt={1}>
-                When the event itself begins and ends.
-              </Text>
-            </Box>
+        <Stack gap={3}>
+            <Flex align="start" justify="space-between" gap={4} flexWrap="wrap">
+              <Box>
+                <Text fontSize="sm" fontWeight="700" color="gray.900">
+                  Event Window <Text as="span" color="red.500">*</Text>
+                </Text>
+                <Text fontSize="xs" color="gray.500" mt={1}>
+                  When the event itself begins and ends.
+                </Text>
+              </Box>
+              <AutofillButton disabled={!canAutofillEventWindow} onClick={applyEventWindowFromSessions} />
+            </Flex>
             <SimpleGrid columns={{ base: 1, lg: 2 }} gap={5}>
               <Stack gap={2}>
                 <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
@@ -511,6 +593,19 @@ export function EventDateTimeStepPage() {
     retry: false,
   })
 
+  const autofillQuery = useQuery({
+    queryKey: ["events", "wizard-draft", currentEventId, "date-time", "autofill"],
+    queryFn: () => {
+      if (!currentEventId) {
+        throw new Error("Event id is required.")
+      }
+
+      return fetchEventWizardDateTimeAutofill(currentEventId)
+    },
+    enabled: !!currentEventId,
+    retry: false,
+  })
+
   useEffect(() => {
     if (!currentEventId || dateTimeQuery.isLoading || dateTimeQuery.isError) {
       setPrimaryAction(null)
@@ -552,6 +647,7 @@ export function EventDateTimeStepPage() {
       initialEndDate={dateTimeQuery.data?.endDate ?? null}
       initialBookingStartDate={dateTimeQuery.data?.bookingStartDate ?? null}
       initialBookingEndDate={dateTimeQuery.data?.bookingEndDate ?? null}
+      autofillData={autofillQuery.data ?? null}
     />
   )
 }

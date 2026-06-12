@@ -108,6 +108,13 @@ const eventWizardDateTimeResponseSchema = z.object({
   stepNo: z.number().int().min(0).optional(),
 })
 
+const eventWizardDateTimeAutofillResponseSchema = z.object({
+  startDate: z.string().nullable().optional(),
+  endDate: z.string().nullable().optional(),
+  bookingStartDate: z.string().nullable().optional(),
+  bookingEndDate: z.string().nullable().optional(),
+})
+
 const eventVisibilityValueSchema = z.enum(["Public", "Member", "Invitation"])
 
 const eventVisibilityOptionSchema = z.object({
@@ -267,6 +274,10 @@ const eventWizardSessionItemSchema = z.object({
   uniqueId: z.string().min(1),
   name: z.string().min(1),
   setupState: z.string().min(1),
+  startDate: z.string().nullable().optional(),
+  endDate: z.string().nullable().optional(),
+  bookingStartDate: z.string().nullable().optional(),
+  bookingEndDate: z.string().nullable().optional(),
 })
 
 const eventWizardProgressResponseSchema = z.object({
@@ -484,6 +495,18 @@ export interface EventWizardDateTimeResponse {
 export async function fetchEventWizardDateTime(uniqueId: string): Promise<EventWizardDateTimeResponse> {
   const res = await client.get<unknown>(API_ROUTES.eventWizardDateTime(uniqueId))
   return eventWizardDateTimeResponseSchema.parse(res.data)
+}
+
+export interface EventWizardDateTimeAutofillResponse {
+  startDate?: string | null
+  endDate?: string | null
+  bookingStartDate?: string | null
+  bookingEndDate?: string | null
+}
+
+export async function fetchEventWizardDateTimeAutofill(uniqueId: string): Promise<EventWizardDateTimeAutofillResponse> {
+  const res = await client.get<unknown>(API_ROUTES.eventWizardDateTimeAutofill(uniqueId))
+  return eventWizardDateTimeAutofillResponseSchema.parse(res.data)
 }
 
 export async function updateEventWizardDateTime(
