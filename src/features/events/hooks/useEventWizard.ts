@@ -37,7 +37,7 @@ const EVENT_WIZARD_STEP_DEFINITIONS: Array<Omit<EventWizardStep, "path">> = [
   { slug: "time-zone", label: "Time Zone" },
   { slug: "venue", label: "Venue" },
   { slug: "sessions", label: "Sessions" },
-  { slug: "date-time", label: "Event Date/Time" },
+  { slug: "date-time", label: "Dates & Time" },
   { slug: "discount-coupon", label: "Discount Coupon" },
   { slug: "questions", label: "Questions" },
   { slug: "thank-you-email", label: "Thank you Email" },

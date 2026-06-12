@@ -581,7 +581,7 @@ export function EventReviewStepPage() {
           isLoading={isSessionsLoading}
         />
         <ReviewItem
-          label="Event Date/Time"
+          label="Dates & Time"
           value={
             <Stack gap={3}>
               <Stack gap={1}>
@@ -609,7 +609,7 @@ export function EventReviewStepPage() {
             </Stack>
           }
           onEdit={() => editStep("date-time")}
-          editLabel="Edit event date/time"
+          editLabel="Edit dates & time"
           isLoading={Boolean(eventId) && dateTimeQuery.isLoading}
         />
         <ReviewItem

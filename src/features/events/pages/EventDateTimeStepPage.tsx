@@ -375,53 +375,13 @@ function EventDateTimeEditor({
     <Stack h="full" gap={4}>
       <Stack flex="1" gap={4}>
         <Text fontSize="sm" fontWeight="700" color="text.primary">
-          Event Date/Time
+          Dates & Time
         </Text>
         <Text fontSize="sm" color="text.secondary">
           Choose when the event and booking windows start and end. UTC Date/Time recommended.
         </Text>
 
         <Stack gap={5} maxW="760px">
-          <Stack gap={3}>
-            <Box>
-              <Text fontSize="sm" fontWeight="700" color="gray.900">
-                Event Window <Text as="span" color="red.500">*</Text>
-              </Text>
-              <Text fontSize="xs" color="gray.500" mt={1}>
-                When the event itself begins and ends.
-              </Text>
-            </Box>
-            <SimpleGrid columns={{ base: 1, lg: 2 }} gap={5}>
-              <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
-                <EventDateTimeField
-                  key={`event-start-${eventStartDate?.toISOString() ?? "empty"}`}
-                  value={eventStartDate}
-                  error={errors.eventStart}
-                  onChange={(nextStart) => {
-                    setEventStartDate(nextStart)
-                    if (eventEndDate && nextStart && eventEndDate <= nextStart) {
-                      setEventEndDate(null)
-                    }
-                    clearEventErrors()
-                  }}
-                />
-              </Box>
-
-              <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
-                <EventDateTimeField
-                  key={`event-end-${eventEndDate?.toISOString() ?? "empty"}-${eventStartDate?.toISOString() ?? "nostart"}`}
-                  value={eventEndDate}
-                  minDate={eventStartDate ?? undefined}
-                  error={errors.eventEnd}
-                  onChange={(value) => {
-                    setEventEndDate(value)
-                    clearEventErrors()
-                  }}
-                />
-              </Box>
-            </SimpleGrid>
-          </Stack>
-
           <Stack gap={3}>
             <Box>
               <Text fontSize="sm" fontWeight="700" color="gray.900">
@@ -432,33 +392,93 @@ function EventDateTimeEditor({
               </Text>
             </Box>
             <SimpleGrid columns={{ base: 1, lg: 2 }} gap={5}>
-              <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
-                <EventDateTimeField
-                  key={`booking-start-${bookingStartDate?.toISOString() ?? "empty"}`}
-                  value={bookingStartDate}
-                  error={errors.bookingStart}
-                  onChange={(nextStart) => {
-                    setBookingStartDate(nextStart)
-                    if (bookingEndDate && nextStart && bookingEndDate <= nextStart) {
-                      setBookingEndDate(null)
-                    }
-                    clearBookingErrors()
-                  }}
-                />
-              </Box>
+              <Stack gap={2}>
+                <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
+                  Start
+                </Text>
+                <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
+                  <EventDateTimeField
+                    key={`booking-start-${bookingStartDate?.toISOString() ?? "empty"}`}
+                    value={bookingStartDate}
+                    error={errors.bookingStart}
+                    onChange={(nextStart) => {
+                      setBookingStartDate(nextStart)
+                      if (bookingEndDate && nextStart && bookingEndDate <= nextStart) {
+                        setBookingEndDate(null)
+                      }
+                      clearBookingErrors()
+                    }}
+                  />
+                </Box>
+              </Stack>
 
-              <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
-                <EventDateTimeField
-                  key={`booking-end-${bookingEndDate?.toISOString() ?? "empty"}-${bookingStartDate?.toISOString() ?? "nostart"}`}
-                  value={bookingEndDate}
-                  minDate={bookingStartDate ?? undefined}
-                  error={errors.bookingEnd}
-                  onChange={(value) => {
-                    setBookingEndDate(value)
-                    clearBookingErrors()
-                  }}
-                />
-              </Box>
+              <Stack gap={2}>
+                <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
+                  End
+                </Text>
+                <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
+                  <EventDateTimeField
+                    key={`booking-end-${bookingEndDate?.toISOString() ?? "empty"}-${bookingStartDate?.toISOString() ?? "nostart"}`}
+                    value={bookingEndDate}
+                    minDate={bookingStartDate ?? undefined}
+                    error={errors.bookingEnd}
+                    onChange={(value) => {
+                      setBookingEndDate(value)
+                      clearBookingErrors()
+                    }}
+                  />
+                </Box>
+              </Stack>
+            </SimpleGrid>
+          </Stack>
+
+          <Stack gap={3}>
+            <Box>
+              <Text fontSize="sm" fontWeight="700" color="gray.900">
+                Event Window <Text as="span" color="red.500">*</Text>
+              </Text>
+              <Text fontSize="xs" color="gray.500" mt={1}>
+                When the event itself begins and ends.
+              </Text>
+            </Box>
+            <SimpleGrid columns={{ base: 1, lg: 2 }} gap={5}>
+              <Stack gap={2}>
+                <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
+                  Start
+                </Text>
+                <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
+                  <EventDateTimeField
+                    key={`event-start-${eventStartDate?.toISOString() ?? "empty"}`}
+                    value={eventStartDate}
+                    error={errors.eventStart}
+                    onChange={(nextStart) => {
+                      setEventStartDate(nextStart)
+                      if (eventEndDate && nextStart && eventEndDate <= nextStart) {
+                        setEventEndDate(null)
+                      }
+                      clearEventErrors()
+                    }}
+                  />
+                </Box>
+              </Stack>
+
+              <Stack gap={2}>
+                <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
+                  End
+                </Text>
+                <Box bg="secondaryGray.300" borderRadius="16px" p={5}>
+                  <EventDateTimeField
+                    key={`event-end-${eventEndDate?.toISOString() ?? "empty"}-${eventStartDate?.toISOString() ?? "nostart"}`}
+                    value={eventEndDate}
+                    minDate={eventStartDate ?? undefined}
+                    error={errors.eventEnd}
+                    onChange={(value) => {
+                      setEventEndDate(value)
+                      clearEventErrors()
+                    }}
+                  />
+                </Box>
+              </Stack>
             </SimpleGrid>
           </Stack>
         </Stack>
@@ -476,6 +496,7 @@ function EventDateTimeEditor({
 export function EventDateTimeStepPage() {
   const { eventId } = useParams<{ eventId?: string }>()
   const currentEventId = eventId ?? ""
+  const { setPrimaryAction, setPrimaryActionReady, setPrimaryActionEnabled, setSkipAction } = useEventWizardActions()
 
   const dateTimeQuery = useQuery({
     queryKey: ["events", "wizard-draft", currentEventId, "date-time"],
@@ -490,15 +511,32 @@ export function EventDateTimeStepPage() {
     retry: false,
   })
 
+  useEffect(() => {
+    if (!currentEventId || dateTimeQuery.isLoading || dateTimeQuery.isError) {
+      setPrimaryAction(null)
+      setPrimaryActionReady(false)
+      setPrimaryActionEnabled(false)
+      setSkipAction(null)
+    }
+  }, [
+    currentEventId,
+    dateTimeQuery.isError,
+    dateTimeQuery.isLoading,
+    setPrimaryAction,
+    setPrimaryActionEnabled,
+    setPrimaryActionReady,
+    setSkipAction,
+  ])
+
   if (dateTimeQuery.isLoading) {
-    return <LoadingState label="Loading the event date/time..." />
+    return <LoadingState label="Loading the dates and time..." />
   }
 
   if (dateTimeQuery.isError) {
     return (
       <Stack gap={4}>
         <Text fontSize="lg" fontWeight="800" color="gray.900">
-          Event Date/Time
+          Dates & Time
         </Text>
         <Text fontSize="sm" color="red.500">
           {extractApiError(dateTimeQuery.error)}
