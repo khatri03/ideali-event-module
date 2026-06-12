@@ -204,6 +204,7 @@ function EventWizardLayoutContent() {
   const navigate = useNavigate()
   const location = useLocation()
   const { eventId } = useParams<{ eventId?: string }>()
+  const returnUrl = new URLSearchParams(location.search).get("returnUrl") ?? undefined
   const sessionQuery = useAuthSession()
   const currentUser = auth.getUser() ?? (sessionQuery.data ? sessionDataToUser(sessionQuery.data) : null)
   const wizardProgressQuery = useEventWizardProgress(eventId)
@@ -436,6 +437,12 @@ function EventWizardLayoutContent() {
       } catch {
         return
       }
+
+      if (returnUrl) {
+        navigate(returnUrl, { replace: true })
+        return
+      }
+
       goNext()
       return
     }
@@ -503,6 +510,12 @@ function EventWizardLayoutContent() {
           await persistSkippedStep(activeStep.slug)
         }
       }
+
+      if (returnUrl) {
+        navigate(returnUrl, { replace: true })
+        return
+      }
+
       goNext()
     }
   }
@@ -539,6 +552,12 @@ function EventWizardLayoutContent() {
       } catch {
         return
       }
+
+      if (returnUrl) {
+        navigate(returnUrl, { replace: true })
+        return
+      }
+
       navigate(APP_ROUTES.events)
       return
     }
@@ -606,6 +625,12 @@ function EventWizardLayoutContent() {
           await persistSkippedStep(activeStep.slug)
         }
       }
+
+      if (returnUrl) {
+        navigate(returnUrl, { replace: true })
+        return
+      }
+
       navigate(APP_ROUTES.events)
     }
   }
