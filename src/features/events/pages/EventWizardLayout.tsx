@@ -9,6 +9,7 @@ import {
   createEvent,
   skipEventWizardStep,
   updateEvent,
+  updateEventWizardDateTime,
   updateEventWizardAdvancedSettings,
   updateEventWizardDescription,
   updateEventWizardName,
@@ -24,6 +25,7 @@ import { queryClient } from "@/lib/queryClient"
 import { APP_ROUTES } from "@/utils/routes"
 import { useEventWizardProgress } from "../hooks/useEventWizardProgress"
 import { useEventWizardDraft } from "../hooks/useEventWizardDraft"
+import { useEventWizardResumeValues } from "../hooks/useEventWizardResumeValues"
 import { buildEventWizardSteps, getEventWizardStepNumber, useCreateEventDraft, useEventWizardNavigation, type EventWizardStep } from "../hooks/useEventWizard"
 import { defaultEventWizardValues, eventWizardFieldGroups, eventWizardSchema, type EventWizardValues } from "../schemas/eventWizard.schemas"
 import { EventWizardStepper } from "../components/EventWizardStepper"
@@ -214,6 +216,7 @@ function EventWizardLayoutContent() {
   const maxUnlockedStepIndex = eventId ? Math.min(lastCompletedStepNo, wizardSteps.length - 1) : 0
   const { activeStepIndex, activeStep, goToStep, goBack, goNext, isFirstStep, isLastStep } = useEventWizardNavigation(maxUnlockedStepIndex)
   const wizardDraftQuery = useEventWizardDraft(eventId, activeStep.slug)
+  const resumeValuesQuery = useEventWizardResumeValues(eventId, lastCompletedStepNo)
   const { runPrimaryAction, runSkipAction, isPrimaryActionReady } = useEventWizardActions()
   const isMobile = useBreakpointValue({ base: true, lg: false }) ?? true
   const [isStepsCollapsedOverride, setIsStepsCollapsedOverride] = useState<boolean | null>(null)
@@ -237,7 +240,17 @@ function EventWizardLayoutContent() {
   })
 
   function setWizardStepCache(
-    step: "name" | "description" | "terms-conditions" | "banner" | "time-zone" | "theme-color" | "venue" | "advanced-settings" | "thank-you-email",
+    step:
+      | "name"
+      | "description"
+      | "terms-conditions"
+      | "banner"
+      | "time-zone"
+      | "theme-color"
+      | "venue"
+      | "date-time"
+      | "advanced-settings"
+      | "thank-you-email",
     value: unknown,
   ) {
     if (!eventId) {
@@ -287,9 +300,14 @@ function EventWizardLayoutContent() {
     activeStep.slug === "questions"
   const isPaymentAccountStep = activeStep.slug === "payment-account"
   const isBannerStep = activeStep.slug === "banner"
+  const isDateTimeStep = activeStep.slug === "date-time"
   const isDiscountCouponStep = activeStep.slug === "discount-coupon"
   const isPageManagedSaveStep =
-    isBannerStep || isDiscountCouponStep || activeStep.slug === "questions" || activeStep.slug === "thank-you-email"
+    isBannerStep ||
+    isDateTimeStep ||
+    isDiscountCouponStep ||
+    activeStep.slug === "questions" ||
+    activeStep.slug === "thank-you-email"
   const isLastWizardStep = isLastStep
   const resolvedStepIndex = eventId ? Math.min(lastCompletedStepNo, wizardSteps.length - 1) : -1
   const resolvedStepPath = eventId ? wizardSteps[resolvedStepIndex]?.path : undefined
@@ -343,6 +361,17 @@ function EventWizardLayoutContent() {
           shouldTouch: false,
           shouldValidate: false,
         })
+      } else if ("startDate" in draftData || "endDate" in draftData) {
+        form.setValue("startDate", draftData.startDate ?? "", {
+          shouldDirty: false,
+          shouldTouch: false,
+          shouldValidate: false,
+        })
+        form.setValue("endDate", draftData.endDate ?? "", {
+          shouldDirty: false,
+          shouldTouch: false,
+          shouldValidate: false,
+        })
       } else if ("purchaseTimeLimit" in draftData || "visibility" in draftData) {
         form.setValue("purchaseTimeLimitMinutes", draftData.purchaseTimeLimit ?? undefined, {
           shouldDirty: false,
@@ -357,6 +386,21 @@ function EventWizardLayoutContent() {
       }
     }
   }, [form, wizardDraftQuery.data])
+
+  useEffect(() => {
+    const resumeValues = resumeValuesQuery.data
+    if (!resumeValues) {
+      return
+    }
+
+    if (resumeValues.startDate !== undefined) {
+      form.setValue("startDate", resumeValues.startDate ?? "", { shouldDirty: false, shouldTouch: false, shouldValidate: false })
+    }
+
+    if (resumeValues.endDate !== undefined) {
+      form.setValue("endDate", resumeValues.endDate ?? "", { shouldDirty: false, shouldTouch: false, shouldValidate: false })
+    }
+  }, [form, resumeValuesQuery.data])
 
   useEffect(() => {
     if (shouldRedirectToResolvedStep && resolvedStepPath) {
@@ -394,6 +438,8 @@ function EventWizardLayoutContent() {
         return eventWizardFieldGroups.venue
       case "sessions":
         return []
+      case "date-time":
+        return []
       case "discount-coupon":
       case "questions":
       case "thank-you-email":
@@ -411,6 +457,8 @@ function EventWizardLayoutContent() {
     const termsConditions = form.getValues("termsConditions").trim()
     const themeColor = form.getValues("themeColor").trim()
     const timeZoneId = form.getValues("timeZoneId") ?? null
+    const startDate = form.getValues("startDate")?.trim() || null
+    const endDate = form.getValues("endDate")?.trim() || null
     const purchaseTimeLimitMinutes = form.getValues("purchaseTimeLimitMinutes") ?? null
 
     if (activeStep.slug === "name") {
@@ -474,6 +522,10 @@ function EventWizardLayoutContent() {
           } else {
             await persistSkippedStep(activeStep.slug)
           }
+        } else if (activeStep.slug === "date-time") {
+          const result = await updateEventWizardDateTime(eventId, { startDate, endDate }, 10)
+          setWizardStepCache("date-time", result)
+          setWizardProgressCache(10)
         } else if (activeStep.slug === "payment-account") {
           const result = await updateEventWizardPaymentAccount(
             eventId,
@@ -497,10 +549,10 @@ function EventWizardLayoutContent() {
           const result = await updateEventWizardAdvancedSettings(
             eventId,
             { purchaseTimeLimit: purchaseTimeLimitMinutes, visibility: form.getValues("visibility") },
-            13,
+            14,
           )
           setWizardStepCache("advanced-settings", result)
-          setWizardProgressCache(13)
+          setWizardProgressCache(14)
         } else if (activeStep.slug === "sessions") {
           await persistSkippedStep(activeStep.slug)
         } else if (
@@ -526,6 +578,8 @@ function EventWizardLayoutContent() {
     const termsConditions = form.getValues("termsConditions").trim()
     const themeColor = form.getValues("themeColor").trim()
     const timeZoneId = form.getValues("timeZoneId") ?? null
+    const startDate = form.getValues("startDate")?.trim() || null
+    const endDate = form.getValues("endDate")?.trim() || null
     const purchaseTimeLimitMinutes = form.getValues("purchaseTimeLimitMinutes") ?? null
 
     if (activeStep.slug === "name") {
@@ -589,6 +643,10 @@ function EventWizardLayoutContent() {
           } else {
             await persistSkippedStep(activeStep.slug)
           }
+        } else if (activeStep.slug === "date-time") {
+          const result = await updateEventWizardDateTime(eventId, { startDate, endDate }, 10)
+          setWizardStepCache("date-time", result)
+          setWizardProgressCache(10)
         } else if (activeStep.slug === "payment-account") {
           const result = await updateEventWizardPaymentAccount(
             eventId,
@@ -612,10 +670,10 @@ function EventWizardLayoutContent() {
           const result = await updateEventWizardAdvancedSettings(
             eventId,
             { purchaseTimeLimit: purchaseTimeLimitMinutes, visibility: form.getValues("visibility") },
-            13,
+            14,
           )
           setWizardStepCache("advanced-settings", result)
-          setWizardProgressCache(13)
+          setWizardProgressCache(14)
         } else if (activeStep.slug === "sessions") {
           await persistSkippedStep(activeStep.slug)
         } else if (

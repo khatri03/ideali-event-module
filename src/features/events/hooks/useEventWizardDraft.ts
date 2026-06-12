@@ -3,6 +3,7 @@ import {
   fetchEventWizardBanner,
   fetchEventWizardAdvancedSettings,
   fetchEventWizardDescription,
+  fetchEventWizardDateTime,
   fetchEventWizardName,
   fetchEventWizardPaymentAccount,
   fetchEventWizardThankYouEmail,
@@ -20,6 +21,7 @@ export type EventWizardDraftData =
   | Awaited<ReturnType<typeof fetchEventWizardBanner>>
   | Awaited<ReturnType<typeof fetchEventWizardTimeZone>>
   | Awaited<ReturnType<typeof fetchEventWizardThemeColor>>
+  | Awaited<ReturnType<typeof fetchEventWizardDateTime>>
   | Awaited<ReturnType<typeof fetchEventWizardAdvancedSettings>>
   | Awaited<ReturnType<typeof fetchEventWizardPaymentAccount>>
   | Awaited<ReturnType<typeof fetchEventWizardVenue>>
@@ -33,6 +35,7 @@ export function useEventWizardDraft(eventId?: string, stepSlug?: EventWizardStep
     stepSlug === "banner" ||
     stepSlug === "time-zone" ||
     stepSlug === "theme-color" ||
+    stepSlug === "date-time" ||
     stepSlug === "payment-account" ||
     stepSlug === "venue" ||
     stepSlug === "advanced-settings" ||
@@ -67,6 +70,10 @@ export function useEventWizardDraft(eventId?: string, stepSlug?: EventWizardStep
 
       if (stepSlug === "theme-color") {
         return fetchEventWizardThemeColor(eventId)
+      }
+
+      if (stepSlug === "date-time") {
+        return fetchEventWizardDateTime(eventId)
       }
 
       if (stepSlug === "payment-account") {

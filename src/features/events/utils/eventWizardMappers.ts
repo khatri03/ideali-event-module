@@ -13,6 +13,8 @@ export function eventToWizardValues(event: AppEvent): EventWizardValues {
     bannerUrl: event.bannerUrl ?? "",
     timeZoneId: undefined,
     themeColor: event.coverColor,
+    startDate: event.startDate ?? "",
+    endDate: event.endDate ?? "",
     visibility: event.visibility ?? "Public",
     purchaseTimeLimitMinutes: event.purchaseTimeLimitMinutes ?? 15,
     paymentAccountId: event.paymentAccountId ?? defaultPaymentAccountId,

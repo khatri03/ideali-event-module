@@ -5,8 +5,10 @@ import { useQuery } from "@tanstack/react-query"
 import { useWatch } from "react-hook-form"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
 import { CheckCircle2, PencilLine, X } from "lucide-react"
+import { format, parseISO } from "date-fns"
 import {
   fetchEventWizardAdvancedSettings,
+  fetchEventWizardDateTime,
   fetchEventWizardName,
   fetchEventWizardPaymentAccount,
   fetchEventWizardQuestions,
@@ -33,6 +35,7 @@ type ReviewStepSlug =
   | "time-zone"
   | "venue"
   | "sessions"
+  | "date-time"
   | "discount-coupon"
   | "questions"
   | "advanced-settings"
@@ -288,6 +291,18 @@ export function EventReviewStepPage() {
     enabled: Boolean(eventId),
     retry: false,
   })
+  const dateTimeQuery = useQuery({
+    queryKey: ["events", "review", eventId, "date-time"],
+    queryFn: () => {
+      if (!eventId) {
+        throw new Error("Event id is required.")
+      }
+
+      return fetchEventWizardDateTime(eventId)
+    },
+    enabled: Boolean(eventId),
+    retry: false,
+  })
   const timeZoneQuery = useQuery({
     queryKey: ["events", "review", eventId, "time-zone"],
     queryFn: () => {
@@ -385,12 +400,15 @@ export function EventReviewStepPage() {
   const selectedPaymentAccountName = selectedPaymentAccount?.name ?? "Not selected"
   const selectedPaymentAccountMerchant = selectedPaymentAccount?.paymentMerchant ?? ""
   const selectedPaymentAccountCurrency = selectedPaymentAccount?.paymentCurrency ?? ""
+  const selectedStartDate = dateTimeQuery.data?.startDate ?? values.startDate ?? ""
+  const selectedEndDate = dateTimeQuery.data?.endDate ?? values.endDate ?? ""
   const summaryError =
     nameQuery.error ??
     termsConditionsQuery.error ??
     themeColorQuery.error ??
     paymentAccountQuery.error ??
     advancedSettingsQuery.error ??
+    dateTimeQuery.error ??
     timeZoneQuery.error ??
     venueQuery.error ??
     sessionsQuery.error ??
@@ -559,6 +577,22 @@ export function EventReviewStepPage() {
           onEdit={() => editStep("sessions")}
           editLabel="Edit sessions"
           isLoading={isSessionsLoading}
+        />
+        <ReviewItem
+          label="Event Date/Time"
+          value={
+            <Stack gap={1}>
+              <Text fontSize="sm" fontWeight="800" color="gray.900" wordBreak="break-word">
+                {selectedStartDate ? format(parseISO(selectedStartDate), "dd-MMM-yyyy hh:mm aa") : "Not set"}
+              </Text>
+              <Text fontSize="sm" fontWeight="800" color="gray.900" wordBreak="break-word">
+                {selectedEndDate ? format(parseISO(selectedEndDate), "dd-MMM-yyyy hh:mm aa") : "Not set"}
+              </Text>
+            </Stack>
+          }
+          onEdit={() => editStep("date-time")}
+          editLabel="Edit event date/time"
+          isLoading={Boolean(eventId) && dateTimeQuery.isLoading}
         />
         <ReviewItem
           label="Discount Coupons"

@@ -12,6 +12,7 @@ import {
   EventBannerStepPage,
   EventDescriptionStepPage,
   EventDiscountCouponStepPage,
+  EventDateTimeStepPage,
   EventNameStepPage,
   EventPaymentAccountStepPage,
   EventPurchaseTimeLimitStepPage,
@@ -48,6 +49,7 @@ export default function App() {
           <Route path={APP_ROUTES.eventWizard.slugs.timeZone} element={<EventTimeZoneStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.venue} element={<EventVenueStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.sessions} element={<EventSessionsStepPage />} />
+          <Route path={APP_ROUTES.eventWizard.slugs.dateTime} element={<EventDateTimeStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.discountCoupon} element={<EventDiscountCouponStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.questions} element={<EventQuestionsStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.thankYouEmail} element={<EventThankYouEmailStepPage />} />
@@ -65,6 +67,7 @@ export default function App() {
           <Route path={APP_ROUTES.eventWizard.slugs.timeZone} element={<EventTimeZoneStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.venue} element={<EventVenueStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.sessions} element={<EventSessionsStepPage />} />
+          <Route path={APP_ROUTES.eventWizard.slugs.dateTime} element={<EventDateTimeStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.discountCoupon} element={<EventDiscountCouponStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.questions} element={<EventQuestionsStepPage />} />
           <Route path={APP_ROUTES.eventWizard.slugs.thankYouEmail} element={<EventThankYouEmailStepPage />} />

@@ -98,6 +98,12 @@ const eventWizardThemeColorResponseSchema = z.object({
   themeColor: z.string().nullable().optional(),
 })
 
+const eventWizardDateTimeResponseSchema = z.object({
+  startDate: z.string().nullable().optional(),
+  endDate: z.string().nullable().optional(),
+  stepNo: z.number().int().min(0).optional(),
+})
+
 const eventVisibilityValueSchema = z.enum(["Public", "Member", "Invitation"])
 
 const eventVisibilityOptionSchema = z.object({
@@ -463,6 +469,29 @@ export async function updateEventWizardThemeColor(
   return eventWizardThemeColorResponseSchema.parse(res.data)
 }
 
+export interface EventWizardDateTimeResponse {
+  startDate?: string | null
+  endDate?: string | null
+  stepNo?: number
+}
+
+export async function fetchEventWizardDateTime(uniqueId: string): Promise<EventWizardDateTimeResponse> {
+  const res = await client.get<unknown>(API_ROUTES.eventWizardDateTime(uniqueId))
+  return eventWizardDateTimeResponseSchema.parse(res.data)
+}
+
+export async function updateEventWizardDateTime(
+  uniqueId: string,
+  payload: { startDate: string | null; endDate: string | null },
+  stepNo = 10,
+): Promise<EventWizardDateTimeResponse> {
+  const res = await client.post<unknown>(API_ROUTES.eventWizardDateTime(uniqueId), payload, {
+    params: { stepNo },
+  })
+
+  return eventWizardDateTimeResponseSchema.parse(res.data)
+}
+
 export interface EventWizardAdvancedSettingsResponse {
   purchaseTimeLimit?: number | null
   visibility?: EventVisibility | null
@@ -497,7 +526,7 @@ export async function fetchEventWizardPurchaseTimeLimitOptions(): Promise<EventP
 export async function updateEventWizardAdvancedSettings(
   uniqueId: string,
   payload: { purchaseTimeLimit: number | null; visibility: EventVisibility },
-  stepNo = 13
+  stepNo = 14
 ): Promise<EventWizardAdvancedSettingsResponse> {
   const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "advanced-settings")}`, payload, {
     params: { stepNo },

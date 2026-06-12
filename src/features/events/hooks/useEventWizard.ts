@@ -18,6 +18,7 @@ export interface EventWizardStep {
     | "advanced-settings"
     | "time-zone"
     | "sessions"
+    | "date-time"
     | "discount-coupon"
     | "questions"
     | "thank-you-email"
@@ -36,6 +37,7 @@ const EVENT_WIZARD_STEP_DEFINITIONS: Array<Omit<EventWizardStep, "path">> = [
   { slug: "time-zone", label: "Time Zone" },
   { slug: "venue", label: "Venue" },
   { slug: "sessions", label: "Sessions" },
+  { slug: "date-time", label: "Event Date/Time" },
   { slug: "discount-coupon", label: "Discount Coupon" },
   { slug: "questions", label: "Questions" },
   { slug: "thank-you-email", label: "Thank you Email" },
@@ -65,16 +67,18 @@ export function getEventWizardStepNumber(stepSlug: EventWizardStepSlug) {
       return 8
     case "sessions":
       return 9
-    case "discount-coupon":
+    case "date-time":
       return 10
-    case "questions":
+    case "discount-coupon":
       return 11
-    case "thank-you-email":
+    case "questions":
       return 12
-    case "advanced-settings":
+    case "thank-you-email":
       return 13
-    case "review":
+    case "advanced-settings":
       return 14
+    case "review":
+      return 15
   }
 }
 
@@ -152,8 +156,8 @@ export function buildCreateEventPayload(values: EventWizardValues): Omit<AppEven
     description: values.description.trim(),
     termsConditions: values.termsConditions.trim() || null,
     bannerUrl: values.bannerUrl.trim() || null,
-    startDate: firstSession?.startsAt || new Date().toISOString(),
-    endDate: lastSession?.endsAt || new Date().toISOString(),
+    startDate: values.startDate?.trim() || firstSession?.startsAt || new Date().toISOString(),
+    endDate: values.endDate?.trim() || lastSession?.endsAt || new Date().toISOString(),
     location: "TBD",
     category: "other",
     status: "draft",
