@@ -414,7 +414,7 @@ function SessionWizardLayoutContent() {
                       Skip
                     </Button>
                   ) : null}
-                <Button
+                  <Button
                   borderRadius="14px"
                   h="44px"
                   px={6}
@@ -424,6 +424,12 @@ function SessionWizardLayoutContent() {
                   onClick={async () => {
                     try {
                       await runPrimaryAction()
+
+                      // Keep the local progress cache aligned before we move to the next step.
+                      if (!isReviewStep && activeStep) {
+                        updateWizardProgressCache(getSessionWizardStepNumber(activeStep.slug) + 1)
+                      }
+
                       if (isReviewStep) {
                         if (isOpenedFromEventWizard) {
                           return
