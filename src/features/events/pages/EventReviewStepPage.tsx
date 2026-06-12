@@ -150,7 +150,7 @@ export function EventReviewStepPage() {
           <ReviewRow label="Thank you Email" value={thankYouEmailSummary} />
           <ReviewRow
             label="Advanced settings"
-            value={values.purchaseTimeLimitHours ? `${values.purchaseTimeLimitHours} hours before start` : "Not set"}
+            value={values.purchaseTimeLimitMinutes ? `${values.purchaseTimeLimitMinutes} minutes before start` : "Not set"}
           />
           <ReviewRow label="Time zone" value={values.timeZone || "Not set"} />
           <ReviewRow label="Venue" value="Not configured" />

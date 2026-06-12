@@ -41,7 +41,7 @@ export interface AppEvent {
   timeZone?: string
   paymentAccountId?: string
   venueUniqueId?: string
-  purchaseTimeLimitHours?: number | null
+  purchaseTimeLimitMinutes?: number | null
   sessions?: EventSession[]
 }
 

@@ -10,40 +10,47 @@ export interface EventFilters {
   category?: EventCategory
 }
 
-const appEventSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  description: z.string(),
-  termsConditions: z.string().nullable().optional(),
-  bannerUrl: z.string().nullable().optional(),
-  discountsEnabled: z.boolean().optional(),
-  startDate: z.string(),
-  endDate: z.string(),
-  location: z.string(),
-  category: z.enum(["conference", "workshop", "seminar", "concert", "sports", "networking", "webinar", "hackathon", "other"]),
-  status: z.enum(["draft", "published", "ongoing", "completed", "cancelled"]),
-  capacity: z.number(),
-  attendees: z.number(),
-  organizer: z.string(),
-  coverColor: z.string(),
-  visibility: z.enum(["Public", "Member", "Invitation"]).optional(),
-  price: z.number(),
-  currency: z.string(),
-  tags: z.array(z.string()),
-  timeZone: z.string().optional(),
-  paymentAccountId: z.string().optional(),
-  venueUniqueId: z.string().optional(),
-  purchaseTimeLimitHours: z.number().int().positive().nullable().optional(),
-  sessions: z
-    .array(
-      z.object({
-        title: z.string(),
-        startsAt: z.string(),
-        endsAt: z.string(),
-      })
-    )
-    .optional(),
-})
+const appEventSchema = z
+  .object({
+    id: z.string(),
+    title: z.string(),
+    description: z.string(),
+    termsConditions: z.string().nullable().optional(),
+    bannerUrl: z.string().nullable().optional(),
+    discountsEnabled: z.boolean().optional(),
+    startDate: z.string(),
+    endDate: z.string(),
+    location: z.string(),
+    category: z.enum(["conference", "workshop", "seminar", "concert", "sports", "networking", "webinar", "hackathon", "other"]),
+    status: z.enum(["draft", "published", "ongoing", "completed", "cancelled"]),
+    capacity: z.number(),
+    attendees: z.number(),
+    organizer: z.string(),
+    coverColor: z.string(),
+    visibility: z.enum(["Public", "Member", "Invitation"]).optional(),
+    price: z.number(),
+    currency: z.string(),
+    tags: z.array(z.string()),
+    timeZone: z.string().optional(),
+    paymentAccountId: z.string().optional(),
+    venueUniqueId: z.string().optional(),
+    purchaseTimeLimitMinutes: z.number().int().positive().nullable().optional(),
+    purchaseTimeLimitHours: z.number().int().positive().nullable().optional(),
+    purchaseTimeLimit: z.number().int().positive().nullable().optional(),
+    sessions: z
+      .array(
+        z.object({
+          title: z.string(),
+          startsAt: z.string(),
+          endsAt: z.string(),
+        })
+      )
+      .optional(),
+  })
+  .transform(({ purchaseTimeLimitMinutes, purchaseTimeLimitHours, purchaseTimeLimit, ...event }) => ({
+    ...event,
+    purchaseTimeLimitMinutes: purchaseTimeLimitMinutes ?? purchaseTimeLimitHours ?? purchaseTimeLimit ?? null,
+  }))
 
 const eventWizardCreateResponseSchema = z.object({
   uniqueId: z.string().min(1),
@@ -100,6 +107,14 @@ const eventVisibilityOptionSchema = z.object({
 })
 
 const eventVisibilityOptionsSchema = z.array(eventVisibilityOptionSchema)
+
+const eventPurchaseTimeLimitOptionSchema = z.object({
+  value: z.string().min(1),
+  label: z.string().min(1),
+  description: z.string().min(1),
+})
+
+const eventPurchaseTimeLimitOptionsSchema = z.array(eventPurchaseTimeLimitOptionSchema)
 
 const eventWizardAdvancedSettingsResponseSchema = z.object({
   purchaseTimeLimit: z.number().int().positive().nullable().optional(),
@@ -468,6 +483,17 @@ export interface EventVisibilityOption {
 export async function fetchEventWizardVisibilityOptions(): Promise<EventVisibilityOption[]> {
   const res = await client.get<unknown>(API_ROUTES.eventWizardVisibilityOptions)
   return eventVisibilityOptionsSchema.parse(res.data)
+}
+
+export interface EventPurchaseTimeLimitOption {
+  value: string
+  label: string
+  description: string
+}
+
+export async function fetchEventWizardPurchaseTimeLimitOptions(): Promise<EventPurchaseTimeLimitOption[]> {
+  const res = await client.get<unknown>(API_ROUTES.eventWizardPurchaseTimeLimitOptions)
+  return eventPurchaseTimeLimitOptionsSchema.parse(res.data)
 }
 
 export async function updateEventWizardAdvancedSettings(

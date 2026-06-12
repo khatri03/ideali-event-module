@@ -168,7 +168,7 @@ export function buildCreateEventPayload(values: EventWizardValues): Omit<AppEven
     visibility: values.visibility,
     paymentAccountId: values.paymentAccountId,
     venueUniqueId: values.venueUniqueId?.trim() || undefined,
-    purchaseTimeLimitHours: values.purchaseTimeLimitHours ?? null,
+    purchaseTimeLimitMinutes: values.purchaseTimeLimitMinutes ?? null,
     sessions: values.sessions ?? [],
   }
 }

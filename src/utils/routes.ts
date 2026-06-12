@@ -67,6 +67,7 @@ export const API_ROUTES = {
   eventWizardStep: (id: string, step: string) => `/api/organizer/events/${id}/${step}`,
   eventWizardName: (id: string) => `/api/organizer/events/${id}/name`,
   eventWizardVisibilityOptions: "/api/organizer/events/visibility/options",
+  eventWizardPurchaseTimeLimitOptions: "/api/organizer/events/purchase-time-limit/options",
   eventEmailTemplatePlaceHolders: "/api/organizer/events/email-template/place-holders",
   eventEmailTemplateSnippetCreate: "/api/organizer/events/email-template/snippet/create",
   eventEmailTemplateSnippetList: "/api/organizer/events/email-template/snippet/list",

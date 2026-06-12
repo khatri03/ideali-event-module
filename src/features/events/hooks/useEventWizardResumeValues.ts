@@ -7,7 +7,7 @@ import {
 import type { EventWizardValues } from "../schemas/eventWizard.schemas"
 
 type EventWizardResumeValues = Partial<
-  Pick<EventWizardValues, "name" | "description" | "themeColor" | "purchaseTimeLimitHours" | "visibility">
+  Pick<EventWizardValues, "name" | "description" | "themeColor" | "purchaseTimeLimitMinutes" | "visibility">
 >
 
 export function useEventWizardResumeValues(eventId?: string, lastCompletedStepNo = 0) {
@@ -27,7 +27,7 @@ export function useEventWizardResumeValues(eventId?: string, lastCompletedStepNo
       return {
         description: descriptionResult?.description ?? "",
         themeColor: themeColorResult?.themeColor ?? "#7551FF",
-        purchaseTimeLimitHours: advancedSettingsResult?.purchaseTimeLimit ?? undefined,
+        purchaseTimeLimitMinutes: advancedSettingsResult?.purchaseTimeLimit ?? undefined,
         visibility: advancedSettingsResult?.visibility ?? "Public",
       }
     },

@@ -343,7 +343,11 @@ function EventWizardLayoutContent() {
           shouldValidate: false,
         })
       } else if ("purchaseTimeLimit" in draftData || "visibility" in draftData) {
-        form.setValue("purchaseTimeLimitHours", draftData.purchaseTimeLimit ?? undefined, { shouldDirty: false, shouldTouch: false, shouldValidate: false })
+        form.setValue("purchaseTimeLimitMinutes", draftData.purchaseTimeLimit ?? undefined, {
+          shouldDirty: false,
+          shouldTouch: false,
+          shouldValidate: false,
+        })
         form.setValue("visibility", draftData.visibility ?? "Public", {
           shouldDirty: false,
           shouldTouch: false,
@@ -406,7 +410,7 @@ function EventWizardLayoutContent() {
     const termsConditions = form.getValues("termsConditions").trim()
     const themeColor = form.getValues("themeColor").trim()
     const timeZoneId = form.getValues("timeZoneId") ?? null
-    const purchaseTimeLimitHours = form.getValues("purchaseTimeLimitHours") ?? null
+    const purchaseTimeLimitMinutes = form.getValues("purchaseTimeLimitMinutes") ?? null
 
     if (activeStep.slug === "name") {
       const isNameValid = await form.trigger(eventWizardFieldGroups.name)
@@ -485,7 +489,7 @@ function EventWizardLayoutContent() {
         } else if (activeStep.slug === "advanced-settings") {
           const result = await updateEventWizardAdvancedSettings(
             eventId,
-            { purchaseTimeLimit: purchaseTimeLimitHours, visibility: form.getValues("visibility") },
+            { purchaseTimeLimit: purchaseTimeLimitMinutes, visibility: form.getValues("visibility") },
             13,
           )
           setWizardStepCache("advanced-settings", result)
@@ -509,7 +513,7 @@ function EventWizardLayoutContent() {
     const termsConditions = form.getValues("termsConditions").trim()
     const themeColor = form.getValues("themeColor").trim()
     const timeZoneId = form.getValues("timeZoneId") ?? null
-    const purchaseTimeLimitHours = form.getValues("purchaseTimeLimitHours") ?? null
+    const purchaseTimeLimitMinutes = form.getValues("purchaseTimeLimitMinutes") ?? null
 
     if (activeStep.slug === "name") {
       const isNameValid = await form.trigger(eventWizardFieldGroups.name)
@@ -588,7 +592,7 @@ function EventWizardLayoutContent() {
         } else if (activeStep.slug === "advanced-settings") {
           const result = await updateEventWizardAdvancedSettings(
             eventId,
-            { purchaseTimeLimit: purchaseTimeLimitHours, visibility: form.getValues("visibility") },
+            { purchaseTimeLimit: purchaseTimeLimitMinutes, visibility: form.getValues("visibility") },
             13,
           )
           setWizardStepCache("advanced-settings", result)
