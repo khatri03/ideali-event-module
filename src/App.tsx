@@ -8,6 +8,7 @@ import { Dashboard } from "./pages/Dashboard"
 import { Events } from "./pages/Events"
 import { CalendarPage } from "./pages/CalendarPage"
 import { Settings } from "./pages/Settings"
+import { ChartLayoutDesignerPage, ChartLayoutsPage } from "./features/chart-layouts"
 import {
   EventBannerStepPage,
   EventDescriptionStepPage,
@@ -108,6 +109,8 @@ export default function App() {
           <Route path={APP_ROUTES.team} element={<Settings />} />
           <Route path={APP_ROUTES.analytics} element={<Settings />} />
           <Route path={APP_ROUTES.help} element={<Settings />} />
+          <Route path={APP_ROUTES.chartLayouts.list} element={<ChartLayoutsPage />} />
+          <Route path={APP_ROUTES.chartLayouts.create} element={<ChartLayoutDesignerPage />} />
         </Route>
 
         {/* Redirect root */}

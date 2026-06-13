@@ -1,0 +1,198 @@
+import { isAxiosError } from "axios"
+import { z } from "zod"
+import { client } from "@/api/client"
+import type { PaginatedResponse, ServiceResponse } from "@/api/types"
+import { API_ROUTES } from "@/utils/routes"
+
+const serviceResponseSchema = z.object({
+  success: z.boolean().optional(),
+  message: z.string().nullable().optional(),
+  errorCode: z.string().nullable().optional(),
+  validationErrors: z.record(z.string(), z.array(z.string())).nullable().optional(),
+  meta: z.record(z.string(), z.unknown()).nullable().optional(),
+  timestamp: z.string().optional(),
+  Data: z.unknown().optional(),
+  data: z.unknown().optional(),
+})
+
+const seatsIoWorkspaceSchema = z.object({
+  Id: z.number().int().optional(),
+  id: z.number().int().optional(),
+  Name: z.string().nullable().optional(),
+  name: z.string().nullable().optional(),
+  Key: z.string().nullable().optional(),
+  key: z.string().nullable().optional(),
+  Region: z.string().nullable().optional(),
+  region: z.string().nullable().optional(),
+  SecretKey: z.string().nullable().optional(),
+  secretKey: z.string().nullable().optional(),
+  IsDefault: z.boolean().optional(),
+  isDefault: z.boolean().optional(),
+  IsTest: z.boolean().optional(),
+  isTest: z.boolean().optional(),
+  IsActive: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+})
+
+const seatsIoChartLayoutSchema = z.object({
+  Id: z.number().int().optional(),
+  id: z.number().int().optional(),
+  UniqueId: z.string().nullable().optional(),
+  uniqueId: z.string().nullable().optional(),
+  VenueUniqueId: z.string().nullable().optional(),
+  venueUniqueId: z.string().nullable().optional(),
+  VenueName: z.string().nullable().optional(),
+  venueName: z.string().nullable().optional(),
+  Name: z.string().nullable().optional(),
+  name: z.string().nullable().optional(),
+  UniqueName: z.string().nullable().optional(),
+  uniqueName: z.string().nullable().optional(),
+  SeatsIoChartKey: z.string().nullable().optional(),
+  seatsIoChartKey: z.string().nullable().optional(),
+})
+
+const seatsIoChartLayoutsPageSchema = z.object({
+  PageNo: z.number().int().optional(),
+  pageNo: z.number().int().optional(),
+  PageSize: z.number().int().optional(),
+  pageSize: z.number().int().optional(),
+  PageCount: z.number().int().optional(),
+  pageCount: z.number().int().optional(),
+  TotalRecordsCount: z.number().int().optional(),
+  totalRecordsCount: z.number().int().optional(),
+  PageData: z.array(seatsIoChartLayoutSchema).optional(),
+  pageData: z.array(seatsIoChartLayoutSchema).optional(),
+})
+
+export interface SeatsIoWorkspace {
+  id: number
+  name: string
+  publicKey: string
+  region: string
+  secretKey: string
+  isDefault: boolean
+  isTest: boolean
+  isActive: boolean
+}
+
+export interface SeatsIoChartLayout {
+  id: number
+  uniqueId: string
+  venueUniqueId: string
+  venueName: string
+  name: string
+  uniqueName: string
+  seatsIoChartKey: string | null
+}
+
+export interface SeatsIoChartLayoutRequest {
+  venueUniqueId: string
+  name: string
+  uniqueName: string
+  seatsIoChartKey?: string
+}
+
+export type SeatsIoChartLayoutsPage = PaginatedResponse<SeatsIoChartLayout>
+
+function readServiceResponseData(payload: unknown): unknown {
+  if (!payload || typeof payload !== "object") {
+    return payload
+  }
+
+  if ("Data" in payload) {
+    return (payload as { Data?: unknown }).Data
+  }
+
+  if ("data" in payload) {
+    return (payload as { data?: unknown }).data
+  }
+
+  return payload
+}
+
+function parseServiceResponseData(payload: unknown): unknown {
+  const serviceResponse = serviceResponseSchema.parse(payload) as ServiceResponse<unknown> & {
+    Data?: unknown
+    data?: unknown
+  }
+
+  return readServiceResponseData(serviceResponse)
+}
+
+function normalizeWorkspace(item: z.infer<typeof seatsIoWorkspaceSchema>): SeatsIoWorkspace {
+  return {
+    id: item.Id ?? item.id ?? 0,
+    name: item.Name ?? item.name ?? "",
+    publicKey: item.Key ?? item.key ?? "",
+    region: item.Region ?? item.region ?? "",
+    secretKey: item.SecretKey ?? item.secretKey ?? "",
+    isDefault: item.IsDefault ?? item.isDefault ?? false,
+    isTest: item.IsTest ?? item.isTest ?? false,
+    isActive: item.IsActive ?? item.isActive ?? false,
+  }
+}
+
+function normalizeChartLayout(item: z.infer<typeof seatsIoChartLayoutSchema>): SeatsIoChartLayout {
+  return {
+    id: item.Id ?? item.id ?? 0,
+    uniqueId: item.UniqueId ?? item.uniqueId ?? "",
+    venueUniqueId: item.VenueUniqueId ?? item.venueUniqueId ?? "",
+    venueName: item.VenueName ?? item.venueName ?? "",
+    name: item.Name ?? item.name ?? "",
+    uniqueName: item.UniqueName ?? item.uniqueName ?? "",
+    seatsIoChartKey: item.SeatsIoChartKey ?? item.seatsIoChartKey ?? null,
+  }
+}
+
+export async function fetchSeatsIoWorkspace(): Promise<SeatsIoWorkspace | null> {
+  try {
+    const res = await client.get<unknown>(API_ROUTES.seatsIoWorkspace)
+    const responseData = parseServiceResponseData(res.data)
+
+    if (!responseData) {
+      return null
+    }
+
+    return normalizeWorkspace(seatsIoWorkspaceSchema.parse(responseData))
+  } catch (error) {
+    if (isAxiosError(error) && error.response?.status === 404) {
+      return null
+    }
+
+    throw error
+  }
+}
+
+export async function createSeatsIoWorkspace(): Promise<SeatsIoWorkspace> {
+  const res = await client.post<unknown>(API_ROUTES.seatsIoWorkspace)
+  const responseData = parseServiceResponseData(res.data)
+  return normalizeWorkspace(seatsIoWorkspaceSchema.parse(responseData))
+}
+
+export async function fetchSeatsIoChartLayouts(pageNo = 1, pageSize = 20): Promise<SeatsIoChartLayoutsPage> {
+  const res = await client.get<unknown>(API_ROUTES.seatsIoChartLayouts, {
+    params: { pageNo, pageSize },
+  })
+  const responseData = parseServiceResponseData(res.data)
+  const parsed = seatsIoChartLayoutsPageSchema.parse(responseData)
+  const pageData = (parsed.PageData ?? parsed.pageData ?? []).map(normalizeChartLayout)
+
+  return {
+    items: pageData,
+    total: parsed.TotalRecordsCount ?? parsed.totalRecordsCount ?? pageData.length,
+    page: parsed.PageNo ?? parsed.pageNo ?? pageNo,
+    pageSize: parsed.PageSize ?? parsed.pageSize ?? pageSize,
+    totalPages: parsed.PageCount ?? parsed.pageCount ?? 0,
+  }
+}
+
+export async function saveSeatsIoChartLayout(payload: SeatsIoChartLayoutRequest): Promise<SeatsIoChartLayout> {
+  const res = await client.post<unknown>(API_ROUTES.seatsIoChartLayouts, {
+    venueUniqueId: payload.venueUniqueId,
+    name: payload.name,
+    uniqueName: payload.uniqueName,
+    seatsIoChartKey: payload.seatsIoChartKey,
+  })
+  const responseData = parseServiceResponseData(res.data)
+  return normalizeChartLayout(seatsIoChartLayoutSchema.parse(responseData))
+}

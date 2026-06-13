@@ -9,6 +9,7 @@ import {
   Users,
   BarChart3,
   HelpCircle,
+  LayoutGrid,
 } from "lucide-react"
 import { mockUser } from "../../data/mock"
 import { logoutUser } from "@/api/auth"
@@ -33,6 +34,7 @@ const mainNav: NavItem[] = [
 ]
 
 const managementNav: NavItem[] = [
+  { label: "Chart Layouts", icon: <LayoutGrid size={17} />, path: APP_ROUTES.chartLayouts.list },
   { label: "Team", icon: <Users size={17} />, path: APP_ROUTES.team },
   { label: "Analytics", icon: <BarChart3 size={17} />, path: APP_ROUTES.analytics },
   { label: "Settings", icon: <Settings size={17} />, path: APP_ROUTES.settings },
@@ -60,7 +62,7 @@ function NavSection({ label, items }: { label: string; items: NavItem[] }) {
       </Text>
       <VStack gap={0.5} align="stretch">
         {items.map((item) => {
-          const isActive = pathname === item.path
+          const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`)
           return (
             <NavLink key={item.path} to={item.path} style={{ textDecoration: "none" }}>
               <Flex
