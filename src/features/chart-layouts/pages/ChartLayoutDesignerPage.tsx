@@ -154,7 +154,7 @@ export function ChartLayoutDesignerPage() {
   const canRenderDesigner = Boolean(activeLayout && isWorkspaceReady)
 
   return (
-    <Box maxW="7xl" mx="auto">
+    <Box w="full">
       <Flex align="center" justify="space-between" gap={4} mb={6} wrap="wrap">
         <Box>
           <Badge colorPalette="purple" borderRadius="999px" px={3} py={1} mb={3}>
@@ -168,7 +168,7 @@ export function ChartLayoutDesignerPage() {
           </Text>
         </Box>
 
-        <Button variant="outline" minH="11" onClick={() => navigate(APP_ROUTES.chartLayouts.list)}>
+        <Button variant="outline" minH="11" px={5} onClick={() => navigate(APP_ROUTES.chartLayouts.list)}>
           <ArrowLeft size={16} />
           Back to layouts
         </Button>
@@ -245,6 +245,7 @@ export function ChartLayoutDesignerPage() {
               type="submit"
               w="full"
               minH="11"
+              px={5}
               bg="linear-gradient(135deg, #7551FF 0%, #422AFB 100%)"
               color="white"
               loading={isSubmitting}

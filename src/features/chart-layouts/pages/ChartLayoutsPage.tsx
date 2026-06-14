@@ -59,7 +59,7 @@ export function ChartLayoutsPage() {
   const currentPage = query.data?.page ?? page
 
   return (
-    <Box maxW="7xl" mx="auto">
+    <Box w="full">
       <Flex
         direction={{ base: "column", lg: "row" }}
         align={{ base: "stretch", lg: "center" }}
@@ -87,6 +87,7 @@ export function ChartLayoutsPage() {
         <Button
           w={{ base: "full", md: "auto" }}
           minH="11"
+          px={5}
           borderRadius="14px"
           fontWeight="700"
           bg="linear-gradient(135deg, #7551FF 0%, #422AFB 100%)"
@@ -143,7 +144,7 @@ export function ChartLayoutsPage() {
                       <Text mt={2} fontSize="sm" color="gray.600">
                         Add the first layout to start designing a Seats.io chart.
                       </Text>
-                      <Button mt={5} onClick={() => navigate(APP_ROUTES.chartLayouts.create)}>
+                      <Button mt={5} px={5} onClick={() => navigate(APP_ROUTES.chartLayouts.create)}>
                         <Plus size={16} />
                         Add Layout
                       </Button>
@@ -202,6 +203,7 @@ export function ChartLayoutsPage() {
           <HStack gap={2} wrap="wrap">
             <Button
               minH="11"
+              px={4}
               variant="outline"
               disabled={currentPage <= 1}
               onClick={() => updatePage(currentPage - 1)}
@@ -213,6 +215,7 @@ export function ChartLayoutsPage() {
               <Button
                 key={item}
                 minH="11"
+                px={4}
                 variant={item === currentPage ? "solid" : "outline"}
                 bg={item === currentPage ? "brand.500" : undefined}
                 color={item === currentPage ? "white" : undefined}
@@ -223,6 +226,7 @@ export function ChartLayoutsPage() {
             ))}
             <Button
               minH="11"
+              px={4}
               variant="outline"
               disabled={currentPage >= totalPages}
               onClick={() => updatePage(currentPage + 1)}
