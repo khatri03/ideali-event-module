@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom"
 import { Badge, Box, Button, Flex, Heading, HStack, Skeleton, SkeletonText, Table, Text } from "@chakra-ui/react"
 import { ArrowLeft, ArrowRight, LayoutGrid, Plus } from "lucide-react"
 import { APP_ROUTES } from "@/utils/routes"
-import { useSeatsIoChartLayouts } from "../hooks/useSeatsIoChartLayouts"
+import { useSeatingLayouts } from "../hooks/useSeatingLayouts"
 import { extractApiError } from "@/utils/errors"
 
 const PAGE_SIZE = 10
@@ -20,7 +20,7 @@ function buildPageNumbers(page: number, totalPages: number) {
   return pages
 }
 
-function ChartLayoutsSkeleton() {
+function SeatingLayoutsSkeleton() {
   return (
     <Box>
       <Skeleton height="32px" width="240px" mb={3} />
@@ -33,11 +33,11 @@ function ChartLayoutsSkeleton() {
   )
 }
 
-export function ChartLayoutsPage() {
+export function SeatingLayoutsPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const page = Math.max(1, Number(searchParams.get("page") ?? "1") || 1)
-  const query = useSeatsIoChartLayouts(page, PAGE_SIZE)
+  const query = useSeatingLayouts(page, PAGE_SIZE)
 
   const pageNumbers = useMemo(
     () => buildPageNumbers(query.data?.page ?? page, query.data?.totalPages ?? 0),
@@ -51,7 +51,7 @@ export function ChartLayoutsPage() {
   }
 
   if (query.isLoading && !query.data) {
-    return <ChartLayoutsSkeleton />
+    return <SeatingLayoutsSkeleton />
   }
 
   const layouts = query.data?.items ?? []
@@ -77,10 +77,10 @@ export function ChartLayoutsPage() {
             </Text>
           </HStack>
           <Heading fontSize={{ base: "2xl", md: "3xl" }} fontWeight="800" letterSpacing="-0.03em" color="gray.900">
-            Chart Layouts
+            Seating Layouts
           </Heading>
           <Text mt={2} fontSize={{ base: "sm", md: "md" }} color="gray.600" maxW="2xl">
-            Review chart layouts created inside the Seats.io designer and open the layout builder when you need a new one.
+            Review seating layouts created inside the Seats.io designer and open the layout builder when you need a new one.
           </Text>
         </Box>
 
@@ -92,7 +92,7 @@ export function ChartLayoutsPage() {
           fontWeight="700"
           bg="linear-gradient(135deg, #7551FF 0%, #422AFB 100%)"
           color="white"
-          onClick={() => navigate(APP_ROUTES.chartLayouts.create)}
+          onClick={() => navigate(APP_ROUTES.seatingLayouts.create)}
         >
           <Plus size={16} />
           Add Layout
@@ -129,22 +129,21 @@ export function ChartLayoutsPage() {
               <Table.Row bg="app.bg">
                 <Table.ColumnHeader px={6} py={3}>Layout</Table.ColumnHeader>
                 <Table.ColumnHeader px={4} py={3}>Venue</Table.ColumnHeader>
-                <Table.ColumnHeader px={4} py={3}>Unique name</Table.ColumnHeader>
                 <Table.ColumnHeader px={4} py={3}>Chart key</Table.ColumnHeader>
               </Table.Row>
             </Table.Header>
             <Table.Body>
               {layouts.length === 0 ? (
                 <Table.Row>
-                  <Table.Cell colSpan={4} py={12}>
+                  <Table.Cell colSpan={3} py={12}>
                     <Box textAlign="center">
                       <Text fontSize="lg" fontWeight="700" color="gray.900">
-                        No chart layouts yet
+                        No seating layouts yet
                       </Text>
                       <Text mt={2} fontSize="sm" color="gray.600">
                         Add the first layout to start designing a Seats.io chart.
                       </Text>
-                      <Button mt={5} px={5} onClick={() => navigate(APP_ROUTES.chartLayouts.create)}>
+                      <Button mt={5} px={5} onClick={() => navigate(APP_ROUTES.seatingLayouts.create)}>
                         <Plus size={16} />
                         Add Layout
                       </Button>
@@ -167,11 +166,6 @@ export function ChartLayoutsPage() {
                     <Table.Cell px={4} py={4}>
                       <Text fontSize="sm" color="text.primary">
                         {layout.venueName}
-                      </Text>
-                    </Table.Cell>
-                    <Table.Cell px={4} py={4}>
-                      <Text fontSize="sm" color="text.primary">
-                        {layout.uniqueName}
                       </Text>
                     </Table.Cell>
                     <Table.Cell px={4} py={4}>

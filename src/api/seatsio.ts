@@ -34,7 +34,7 @@ const seatsIoWorkspaceSchema = z.object({
   isActive: z.boolean().optional(),
 })
 
-const seatsIoChartLayoutSchema = z.object({
+const seatsIoSeatingLayoutSchema = z.object({
   Id: z.number().int().optional(),
   id: z.number().int().optional(),
   UniqueId: z.string().nullable().optional(),
@@ -45,13 +45,11 @@ const seatsIoChartLayoutSchema = z.object({
   venueName: z.string().nullable().optional(),
   Name: z.string().nullable().optional(),
   name: z.string().nullable().optional(),
-  UniqueName: z.string().nullable().optional(),
-  uniqueName: z.string().nullable().optional(),
   SeatsIoChartKey: z.string().nullable().optional(),
   seatsIoChartKey: z.string().nullable().optional(),
 })
 
-const seatsIoChartLayoutsPageSchema = z.object({
+const seatsIoSeatingLayoutsPageSchema = z.object({
   PageNo: z.number().int().optional(),
   pageNo: z.number().int().optional(),
   PageSize: z.number().int().optional(),
@@ -60,8 +58,8 @@ const seatsIoChartLayoutsPageSchema = z.object({
   pageCount: z.number().int().optional(),
   TotalRecordsCount: z.number().int().optional(),
   totalRecordsCount: z.number().int().optional(),
-  PageData: z.array(seatsIoChartLayoutSchema).optional(),
-  pageData: z.array(seatsIoChartLayoutSchema).optional(),
+  PageData: z.array(seatsIoSeatingLayoutSchema).optional(),
+  pageData: z.array(seatsIoSeatingLayoutSchema).optional(),
 })
 
 export interface SeatsIoWorkspace {
@@ -75,24 +73,22 @@ export interface SeatsIoWorkspace {
   isActive: boolean
 }
 
-export interface SeatsIoChartLayout {
+export interface SeatsIoSeatingLayout {
   id: number
   uniqueId: string
   venueUniqueId: string
   venueName: string
   name: string
-  uniqueName: string
   seatsIoChartKey: string | null
 }
 
-export interface SeatsIoChartLayoutRequest {
+export interface SeatsIoSeatingLayoutRequest {
   venueUniqueId: string
   name: string
-  uniqueName: string
   seatsIoChartKey?: string
 }
 
-export type SeatsIoChartLayoutsPage = PaginatedResponse<SeatsIoChartLayout>
+export type SeatsIoSeatingLayoutsPage = PaginatedResponse<SeatsIoSeatingLayout>
 
 function readServiceResponseData(payload: unknown): unknown {
   if (!payload || typeof payload !== "object") {
@@ -132,14 +128,13 @@ function normalizeWorkspace(item: z.infer<typeof seatsIoWorkspaceSchema>): Seats
   }
 }
 
-function normalizeChartLayout(item: z.infer<typeof seatsIoChartLayoutSchema>): SeatsIoChartLayout {
+function normalizeSeatingLayout(item: z.infer<typeof seatsIoSeatingLayoutSchema>): SeatsIoSeatingLayout {
   return {
     id: item.Id ?? item.id ?? 0,
     uniqueId: item.UniqueId ?? item.uniqueId ?? "",
     venueUniqueId: item.VenueUniqueId ?? item.venueUniqueId ?? "",
     venueName: item.VenueName ?? item.venueName ?? "",
     name: item.Name ?? item.name ?? "",
-    uniqueName: item.UniqueName ?? item.uniqueName ?? "",
     seatsIoChartKey: item.SeatsIoChartKey ?? item.seatsIoChartKey ?? null,
   }
 }
@@ -169,13 +164,13 @@ export async function createSeatsIoWorkspace(): Promise<SeatsIoWorkspace> {
   return normalizeWorkspace(seatsIoWorkspaceSchema.parse(responseData))
 }
 
-export async function fetchSeatsIoChartLayouts(pageNo = 1, pageSize = 20): Promise<SeatsIoChartLayoutsPage> {
-  const res = await client.get<unknown>(API_ROUTES.seatsIoChartLayouts, {
+export async function fetchSeatsIoSeatingLayouts(pageNo = 1, pageSize = 20): Promise<SeatsIoSeatingLayoutsPage> {
+  const res = await client.get<unknown>(API_ROUTES.seatsIoSeatingLayouts, {
     params: { pageNo, pageSize },
   })
   const responseData = parseServiceResponseData(res.data)
-  const parsed = seatsIoChartLayoutsPageSchema.parse(responseData)
-  const pageData = (parsed.PageData ?? parsed.pageData ?? []).map(normalizeChartLayout)
+  const parsed = seatsIoSeatingLayoutsPageSchema.parse(responseData)
+  const pageData = (parsed.PageData ?? parsed.pageData ?? []).map(normalizeSeatingLayout)
 
   return {
     items: pageData,
@@ -186,13 +181,12 @@ export async function fetchSeatsIoChartLayouts(pageNo = 1, pageSize = 20): Promi
   }
 }
 
-export async function saveSeatsIoChartLayout(payload: SeatsIoChartLayoutRequest): Promise<SeatsIoChartLayout> {
-  const res = await client.post<unknown>(API_ROUTES.seatsIoChartLayouts, {
+export async function saveSeatsIoSeatingLayout(payload: SeatsIoSeatingLayoutRequest): Promise<SeatsIoSeatingLayout> {
+  const res = await client.post<unknown>(API_ROUTES.seatsIoSeatingLayouts, {
     venueUniqueId: payload.venueUniqueId,
     name: payload.name,
-    uniqueName: payload.uniqueName,
     seatsIoChartKey: payload.seatsIoChartKey,
   })
   const responseData = parseServiceResponseData(res.data)
-  return normalizeChartLayout(seatsIoChartLayoutSchema.parse(responseData))
+  return normalizeSeatingLayout(seatsIoSeatingLayoutSchema.parse(responseData))
 }

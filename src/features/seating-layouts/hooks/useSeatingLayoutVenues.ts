@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query"
 import { fetchOrganizerVenues } from "@/api/organizer"
 
-export function useChartLayoutVenues() {
+export function useSeatingLayoutVenues() {
   const query = useQuery({
-    queryKey: ["chart-layouts", "venues"],
+    queryKey: ["seating-layouts", "venues"],
     queryFn: fetchOrganizerVenues,
     retry: false,
     refetchOnWindowFocus: false,

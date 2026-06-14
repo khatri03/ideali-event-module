@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { fetchSeatsIoWorkspace } from "@/api/seatsio"
 
-export function useSeatsIoWorkspace() {
+export function useSeatingLayoutWorkspace() {
   return useQuery({
     queryKey: ["seatsio", "workspace"],
     queryFn: fetchSeatsIoWorkspace,

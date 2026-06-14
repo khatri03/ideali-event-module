@@ -7,9 +7,9 @@ export const APP_ROUTES = {
   team: "/team",
   analytics: "/analytics",
   help: "/help",
-  chartLayouts: {
-    list: "/organizer/seatsio/chart-layouts",
-    create: "/organizer/seatsio/chart-layouts/new",
+  seatingLayouts: {
+    list: "/organizer/seatsio/seating-layouts",
+    create: "/organizer/seatsio/seating-layouts/new",
   },
   auth: {
     login: "/auth/login",
@@ -92,7 +92,7 @@ export const API_ROUTES = {
   adminTimeZones: "/api/admin/list-items/time-zones",
   organizerEvents: "/api/organizer/events/list",
   seatsIoWorkspace: "/api/organizer/seatsio/workspace",
-  seatsIoChartLayouts: "/api/organizer/seatsio/chart-layouts",
+  seatsIoSeatingLayouts: "/api/organizer/seatsio/seating-layouts",
   sessionWizardName: (id: string) => `/api/organizer/sessions/${id}/name`,
   sessionWizardDescription: (id: string) => `/api/organizer/sessions/${id}/description`,
   sessionWizardBanner: (id: string) => `/api/organizer/sessions/${id}/banner`,
