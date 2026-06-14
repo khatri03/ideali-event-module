@@ -30,6 +30,7 @@ import { createSeatsIoWorkspace, type SeatsIoWorkspace } from "@/api/seatsio"
 import { useSeatingLayoutVenues } from "../hooks/useSeatingLayoutVenues"
 import { useSaveSeatsIoSeatingLayout } from "../hooks/useSaveSeatsIoSeatingLayout"
 import { seatingLayoutDesignerSchema, type SeatingLayoutDesignerValues } from "../schemas/seatingLayout.schemas"
+import { SeatsIoChartCategoriesCard } from "../components"
 
 function DesignerLoadingState() {
   return (
@@ -53,10 +54,18 @@ const SUPPORTED_SEATSIO_REGIONS = new Set<Region>(["eu", "na", "sa", "oc"])
 export function SeatingLayoutDesignerPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const routeLayoutId = searchParams.get("layoutId")
+  const routeChartUniqueId = searchParams.get("chartUniqueId") ?? routeLayoutId ?? ""
+  const routeVenueUniqueId = searchParams.get("venueUniqueId") ?? ""
+  const routeName = searchParams.get("name") ?? ""
+  const routeChartKey = searchParams.get("chartKey") ?? ""
+  const routeVenueName = searchParams.get("venueName") ?? ""
+
   const saveLayoutMutation = useSaveSeatsIoSeatingLayout()
   const venuesQuery = useSeatingLayoutVenues()
   const [layoutMode, setLayoutMode] = useState<"create" | "edit">("create")
   const [layoutChartKey, setLayoutChartKey] = useState<string | null>(null)
+  const [layoutUniqueId, setLayoutUniqueId] = useState(routeChartUniqueId)
   const [designerWorkspace, setDesignerWorkspace] = useState<SeatsIoWorkspace | null>(null)
   const [isLoadingDesignerCredentials, setIsLoadingDesignerCredentials] = useState(false)
   const [workspaceError, setWorkspaceError] = useState<string | null>(null)
@@ -83,12 +92,6 @@ export function SeatingLayoutDesignerPage() {
   const createVenueMutation = useMutation({
     mutationFn: createOrganizerVenue,
   })
-
-  const routeLayoutId = searchParams.get("layoutId")
-  const routeVenueUniqueId = searchParams.get("venueUniqueId") ?? ""
-  const routeName = searchParams.get("name") ?? ""
-  const routeChartKey = searchParams.get("chartKey") ?? ""
-  const routeVenueName = searchParams.get("venueName") ?? ""
 
   const nameValue = useWatch({ control, name: "name" })
   const venueUniqueIdValue = useWatch({ control, name: "venueUniqueId" }) ?? ""
@@ -132,14 +135,14 @@ export function SeatingLayoutDesignerPage() {
       setLayoutMode("edit")
     }
 
-    if (routeLayoutId) {
-      void routeLayoutId
+    if (routeChartUniqueId) {
+      setLayoutUniqueId(routeChartUniqueId)
     }
 
     if (routeVenueName) {
       void routeVenueName
     }
-  }, [routeChartKey, routeLayoutId, routeName, routeVenueName, routeVenueUniqueId, setValue])
+  }, [routeChartKey, routeChartUniqueId, routeName, routeVenueName, routeVenueUniqueId, setValue])
 
   useEffect(() => {
     if (layoutMode !== "edit") {
@@ -208,6 +211,7 @@ export function SeatingLayoutDesignerPage() {
         throw new Error("Seats.io chart key was not returned.")
       }
 
+      setLayoutUniqueId(savedLayout.uniqueId)
       setLayoutChartKey(savedLayout.seatsIoChartKey)
 
       if (layoutMode === "create") {
@@ -405,6 +409,12 @@ export function SeatingLayoutDesignerPage() {
           ) : null}
 
         </Box>
+
+        <SeatsIoChartCategoriesCard
+          chartUniqueId={layoutUniqueId}
+          chartName={trimmedName}
+          isEnabled={layoutMode === "edit"}
+        />
 
         <Box w="full">
           {isCreateMode ? (

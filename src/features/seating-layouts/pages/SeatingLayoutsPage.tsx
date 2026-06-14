@@ -53,6 +53,7 @@ export function SeatingLayoutsPage() {
   function buildEditUrl(layout: (typeof layouts)[number]) {
     const params = new URLSearchParams()
     params.set("layoutId", layout.uniqueId)
+    params.set("chartUniqueId", layout.uniqueId)
     params.set("name", layout.name)
     if (layout.venueUniqueId) {
       params.set("venueUniqueId", layout.venueUniqueId)

@@ -93,6 +93,9 @@ export const API_ROUTES = {
   organizerEvents: "/api/organizer/events/list",
   seatsIoWorkspace: "/api/organizer/seatsio/workspace",
   seatsIoSeatingLayouts: "/api/organizer/seatsio/seating-layouts",
+  seatsIoChartCategories: (chartUniqueId: string) => `/api/organizer/seatsio/seating-layouts/${chartUniqueId}/categories`,
+  seatsIoChartCategory: (chartUniqueId: string, categoryUniqueId: string) =>
+    `/api/organizer/seatsio/seating-layouts/${chartUniqueId}/categories/${categoryUniqueId}`,
   sessionWizardName: (id: string) => `/api/organizer/sessions/${id}/name`,
   sessionWizardDescription: (id: string) => `/api/organizer/sessions/${id}/description`,
   sessionWizardBanner: (id: string) => `/api/organizer/sessions/${id}/banner`,
