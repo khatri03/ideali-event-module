@@ -91,10 +91,10 @@ export function SeatingLayoutDesignerPage() {
   const routeVenueName = searchParams.get("venueName") ?? ""
 
   const nameValue = useWatch({ control, name: "name" })
-  const venueUniqueIdValue = useWatch({ control, name: "venueUniqueId" })
+  const venueUniqueIdValue = useWatch({ control, name: "venueUniqueId" }) ?? ""
   const trimmedVenueUniqueId = venueUniqueIdValue.trim()
   const trimmedName = nameValue.trim()
-  const hasLayoutDetails = Boolean(trimmedVenueUniqueId && trimmedName)
+  const hasLayoutDetails = Boolean(trimmedName)
 
   const venueOptions = useMemo(
     () =>
@@ -190,7 +190,7 @@ export function SeatingLayoutDesignerPage() {
   }
 
   async function handlePersistLayout() {
-    if (!trimmedVenueUniqueId || !trimmedName) {
+    if (!trimmedName) {
       return
     }
 
@@ -199,7 +199,7 @@ export function SeatingLayoutDesignerPage() {
 
     try {
       const savedLayout = await saveLayoutMutation.mutateAsync({
-        venueUniqueId: trimmedVenueUniqueId,
+        venueUniqueId: trimmedVenueUniqueId || undefined,
         name: trimmedName,
         seatsIoChartKey: currentChartKey ?? undefined,
       })
@@ -248,7 +248,7 @@ export function SeatingLayoutDesignerPage() {
             Create seating layout
           </Heading>
           <Text mt={2} color="gray.600" fontSize={{ base: "sm", md: "md" }}>
-            Choose a venue and layout name, create the chart layout first, and then we’ll open the Seats.io designer in edit mode.
+            Choose a layout name first. Venue is optional for now and can be mapped later when venues are ready.
           </Text>
         </Box>
 
@@ -276,59 +276,6 @@ export function SeatingLayoutDesignerPage() {
           </Flex>
 
           <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-            <Field.Root invalid={!!errors.venueUniqueId}>
-              <Flex align="center" justify="space-between" gap={3} mb={2}>
-                <Field.Label mb={0}>Venue</Field.Label>
-              </Flex>
-              <StyledSelect
-                options={venueOptions}
-                value={venueUniqueIdValue ?? ""}
-                onChange={(value) => {
-                  setValue("venueUniqueId", value, { shouldDirty: true, shouldValidate: true })
-
-                  if (layoutMode !== "create" || nameValue.trim()) {
-                    return
-                  }
-
-                  const venueLabel = venuesQuery.venues.find((venue) => venue.uniqueId === value)?.name ?? ""
-                  if (venueLabel) {
-                    setValue("name", venueLabel, { shouldDirty: true, shouldValidate: true })
-                  }
-                }}
-                placeholder={venuesQuery.isLoading ? "Loading venues..." : "Select venue"}
-                disabled={venuesQuery.isLoading}
-                size="md"
-              />
-              {errors.venueUniqueId && <Field.ErrorText>{errors.venueUniqueId.message}</Field.ErrorText>}
-              {venuesQuery.isError ? (
-                <Text mt={2} fontSize="sm" color="red.600">
-                  {extractApiError(venuesQuery.error)}
-                </Text>
-              ) : null}
-
-              <Tooltip.Root openDelay={300} closeDelay={100}>
-                <Tooltip.Trigger asChild>
-                  <Button
-                    mt={3}
-                    variant="outline"
-                    aria-label="Add venue"
-                    borderRadius="999px"
-                    h="44px"
-                    w="44px"
-                    minW="44px"
-                    p={0}
-                    disabled={createVenueMutation.isPending}
-                    onClick={() => setIsVenueDialogOpen(true)}
-                  >
-                    <Plus size={18} />
-                  </Button>
-                </Tooltip.Trigger>
-                <Tooltip.Positioner>
-                  <Tooltip.Content>Quick add venue</Tooltip.Content>
-                </Tooltip.Positioner>
-              </Tooltip.Root>
-            </Field.Root>
-
             <Field.Root invalid={!!errors.name}>
               <Field.Label>Name</Field.Label>
               <Input
@@ -339,6 +286,53 @@ export function SeatingLayoutDesignerPage() {
                 px={4}
               />
               {errors.name && <Field.ErrorText>{errors.name.message}</Field.ErrorText>}
+            </Field.Root>
+
+            <Field.Root invalid={!!errors.venueUniqueId} w="full">
+              <Flex align="center" justify="space-between" gap={3} mb={2} w="full">
+                <Flex align="center" gap={2} minW={0}>
+                  <Field.Label mb={0}>Venue</Field.Label>
+                  <Tooltip.Root openDelay={300} closeDelay={100}>
+                    <Tooltip.Trigger asChild>
+                      <Button
+                        variant="outline"
+                        aria-label="Add venue"
+                        borderRadius="999px"
+                        h="32px"
+                        w="32px"
+                        minW="32px"
+                        flexShrink={0}
+                        p={0}
+                        disabled={createVenueMutation.isPending}
+                        onClick={() => setIsVenueDialogOpen(true)}
+                      >
+                        <Plus size={16} />
+                      </Button>
+                    </Tooltip.Trigger>
+                    <Tooltip.Positioner>
+                      <Tooltip.Content>Quick add venue</Tooltip.Content>
+                    </Tooltip.Positioner>
+                  </Tooltip.Root>
+                </Flex>
+              </Flex>
+              <Box w="full" minW={0}>
+                <StyledSelect
+                  options={venueOptions}
+                  value={venueUniqueIdValue ?? ""}
+                  onChange={(value) => {
+                    setValue("venueUniqueId", value, { shouldDirty: true, shouldValidate: true })
+                  }}
+                  placeholder={venuesQuery.isLoading ? "Loading venues..." : "Select venue"}
+                  disabled={venuesQuery.isLoading}
+                  size="md"
+                />
+              </Box>
+              {errors.venueUniqueId && <Field.ErrorText>{errors.venueUniqueId.message}</Field.ErrorText>}
+              {venuesQuery.isError ? (
+                <Text mt={2} fontSize="sm" color="red.600">
+                  {extractApiError(venuesQuery.error)}
+                </Text>
+              ) : null}
             </Field.Root>
           </SimpleGrid>
 
@@ -429,7 +423,7 @@ export function SeatingLayoutDesignerPage() {
                 </Text>
               </Flex>
               <Text fontSize="sm" color="gray.600" maxW="2xl">
-                Provide venue and name, then create the chart layout first. We’ll switch this page into edit mode, fetch the Seats.io credentials from the backend, and render the designer using the saved chart name.
+                Provide a layout name first. Venue is optional and can be mapped later when venues are ready. We’ll switch this page into edit mode, fetch the Seats.io credentials from the backend, and render the designer using the saved chart name.
               </Text>
             </Box>
           ) : (

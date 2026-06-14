@@ -76,14 +76,14 @@ export interface SeatsIoWorkspace {
 export interface SeatsIoSeatingLayout {
   id: number
   uniqueId: string
-  venueUniqueId: string
-  venueName: string
+  venueUniqueId: string | null
+  venueName: string | null
   name: string
   seatsIoChartKey: string | null
 }
 
 export interface SeatsIoSeatingLayoutRequest {
-  venueUniqueId: string
+  venueUniqueId?: string | null
   name: string
   seatsIoChartKey?: string
 }
@@ -133,8 +133,8 @@ function normalizeSeatingLayout(item: z.infer<typeof seatsIoSeatingLayoutSchema>
   return {
     id: item.Id ?? item.id ?? 0,
     uniqueId: item.UniqueId ?? item.uniqueId ?? "",
-    venueUniqueId: item.VenueUniqueId ?? item.venueUniqueId ?? "",
-    venueName: item.VenueName ?? item.venueName ?? "",
+    venueUniqueId: item.VenueUniqueId ?? item.venueUniqueId ?? null,
+    venueName: item.VenueName ?? item.venueName ?? null,
     name: item.Name ?? item.name ?? "",
     seatsIoChartKey: item.SeatsIoChartKey ?? item.seatsIoChartKey ?? null,
   }
@@ -183,11 +183,16 @@ export async function fetchSeatsIoSeatingLayouts(pageNo = 1, pageSize = 20): Pro
 }
 
 export async function saveSeatsIoSeatingLayout(payload: SeatsIoSeatingLayoutRequest): Promise<SeatsIoSeatingLayout> {
-  const res = await client.post<unknown>(API_ROUTES.seatsIoSeatingLayouts, {
-    venueUniqueId: payload.venueUniqueId,
+  const body: Record<string, unknown> = {
     name: payload.name,
     seatsIoChartKey: payload.seatsIoChartKey,
-  })
+  }
+
+  if (payload.venueUniqueId) {
+    body.venueUniqueId = payload.venueUniqueId
+  }
+
+  const res = await client.post<unknown>(API_ROUTES.seatsIoSeatingLayouts, body)
   const responseData = parseServiceResponseData(res.data)
   return normalizeSeatingLayout(seatsIoSeatingLayoutSchema.parse(responseData))
 }

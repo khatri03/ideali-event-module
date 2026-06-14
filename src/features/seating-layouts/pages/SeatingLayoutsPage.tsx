@@ -50,6 +50,23 @@ export function SeatingLayoutsPage() {
     setSearchParams(params, { replace: true })
   }
 
+  function buildEditUrl(layout: (typeof layouts)[number]) {
+    const params = new URLSearchParams()
+    params.set("layoutId", layout.uniqueId)
+    params.set("name", layout.name)
+    if (layout.venueUniqueId) {
+      params.set("venueUniqueId", layout.venueUniqueId)
+    }
+    if (layout.venueName) {
+      params.set("venueName", layout.venueName)
+    }
+    if (layout.seatsIoChartKey) {
+      params.set("chartKey", layout.seatsIoChartKey)
+    }
+
+    return `${APP_ROUTES.seatingLayouts.create}?${params.toString()}`
+  }
+
   if (query.isLoading && !query.data) {
     return <SeatingLayoutsSkeleton />
   }
@@ -168,7 +185,7 @@ export function SeatingLayoutsPage() {
                     </Table.Cell>
                     <Table.Cell px={4} py={4}>
                       <Text fontSize="sm" color="text.primary">
-                        {layout.venueName}
+                        {layout.venueName ?? "Not mapped yet"}
                       </Text>
                     </Table.Cell>
                     <Table.Cell px={4} py={4}>
@@ -181,11 +198,7 @@ export function SeatingLayoutsPage() {
                         variant="outline"
                         minH="11"
                         px={4}
-                        onClick={() =>
-                          navigate(
-                            `${APP_ROUTES.seatingLayouts.create}?layoutId=${layout.uniqueId}&venueUniqueId=${layout.venueUniqueId}&venueName=${encodeURIComponent(layout.venueName)}&name=${encodeURIComponent(layout.name)}&chartKey=${encodeURIComponent(layout.seatsIoChartKey ?? "")}`
-                          )
-                        }
+                        onClick={() => navigate(buildEditUrl(layout))}
                       >
                         <Edit3 size={16} />
                         Edit
