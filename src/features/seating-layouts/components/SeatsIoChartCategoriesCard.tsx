@@ -301,66 +301,73 @@ export function SeatsIoChartCategoriesCard({
                     </Table.Cell>
                   </Table.Row>
                 ) : (
-                  categories.map((category) => (
-                    <Table.Row key={category.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
-                      <Table.Cell px={5} py={4}>
-                        <Text fontSize="sm" fontWeight="700" color="text.primary">
-                          {category.name}
-                        </Text>
-                      </Table.Cell>
-                      <Table.Cell px={5} py={4} textAlign="center">
-                        <Flex justify="center">
-                          <CategorySwatch color={category.color} />
-                        </Flex>
-                      </Table.Cell>
-                      <Table.Cell px={5} py={4} textAlign="right">
-                        <Flex justify="flex-end" gap={2} wrap="wrap">
-                          <Tooltip.Root openDelay={250} closeDelay={100}>
-                            <Tooltip.Trigger asChild>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                aria-label={`Edit category ${category.name}`}
-                                borderRadius="full"
-                                minH="11"
-                                w="40px"
-                                minW="40px"
-                                p={0}
-                                onClick={() => openEditCategoryDialog(category)}
-                              >
-                                <Edit3 size={15} />
-                              </Button>
-                            </Tooltip.Trigger>
-                            <Tooltip.Positioner>
-                              <Tooltip.Content>Edit category</Tooltip.Content>
-                            </Tooltip.Positioner>
-                          </Tooltip.Root>
+                  categories.map((category) => {
+                    const canDelete = categories.length > 1;
 
-                          <Tooltip.Root openDelay={250} closeDelay={100}>
-                            <Tooltip.Trigger asChild>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                colorPalette="red"
-                                aria-label={`Delete category ${category.name}`}
-                                borderRadius="full"
-                                minH="11"
-                                w="40px"
-                                minW="40px"
-                                p={0}
-                                onClick={() => requestDeleteCategory(category)}
-                              >
-                                <Trash2 size={15} />
-                              </Button>
-                            </Tooltip.Trigger>
-                            <Tooltip.Positioner>
-                              <Tooltip.Content>Delete category</Tooltip.Content>
-                            </Tooltip.Positioner>
-                          </Tooltip.Root>
-                        </Flex>
-                      </Table.Cell>
-                    </Table.Row>
-                  ))
+                    return (
+                      <Table.Row key={category.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
+                        <Table.Cell px={5} py={4}>
+                          <Text fontSize="sm" fontWeight="700" color="text.primary">
+                            {category.name}
+                          </Text>
+                        </Table.Cell>
+                        <Table.Cell px={5} py={4} textAlign="center">
+                          <Flex justify="center">
+                            <CategorySwatch color={category.color} />
+                          </Flex>
+                        </Table.Cell>
+                        <Table.Cell px={5} py={4} textAlign="right">
+                          <Flex justify="flex-end" gap={2} wrap="wrap">
+                            <Tooltip.Root openDelay={250} closeDelay={100}>
+                              <Tooltip.Trigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  aria-label={`Edit category ${category.name}`}
+                                  borderRadius="full"
+                                  minH="11"
+                                  w="40px"
+                                  minW="40px"
+                                  p={0}
+                                  onClick={() => openEditCategoryDialog(category)}
+                                >
+                                  <Edit3 size={15} />
+                                </Button>
+                              </Tooltip.Trigger>
+                              <Tooltip.Positioner>
+                                <Tooltip.Content>Edit category</Tooltip.Content>
+                              </Tooltip.Positioner>
+                            </Tooltip.Root>
+
+                            <Tooltip.Root openDelay={250} closeDelay={100}>
+                              <Tooltip.Trigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  colorPalette="red"
+                                  aria-label={`Delete category ${category.name}`}
+                                  borderRadius="full"
+                                  minH="11"
+                                  w="40px"
+                                  minW="40px"
+                                  p={0}
+                                  disabled={!canDelete}
+                                  onClick={() => requestDeleteCategory(category)}
+                                >
+                                  <Trash2 size={15} />
+                                </Button>
+                              </Tooltip.Trigger>
+                              <Tooltip.Positioner>
+                                <Tooltip.Content>
+                                  {canDelete ? "Delete category" : "A chart must have at least one category"}
+                                </Tooltip.Content>
+                              </Tooltip.Positioner>
+                            </Tooltip.Root>
+                          </Flex>
+                        </Table.Cell>
+                      </Table.Row>
+                    );
+                  })
                 )}
               </Table.Body>
             </Table.Root>
