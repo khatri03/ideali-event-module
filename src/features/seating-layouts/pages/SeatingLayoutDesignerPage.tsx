@@ -228,7 +228,7 @@ export function SeatingLayoutDesignerPage() {
                 value={venueUniqueIdValue ?? ""}
                 onChange={(value) => setValue("venueUniqueId", value, { shouldDirty: true, shouldValidate: true })}
                 placeholder={venuesQuery.isLoading ? "Loading venues..." : "Select venue"}
-                disabled={venuesQuery.isLoading || canRenderDesigner}
+                disabled={venuesQuery.isLoading}
                 size="md"
               />
               {errors.venueUniqueId && <Field.ErrorText>{errors.venueUniqueId.message}</Field.ErrorText>}
@@ -249,7 +249,7 @@ export function SeatingLayoutDesignerPage() {
                     w="44px"
                     minW="44px"
                     p={0}
-                    disabled={canRenderDesigner}
+                    disabled={createVenueMutation.isPending}
                     onClick={() => setIsVenueDialogOpen(true)}
                   >
                     <Plus size={18} />
@@ -269,7 +269,6 @@ export function SeatingLayoutDesignerPage() {
                 minH="11"
                 borderRadius="14px"
                 px={4}
-                disabled={canRenderDesigner}
               />
               {errors.name && <Field.ErrorText>{errors.name.message}</Field.ErrorText>}
             </Field.Root>
