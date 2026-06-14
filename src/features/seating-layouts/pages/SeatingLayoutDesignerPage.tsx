@@ -16,11 +16,9 @@ import {
   Heading,
   Input,
   Skeleton,
-  Spinner,
   SimpleGrid,
   Stack,
   Text,
-  VStack,
   Tooltip,
 } from "@chakra-ui/react"
 import { ArrowLeft, LayoutGrid, Plus, Sparkles } from "lucide-react"
@@ -28,9 +26,8 @@ import { StyledSelect } from "@/components/common"
 import { APP_ROUTES } from "@/utils/routes"
 import { extractApiError } from "@/utils/errors"
 import { createOrganizerVenue } from "@/api/organizer"
-import { createSeatsIoWorkspace, type SeatsIoWorkspace } from "@/api/seatsio"
+import { createSeatsIoWorkspace, fetchSeatsIoWorkspace, type SeatsIoWorkspace } from "@/api/seatsio"
 import { useSeatingLayoutVenues } from "../hooks/useSeatingLayoutVenues"
-import { useSeatingLayoutWorkspace } from "../hooks/useSeatingLayoutWorkspace"
 import { useSaveSeatsIoSeatingLayout } from "../hooks/useSaveSeatsIoSeatingLayout"
 import { seatingLayoutDesignerSchema, type SeatingLayoutDesignerValues } from "../schemas/seatingLayout.schemas"
 
@@ -51,17 +48,20 @@ function DesignerLoadingState() {
   )
 }
 
+const SUPPORTED_SEATSIO_REGIONS = new Set<Region>(["eu", "na", "sa", "oc"])
+
 export function SeatingLayoutDesignerPage() {
   const navigate = useNavigate()
-  const workspaceQuery = useSeatingLayoutWorkspace()
   const saveLayoutMutation = useSaveSeatsIoSeatingLayout()
   const venuesQuery = useSeatingLayoutVenues()
   const autoCreateRequestedRef = useRef(false)
   const savedChartKeyRef = useRef<string | null>(null)
+  const [workspaceBootstrapAttempt, setWorkspaceBootstrapAttempt] = useState(0)
   const [workspaceOverride, setWorkspaceOverride] = useState<SeatsIoWorkspace | null>(null)
+  const [isBootstrappingWorkspace, setIsBootstrappingWorkspace] = useState(true)
   const [workspaceError, setWorkspaceError] = useState<string | null>(null)
   const [designerError, setDesignerError] = useState<string | null>(null)
-  const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false)
+  const [isDesignerRendered, setIsDesignerRendered] = useState(false)
   const [isVenueDialogOpen, setIsVenueDialogOpen] = useState(false)
   const [venueName, setVenueName] = useState("")
   const [venueNameError, setVenueNameError] = useState("")
@@ -98,31 +98,40 @@ export function SeatingLayoutDesignerPage() {
     [venuesQuery.venues]
   )
 
-  const workspace = workspaceOverride ?? workspaceQuery.data ?? null
+  const workspace = workspaceOverride
   const isWorkspaceReady = Boolean(workspace?.secretKey && workspace?.region)
+  const designerRegion = workspace?.region
+  const hasSupportedRegion = Boolean(designerRegion && SUPPORTED_SEATSIO_REGIONS.has(designerRegion as Region))
 
   useEffect(() => {
-    async function ensureWorkspace() {
-      if (!workspaceQuery.isSuccess || workspaceQuery.data || workspaceOverride || autoCreateRequestedRef.current) {
+    async function bootstrapWorkspace() {
+      if (workspaceOverride || autoCreateRequestedRef.current) {
         return
       }
 
       autoCreateRequestedRef.current = true
-      setIsCreatingWorkspace(true)
+      setIsBootstrappingWorkspace(true)
       setWorkspaceError(null)
+      setIsDesignerRendered(false)
 
       try {
-        const workspace = await createSeatsIoWorkspace()
-        setWorkspaceOverride(workspace)
+        const existingWorkspace = await fetchSeatsIoWorkspace()
+        if (existingWorkspace?.secretKey && existingWorkspace.region) {
+          setWorkspaceOverride(existingWorkspace)
+          return
+        }
+
+        const createdWorkspace = await createSeatsIoWorkspace()
+        setWorkspaceOverride(createdWorkspace)
       } catch (error) {
         setWorkspaceError(error instanceof Error ? error.message : "Failed to configure Seats.io workspace.")
       } finally {
-        setIsCreatingWorkspace(false)
+        setIsBootstrappingWorkspace(false)
       }
     }
 
-    void ensureWorkspace()
-  }, [workspaceOverride, workspaceQuery.data, workspaceQuery.isSuccess])
+    void bootstrapWorkspace()
+  }, [workspaceBootstrapAttempt, workspaceOverride])
 
   async function handleCreateVenue() {
     const trimmedName = venueName.trim()
@@ -169,7 +178,7 @@ export function SeatingLayoutDesignerPage() {
     }
   }
 
-  const canRenderDesigner = Boolean(hasLayoutDetails && isWorkspaceReady)
+  const canRenderDesigner = Boolean(isWorkspaceReady && hasSupportedRegion)
 
   return (
     <Box w="full">
@@ -213,26 +222,6 @@ export function SeatingLayoutDesignerPage() {
             <Field.Root invalid={!!errors.venueUniqueId}>
               <Flex align="center" justify="space-between" gap={3} mb={2}>
                 <Field.Label mb={0}>Venue</Field.Label>
-                <Tooltip.Root openDelay={300} closeDelay={100}>
-                  <Tooltip.Trigger asChild>
-                    <Button
-                      variant="outline"
-                      aria-label="Add venue"
-                      borderRadius="999px"
-                      h="44px"
-                      w="44px"
-                      minW="44px"
-                      p={0}
-                      disabled={canRenderDesigner}
-                      onClick={() => setIsVenueDialogOpen(true)}
-                    >
-                      <Plus size={18} />
-                    </Button>
-                  </Tooltip.Trigger>
-                  <Tooltip.Positioner>
-                    <Tooltip.Content>Quick add venue</Tooltip.Content>
-                  </Tooltip.Positioner>
-                </Tooltip.Root>
               </Flex>
               <StyledSelect
                 options={venueOptions}
@@ -248,43 +237,48 @@ export function SeatingLayoutDesignerPage() {
                   {extractApiError(venuesQuery.error)}
                 </Text>
               ) : null}
+
+              <Tooltip.Root openDelay={300} closeDelay={100}>
+                <Tooltip.Trigger asChild>
+                  <Button
+                    mt={3}
+                    variant="outline"
+                    aria-label="Add venue"
+                    borderRadius="999px"
+                    h="44px"
+                    w="44px"
+                    minW="44px"
+                    p={0}
+                    disabled={canRenderDesigner}
+                    onClick={() => setIsVenueDialogOpen(true)}
+                  >
+                    <Plus size={18} />
+                  </Button>
+                </Tooltip.Trigger>
+                <Tooltip.Positioner>
+                  <Tooltip.Content>Quick add venue</Tooltip.Content>
+                </Tooltip.Positioner>
+              </Tooltip.Root>
             </Field.Root>
 
             <Field.Root invalid={!!errors.name}>
-              <Field.Label>Layout name</Field.Label>
+              <Field.Label>Name</Field.Label>
               <Input
                 {...register("name")}
                 placeholder="Main hall seating plan"
                 minH="11"
                 borderRadius="14px"
+                px={4}
                 disabled={canRenderDesigner}
               />
               {errors.name && <Field.ErrorText>{errors.name.message}</Field.ErrorText>}
             </Field.Root>
           </SimpleGrid>
 
-          {workspaceQuery.isLoading ? (
+          {isBootstrappingWorkspace ? (
             <Text mt={4} fontSize="sm" color="gray.600">
               Checking workspace configuration...
             </Text>
-          ) : null}
-
-          {workspaceQuery.isError ? (
-            <Box mt={4} p={4} borderRadius="16px" border="1px solid" borderColor="red.200" bg="red.50">
-              <Text fontSize="sm" fontWeight="700" color="red.700">
-                Workspace lookup failed
-              </Text>
-              <Text mt={1} fontSize="sm" color="red.600">
-                {extractApiError(workspaceQuery.error)}
-              </Text>
-            </Box>
-          ) : null}
-
-          {isCreatingWorkspace ? (
-            <Flex mt={4} align="center" gap={2} color="gray.600" fontSize="sm">
-              <Spinner size="sm" />
-              Configuring Seats.io workspace for this organizer.
-            </Flex>
           ) : null}
 
           {workspaceError ? (
@@ -295,35 +289,39 @@ export function SeatingLayoutDesignerPage() {
               <Text mt={1} fontSize="sm" color="red.600">
                 {workspaceError}
               </Text>
+              <Button
+                mt={3}
+                variant="outline"
+                colorPalette="red"
+                minH="11"
+                onClick={() => {
+                  autoCreateRequestedRef.current = false
+                  setWorkspaceOverride(null)
+                  setWorkspaceError(null)
+                  setIsBootstrappingWorkspace(true)
+                  setWorkspaceBootstrapAttempt((current) => current + 1)
+                }}
+              >
+                Retry setup
+              </Button>
+            </Box>
+          ) : null}
+
+          {workspace && !hasSupportedRegion ? (
+            <Box mt={4} p={4} borderRadius="16px" border="1px solid" borderColor="red.200" bg="red.50">
+              <Text fontSize="sm" fontWeight="700" color="red.700">
+                Unsupported Seats.io region
+              </Text>
+              <Text mt={1} fontSize="sm" color="red.600">
+                The workspace returned "{designerRegion}" but Seats.io designer only accepts eu, na, sa, or oc.
+              </Text>
             </Box>
           ) : null}
 
         </Box>
 
         <Box w="full">
-          {!hasLayoutDetails ? (
-            <Box
-              borderRadius="24px"
-              border="1px solid"
-              borderColor="border.subtle"
-              bg="card.bg"
-              p={8}
-              minH={{ base: "40vh", lg: "800px" }}
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-            >
-              <VStack gap={3} textAlign="center" maxW="lg">
-                <Sparkles size={28} />
-                <Heading fontSize={{ base: "xl", md: "2xl" }} fontWeight="800">
-                  Fill in the layout details to start shaping the chart
-                </Heading>
-                <Text color="gray.600" fontSize={{ base: "sm", md: "md" }}>
-                  The designer opens automatically once a venue, layout name, and workspace credentials are available.
-                </Text>
-              </VStack>
-            </Box>
-          ) : !isWorkspaceReady ? (
+          {!isWorkspaceReady ? (
             <DesignerLoadingState />
           ) : (
             <Box
@@ -345,6 +343,17 @@ export function SeatingLayoutDesignerPage() {
                 </Badge>
               </Flex>
 
+              {!hasLayoutDetails ? (
+                <Box mb={4} p={4} borderRadius="16px" bg="blue.50" border="1px solid" borderColor="blue.200">
+                  <Flex align="center" gap={2}>
+                    <Sparkles size={18} />
+                    <Text fontSize="sm" fontWeight="700" color="blue.800">
+                      Fill in venue and name to save the created chart.
+                    </Text>
+                  </Flex>
+                </Box>
+              ) : null}
+
               {designerError ? (
                 <Box mb={4} p={4} borderRadius="16px" border="1px solid" borderColor="red.200" bg="red.50">
                   <Text fontSize="sm" fontWeight="700" color="red.700">
@@ -361,7 +370,11 @@ export function SeatingLayoutDesignerPage() {
                   <SeatsioDesigner
                     key={workspace?.id ?? "workspace"}
                     secretKey={workspace!.secretKey}
-                    region={workspace!.region as Region}
+                    region={designerRegion as Region}
+                    onDesignerRendered={() => setIsDesignerRendered(true)}
+                    onDesignerRenderingFailed={() => {
+                      setDesignerError("Seats.io designer failed to render. Please verify the workspace secret key and region.")
+                    }}
                     onChartCreated={handleSaveChart}
                     onChartPublished={handleSaveChart}
                     onExitRequested={() => navigate(APP_ROUTES.seatingLayouts.list)}
@@ -374,6 +387,12 @@ export function SeatingLayoutDesignerPage() {
           )}
         </Box>
       </Stack>
+
+      {isWorkspaceReady && !isDesignerRendered && !designerError ? (
+        <Text mt={4} fontSize="sm" color="gray.600">
+          Loading Seats.io designer...
+        </Text>
+      ) : null}
 
       <Dialog.Root
         open={isVenueDialogOpen}

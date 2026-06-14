@@ -116,11 +116,12 @@ function parseServiceResponseData(payload: unknown): unknown {
 }
 
 function normalizeWorkspace(item: z.infer<typeof seatsIoWorkspaceSchema>): SeatsIoWorkspace {
+  const region = (item.Region ?? item.region ?? "").trim().toLowerCase()
   return {
     id: item.Id ?? item.id ?? 0,
     name: item.Name ?? item.name ?? "",
     publicKey: item.Key ?? item.key ?? "",
-    region: item.Region ?? item.region ?? "",
+    region,
     secretKey: item.SecretKey ?? item.secretKey ?? "",
     isDefault: item.IsDefault ?? item.isDefault ?? false,
     isTest: item.IsTest ?? item.isTest ?? false,
