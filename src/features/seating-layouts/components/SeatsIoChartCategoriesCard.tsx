@@ -33,6 +33,7 @@ interface SeatsIoChartCategoriesCardProps {
   chartUniqueId?: string | null
   chartName?: string | null
   isEnabled?: boolean
+  onCategoriesChanged?: () => void
 }
 
 const DEFAULT_COLOR = "#7551FF"
@@ -66,6 +67,7 @@ export function SeatsIoChartCategoriesCard({
   chartUniqueId,
   chartName,
   isEnabled = true,
+  onCategoriesChanged,
 }: SeatsIoChartCategoriesCardProps) {
   const normalizedChartUniqueId = chartUniqueId?.trim() ?? ""
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false)
@@ -180,6 +182,7 @@ export function SeatsIoChartCategoriesCard({
       }
 
       closeCategoryDialog()
+      onCategoriesChanged?.()
     } catch (error) {
       setFormError(extractApiError(error))
     }
@@ -197,6 +200,7 @@ export function SeatsIoChartCategoriesCard({
         categoryUniqueId: pendingDeleteCategory.uniqueId,
       })
       closeDeleteDialog()
+      onCategoriesChanged?.()
     } catch (error) {
       setDeleteError(extractApiError(error))
     }
@@ -512,7 +516,7 @@ export function SeatsIoChartCategoriesCard({
                     Delete category
                   </Text>
                   <Text fontSize="sm" color="gray.600">
-                    This action will remove the category from Seats.io and our database.
+                    {pendingDeleteCategory ? `Delete "${pendingDeleteCategory.name}" from Seats.io and our database.` : "This action will remove the category from Seats.io and our database."}
                   </Text>
                 </Box>
 

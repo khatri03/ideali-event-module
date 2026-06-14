@@ -110,8 +110,9 @@ export default function App() {
           <Route path={APP_ROUTES.analytics} element={<Settings />} />
           <Route path={APP_ROUTES.help} element={<Settings />} />
           <Route path={APP_ROUTES.seatingLayouts.list} element={<SeatingLayoutsPage />} />
-          <Route path={APP_ROUTES.seatingLayouts.create} element={<SeatingLayoutDesignerPage />} />
-        </Route>
+        <Route path={APP_ROUTES.seatingLayouts.create} element={<SeatingLayoutDesignerPage />} />
+        <Route path={APP_ROUTES.seatingLayouts.edit(":chartUniqueId")} element={<SeatingLayoutDesignerPage />} />
+      </Route>
 
         {/* Redirect root */}
         <Route path={APP_ROUTES.root} element={<Navigate to={APP_ROUTES.dashboard} replace />} />

@@ -51,21 +51,7 @@ export function SeatingLayoutsPage() {
   }
 
   function buildEditUrl(layout: (typeof layouts)[number]) {
-    const params = new URLSearchParams()
-    params.set("layoutId", layout.uniqueId)
-    params.set("chartUniqueId", layout.uniqueId)
-    params.set("name", layout.name)
-    if (layout.venueUniqueId) {
-      params.set("venueUniqueId", layout.venueUniqueId)
-    }
-    if (layout.venueName) {
-      params.set("venueName", layout.venueName)
-    }
-    if (layout.seatsIoChartKey) {
-      params.set("chartKey", layout.seatsIoChartKey)
-    }
-
-    return `${APP_ROUTES.seatingLayouts.create}?${params.toString()}`
+    return APP_ROUTES.seatingLayouts.edit(layout.uniqueId)
   }
 
   if (query.isLoading && !query.data) {

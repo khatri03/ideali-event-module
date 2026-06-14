@@ -4,7 +4,7 @@ import type { Region } from "@seatsio/seatsio-types"
 import { SeatsioDesigner } from "@seatsio/seatsio-react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, useWatch } from "react-hook-form"
-import { useNavigate, useSearchParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import {
   Badge,
   Box,
@@ -28,6 +28,7 @@ import { extractApiError } from "@/utils/errors"
 import { createOrganizerVenue } from "@/api/organizer"
 import { createSeatsIoWorkspace, type SeatsIoWorkspace } from "@/api/seatsio"
 import { useSeatingLayoutVenues } from "../hooks/useSeatingLayoutVenues"
+import { useSeatsIoSeatingLayoutDetail } from "../hooks/useSeatsIoSeatingLayoutDetail"
 import { useSaveSeatsIoSeatingLayout } from "../hooks/useSaveSeatsIoSeatingLayout"
 import { seatingLayoutDesignerSchema, type SeatingLayoutDesignerValues } from "../schemas/seatingLayout.schemas"
 import { SeatsIoChartCategoriesCard } from "../components"
@@ -53,19 +54,15 @@ const SUPPORTED_SEATSIO_REGIONS = new Set<Region>(["eu", "na", "sa", "oc"])
 
 export function SeatingLayoutDesignerPage() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const routeLayoutId = searchParams.get("layoutId")
-  const routeChartUniqueId = searchParams.get("chartUniqueId") ?? routeLayoutId ?? ""
-  const routeVenueUniqueId = searchParams.get("venueUniqueId") ?? ""
-  const routeName = searchParams.get("name") ?? ""
-  const routeChartKey = searchParams.get("chartKey") ?? ""
-  const routeVenueName = searchParams.get("venueName") ?? ""
+  const params = useParams<{ chartUniqueId?: string }>()
+  const routeChartUniqueId = params.chartUniqueId ?? ""
+  const isEditRoute = Boolean(routeChartUniqueId)
 
   const saveLayoutMutation = useSaveSeatsIoSeatingLayout()
   const venuesQuery = useSeatingLayoutVenues()
+  const layoutDetailQuery = useSeatsIoSeatingLayoutDetail(routeChartUniqueId, isEditRoute)
   const [layoutMode, setLayoutMode] = useState<"create" | "edit">("create")
   const [layoutChartKey, setLayoutChartKey] = useState<string | null>(null)
-  const [layoutUniqueId, setLayoutUniqueId] = useState(routeChartUniqueId)
   const [designerWorkspace, setDesignerWorkspace] = useState<SeatsIoWorkspace | null>(null)
   const [isLoadingDesignerCredentials, setIsLoadingDesignerCredentials] = useState(false)
   const [workspaceError, setWorkspaceError] = useState<string | null>(null)
@@ -114,35 +111,28 @@ export function SeatingLayoutDesignerPage() {
   const hasSupportedRegion = Boolean(designerRegion && SUPPORTED_SEATSIO_REGIONS.has(designerRegion as Region))
 
   useEffect(() => {
-    if (routeVenueUniqueId) {
-      setValue("venueUniqueId", routeVenueUniqueId, {
-        shouldDirty: false,
-        shouldTouch: false,
-        shouldValidate: true,
-      })
-    }
-
-    if (routeName) {
-      setValue("name", routeName, {
-        shouldDirty: false,
-        shouldTouch: false,
-        shouldValidate: true,
-      })
-    }
-
-    if (routeChartKey) {
-      setLayoutChartKey(routeChartKey)
+    if (isEditRoute) {
       setLayoutMode("edit")
     }
+  }, [isEditRoute])
 
-    if (routeChartUniqueId) {
-      setLayoutUniqueId(routeChartUniqueId)
+  useEffect(() => {
+    if (!layoutDetailQuery.data) {
+      return
     }
 
-    if (routeVenueName) {
-      void routeVenueName
-    }
-  }, [routeChartKey, routeChartUniqueId, routeName, routeVenueName, routeVenueUniqueId, setValue])
+    setValue("venueUniqueId", layoutDetailQuery.data.venueUniqueId ?? "", {
+      shouldDirty: false,
+      shouldTouch: false,
+      shouldValidate: true,
+    })
+    setValue("name", layoutDetailQuery.data.name, {
+      shouldDirty: false,
+      shouldTouch: false,
+      shouldValidate: true,
+    })
+    setLayoutChartKey(layoutDetailQuery.data.seatsIoChartKey)
+  }, [layoutDetailQuery.data, setValue])
 
   useEffect(() => {
     if (layoutMode !== "edit") {
@@ -211,7 +201,6 @@ export function SeatingLayoutDesignerPage() {
         throw new Error("Seats.io chart key was not returned.")
       }
 
-      setLayoutUniqueId(savedLayout.uniqueId)
       setLayoutChartKey(savedLayout.seatsIoChartKey)
 
       if (layoutMode === "create") {
@@ -219,6 +208,7 @@ export function SeatingLayoutDesignerPage() {
         setIsLoadingDesignerCredentials(true)
         setWorkspaceError(null)
         setIsDesignerRendered(false)
+        navigate(APP_ROUTES.seatingLayouts.edit(savedLayout.uniqueId), { replace: true })
 
         try {
           const designerCredentials = await createSeatsIoWorkspace()
@@ -240,6 +230,12 @@ export function SeatingLayoutDesignerPage() {
 
   const canRenderDesigner = Boolean(layoutMode === "edit" && isWorkspaceReady && hasSupportedRegion && layoutChartKey)
   const isCreateMode = layoutMode === "create"
+  const chartUniqueId = routeChartUniqueId || layoutDetailQuery.data?.uniqueId || ""
+
+  function handleCategoriesChanged() {
+    setIsDesignerRendered(false)
+    setDesignerRevision((current) => current + 1)
+  }
 
   return (
     <Box w="full">
@@ -411,9 +407,10 @@ export function SeatingLayoutDesignerPage() {
         </Box>
 
         <SeatsIoChartCategoriesCard
-          chartUniqueId={layoutUniqueId}
+          chartUniqueId={chartUniqueId}
           chartName={trimmedName}
           isEnabled={layoutMode === "edit"}
+          onCategoriesChanged={handleCategoriesChanged}
         />
 
         <Box w="full">

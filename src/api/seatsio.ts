@@ -68,6 +68,11 @@ const seatsIoChartCategorySchema = z.object({
   displayOrder: z.number().int().nullable().optional(),
 })
 
+const seatsIoSeatingLayoutDetailSchema = seatsIoSeatingLayoutSchema.extend({
+  Categories: z.array(seatsIoChartCategorySchema).optional(),
+  categories: z.array(seatsIoChartCategorySchema).optional(),
+})
+
 const seatsIoSeatingLayoutsPageSchema = z.object({
   PageNo: z.number().int().optional(),
   pageNo: z.number().int().optional(),
@@ -99,6 +104,10 @@ export interface SeatsIoSeatingLayout {
   venueName: string | null
   name: string
   seatsIoChartKey: string | null
+}
+
+export interface SeatsIoSeatingLayoutDetail extends SeatsIoSeatingLayout {
+  categories: SeatsIoChartCategory[]
 }
 
 export interface SeatsIoChartCategory {
@@ -171,6 +180,18 @@ function normalizeSeatingLayout(item: z.infer<typeof seatsIoSeatingLayoutSchema>
     venueName: item.VenueName ?? item.venueName ?? null,
     name: item.Name ?? item.name ?? "",
     seatsIoChartKey: item.SeatsIoChartKey ?? item.seatsIoChartKey ?? null,
+  }
+}
+
+function normalizeSeatingLayoutDetail(item: z.infer<typeof seatsIoSeatingLayoutDetailSchema>): SeatsIoSeatingLayoutDetail {
+  const normalized = normalizeSeatingLayout(item)
+  const categories = (item.Categories ?? item.categories ?? []).map((category) =>
+    normalizeChartCategory(seatsIoChartCategorySchema.parse(category))
+  )
+
+  return {
+    ...normalized,
+    categories,
   }
 }
 
@@ -248,6 +269,12 @@ export async function fetchSeatsIoSeatingLayouts(pageNo = 1, pageSize = 20): Pro
     pageSize: parsed.PageSize ?? parsed.pageSize ?? pageSize,
     totalPages: parsed.PageCount ?? parsed.pageCount ?? 0,
   }
+}
+
+export async function fetchSeatsIoSeatingLayoutDetail(chartUniqueId: string): Promise<SeatsIoSeatingLayoutDetail> {
+  const res = await client.get<unknown>(API_ROUTES.seatsIoSeatingLayout(chartUniqueId))
+  const responseData = parseServiceResponseData(res.data)
+  return normalizeSeatingLayoutDetail(seatsIoSeatingLayoutDetailSchema.parse(responseData))
 }
 
 export async function saveSeatsIoSeatingLayout(payload: SeatsIoSeatingLayoutRequest): Promise<SeatsIoSeatingLayout> {

@@ -10,6 +10,7 @@ export const APP_ROUTES = {
   seatingLayouts: {
     list: "/organizer/seatsio/seating-layouts",
     create: "/organizer/seatsio/seating-layouts/new",
+    edit: (chartUniqueId: string) => `/organizer/seatsio/seating-layouts/${chartUniqueId}`,
   },
   auth: {
     login: "/auth/login",
@@ -93,6 +94,7 @@ export const API_ROUTES = {
   organizerEvents: "/api/organizer/events/list",
   seatsIoWorkspace: "/api/organizer/seatsio/workspace",
   seatsIoSeatingLayouts: "/api/organizer/seatsio/seating-layouts",
+  seatsIoSeatingLayout: (chartUniqueId: string) => `/api/organizer/seatsio/seating-layouts/${chartUniqueId}`,
   seatsIoChartCategories: (chartUniqueId: string) => `/api/organizer/seatsio/seating-layouts/${chartUniqueId}/categories`,
   seatsIoChartCategory: (chartUniqueId: string, categoryUniqueId: string) =>
     `/api/organizer/seatsio/seating-layouts/${chartUniqueId}/categories/${categoryUniqueId}`,
