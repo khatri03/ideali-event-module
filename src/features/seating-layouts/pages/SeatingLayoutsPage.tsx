@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { Badge, Box, Button, Flex, Heading, HStack, Skeleton, SkeletonText, Table, Text } from "@chakra-ui/react"
-import { ArrowLeft, ArrowRight, LayoutGrid, Plus } from "lucide-react"
+import { ArrowLeft, ArrowRight, Edit3, LayoutGrid, Plus } from "lucide-react"
 import { APP_ROUTES } from "@/utils/routes"
 import { useSeatingLayouts } from "../hooks/useSeatingLayouts"
 import { extractApiError } from "@/utils/errors"
@@ -130,12 +130,15 @@ export function SeatingLayoutsPage() {
                 <Table.ColumnHeader px={6} py={3}>Layout</Table.ColumnHeader>
                 <Table.ColumnHeader px={4} py={3}>Venue</Table.ColumnHeader>
                 <Table.ColumnHeader px={4} py={3}>Chart key</Table.ColumnHeader>
+                <Table.ColumnHeader px={4} py={3} textAlign="right">
+                  Actions
+                </Table.ColumnHeader>
               </Table.Row>
             </Table.Header>
             <Table.Body>
               {layouts.length === 0 ? (
                 <Table.Row>
-                  <Table.Cell colSpan={3} py={12}>
+                  <Table.Cell colSpan={4} py={12}>
                     <Box textAlign="center">
                       <Text fontSize="lg" fontWeight="700" color="gray.900">
                         No seating layouts yet
@@ -172,6 +175,21 @@ export function SeatingLayoutsPage() {
                       <Text fontSize="sm" color="text.primary" wordBreak="break-all">
                         {layout.seatsIoChartKey ?? "Not linked yet"}
                       </Text>
+                    </Table.Cell>
+                    <Table.Cell px={4} py={4} textAlign="right">
+                      <Button
+                        variant="outline"
+                        minH="11"
+                        px={4}
+                        onClick={() =>
+                          navigate(
+                            `${APP_ROUTES.seatingLayouts.create}?layoutId=${layout.uniqueId}&venueUniqueId=${layout.venueUniqueId}&venueName=${encodeURIComponent(layout.venueName)}&name=${encodeURIComponent(layout.name)}&chartKey=${encodeURIComponent(layout.seatsIoChartKey ?? "")}`
+                          )
+                        }
+                      >
+                        <Edit3 size={16} />
+                        Edit
+                      </Button>
                     </Table.Cell>
                   </Table.Row>
                 ))

@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import type { Region } from "@seatsio/seatsio-types"
 import { SeatsioDesigner } from "@seatsio/seatsio-react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, useWatch } from "react-hook-form"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import {
   Badge,
   Box,
@@ -26,7 +26,7 @@ import { StyledSelect } from "@/components/common"
 import { APP_ROUTES } from "@/utils/routes"
 import { extractApiError } from "@/utils/errors"
 import { createOrganizerVenue } from "@/api/organizer"
-import { createSeatsIoWorkspace, fetchSeatsIoWorkspace, type SeatsIoWorkspace } from "@/api/seatsio"
+import { createSeatsIoWorkspace, type SeatsIoWorkspace } from "@/api/seatsio"
 import { useSeatingLayoutVenues } from "../hooks/useSeatingLayoutVenues"
 import { useSaveSeatsIoSeatingLayout } from "../hooks/useSaveSeatsIoSeatingLayout"
 import { seatingLayoutDesignerSchema, type SeatingLayoutDesignerValues } from "../schemas/seatingLayout.schemas"
@@ -52,16 +52,17 @@ const SUPPORTED_SEATSIO_REGIONS = new Set<Region>(["eu", "na", "sa", "oc"])
 
 export function SeatingLayoutDesignerPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const saveLayoutMutation = useSaveSeatsIoSeatingLayout()
   const venuesQuery = useSeatingLayoutVenues()
-  const autoCreateRequestedRef = useRef(false)
-  const savedChartKeyRef = useRef<string | null>(null)
-  const [workspaceBootstrapAttempt, setWorkspaceBootstrapAttempt] = useState(0)
-  const [workspaceOverride, setWorkspaceOverride] = useState<SeatsIoWorkspace | null>(null)
-  const [isBootstrappingWorkspace, setIsBootstrappingWorkspace] = useState(true)
+  const [layoutMode, setLayoutMode] = useState<"create" | "edit">("create")
+  const [layoutChartKey, setLayoutChartKey] = useState<string | null>(null)
+  const [designerWorkspace, setDesignerWorkspace] = useState<SeatsIoWorkspace | null>(null)
+  const [isLoadingDesignerCredentials, setIsLoadingDesignerCredentials] = useState(false)
   const [workspaceError, setWorkspaceError] = useState<string | null>(null)
   const [designerError, setDesignerError] = useState<string | null>(null)
   const [isDesignerRendered, setIsDesignerRendered] = useState(false)
+  const [designerRevision, setDesignerRevision] = useState(0)
   const [isVenueDialogOpen, setIsVenueDialogOpen] = useState(false)
   const [venueName, setVenueName] = useState("")
   const [venueNameError, setVenueNameError] = useState("")
@@ -83,6 +84,12 @@ export function SeatingLayoutDesignerPage() {
     mutationFn: createOrganizerVenue,
   })
 
+  const routeLayoutId = searchParams.get("layoutId")
+  const routeVenueUniqueId = searchParams.get("venueUniqueId") ?? ""
+  const routeName = searchParams.get("name") ?? ""
+  const routeChartKey = searchParams.get("chartKey") ?? ""
+  const routeVenueName = searchParams.get("venueName") ?? ""
+
   const nameValue = useWatch({ control, name: "name" })
   const venueUniqueIdValue = useWatch({ control, name: "venueUniqueId" })
   const trimmedVenueUniqueId = venueUniqueIdValue.trim()
@@ -98,40 +105,65 @@ export function SeatingLayoutDesignerPage() {
     [venuesQuery.venues]
   )
 
-  const workspace = workspaceOverride
-  const isWorkspaceReady = Boolean(workspace?.secretKey && workspace?.region)
+  const workspace = designerWorkspace
+  const isWorkspaceReady = Boolean(workspace?.secretKey && workspace?.region && layoutChartKey)
   const designerRegion = workspace?.region
   const hasSupportedRegion = Boolean(designerRegion && SUPPORTED_SEATSIO_REGIONS.has(designerRegion as Region))
 
   useEffect(() => {
-    async function bootstrapWorkspace() {
-      if (workspaceOverride || autoCreateRequestedRef.current) {
-        return
-      }
-
-      autoCreateRequestedRef.current = true
-      setIsBootstrappingWorkspace(true)
-      setWorkspaceError(null)
-      setIsDesignerRendered(false)
-
-      try {
-        const existingWorkspace = await fetchSeatsIoWorkspace()
-        if (existingWorkspace?.secretKey && existingWorkspace.region) {
-          setWorkspaceOverride(existingWorkspace)
-          return
-        }
-
-        const createdWorkspace = await createSeatsIoWorkspace()
-        setWorkspaceOverride(createdWorkspace)
-      } catch (error) {
-        setWorkspaceError(error instanceof Error ? error.message : "Failed to configure Seats.io workspace.")
-      } finally {
-        setIsBootstrappingWorkspace(false)
-      }
+    if (routeVenueUniqueId) {
+      setValue("venueUniqueId", routeVenueUniqueId, {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: true,
+      })
     }
 
-    void bootstrapWorkspace()
-  }, [workspaceBootstrapAttempt, workspaceOverride])
+    if (routeName) {
+      setValue("name", routeName, {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: true,
+      })
+    }
+
+    if (routeChartKey) {
+      setLayoutChartKey(routeChartKey)
+      setLayoutMode("edit")
+    }
+
+    if (routeLayoutId) {
+      void routeLayoutId
+    }
+
+    if (routeVenueName) {
+      void routeVenueName
+    }
+  }, [routeChartKey, routeLayoutId, routeName, routeVenueName, routeVenueUniqueId, setValue])
+
+  useEffect(() => {
+    if (layoutMode !== "edit") {
+      return
+    }
+
+    if (!layoutChartKey || designerWorkspace || isLoadingDesignerCredentials || workspaceError) {
+      return
+    }
+
+    setIsLoadingDesignerCredentials(true)
+    setIsDesignerRendered(false)
+
+    void createSeatsIoWorkspace()
+      .then((designerCredentials) => {
+        setDesignerWorkspace(designerCredentials)
+      })
+      .catch((error) => {
+        setWorkspaceError(error instanceof Error ? error.message : "Failed to configure Seats.io workspace.")
+      })
+      .finally(() => {
+        setIsLoadingDesignerCredentials(false)
+      })
+  }, [designerWorkspace, isLoadingDesignerCredentials, layoutChartKey, layoutMode, workspaceError])
 
   async function handleCreateVenue() {
     const trimmedName = venueName.trim()
@@ -157,28 +189,53 @@ export function SeatingLayoutDesignerPage() {
     }
   }
 
-  async function handleSaveChart(chartKey: string) {
-    if (!trimmedVenueUniqueId || !trimmedName || savedChartKeyRef.current === chartKey) {
+  async function handlePersistLayout() {
+    if (!trimmedVenueUniqueId || !trimmedName) {
       return
     }
 
-    savedChartKeyRef.current = chartKey
     setDesignerError(null)
+    const currentChartKey = layoutChartKey?.trim()
 
     try {
-      await saveLayoutMutation.mutateAsync({
+      const savedLayout = await saveLayoutMutation.mutateAsync({
         venueUniqueId: trimmedVenueUniqueId,
         name: trimmedName,
-        seatsIoChartKey: chartKey,
+        seatsIoChartKey: currentChartKey ?? undefined,
       })
-      navigate(APP_ROUTES.seatingLayouts.list)
+
+      if (!savedLayout.seatsIoChartKey) {
+        throw new Error("Seats.io chart key was not returned.")
+      }
+
+      setLayoutChartKey(savedLayout.seatsIoChartKey)
+
+      if (layoutMode === "create") {
+        setLayoutMode("edit")
+        setIsLoadingDesignerCredentials(true)
+        setWorkspaceError(null)
+        setIsDesignerRendered(false)
+
+        try {
+          const designerCredentials = await createSeatsIoWorkspace()
+          setDesignerWorkspace(designerCredentials)
+        } catch (error) {
+          setWorkspaceError(error instanceof Error ? error.message : "Failed to configure Seats.io workspace.")
+        } finally {
+          setIsLoadingDesignerCredentials(false)
+        }
+        return
+      }
+
+      setIsDesignerRendered(false)
+      setDesignerRevision((current) => current + 1)
     } catch (error) {
       setDesignerError(error instanceof Error ? error.message : "Failed to save chart layout.")
-      savedChartKeyRef.current = null
     }
   }
 
-  const canRenderDesigner = Boolean(isWorkspaceReady && hasSupportedRegion)
+  const canRenderDesigner = Boolean(layoutMode === "edit" && isWorkspaceReady && hasSupportedRegion && layoutChartKey)
+  const isCreateMode = layoutMode === "create"
 
   return (
     <Box w="full">
@@ -191,7 +248,7 @@ export function SeatingLayoutDesignerPage() {
             Create seating layout
           </Heading>
           <Text mt={2} color="gray.600" fontSize={{ base: "sm", md: "md" }}>
-            Choose a venue and layout name. Once the workspace credentials are ready, the Seats.io designer opens automatically.
+            Choose a venue and layout name, create the chart layout first, and then we’ll open the Seats.io designer in edit mode.
           </Text>
         </Box>
 
@@ -226,7 +283,18 @@ export function SeatingLayoutDesignerPage() {
               <StyledSelect
                 options={venueOptions}
                 value={venueUniqueIdValue ?? ""}
-                onChange={(value) => setValue("venueUniqueId", value, { shouldDirty: true, shouldValidate: true })}
+                onChange={(value) => {
+                  setValue("venueUniqueId", value, { shouldDirty: true, shouldValidate: true })
+
+                  if (layoutMode !== "create" || nameValue.trim()) {
+                    return
+                  }
+
+                  const venueLabel = venuesQuery.venues.find((venue) => venue.uniqueId === value)?.name ?? ""
+                  if (venueLabel) {
+                    setValue("name", venueLabel, { shouldDirty: true, shouldValidate: true })
+                  }
+                }}
                 placeholder={venuesQuery.isLoading ? "Loading venues..." : "Select venue"}
                 disabled={venuesQuery.isLoading}
                 size="md"
@@ -274,11 +342,26 @@ export function SeatingLayoutDesignerPage() {
             </Field.Root>
           </SimpleGrid>
 
-          {isBootstrappingWorkspace ? (
+          {isCreateMode ? (
             <Text mt={4} fontSize="sm" color="gray.600">
-              Checking workspace configuration...
+              Save the venue and name first to create the Seats.io chart.
             </Text>
           ) : null}
+
+          <Flex mt={5} justify="flex-end" gap={3} wrap="wrap">
+            <Button
+              borderRadius="14px"
+              minH="11"
+              px={6}
+              color="white"
+              style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+              loading={saveLayoutMutation.isPending || isLoadingDesignerCredentials}
+              onClick={handlePersistLayout}
+              disabled={!hasLayoutDetails}
+            >
+              {isCreateMode ? "Create chart layout" : "Save changes"}
+            </Button>
+          </Flex>
 
           {workspaceError ? (
             <Box mt={4} p={4} borderRadius="16px" border="1px solid" borderColor="red.200" bg="red.50">
@@ -288,21 +371,31 @@ export function SeatingLayoutDesignerPage() {
               <Text mt={1} fontSize="sm" color="red.600">
                 {workspaceError}
               </Text>
-              <Button
-                mt={3}
-                variant="outline"
-                colorPalette="red"
-                minH="11"
-                onClick={() => {
-                  autoCreateRequestedRef.current = false
-                  setWorkspaceOverride(null)
-                  setWorkspaceError(null)
-                  setIsBootstrappingWorkspace(true)
-                  setWorkspaceBootstrapAttempt((current) => current + 1)
-                }}
-              >
-                Retry setup
-              </Button>
+              {layoutMode === "edit" ? (
+                <Button
+                  mt={3}
+                  variant="outline"
+                  colorPalette="red"
+                  minH="11"
+                  onClick={() => {
+                    setWorkspaceError(null)
+                    setIsLoadingDesignerCredentials(true)
+                    setDesignerError(null)
+                    void createSeatsIoWorkspace()
+                      .then((credentials) => {
+                        setDesignerWorkspace(credentials)
+                      })
+                      .catch((error) => {
+                        setWorkspaceError(error instanceof Error ? error.message : "Failed to configure Seats.io workspace.")
+                      })
+                      .finally(() => {
+                        setIsLoadingDesignerCredentials(false)
+                      })
+                  }}
+                >
+                  Retry setup
+                </Button>
+              ) : null}
             </Box>
           ) : null}
 
@@ -320,8 +413,25 @@ export function SeatingLayoutDesignerPage() {
         </Box>
 
         <Box w="full">
-          {!isWorkspaceReady ? (
-            <DesignerLoadingState />
+          {isCreateMode ? (
+            <Box
+              borderRadius="24px"
+              border="1px solid"
+              borderColor="border.subtle"
+              bg="card.bg"
+              p={6}
+              boxShadow="card"
+            >
+              <Flex align="center" gap={2} mb={3}>
+                <Sparkles size={18} />
+                <Text fontSize="lg" fontWeight="700">
+                  Chart designer will open after the first save
+                </Text>
+              </Flex>
+              <Text fontSize="sm" color="gray.600" maxW="2xl">
+                Provide venue and name, then create the chart layout first. We’ll switch this page into edit mode, fetch the Seats.io credentials from the backend, and render the designer using the saved chart name.
+              </Text>
+            </Box>
           ) : (
             <Box
               borderRadius="24px"
@@ -338,20 +448,9 @@ export function SeatingLayoutDesignerPage() {
                   </Heading>
                 </Box>
                 <Badge variant="subtle" colorPalette="purple">
-                  Seats.io designer
+                  Edit mode
                 </Badge>
               </Flex>
-
-              {!hasLayoutDetails ? (
-                <Box mb={4} p={4} borderRadius="16px" bg="blue.50" border="1px solid" borderColor="blue.200">
-                  <Flex align="center" gap={2}>
-                    <Sparkles size={18} />
-                    <Text fontSize="sm" fontWeight="700" color="blue.800">
-                      Fill in venue and name to save the created chart.
-                    </Text>
-                  </Flex>
-                </Box>
-              ) : null}
 
               {designerError ? (
                 <Box mb={4} p={4} borderRadius="16px" border="1px solid" borderColor="red.200" bg="red.50">
@@ -364,18 +463,30 @@ export function SeatingLayoutDesignerPage() {
                 </Box>
               ) : null}
 
-              {canRenderDesigner ? (
+              {workspaceError ? (
+                <Box mb={4} p={4} borderRadius="16px" border="1px solid" borderColor="red.200" bg="red.50">
+                  <Text fontSize="sm" fontWeight="700" color="red.700">
+                    Workspace setup failed
+                  </Text>
+                  <Text mt={1} fontSize="sm" color="red.600">
+                    {workspaceError}
+                  </Text>
+                </Box>
+              ) : null}
+
+              {isLoadingDesignerCredentials ? (
+                <DesignerLoadingState />
+              ) : canRenderDesigner ? (
                 <Box h={{ base: "70vh", lg: "820px" }} w="full">
                   <SeatsioDesigner
-                    key={workspace?.id ?? "workspace"}
+                    key={`${workspace?.id ?? "workspace"}:${layoutChartKey}:${designerRevision}`}
                     secretKey={workspace!.secretKey}
                     region={designerRegion as Region}
+                    chartKey={layoutChartKey ?? undefined}
                     onDesignerRendered={() => setIsDesignerRendered(true)}
                     onDesignerRenderingFailed={() => {
                       setDesignerError("Seats.io designer failed to render. Please verify the workspace secret key and region.")
                     }}
-                    onChartCreated={handleSaveChart}
-                    onChartPublished={handleSaveChart}
                     onExitRequested={() => navigate(APP_ROUTES.seatingLayouts.list)}
                   />
                 </Box>
@@ -387,7 +498,7 @@ export function SeatingLayoutDesignerPage() {
         </Box>
       </Stack>
 
-      {isWorkspaceReady && !isDesignerRendered && !designerError ? (
+      {layoutMode === "edit" && isWorkspaceReady && !isDesignerRendered && !designerError ? (
         <Text mt={4} fontSize="sm" color="gray.600">
           Loading Seats.io designer...
         </Text>
