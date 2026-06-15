@@ -15,6 +15,7 @@ import {
   fetchSessionWizardQuestions,
   fetchSessionWizardSetupStateOptions,
   fetchSessionWizardSchedule,
+  fetchSessionWizardSeatSelection,
   fetchSessionWizardTickets,
   fetchSessionWizardVenue,
   markSessionWizardReadyForReview,
@@ -236,6 +237,12 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     enabled: !!sessionId,
     retry: false,
   })
+  const seatSelectionQuery = useQuery({
+    queryKey: ["sessions", "review", sessionId, "seat-selection"],
+    queryFn: () => fetchSessionWizardSeatSelection(sessionId),
+    enabled: !!sessionId,
+    retry: false,
+  })
   const organizerVenuesQuery = useQuery({
     queryKey: ["sessions", "review", sessionId, "organizer-venues"],
     queryFn: fetchOrganizerVenues,
@@ -344,6 +351,13 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   const venueUniqueId = sessionVenueQuery.data?.venueUniqueId ?? ""
   const eventName = organizerEventsQuery.data?.find((item) => item.uniqueId === eventUniqueId)?.name || "Not set"
   const venueName = organizerVenuesQuery.data?.find((item) => item.uniqueId === venueUniqueId)?.name || "Not set"
+  const isSeatSelectionEnabled = seatSelectionQuery.data?.offerPickingSeats ?? false
+  const seatSelectionEventName =
+    seatSelectionQuery.data?.seatsIoEventLabel ||
+    (seatSelectionQuery.data?.seatsIoEventUniqueId
+      ? "Selected event"
+      : "Not set")
+  const seatSelectionChartName = seatSelectionQuery.data?.seatsIoChartName ?? "Not set"
   const bookingWindow = formatRange(bookingQuery.data?.bookingStartDate, bookingQuery.data?.bookingEndDate)
   const sessionDateTime = formatRange(durationQuery.data?.startDate, durationQuery.data?.endDate)
   const scheduleCount = schedulesQuery.data?.length ?? 0
@@ -355,6 +369,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     eTicketingQuery.error ??
     organizerEventsQuery.error ??
     sessionVenueQuery.error ??
+    seatSelectionQuery.error ??
     organizerVenuesQuery.error ??
     bookingQuery.error ??
     genreQuery.error ??
@@ -364,14 +379,14 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     ticketsQuery.error
 
   function buildEditUrl(
-    step: "name" | "genre" | "event" | "venue" | "booking" | "start-end" | "dates-time" | "schedule" | "ticket" | "e-ticketing" | "questions",
+    step: "name" | "genre" | "event" | "venue" | "seat-selection" | "booking" | "start-end" | "dates-time" | "schedule" | "ticket" | "e-ticketing" | "questions",
   ) {
     const target = APP_ROUTES.sessionWizard.editStep(sessionId, step)
     return `${target}?returnUrl=${encodeURIComponent(reviewReturnUrl)}`
   }
 
   function handleEdit(
-    step: "name" | "genre" | "event" | "venue" | "booking" | "start-end" | "dates-time" | "schedule" | "ticket" | "e-ticketing" | "questions",
+    step: "name" | "genre" | "event" | "venue" | "seat-selection" | "booking" | "start-end" | "dates-time" | "schedule" | "ticket" | "e-ticketing" | "questions",
   ) {
     navigate(buildEditUrl(step))
   }
@@ -517,6 +532,30 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
           onEdit={() => handleEdit("venue")}
           editLabel="Edit venue"
           isLoading={sessionVenueQuery.isLoading || organizerVenuesQuery.isLoading}
+        />
+        <ReviewItem
+          label="Seat Selection"
+          value={
+            <Stack gap={1}>
+              <Badge variant="subtle" colorPalette={isSeatSelectionEnabled ? "green" : "gray"} borderRadius="999px" px={3} py={1} alignSelf="flex-start">
+                <Flex align="center" gap={1.5}>
+                  {isSeatSelectionEnabled ? <CheckCircle2 size={14} /> : <X size={14} />}
+                  <Text as="span" fontSize="xs" fontWeight="800">
+                    {isSeatSelectionEnabled ? "Enabled" : "Disabled"}
+                  </Text>
+                </Flex>
+              </Badge>
+              <Text fontSize="sm" color="gray.700">
+                {seatSelectionChartName}
+              </Text>
+              <Text fontSize="sm" color="gray.600">
+                {seatSelectionEventName}
+              </Text>
+            </Stack>
+          }
+          onEdit={() => handleEdit("seat-selection")}
+          editLabel="Edit seat selection"
+          isLoading={seatSelectionQuery.isLoading}
         />
         <ReviewItem
           label="Booking Window"

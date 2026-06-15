@@ -54,6 +54,19 @@ const sessionVenueSchema = z.object({
   venueUniqueId: z.string().optional(),
 })
 
+const sessionSeatSelectionSchema = z.object({
+  OfferPickingSeats: z.boolean().optional(),
+  offerPickingSeats: z.boolean().optional(),
+  SeatsIoEventUniqueId: z.string().nullable().optional(),
+  seatsIoEventUniqueId: z.string().nullable().optional(),
+  SeatsIoChartUniqueId: z.string().nullable().optional(),
+  seatsIoChartUniqueId: z.string().nullable().optional(),
+  SeatsIoChartName: z.string().nullable().optional(),
+  seatsIoChartName: z.string().nullable().optional(),
+  SeatsIoEventLabel: z.string().nullable().optional(),
+  seatsIoEventLabel: z.string().nullable().optional(),
+})
+
 const sessionBookingSchema = z.object({
   BookingStartDate: z.string().nullable().optional(),
   bookingStartDate: z.string().nullable().optional(),
@@ -301,6 +314,14 @@ export interface SessionWizardVenue {
   venueUniqueId: string
 }
 
+export interface SessionWizardSeatSelection {
+  offerPickingSeats: boolean
+  seatsIoEventUniqueId: string | null
+  seatsIoChartUniqueId: string | null
+  seatsIoChartName: string | null
+  seatsIoEventLabel: string | null
+}
+
 export interface SessionWizardEvent {
   eventUniqueId: string
 }
@@ -376,6 +397,11 @@ export interface SessionWizardQuestionsRequest {
 
 export interface SessionWizardVenueRequest {
   venueUniqueId: string
+}
+
+export interface SessionWizardSeatSelectionRequest {
+  offerPickingSeats: boolean
+  seatsIoEventUniqueId: string | null
 }
 
 export interface SessionWizardEventRequest {
@@ -824,6 +850,40 @@ export async function updateSessionWizardVenue(
 
   return {
     venueUniqueId: venue.VenueUniqueId ?? venue.venueUniqueId ?? "",
+  }
+}
+
+export async function fetchSessionWizardSeatSelection(uniqueId: string): Promise<SessionWizardSeatSelection> {
+  const res = await client.get<unknown>(API_ROUTES.sessionWizardSeatSelection(uniqueId))
+  const responseData = parseServicePayload(res.data)
+  const seatSelection = sessionSeatSelectionSchema.parse(responseData)
+
+  return {
+    offerPickingSeats: seatSelection.OfferPickingSeats ?? seatSelection.offerPickingSeats ?? false,
+    seatsIoEventUniqueId: seatSelection.SeatsIoEventUniqueId ?? seatSelection.seatsIoEventUniqueId ?? null,
+    seatsIoChartUniqueId: seatSelection.SeatsIoChartUniqueId ?? seatSelection.seatsIoChartUniqueId ?? null,
+    seatsIoChartName: seatSelection.SeatsIoChartName ?? seatSelection.seatsIoChartName ?? null,
+    seatsIoEventLabel: seatSelection.SeatsIoEventLabel ?? seatSelection.seatsIoEventLabel ?? null,
+  }
+}
+
+export async function updateSessionWizardSeatSelection(
+  uniqueId: string,
+  payload: SessionWizardSeatSelectionRequest,
+  stepNo = 7,
+): Promise<SessionWizardSeatSelection> {
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardSeatSelection(uniqueId), payload, {
+    params: { stepNo },
+  })
+  const responseData = parseServicePayload(res.data)
+  const seatSelection = sessionSeatSelectionSchema.parse(responseData)
+
+  return {
+    offerPickingSeats: seatSelection.OfferPickingSeats ?? seatSelection.offerPickingSeats ?? false,
+    seatsIoEventUniqueId: seatSelection.SeatsIoEventUniqueId ?? seatSelection.seatsIoEventUniqueId ?? null,
+    seatsIoChartUniqueId: seatSelection.SeatsIoChartUniqueId ?? seatSelection.seatsIoChartUniqueId ?? null,
+    seatsIoChartName: seatSelection.SeatsIoChartName ?? seatSelection.seatsIoChartName ?? null,
+    seatsIoEventLabel: seatSelection.SeatsIoEventLabel ?? seatSelection.seatsIoEventLabel ?? null,
   }
 }
 

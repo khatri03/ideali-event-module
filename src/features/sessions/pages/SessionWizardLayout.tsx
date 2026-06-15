@@ -129,11 +129,31 @@ function SessionWizardLayoutContent() {
       return stepNo - 1
     }
 
-    if (stepNo <= 8) {
+    if (stepNo === 7) {
       return 6
     }
 
-    return stepNo - 2
+    if (stepNo === 8) {
+      return 7
+    }
+
+    if (stepNo === 9) {
+      return 8
+    }
+
+    if (stepNo === 10) {
+      return 9
+    }
+
+    if (stepNo === 11) {
+      return 10
+    }
+
+    if (stepNo === 12) {
+      return 11
+    }
+
+    return 12
   }
 
   const resolvedStepIndex = sessionId ? Math.min(mapProgressToVisibleStepIndex(lastCompletedStepNo), steps.length - 1) : -1

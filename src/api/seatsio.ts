@@ -68,6 +68,21 @@ const seatsIoChartCategorySchema = z.object({
   displayOrder: z.number().int().nullable().optional(),
 })
 
+const seatsIoEventSchema = z.object({
+  Id: z.number().int().optional(),
+  id: z.number().int().optional(),
+  UniqueId: z.string().nullable().optional(),
+  uniqueId: z.string().nullable().optional(),
+  ChartUniqueId: z.string().nullable().optional(),
+  chartUniqueId: z.string().nullable().optional(),
+  Label: z.string().nullable().optional(),
+  label: z.string().nullable().optional(),
+  SeatsIoEventKey: z.string().nullable().optional(),
+  seatsIoEventKey: z.string().nullable().optional(),
+  SeatsIoChartKey: z.string().nullable().optional(),
+  seatsIoChartKey: z.string().nullable().optional(),
+})
+
 const seatsIoSeatingLayoutDetailSchema = seatsIoSeatingLayoutSchema.extend({
   Categories: z.array(seatsIoChartCategorySchema).optional(),
   categories: z.array(seatsIoChartCategorySchema).optional(),
@@ -118,6 +133,15 @@ export interface SeatsIoChartCategory {
   name: string
   color: string
   displayOrder: number
+}
+
+export interface SeatsIoChartEvent {
+  id: number
+  uniqueId: string
+  chartUniqueId: string
+  label: string
+  seatsIoEventKey: string | null
+  seatsIoChartKey: string | null
 }
 
 export interface SeatsIoChartCategoryRequest {
@@ -204,6 +228,17 @@ function normalizeChartCategory(item: z.infer<typeof seatsIoChartCategorySchema>
     name: item.Name ?? item.name ?? item.Label ?? item.label ?? "",
     color: item.Color ?? item.color ?? "",
     displayOrder: item.DisplayOrder ?? item.displayOrder ?? 0,
+  }
+}
+
+function normalizeChartEvent(item: z.infer<typeof seatsIoEventSchema>): SeatsIoChartEvent {
+  return {
+    id: item.Id ?? item.id ?? 0,
+    uniqueId: item.UniqueId ?? item.uniqueId ?? "",
+    chartUniqueId: item.ChartUniqueId ?? item.chartUniqueId ?? "",
+    label: item.Label ?? item.label ?? "",
+    seatsIoEventKey: item.SeatsIoEventKey ?? item.seatsIoEventKey ?? null,
+    seatsIoChartKey: item.SeatsIoChartKey ?? item.seatsIoChartKey ?? null,
   }
 }
 
@@ -298,6 +333,28 @@ export async function fetchSeatsIoChartCategories(chartUniqueId: string): Promis
   return normalizeChartCategoryList(responseData)
 }
 
+export async function fetchSeatsIoVenueCharts(venueUniqueId: string): Promise<SeatsIoSeatingLayout[]> {
+  const res = await client.get<unknown>(API_ROUTES.seatsIoVenueCharts(venueUniqueId))
+  const responseData = parseServiceResponseData(res.data)
+
+  if (!Array.isArray(responseData)) {
+    return []
+  }
+
+  return responseData.map((item) => normalizeSeatingLayout(seatsIoSeatingLayoutSchema.parse(item)))
+}
+
+export async function fetchSeatsIoChartEvents(chartUniqueId: string): Promise<SeatsIoChartEvent[]> {
+  const res = await client.get<unknown>(API_ROUTES.seatsIoChartEvents(chartUniqueId))
+  const responseData = parseServiceResponseData(res.data)
+
+  if (!Array.isArray(responseData)) {
+    return []
+  }
+
+  return responseData.map((item) => normalizeChartEvent(seatsIoEventSchema.parse(item)))
+}
+
 export async function createSeatsIoChartCategory(
   chartUniqueId: string,
   payload: SeatsIoChartCategoryRequest
@@ -319,4 +376,13 @@ export async function updateSeatsIoChartCategory(
 
 export async function deleteSeatsIoChartCategory(chartUniqueId: string, categoryUniqueId: string): Promise<void> {
   await client.delete(API_ROUTES.seatsIoChartCategory(chartUniqueId, categoryUniqueId))
+}
+
+export async function createSessionSeatsIoEvent(
+  sessionId: string,
+  payload: { chartUniqueId: string; label: string },
+): Promise<SeatsIoChartEvent> {
+  const res = await client.post<unknown>(API_ROUTES.sessionSeatsIoEvent(sessionId), payload)
+  const responseData = parseServiceResponseData(res.data)
+  return normalizeChartEvent(seatsIoEventSchema.parse(responseData))
 }
