@@ -485,7 +485,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
                   <Badge
                     key={genre.uniqueId}
                     variant="subtle"
-                    colorPalette={genre.isSystem ? "gray" : "brand"}
+                    colorPalette="gray"
                     borderRadius="999px"
                     px={3}
                     py={1}
