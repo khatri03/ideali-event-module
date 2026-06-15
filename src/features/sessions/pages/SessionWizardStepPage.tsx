@@ -1963,8 +1963,12 @@ function SessionVenueEditor({
       try {
         const stepNo = getSessionWizardStepNumber("venue")
         const result = await updateSessionWizardVenue(sessionId, { venueUniqueId: selectedVenueUniqueId }, stepNo)
+        queryClient.setQueryData(["sessions", { sessionId, step: "venue" }], {
+          venueUniqueId: result.venueUniqueId,
+        })
         updateWizardProgressCache(queryClient, sessionId, stepNo)
         setSelectedVenueUniqueId(result.venueUniqueId)
+        await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "seat-selection" }] })
         await invalidateSessionReviewQueries(queryClient, sessionId)
       } catch (saveError: unknown) {
         setVenueError(extractApiError(saveError))

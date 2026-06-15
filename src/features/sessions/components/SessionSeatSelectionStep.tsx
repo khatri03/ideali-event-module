@@ -16,8 +16,13 @@ import {
 } from "@chakra-ui/react"
 import { Plus } from "lucide-react"
 import { fetchOrganizerVenues } from "@/api/organizer"
-import { createSessionSeatsIoEvent, fetchSeatsIoChartEvents, fetchSeatsIoVenueCharts } from "@/api/seatsio"
-import { fetchSessionWizardSeatSelection, fetchSessionWizardVenue, updateSessionWizardSeatSelection } from "@/api/sessions"
+import {
+  createSessionSeatsIoEvent,
+  fetchSeatsIoChartEvents,
+  fetchSeatsIoVenueCharts,
+  saveSeatsIoSeatingLayout,
+} from "@/api/seatsio"
+import { fetchSessionWizardName, fetchSessionWizardSeatSelection, fetchSessionWizardVenue, updateSessionWizardSeatSelection } from "@/api/sessions"
 import { StyledSelect } from "@/components/common/StyledSelect"
 import { extractApiError } from "@/utils/errors"
 import { useSessionWizardActions } from "../hooks/useSessionWizardActions"
@@ -48,6 +53,9 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
   const [draftSeatsIoChartUniqueId, setDraftSeatsIoChartUniqueId] = useState<string | null>(null)
   const [isHydrated, setIsHydrated] = useState(false)
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false)
+  const [isCreateChartOpen, setIsCreateChartOpen] = useState(false)
+  const [chartName, setChartName] = useState("")
+  const [chartNameError, setChartNameError] = useState("")
   const [eventName, setEventName] = useState("")
   const [eventNameError, setEventNameError] = useState("")
   const [seatSelectionError, setSeatSelectionError] = useState("")
@@ -55,6 +63,13 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
   const seatSelectionQuery = useQuery({
     queryKey: ["sessions", { sessionId, step: "seat-selection" }],
     queryFn: () => fetchSessionWizardSeatSelection(sessionId),
+    enabled: !!sessionId,
+    retry: false,
+  })
+
+  const sessionNameQuery = useQuery({
+    queryKey: ["sessions", { sessionId, step: "name" }],
+    queryFn: () => fetchSessionWizardName(sessionId),
     enabled: !!sessionId,
     retry: false,
   })
@@ -78,6 +93,15 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
     () => organizerVenuesQuery.data?.find((venue) => venue.uniqueId === currentVenueUniqueId) ?? null,
     [currentVenueUniqueId, organizerVenuesQuery.data],
   )
+
+  const suggestedEventName = useMemo(() => {
+    const sessionName = sessionNameQuery.data?.name.trim()
+    if (!sessionName) {
+      return ""
+    }
+
+    return `${sessionName} ${new Date().getFullYear()}`
+  }, [sessionNameQuery.data?.name])
 
   const venueChartsQuery = useQuery({
     queryKey: ["seatsio", { venueUniqueId: currentVenueUniqueId, step: "charts" }],
@@ -112,6 +136,26 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
     },
   })
 
+  const createChartMutation = useMutation({
+    mutationFn: (payload: { name: string; venueUniqueId: string }) =>
+      saveSeatsIoSeatingLayout({
+        name: payload.name,
+        venueUniqueId: payload.venueUniqueId,
+      }),
+    onSuccess: async (createdChart) => {
+      await venueChartsQuery.refetch()
+      setDraftSeatsIoChartUniqueId(createdChart.uniqueId)
+      setDraftSeatsIoEventUniqueId(null)
+      setChartName("")
+      setChartNameError("")
+      setIsCreateChartOpen(false)
+      await queryClient.invalidateQueries({ queryKey: ["seatsio", { venueUniqueId: currentVenueUniqueId, step: "charts" }] })
+      await queryClient.invalidateQueries({ queryKey: ["seatsio", "seating-layouts"] })
+      await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "seat-selection" }] })
+      await queryClient.invalidateQueries({ queryKey: ["sessions", "review", sessionId] })
+    },
+  })
+
   const updateMutation = useMutation({
     mutationFn: (payload: { offerPickingSeats: boolean; seatsIoEventUniqueId: string | null }) =>
       updateSessionWizardSeatSelection(sessionId, payload),
@@ -139,6 +183,18 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
   }, [isHydrated, seatSelectionQuery.data, seatSelectionQuery.isSuccess])
 
   useEffect(() => {
+    if (!isHydrated || !draftSeatsIoChartUniqueId || !venueChartsQuery.isSuccess) {
+      return
+    }
+
+    const chartStillBelongsToVenue = (venueChartsQuery.data ?? []).some((chart) => chart.uniqueId === draftSeatsIoChartUniqueId)
+    if (!chartStillBelongsToVenue) {
+      setDraftSeatsIoChartUniqueId(null)
+      setDraftSeatsIoEventUniqueId(null)
+    }
+  }, [draftSeatsIoChartUniqueId, isHydrated, venueChartsQuery.data, venueChartsQuery.isSuccess])
+
+  useEffect(() => {
     if (!seatSelectionQuery.isSuccess || !isHydrated || venueChartsQuery.isFetching || chartEventsQuery.isFetching) {
       setPrimaryAction(null)
       setPrimaryActionReady(false)
@@ -147,8 +203,14 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
 
     setPrimaryAction(async () => {
       setPrimaryActionReady(false)
+      if (draftOfferPickingSeats && !draftSeatsIoChartUniqueId) {
+        const message = "Select a chart before saving seat selection."
+        setSeatSelectionError(message)
+        throw new Error(message)
+      }
+
       if (draftOfferPickingSeats && !draftSeatsIoEventUniqueId) {
-        const message = "Select a Seats.io event before enabling seat selection."
+        const message = "Select a Seats.io event before saving seat selection."
         setSeatSelectionError(message)
         throw new Error(message)
       }
@@ -159,7 +221,7 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
         seatsIoEventUniqueId: draftSeatsIoEventUniqueId,
       })
     })
-    setPrimaryActionReady(!draftOfferPickingSeats || Boolean(draftSeatsIoEventUniqueId))
+    setPrimaryActionReady(!draftOfferPickingSeats || Boolean(draftSeatsIoChartUniqueId && draftSeatsIoEventUniqueId))
 
     return () => {
       setPrimaryAction(null)
@@ -167,6 +229,7 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
     }
   }, [
     draftOfferPickingSeats,
+    draftSeatsIoChartUniqueId,
     draftSeatsIoEventUniqueId,
     isHydrated,
     chartEventsQuery.isFetching,
@@ -186,6 +249,9 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
     [venueChartsQuery.data],
   )
 
+  const hasVenueCharts = Boolean(venueChartsQuery.isSuccess && chartOptions.length > 0)
+  const hasNoVenueCharts = Boolean(venueChartsQuery.isSuccess && chartOptions.length === 0)
+
   const eventOptions = useMemo(
     () =>
       (chartEventsQuery.data ?? []).map((event) => ({
@@ -196,13 +262,14 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
     [chartEventsQuery.data],
   )
 
+  const hasChartEvents = Boolean(chartEventsQuery.isSuccess && eventOptions.length > 0)
+  const hasNoChartEvents = Boolean(chartEventsQuery.isSuccess && eventOptions.length === 0)
+
   const isBusy = seatSelectionQuery.isLoading || sessionVenueQuery.isLoading || organizerVenuesQuery.isLoading
   const isSelectionEnabled = draftOfferPickingSeats
   const isFetchingChoices = venueChartsQuery.isFetching || chartEventsQuery.isFetching
-  const hasVenueCharts = Boolean(venueChartsQuery.isSuccess && (venueChartsQuery.data?.length ?? 0) === 0)
-  const hasChartEvents = Boolean(chartEventsQuery.isSuccess && (chartEventsQuery.data?.length ?? 0) === 0)
-  const isChartDisabled = !isSelectionEnabled || isFetchingChoices || !currentVenueUniqueId || hasVenueCharts
-  const isEventDisabled = !isSelectionEnabled || isFetchingChoices || !draftSeatsIoChartUniqueId || hasChartEvents
+  const isChartDisabled = !isSelectionEnabled || isFetchingChoices || !currentVenueUniqueId
+  const isEventDisabled = !isSelectionEnabled || isFetchingChoices || !draftSeatsIoChartUniqueId
 
   async function handleCreateEvent() {
     const trimmedName = eventName.trim()
@@ -220,6 +287,25 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
     await createEventMutation.mutateAsync({
       chartUniqueId: draftSeatsIoChartUniqueId,
       label: trimmedName,
+    })
+  }
+
+  async function handleCreateChart() {
+    const trimmedName = chartName.trim()
+    if (!trimmedName) {
+      setChartNameError("Chart name is required.")
+      return
+    }
+
+    if (!currentVenueUniqueId) {
+      setChartNameError("Select a venue first.")
+      return
+    }
+
+    setChartNameError("")
+    await createChartMutation.mutateAsync({
+      name: trimmedName,
+      venueUniqueId: currentVenueUniqueId,
     })
   }
 
@@ -285,10 +371,30 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
 
           <SimpleGrid columns={{ base: 1, lg: 2 }} gap={4}>
             <Box>
-              <Flex align="center" justify="space-between" gap={3} mb={2}>
+              <Flex align="center" justify="space-between" gap={3} mb={2} minW={0}>
                 <Text fontSize="sm" fontWeight="700" color="gray.700">
-                  Chart
+                  Chart <Text as="span" color="red.500">*</Text>
                 </Text>
+                <Tooltip.Root openDelay={300} closeDelay={100}>
+                  <Tooltip.Trigger asChild>
+                    <Button
+                      variant="outline"
+                      aria-label="Add chart"
+                      borderRadius="999px"
+                      h="44px"
+                      w="44px"
+                      minW="44px"
+                      p={0}
+                      disabled={!isSelectionEnabled || !currentVenueUniqueId || isFetchingChoices}
+                      onClick={() => setIsCreateChartOpen(true)}
+                    >
+                      <Plus size={18} />
+                    </Button>
+                  </Tooltip.Trigger>
+                  <Tooltip.Positioner>
+                    <Tooltip.Content>Quick add chart</Tooltip.Content>
+                  </Tooltip.Positioner>
+                </Tooltip.Root>
               </Flex>
               <StyledSelect
                 options={chartOptions}
@@ -300,11 +406,11 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
                     setSeatSelectionError("")
                   }
                 }}
-                placeholder={currentVenueUniqueId ? "Select chart" : "No venue selected"}
+                placeholder={!currentVenueUniqueId ? "No venue selected" : hasVenueCharts ? "Select chart" : "No Chart Found"}
                 disabled={isChartDisabled}
                 minW="0"
               />
-              {isSelectionEnabled && currentVenueUniqueId && venueChartsQuery.data?.length === 0 && !venueChartsQuery.isLoading ? (
+              {isSelectionEnabled && currentVenueUniqueId && hasNoVenueCharts && !venueChartsQuery.isLoading ? (
                 <Text mt={2} fontSize="sm" color="gray.600">
                   No charts are mapped to this venue yet.
                 </Text>
@@ -312,9 +418,9 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
             </Box>
 
             <Box>
-              <Flex align="center" justify="space-between" gap={3} mb={2}>
+              <Flex align="center" justify="space-between" gap={3} mb={2} minW={0}>
                 <Text fontSize="sm" fontWeight="700" color="gray.700">
-                  Event
+                  Event <Text as="span" color="red.500">*</Text>
                 </Text>
                 <Tooltip.Root openDelay={300} closeDelay={100}>
                   <Tooltip.Trigger asChild>
@@ -327,15 +433,19 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
                       minW="44px"
                       p={0}
                       disabled={!isSelectionEnabled || !draftSeatsIoChartUniqueId || isFetchingChoices}
-                      onClick={() => setIsCreateEventOpen(true)}
+                      onClick={() => {
+                        setEventName(suggestedEventName)
+                        setEventNameError("")
+                        setIsCreateEventOpen(true)
+                      }}
                     >
                       <Plus size={18} />
                     </Button>
                   </Tooltip.Trigger>
                   <Tooltip.Positioner>
                     <Tooltip.Content>Quick add event</Tooltip.Content>
-                  </Tooltip.Positioner>
-                </Tooltip.Root>
+                    </Tooltip.Positioner>
+                  </Tooltip.Root>
               </Flex>
               <StyledSelect
                 options={eventOptions}
@@ -346,11 +456,11 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
                     setSeatSelectionError("")
                   }
                 }}
-                placeholder={draftSeatsIoChartUniqueId ? "Select event" : "Select a chart first"}
+                placeholder={!draftSeatsIoChartUniqueId ? "Select chart first" : hasChartEvents ? "Select event" : "No Event Found"}
                 disabled={isEventDisabled}
                 minW="0"
               />
-              {isSelectionEnabled && draftSeatsIoChartUniqueId && chartEventsQuery.data?.length === 0 && !chartEventsQuery.isLoading ? (
+              {isSelectionEnabled && draftSeatsIoChartUniqueId && hasNoChartEvents && !chartEventsQuery.isLoading ? (
                 <Text mt={2} fontSize="sm" color="gray.600">
                   No events exist for this chart yet.
                 </Text>
@@ -361,12 +471,6 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
           {selectedChart?.name ? (
             <Text fontSize="sm" color="gray.600">
               Currently filtered by chart {selectedChart.name}.
-            </Text>
-          ) : null}
-
-          {draftOfferPickingSeats && !draftSeatsIoEventUniqueId ? (
-            <Text fontSize="sm" fontWeight="600" color="orange.600">
-              Seat selection is enabled, so an event must be selected before saving.
             </Text>
           ) : null}
 
@@ -416,6 +520,8 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
             setEventName("")
             setEventNameError("")
             createEventMutation.reset()
+          } else if (!eventName) {
+            setEventName(suggestedEventName)
           }
         }}
         size="lg"
@@ -517,6 +623,132 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
                 {createEventMutation.isError ? (
                   <Text fontSize="sm" color="red.500">
                     {extractApiError(createEventMutation.error)}
+                  </Text>
+                ) : null}
+              </Stack>
+            </Dialog.Body>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+
+      <Dialog.Root
+        open={isCreateChartOpen}
+        onOpenChange={(details) => {
+          setIsCreateChartOpen(details.open)
+          if (!details.open) {
+            setChartName("")
+            setChartNameError("")
+            createChartMutation.reset()
+          }
+        }}
+        size="lg"
+      >
+        <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
+        <Dialog.Positioner>
+          <Dialog.Content
+            bg="white"
+            borderRadius={{ base: 0, md: "24px" }}
+            maxW={{ base: "100vw", md: "560px" }}
+            maxH={{ base: "100dvh", md: "90vh" }}
+            m={{ base: 0, md: "auto" }}
+            overflow="hidden"
+            display="flex"
+            flexDirection="column"
+          >
+            <Box px={6} pt={6} pb={4} borderBottom="1px solid" borderColor="gray.200">
+              <Flex align="flex-start" justify="space-between" gap={4}>
+                <Box>
+                  <Text fontSize="lg" fontWeight="800" color="gray.900">
+                    Add chart
+                  </Text>
+                  <Text fontSize="sm" color="gray.600">
+                    Create a new Seats.io chart for the selected venue and auto-select it.
+                  </Text>
+                </Box>
+
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton aria-label="Close chart modal" />
+                </Dialog.CloseTrigger>
+              </Flex>
+            </Box>
+
+            <Dialog.Body px={6} py={6} overflowY="auto">
+              <Stack gap={4}>
+                <Box border="1px solid" borderColor="gray.200" borderRadius="16px" bg="gray.50" px={4} py={3}>
+                  <Text fontSize="xs" fontWeight="800" color="gray.500" textTransform="uppercase" letterSpacing="0.12em">
+                    Venue
+                  </Text>
+                  <Text mt={1} fontSize="sm" fontWeight="700" color="gray.800">
+                    {currentVenue?.name ?? "Not set"}
+                  </Text>
+                </Box>
+
+                <Box>
+                  <Text fontSize="sm" fontWeight="700" color="gray.700" mb={2}>
+                    Name <Text as="span" color="red.500">*</Text>
+                  </Text>
+                  <Input
+                    value={chartName}
+                    onChange={(event) => {
+                      setChartName(event.target.value)
+                      if (chartNameError) {
+                        setChartNameError("")
+                      }
+                    }}
+                    placeholder="Main hall seating plan"
+                    border="1px solid"
+                    borderColor="secondaryGray.100"
+                    borderRadius="14px"
+                    h="44px"
+                    px={4}
+                    w="full"
+                    autoFocus
+                  />
+                  {chartNameError ? (
+                    <Text mt={2} fontSize="sm" color="red.500">
+                      {chartNameError}
+                    </Text>
+                  ) : null}
+                </Box>
+
+                <Flex
+                  pt={5}
+                  borderTop="1px solid"
+                  borderColor="gray.200"
+                  align="center"
+                  justify="space-between"
+                  gap={3}
+                  flexWrap="wrap"
+                >
+                  <Button
+                    variant="outline"
+                    colorPalette="gray"
+                    borderRadius="14px"
+                    h="44px"
+                    px={6}
+                    minW={{ base: "full", md: "140px" }}
+                    onClick={() => setIsCreateChartOpen(false)}
+                  >
+                    Close
+                  </Button>
+
+                  <Button
+                    borderRadius="14px"
+                    h="44px"
+                    px={6}
+                    minW={{ base: "full", md: "140px" }}
+                    onClick={handleCreateChart}
+                    color="white"
+                    style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+                    loading={createChartMutation.isPending}
+                  >
+                    Create
+                  </Button>
+                </Flex>
+
+                {createChartMutation.isError ? (
+                  <Text fontSize="sm" color="red.500">
+                    {extractApiError(createChartMutation.error)}
                   </Text>
                 ) : null}
               </Stack>
