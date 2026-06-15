@@ -164,7 +164,11 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
       setDraftOfferPickingSeats(data.offerPickingSeats)
       setDraftSeatsIoEventUniqueId(data.seatsIoEventUniqueId)
       setDraftSeatsIoChartUniqueId(data.seatsIoChartUniqueId)
+      setSeatSelectionError("")
       await queryClient.invalidateQueries({ queryKey: ["sessions", "review", sessionId] })
+    },
+    onError: (error) => {
+      setSeatSelectionError(extractApiError(error))
     },
     onSettled: () => {
       setPrimaryActionReady(true)

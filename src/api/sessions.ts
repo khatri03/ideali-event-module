@@ -144,6 +144,8 @@ const sessionTicketSchema = z.object({
   name: z.string().optional(),
   Description: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
+  SeatsIoChartCategoryId: z.number().int().nullable().optional(),
+  seatsIoChartCategoryId: z.number().int().nullable().optional(),
   TotalQuantity: z.number().int().nullable().optional(),
   totalQuantity: z.number().int().nullable().optional(),
   FullPrice: z.union([z.number(), z.string()]).nullable().optional(),
@@ -469,6 +471,7 @@ export interface SessionWizardTicket {
   uniqueId: string
   name: string
   description: string | null
+  seatsIoChartCategoryId: number | null
   totalQuantity: number | null
   fullPrice: string
   minPurchase: number | null
@@ -490,6 +493,7 @@ export interface SessionWizardTicketPricePeriod {
 export interface SessionWizardTicketRequest {
   name: string
   description: string | null
+  seatsIoChartCategoryId: number | null
   totalQuantity: number
   fullPrice: number
   minPurchase: number | null
@@ -1104,6 +1108,7 @@ export async function fetchSessionWizardTickets(uniqueId: string): Promise<Sessi
     uniqueId: ticket.UniqueId ?? ticket.uniqueId ?? "",
     name: ticket.Name ?? ticket.name ?? "",
     description: ticket.Description ?? ticket.description ?? null,
+    seatsIoChartCategoryId: ticket.SeatsIoChartCategoryId ?? ticket.seatsIoChartCategoryId ?? null,
     totalQuantity: ticket.TotalQuantity ?? ticket.totalQuantity ?? null,
     fullPrice: normalizeTicketPrice(ticket.FullPrice ?? ticket.fullPrice),
     minPurchase: ticket.MinPurchase ?? ticket.minPurchase ?? null,
@@ -1135,6 +1140,7 @@ export async function createSessionWizardTicket(
     uniqueId: ticket.UniqueId ?? ticket.uniqueId ?? "",
     name: ticket.Name ?? ticket.name ?? "",
     description: ticket.Description ?? ticket.description ?? null,
+    seatsIoChartCategoryId: ticket.SeatsIoChartCategoryId ?? ticket.seatsIoChartCategoryId ?? null,
     totalQuantity: ticket.TotalQuantity ?? ticket.totalQuantity ?? null,
     fullPrice: normalizeTicketPrice(ticket.FullPrice ?? ticket.fullPrice),
     minPurchase: ticket.MinPurchase ?? ticket.minPurchase ?? null,
@@ -1158,6 +1164,7 @@ export async function updateSessionWizardTicket(
     uniqueId: ticket.UniqueId ?? ticket.uniqueId ?? "",
     name: ticket.Name ?? ticket.name ?? "",
     description: ticket.Description ?? ticket.description ?? null,
+    seatsIoChartCategoryId: ticket.SeatsIoChartCategoryId ?? ticket.seatsIoChartCategoryId ?? null,
     totalQuantity: ticket.TotalQuantity ?? ticket.totalQuantity ?? null,
     fullPrice: normalizeTicketPrice(ticket.FullPrice ?? ticket.fullPrice),
     minPurchase: ticket.MinPurchase ?? ticket.minPurchase ?? null,

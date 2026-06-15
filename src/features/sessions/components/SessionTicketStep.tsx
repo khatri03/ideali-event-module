@@ -31,12 +31,17 @@ import {
   createSessionWizardTicket,
   deleteSessionWizardTicket,
   fetchSessionWizardBooking,
+  fetchSessionWizardSeatSelection,
   fetchSessionWizardTickets,
   updateSessionWizardTicketDisplayOrder,
   updateSessionWizardTicket,
   type SessionWizardTicket,
   type SessionWizardTicketDisplayOrderRequest,
 } from "@/api/sessions"
+import {
+  fetchSeatsIoChartCategories,
+} from "@/api/seatsio"
+import { StyledSelect } from "@/components/common/StyledSelect"
 import {
   SessionTicketPricePeriodsSection,
   type SessionTicketPricePeriodsSectionHandle,
@@ -231,6 +236,8 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
   const [ticketPriceError, setTicketPriceError] = useState("")
   const [minimumPurchaseError, setMinimumPurchaseError] = useState("")
   const [maximumPurchaseError, setMaximumPurchaseError] = useState("")
+  const [ticketCategoryId, setTicketCategoryId] = useState("")
+  const [ticketCategoryError, setTicketCategoryError] = useState("")
   const [editingTicketId, setEditingTicketId] = useState<string | null>(null)
   const [editingTicket, setEditingTicket] = useState<SessionWizardTicket | null>(null)
   const [ticketEditorInstanceId, setTicketEditorInstanceId] = useState(0)
@@ -257,6 +264,23 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
       : undefined,
   })
 
+  const seatSelectionQuery = useQuery({
+    queryKey: ["sessions", { sessionId, step: "seat-selection" }],
+    queryFn: () => fetchSessionWizardSeatSelection(sessionId),
+    enabled: !!sessionId,
+    retry: false,
+  })
+
+  const isSeatSelectionEnabled = seatSelectionQuery.data?.offerPickingSeats ?? false
+  const selectedChartUniqueId = seatSelectionQuery.data?.seatsIoChartUniqueId ?? null
+
+  const chartCategoriesQuery = useQuery({
+    queryKey: ["seatsio", { chartUniqueId: selectedChartUniqueId, step: "categories" }],
+    queryFn: () => fetchSeatsIoChartCategories(selectedChartUniqueId ?? ""),
+    enabled: Boolean(isSeatSelectionEnabled && selectedChartUniqueId),
+    retry: false,
+  })
+
   const ticketsQuery = useQuery({
     queryKey: ["sessions", { sessionId, step: "ticket" }],
     queryFn: () => fetchSessionWizardTickets(sessionId),
@@ -273,10 +297,55 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
       ),
     [ticketsQuery.data],
   )
+
+  const assignedCategoryIds = useMemo(() => {
+    const ids = new Set<number>()
+
+    for (const ticket of sortedTickets) {
+      if (editingTicketId && ticket.uniqueId === editingTicketId) {
+        continue
+      }
+
+      if (typeof ticket.seatsIoChartCategoryId === "number") {
+        ids.add(ticket.seatsIoChartCategoryId)
+      }
+    }
+
+    return ids
+  }, [editingTicketId, sortedTickets])
+
+  const chartCategoryOptions = useMemo(
+    () =>
+      (chartCategoriesQuery.data ?? []).map((category) => {
+        const categoryId = String(category.id)
+
+        return {
+          label: category.name,
+          value: categoryId,
+          swatchColor: category.color,
+          disabled: assignedCategoryIds.has(category.id) && categoryId !== ticketCategoryId,
+        }
+      }),
+    [assignedCategoryIds, chartCategoriesQuery.data, ticketCategoryId],
+  )
+
+  const hasChartCategories = Boolean(chartCategoriesQuery.isSuccess && chartCategoryOptions.length > 0)
+  const hasNoChartCategories = Boolean(chartCategoriesQuery.isSuccess && chartCategoryOptions.length === 0)
+
+  useEffect(() => {
+    if (!ticketCategoryId || !chartCategoriesQuery.isSuccess) {
+      return
+    }
+
+    if (!chartCategoryOptions.some((option) => option.value === ticketCategoryId)) {
+      setTicketCategoryId("")
+    }
+  }, [chartCategoriesQuery.isSuccess, chartCategoryOptions, ticketCategoryId])
   const createTicketMutation = useMutation({
     mutationFn: (payload: {
       name: string
       description: string | null
+      seatsIoChartCategoryId: number | null
       totalQuantity: number
       fullPrice: number
       minPurchase: number | null
@@ -293,6 +362,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
       ticketUniqueId: string
       name: string
       description: string | null
+      seatsIoChartCategoryId: number | null
       totalQuantity: number
       fullPrice: number
       minPurchase: number | null
@@ -302,6 +372,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
       updateSessionWizardTicket(sessionId, payload.ticketUniqueId, {
         name: payload.name,
         description: payload.description,
+        seatsIoChartCategoryId: payload.seatsIoChartCategoryId,
         totalQuantity: payload.totalQuantity,
         fullPrice: payload.fullPrice,
         minPurchase: payload.minPurchase,
@@ -351,6 +422,20 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
 
     return () => window.cancelAnimationFrame(frameId)
   }, [isOpen])
+
+  useEffect(() => {
+    if (editingTicketId || !ticketCategoryId || ticketName.trim()) {
+      return
+    }
+
+    const selectedCategory = chartCategoriesQuery.data?.find(
+      (category) => String(category.id) === ticketCategoryId,
+    )
+
+    if (selectedCategory?.name) {
+      setTicketName(selectedCategory.name)
+    }
+  }, [chartCategoriesQuery.data, editingTicketId, ticketCategoryId, ticketName])
 
   useEffect(() => {
     setPrimaryActionReady(!ticketsQuery.isLoading && !ticketsQuery.isError)
@@ -411,12 +496,14 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
   function resetTicketForm() {
     setTicketName("")
     setTicketDescription("")
+    setTicketCategoryId("")
     setTicketTotalTickets("")
     setTicketPrice("")
     setMinimumPurchase("")
     setMaximumPurchase("")
     setIsActive(true)
     setTicketNameError("")
+    setTicketCategoryError("")
     setTicketTotalTicketsError("")
     setTicketPriceError("")
     setMinimumPurchaseError("")
@@ -441,12 +528,14 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
     setEditingTicketId(ticket.uniqueId)
     setTicketName(ticket.name)
     setTicketDescription(ticket.description ?? "")
+    setTicketCategoryId(ticket.seatsIoChartCategoryId ? String(ticket.seatsIoChartCategoryId) : "")
     setTicketTotalTickets(ticket.totalQuantity?.toString() ?? "")
     setTicketPrice(formatMoneyInput(ticket.fullPrice))
     setMinimumPurchase(ticket.minPurchase?.toString() ?? "")
     setMaximumPurchase(ticket.maxPurchase?.toString() ?? "")
     setIsActive(ticket.isActive)
     setTicketNameError("")
+    setTicketCategoryError("")
     setTicketTotalTicketsError("")
     setTicketPriceError("")
     setMinimumPurchaseError("")
@@ -463,6 +552,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
     const parsedPrice = parseMoneyInput(ticketPrice)
     const parsedMinimumPurchase = minimumPurchase.trim() ? Number.parseInt(minimumPurchase, 10) : null
     const parsedMaximumPurchase = maximumPurchase.trim() ? Number.parseInt(maximumPurchase, 10) : null
+    const parsedCategoryId = ticketCategoryId.trim() ? Number.parseInt(ticketCategoryId, 10) : null
 
     let hasError = false
 
@@ -515,6 +605,17 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
       setMaximumPurchaseError("")
     }
 
+    if (isSeatSelectionEnabled) {
+      if (!parsedCategoryId || !Number.isInteger(parsedCategoryId)) {
+        setTicketCategoryError("Category is required.")
+        hasError = true
+      } else {
+        setTicketCategoryError("")
+      }
+    } else {
+      setTicketCategoryError("")
+    }
+
     if (hasError) {
       return
     }
@@ -527,6 +628,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
     const payload = {
       name: trimmedName,
       description: trimmedDescription ? trimmedDescription : null,
+      seatsIoChartCategoryId: isSeatSelectionEnabled ? parsedCategoryId : null,
       totalQuantity,
       fullPrice,
       minPurchase: resolvedMinimumPurchase,
@@ -544,6 +646,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
 
       setEditingTicketId(savedTicket.uniqueId)
       setEditingTicket(savedTicket)
+      setTicketCategoryId(savedTicket.seatsIoChartCategoryId ? String(savedTicket.seatsIoChartCategoryId) : "")
       await tenurePricingSectionRef.current?.persistDrafts(savedTicket.uniqueId)
 
       if (closeAfterSave) {
@@ -954,6 +1057,55 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                       </Text>
                     ) : null}
                   </Box>
+
+                  {isSeatSelectionEnabled ? (
+                    <Box>
+                      <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
+                        Category <Text as="span" color="red.500">*</Text>
+                      </Text>
+                      <StyledSelect
+                        options={chartCategoryOptions}
+                        value={ticketCategoryId}
+                        onChange={(value) => {
+                          setTicketCategoryId(value)
+                          if (ticketCategoryError) {
+                            setTicketCategoryError("")
+                          }
+                          if (value && !editingTicketId && !ticketName.trim()) {
+                            const selectedCategory = chartCategoriesQuery.data?.find(
+                              (category) => String(category.id) === value,
+                            )
+
+                            if (selectedCategory?.name) {
+                              setTicketName(selectedCategory.name)
+                            }
+                          }
+                        }}
+                        placeholder={
+                          !selectedChartUniqueId
+                            ? "Select chart first"
+                            : chartCategoriesQuery.isLoading
+                              ? "Loading categories..."
+                              : hasChartCategories
+                                ? "Select category"
+                                : "No Categories Found"
+                        }
+                        disabled={!selectedChartUniqueId || chartCategoriesQuery.isLoading}
+                      />
+                      {ticketCategoryError ? (
+                        <Text mt={2} fontSize="sm" color="red.500">
+                          {ticketCategoryError}
+                        </Text>
+                      ) : null}
+                      {hasNoChartCategories && !chartCategoriesQuery.isLoading ? (
+                        <Text mt={2} fontSize="sm" color="gray.600">
+                          {sortedTickets.length > 0
+                            ? "All remaining chart categories are already assigned to other tickets."
+                            : "No categories are mapped to the selected chart yet."}
+                        </Text>
+                      ) : null}
+                    </Box>
+                  ) : null}
 
                   <Box>
                     <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>

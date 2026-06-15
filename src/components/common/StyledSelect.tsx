@@ -6,6 +6,8 @@ export interface SelectOption {
   label: string
   value: string
   description?: string
+  swatchColor?: string
+  disabled?: boolean
 }
 
 interface StyledSelectProps {
@@ -97,6 +99,10 @@ export function StyledSelect({
               fontSize="sm"
               color="navy.700"
               _dark={{ color: "secondaryGray.100" }}
+              _disabled={{
+                opacity: 0.55,
+                cursor: "not-allowed",
+              }}
               _highlighted={{
                 bg: "secondaryGray.300",
                 _dark: { bg: "navy.700" },
@@ -110,6 +116,20 @@ export function StyledSelect({
               cursor="pointer"
               transition="background 0.1s ease"
             >
+              {item.swatchColor ? (
+                <Box
+                  w="12px"
+                  h="12px"
+                  borderRadius="full"
+                  border="1px solid"
+                  borderColor="border.subtle"
+                  bg={item.swatchColor}
+                  boxShadow="sm"
+                  flexShrink={0}
+                  aria-hidden="true"
+                  mr={2.5}
+                />
+              ) : null}
               <Box flex={1} minW={0}>
                 <Select.ItemText>{item.label}</Select.ItemText>
                 {item.description ? (
