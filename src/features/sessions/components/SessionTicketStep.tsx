@@ -318,12 +318,13 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
     () =>
       (chartCategoriesQuery.data ?? []).map((category) => {
         const categoryId = String(category.id)
+        const isAssignedToAnotherTicket = assignedCategoryIds.has(category.id) && categoryId !== ticketCategoryId
 
         return {
           label: category.name,
           value: categoryId,
           swatchColor: category.color,
-          disabled: assignedCategoryIds.has(category.id) && categoryId !== ticketCategoryId,
+          description: isAssignedToAnotherTicket ? "Already assigned to another ticket" : undefined,
         }
       }),
     [assignedCategoryIds, chartCategoriesQuery.data, ticketCategoryId],
@@ -1099,9 +1100,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                       ) : null}
                       {hasNoChartCategories && !chartCategoriesQuery.isLoading ? (
                         <Text mt={2} fontSize="sm" color="gray.600">
-                          {sortedTickets.length > 0
-                            ? "All remaining chart categories are already assigned to other tickets."
-                            : "No categories are mapped to the selected chart yet."}
+                          No categories are mapped to the selected chart yet.
                         </Text>
                       ) : null}
                     </Box>
@@ -1489,10 +1488,20 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
               </Stack>
             </Dialog.Body>
 
-            <Box px={6} py={4} borderTop="1px solid" borderColor="gray.200">
-              <Flex justify="flex-end" gap={3}>
+            <Box px={6} py={4} borderTop="1px solid" borderColor="gray.200" bg="gray.50">
+              <Stack
+                direction={{ base: "column-reverse", md: "row" }}
+                gap={3}
+                align={{ base: "stretch", md: "center" }}
+                justify="flex-end"
+              >
                 <Button
-                  variant="ghost"
+                  variant="outline"
+                  colorPalette="gray"
+                  borderRadius="14px"
+                  h="44px"
+                  px={6}
+                  minW={{ base: "full", md: "120px" }}
                   onClick={() => {
                     setIsDeleteOpen(false)
                     setTicketToDelete(null)
@@ -1502,6 +1511,10 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                 </Button>
                 <Button
                   colorPalette="red"
+                  borderRadius="14px"
+                  h="44px"
+                  px={6}
+                  minW={{ base: "full", md: "120px" }}
                   loading={deleteTicketMutation.isPending}
                   loadingText="Deleting..."
                   onClick={() => {
@@ -1510,7 +1523,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                 >
                   Delete
                 </Button>
-              </Flex>
+              </Stack>
             </Box>
           </Dialog.Content>
         </Dialog.Positioner>
