@@ -1,5 +1,5 @@
 import { Box, Badge, Flex, Text } from "@chakra-ui/react"
-import { CalendarDays, MapPin, Ticket, Users } from "lucide-react"
+import { CalendarDays, MapPin, Users } from "lucide-react"
 import { format } from "date-fns"
 import type { OrganizerEventListItem } from "@/api/events"
 
@@ -78,37 +78,37 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
           {event.name}
         </Text>
 
-        <Flex align="center" justify="space-between" gap={3} mb={4}>
+        <Flex direction={{ base: "column", sm: "row" }} align={{ base: "stretch", sm: "center" }} justify="space-between" gap={3} mb={4}>
           <Flex align="center" gap={2} minW={0}>
             <Box color="text.secondary" flexShrink={0}>
               <CalendarDays size={13} />
             </Box>
-            <Text fontSize="xs" color="text.secondary" fontWeight="500" whiteSpace="nowrap">
+            <Text fontSize="xs" color="text.secondary" fontWeight="500" whiteSpace={{ base: "normal", sm: "nowrap" }}>
               {startDate} to {endDate}
             </Text>
           </Flex>
 
-          <Flex align="center" gap={2} justify="flex-end" minW={0}>
+          <Flex align="center" gap={2} justify={{ base: "flex-start", sm: "flex-end" }} minW={0}>
             <Box color="text.secondary" flexShrink={0}>
               <MapPin size={13} />
             </Box>
-            <Text fontSize="xs" color="text.secondary" fontWeight="500" lineClamp={1} textAlign="right">
+            <Text fontSize="xs" color="text.secondary" fontWeight="500" lineClamp={1} textAlign={{ base: "left", sm: "right" }}>
               {event.venueName ?? "Venue not mapped yet"}
             </Text>
           </Flex>
         </Flex>
 
         <Box mb={4}>
-          <Flex justify="space-between" align="center" mb={1}>
-            <Flex align="center" gap={1.5}>
+          <Flex direction={{ base: "column", sm: "row" }} justify="space-between" align={{ base: "flex-start", sm: "center" }} gap={1} mb={1}>
+            <Flex align="center" gap={1.5} minW={0}>
               <Box color="text.secondary">
                 <Users size={12} />
               </Box>
-              <Text fontSize="xs" color="text.secondary" fontWeight="500">
+              <Text fontSize="xs" color="text.secondary" fontWeight="500" lineClamp={1}>
                 {event.ticketsSold.toLocaleString()} / {totalTickets.toLocaleString()} tickets sold
               </Text>
             </Flex>
-            <Text fontSize="xs" fontWeight="700" style={{ color: event.themeColor ?? "#7551FF" }}>
+            <Text fontSize="xs" fontWeight="700" style={{ color: event.themeColor ?? "#7551FF" }} alignSelf={{ base: "flex-end", sm: "auto" }}>
               {soldPct}%
             </Text>
           </Flex>
@@ -126,19 +126,6 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
           </Box>
         </Box>
 
-        <Flex justify="space-between" align="center" gap={3}>
-          <Flex align="center" gap={1.5}>
-            <Box color="text.secondary">
-              <Ticket size={13} />
-            </Box>
-            <Text fontSize="sm" fontWeight="700" color="text.primary">
-              {event.totalAvailableTickets.toLocaleString()} available
-            </Text>
-          </Flex>
-          <Text fontSize="xs" color="text.secondary" fontWeight="500">
-            Read data
-          </Text>
-        </Flex>
       </Box>
     </Box>
   )
