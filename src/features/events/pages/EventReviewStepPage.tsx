@@ -1,35 +1,17 @@
 import type { ReactNode } from "react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Badge, Box, Button, CloseButton, Dialog, Flex, Grid, Skeleton, Stack, Switch, Text, useBreakpointValue } from "@chakra-ui/react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useWatch } from "react-hook-form"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
 import { CheckCircle2, PencilLine, X } from "lucide-react"
 import { format, parseISO } from "date-fns"
 import {
-  fetchEventWizardAdvancedSettings,
-  fetchEventWizardDateTime,
-  fetchEventWizardName,
-  fetchEventWizardPaymentAccount,
-  fetchEventWizardQuestions,
-  fetchEventWizardSessions,
-  fetchEventWizardThemeColor,
-  fetchEventWizardTimeZone,
-  fetchEventWizardTimeZones,
-  fetchEventWizardTermsConditions,
-  fetchEventWizardVenue,
-  fetchEventWizardSetupStateOptions,
-  fetchEventWizardVisibilityOptions,
-  markEventWizardReadyForReview,
-  updateEventWizardSetupState,
   type EventSetupStateOption,
+  updateEventWizardSetupState,
 } from "@/api/events"
-import { fetchOrganizerVenues } from "@/api/organizer"
-import { fetchOrganizerPaymentAccountSelectionItems } from "@/api/paymentAccounts"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
-import { defaultEventWizardValues, type EventWizardValues } from "../schemas/eventWizard.schemas"
-import { useEventDiscountCoupons } from "../hooks/useEventDiscountCoupons"
+import { useEventReviewSummary } from "../hooks/useEventReviewSummary"
 import { useEventWizardActions } from "../hooks/useEventWizardActions"
 
 type ReviewStepSlug =
@@ -266,200 +248,25 @@ export function EventReviewStepPage() {
   const queryClient = useQueryClient()
   const { setPrimaryAction, setPrimaryActionReady } = useEventWizardActions()
   const finishDialogSize = useBreakpointValue<"full" | "sm">({ base: "full", md: "sm" }) ?? "sm"
-  const values = useWatch({ defaultValue: defaultEventWizardValues }) as EventWizardValues
   const returnUrl = useMemo(() => `${location.pathname}${location.search}`, [location.pathname, location.search])
   const [setupState, setSetupState] = useState("")
   const [finishSetupState, setFinishSetupState] = useState<string | null>(null)
-  const [isInitialised, setIsInitialised] = useState(false)
   const [isFinishConfirmOpen, setIsFinishConfirmOpen] = useState(false)
-  const requestedSetupStateEventIdRef = useRef<string | null>(null)
   const finishConfirmationDeferredRef = useRef<{ resolve: () => void; reject: (error: Error) => void } | null>(null)
 
-  const nameQuery = useQuery({
-    queryKey: ["events", "review", eventId, "name"],
-    queryFn: () => {
-      if (!eventId) {
-        throw new Error("Event id is required.")
-      }
-
-      return fetchEventWizardName(eventId)
-    },
-    enabled: Boolean(eventId),
-    retry: false,
-  })
-  const termsConditionsQuery = useQuery({
-    queryKey: ["events", "review", eventId, "terms-conditions"],
-    queryFn: () => {
-      if (!eventId) {
-        throw new Error("Event id is required.")
-      }
-
-      return fetchEventWizardTermsConditions(eventId)
-    },
-    enabled: Boolean(eventId),
-    retry: false,
-  })
-  const themeColorQuery = useQuery({
-    queryKey: ["events", "review", eventId, "theme-color"],
-    queryFn: () => {
-      if (!eventId) {
-        throw new Error("Event id is required.")
-      }
-
-      return fetchEventWizardThemeColor(eventId)
-    },
-    enabled: Boolean(eventId),
-    retry: false,
-  })
-  const paymentAccountQuery = useQuery({
-    queryKey: ["events", "review", eventId, "payment-account"],
-    queryFn: () => {
-      if (!eventId) {
-        throw new Error("Event id is required.")
-      }
-
-      return fetchEventWizardPaymentAccount(eventId)
-    },
-    enabled: Boolean(eventId),
-    retry: false,
-  })
-  const advancedSettingsQuery = useQuery({
-    queryKey: ["events", "review", eventId, "advanced-settings"],
-    queryFn: () => {
-      if (!eventId) {
-        throw new Error("Event id is required.")
-      }
-
-      return fetchEventWizardAdvancedSettings(eventId)
-    },
-    enabled: Boolean(eventId),
-    retry: false,
-  })
-  const dateTimeQuery = useQuery({
-    queryKey: ["events", "review", eventId, "date-time"],
-    queryFn: () => {
-      if (!eventId) {
-        throw new Error("Event id is required.")
-      }
-
-      return fetchEventWizardDateTime(eventId)
-    },
-    enabled: Boolean(eventId),
-    retry: false,
-  })
-  const timeZoneQuery = useQuery({
-    queryKey: ["events", "review", eventId, "time-zone"],
-    queryFn: () => {
-      if (!eventId) {
-        throw new Error("Event id is required.")
-      }
-
-      return fetchEventWizardTimeZone(eventId)
-    },
-    enabled: Boolean(eventId),
-    retry: false,
-  })
-  const venueQuery = useQuery({
-    queryKey: ["events", "review", eventId, "venue"],
-    queryFn: () => {
-      if (!eventId) {
-        throw new Error("Event id is required.")
-      }
-
-      return fetchEventWizardVenue(eventId)
-    },
-    enabled: Boolean(eventId),
-    retry: false,
-  })
-  const sessionsQuery = useQuery({
-    queryKey: ["events", "review", eventId, "sessions"],
-    queryFn: () => {
-      if (!eventId) {
-        throw new Error("Event id is required.")
-      }
-
-      return fetchEventWizardSessions(eventId)
-    },
-    enabled: Boolean(eventId),
-    retry: false,
-  })
-  const questionsQuery = useQuery({
-    queryKey: ["events", "review", eventId, "questions"],
-    queryFn: () => {
-      if (!eventId) {
-        throw new Error("Event id is required.")
-      }
-
-      return fetchEventWizardQuestions(eventId)
-    },
-    enabled: Boolean(eventId),
-    retry: false,
-  })
-  const visibilityOptionsQuery = useQuery({
-    queryKey: ["events", "review", "visibility-options"],
-    queryFn: fetchEventWizardVisibilityOptions,
-    staleTime: 1000 * 60 * 60,
-    retry: false,
-  })
-  const timeZonesQuery = useQuery({
-    queryKey: ["events", "review", "time-zones"],
-    queryFn: fetchEventWizardTimeZones,
-    staleTime: 1000 * 60 * 60,
-    retry: false,
-  })
-  const venueOptionsQuery = useQuery({
-    queryKey: ["events", "review", "venues"],
-    queryFn: fetchOrganizerVenues,
-    staleTime: 1000 * 60 * 10,
-    retry: false,
-  })
-  const paymentAccountsQuery = useQuery({
-    queryKey: ["events", "review", "payment-accounts"],
-    queryFn: fetchOrganizerPaymentAccountSelectionItems,
-    staleTime: 1000 * 60 * 10,
-    retry: false,
-  })
-  const setupStateOptionsQuery = useQuery({
-    queryKey: ["events", "setup-state-options"],
-    queryFn: fetchEventWizardSetupStateOptions,
-    staleTime: 1000 * 60 * 60,
-    retry: false,
-  })
-  const discountCouponsQuery = useEventDiscountCoupons(eventId)
-
-  const setupStateOptions = useMemo(() => setupStateOptionsQuery.data ?? [], [setupStateOptionsQuery.data])
+  const reviewSummaryQuery = useEventReviewSummary(eventId)
+  const reviewSummary = reviewSummaryQuery.data
+  const setupStateOptions = reviewSummary?.setupStateOptions ?? []
   const selectableSetupStates = useMemo(() => setupStateOptions.filter((option) => option.isSelectable), [setupStateOptions])
   const finalSetupState = setupStateOptions.find((option) => option.isFinal)?.value ?? ""
-  const setupStateTheme = getEventSetupStateTheme(setupState, setupStateOptions)
+  const setupStateTheme = getEventSetupStateTheme(setupState || reviewSummary?.setupState || "", setupStateOptions)
   const resolvedFinishSetupState =
-    finishSetupState ?? selectableSetupStates.find((option) => option.isFinal)?.value ?? selectableSetupStates[0]?.value ?? ""
+    finishSetupState ??
+    selectableSetupStates.find((option) => option.value === reviewSummary?.setupState)?.value ??
+    selectableSetupStates.find((option) => !option.isFinal)?.value ??
+    selectableSetupStates.find((option) => option.isFinal)?.value ??
+    ""
   const finishSetupStateLabel = setupStateOptions.find((option) => option.value === resolvedFinishSetupState)?.label ?? "Loading"
-
-  const setupStateMutation = useMutation({
-    mutationFn: () => {
-      if (!eventId) {
-        throw new Error("Event id is required.")
-      }
-
-      return markEventWizardReadyForReview(eventId)
-    },
-    onSuccess: (data) => {
-      setSetupState(data.setupState)
-      setFinishSetupState(selectableSetupStates.find((option) => option.value === data.setupState)?.value ?? null)
-      setIsInitialised(true)
-      setPrimaryActionReady(true)
-      if (eventId) {
-        queryClient.invalidateQueries({ queryKey: ["events", "setup-state", eventId] })
-        queryClient.invalidateQueries({ queryKey: ["events", "review", eventId] })
-      }
-    },
-    onError: () => {
-      setSetupState("")
-      setFinishSetupState(null)
-      setIsInitialised(true)
-      setPrimaryActionReady(true)
-    },
-  })
 
   const finishMutation = useMutation({
     mutationFn: (setupStateValue: string) => {
@@ -473,9 +280,8 @@ export function EventReviewStepPage() {
       setSetupState(data.setupState)
       setFinishSetupState(selectableSetupStates.find((option) => option.value === data.setupState)?.value ?? null)
       if (eventId) {
-        await queryClient.invalidateQueries({ queryKey: ["events", "setup-state", eventId] })
+        await queryClient.invalidateQueries({ queryKey: ["events", "review-summary", eventId] })
         await queryClient.invalidateQueries({ queryKey: ["events", "wizard-progress", eventId] })
-        await queryClient.invalidateQueries({ queryKey: ["events", "review", eventId] })
       }
     },
     onSettled: () => {
@@ -515,74 +321,48 @@ export function EventReviewStepPage() {
   }, [finishMutation, resolvedFinishSetupState, setPrimaryActionReady])
 
   useEffect(() => {
-    if (!eventId || requestedSetupStateEventIdRef.current === eventId) {
-      return
-    }
-
-    requestedSetupStateEventIdRef.current = eventId
-    setPrimaryActionReady(false)
-    setupStateMutation.mutate()
-
-    return () => {
+    if (!eventId || !reviewSummary) {
       setPrimaryAction(null)
-      setPrimaryActionReady(true)
-    }
-  }, [eventId, setPrimaryAction, setPrimaryActionReady, setupStateMutation])
-
-  useEffect(() => {
-    if (!isInitialised || setupStateOptions.length === 0) {
+      setPrimaryActionReady(false)
       return
     }
 
+    setSetupState(reviewSummary.setupState)
+    setFinishSetupState(
+      setupStateOptions.find((option) => option.value === reviewSummary.setupState)?.value ??
+        selectableSetupStates.find((option) => !option.isFinal)?.value ??
+        selectableSetupStates.find((option) => option.isFinal)?.value ??
+        null,
+    )
     setPrimaryAction(async () => {
       await openFinishConfirmation()
     })
     setPrimaryActionReady(true)
-  }, [isInitialised, openFinishConfirmation, setPrimaryAction, setPrimaryActionReady, setupStateOptions.length])
+    return () => {
+      setPrimaryAction(null)
+      setPrimaryActionReady(true)
+    }
+  }, [eventId, openFinishConfirmation, reviewSummary, selectableSetupStates, setPrimaryAction, setPrimaryActionReady, setupStateOptions])
 
-  const selectedVisibility = advancedSettingsQuery.data?.visibility ?? values.visibility ?? "Public"
-  const selectedVisibilityLabel =
-    visibilityOptionsQuery.data?.find((option) => option.value === selectedVisibility)?.label ?? selectedVisibility
-  const selectedPurchaseTimeLimit = advancedSettingsQuery.data?.purchaseTimeLimit ?? values.purchaseTimeLimitMinutes ?? 15
-  const selectedPaymentAccountUniqueId = paymentAccountQuery.data?.paymentAccountUniqueId ?? values.paymentAccountId ?? ""
-  const selectedVenueUniqueId = venueQuery.data?.venueUniqueId ?? values.venueUniqueId ?? ""
-  const selectedTimeZoneId = timeZoneQuery.data?.timeZoneId ?? values.timeZoneId
-  const selectedTimeZoneLabel =
-    timeZonesQuery.data?.find((timeZone) => timeZone.id === selectedTimeZoneId)?.displayName ?? values.timeZone ?? "Not set"
-  const selectedPaymentAccount = paymentAccountsQuery.data?.find((account) => account.uniqueId === selectedPaymentAccountUniqueId) ?? null
-  const selectedVenue = venueOptionsQuery.data?.find((venue) => venue.uniqueId === selectedVenueUniqueId) ?? null
-  const selectedName = nameQuery.data?.name ?? values.name
-  const selectedTermsConditions = termsConditionsQuery.data?.termsConditions ?? values.termsConditions
-  const selectedThemeColor = themeColorQuery.data?.themeColor ?? values.themeColor ?? defaultEventWizardValues.themeColor
-  const selectedSessions = sessionsQuery.data ?? []
-  const hasQuestions = Boolean(
-    (questionsQuery.data?.customFormUniqueIds.length ?? 0) > 0 || (questionsQuery.data?.customQuestions.length ?? 0) > 0,
-  )
+  const selectedVisibilityLabel = reviewSummary?.visibility ?? "Not set"
+  const selectedPurchaseTimeLimit = reviewSummary?.purchaseTimeLimit ?? 15
+  const selectedPaymentAccountName = reviewSummary?.paymentAccountName ?? "Not selected"
+  const selectedPaymentAccountMerchant = reviewSummary?.paymentAccountMerchant ?? ""
+  const selectedPaymentAccountCurrency = reviewSummary?.paymentAccountCurrency ?? ""
+  const selectedTimeZoneLabel = reviewSummary?.timeZone ?? "Not set"
+  const selectedVenue = reviewSummary?.venueName ?? "Not selected"
+  const selectedName = reviewSummary?.name ?? ""
+  const selectedTermsConditions = reviewSummary?.termsConditions ?? ""
+  const selectedThemeColor = reviewSummary?.themeColor ?? "#CBD5E1"
+  const selectedSessions = reviewSummary?.sessions ?? []
+  const hasQuestions = reviewSummary?.hasQuestions ?? false
   const hasTermsConditions = Boolean(selectedTermsConditions?.trim())
-  const hasDiscountCoupons = discountCouponsQuery.data?.discountsEnabled ?? false
-  const selectedPaymentAccountName = selectedPaymentAccount?.name ?? "Not selected"
-  const selectedPaymentAccountMerchant = selectedPaymentAccount?.paymentMerchant ?? ""
-  const selectedPaymentAccountCurrency = selectedPaymentAccount?.paymentCurrency ?? ""
-  const selectedStartDate = dateTimeQuery.data?.startDate ?? values.startDate ?? ""
-  const selectedEndDate = dateTimeQuery.data?.endDate ?? values.endDate ?? ""
-  const selectedBookingStartDate = dateTimeQuery.data?.bookingStartDate ?? values.bookingStartDate ?? ""
-  const selectedBookingEndDate = dateTimeQuery.data?.bookingEndDate ?? values.bookingEndDate ?? ""
-  const summaryError =
-    nameQuery.error ??
-    termsConditionsQuery.error ??
-    themeColorQuery.error ??
-    paymentAccountQuery.error ??
-    advancedSettingsQuery.error ??
-    dateTimeQuery.error ??
-    timeZoneQuery.error ??
-    venueQuery.error ??
-    sessionsQuery.error ??
-    questionsQuery.error ??
-    visibilityOptionsQuery.error ??
-    timeZonesQuery.error ??
-    venueOptionsQuery.error ??
-    paymentAccountsQuery.error ??
-    discountCouponsQuery.error
+  const hasDiscountCoupons = reviewSummary?.discountsEnabled ?? false
+  const selectedStartDate = reviewSummary?.startDate ?? ""
+  const selectedEndDate = reviewSummary?.endDate ?? ""
+  const selectedBookingStartDate = reviewSummary?.bookingStartDate ?? ""
+  const selectedBookingEndDate = reviewSummary?.bookingEndDate ?? ""
+  const summaryError = reviewSummaryQuery.error
 
   function editStep(step: ReviewStepSlug) {
     if (!eventId) {
@@ -592,20 +372,7 @@ export function EventReviewStepPage() {
     navigate(`${APP_ROUTES.eventWizard.editStep(eventId, step)}?returnUrl=${encodeURIComponent(returnUrl)}`)
   }
 
-  const isNameLoading = Boolean(eventId) && nameQuery.isLoading
-  const isTermsLoading = Boolean(eventId) && termsConditionsQuery.isLoading
-  const isThemeColorLoading = Boolean(eventId) && themeColorQuery.isLoading
-  const isPaymentAccountLoading =
-    (Boolean(eventId) && paymentAccountQuery.isLoading) ||
-    (Boolean(selectedPaymentAccountUniqueId) && paymentAccountsQuery.isLoading)
-  const isTimeZoneLoading =
-    (Boolean(eventId) && timeZoneQuery.isLoading) || (Boolean(selectedTimeZoneId) && timeZonesQuery.isLoading)
-  const isVenueLoading = (Boolean(eventId) && venueQuery.isLoading) || (Boolean(selectedVenueUniqueId) && venueOptionsQuery.isLoading)
-  const isSessionsLoading = Boolean(eventId) && sessionsQuery.isLoading
-  const isDiscountCouponsLoading = Boolean(eventId) && discountCouponsQuery.isLoading
-  const isQuestionsLoading = Boolean(eventId) && questionsQuery.isLoading
-  const isAdvancedSettingsLoading =
-    (Boolean(eventId) && advancedSettingsQuery.isLoading) || visibilityOptionsQuery.isLoading || timeZonesQuery.isLoading
+  const isSummaryLoading = Boolean(eventId) && reviewSummaryQuery.isLoading
 
   return (
     <Stack gap={5}>
@@ -670,7 +437,7 @@ export function EventReviewStepPage() {
             </Badge>
           }
           editLabel="Setup state"
-          isLoading={false}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Name"
@@ -681,14 +448,14 @@ export function EventReviewStepPage() {
           }
           onEdit={() => editStep("name")}
           editLabel="Edit event name"
-          isLoading={isNameLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Terms & Conditions"
           value={<ReviewPill label={getBooleanLabel(hasTermsConditions)} isSuccess={hasTermsConditions} />}
           onEdit={() => editStep("terms-conditions")}
           editLabel="Edit terms & conditions"
-          isLoading={isTermsLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Theme color"
@@ -706,12 +473,12 @@ export function EventReviewStepPage() {
           }
           onEdit={() => editStep("theme-color")}
           editLabel="Edit theme color"
-          isLoading={isThemeColorLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Payment Account"
           value={
-            selectedPaymentAccount ? (
+            reviewSummary?.paymentAccountName ? (
               <Stack gap={2} align="flex-start">
                 <Text fontSize="sm" fontWeight="800" color="gray.900" wordBreak="break-word">
                   {selectedPaymentAccountName}
@@ -729,7 +496,7 @@ export function EventReviewStepPage() {
           }
           onEdit={() => editStep("payment-account")}
           editLabel="Edit payment account"
-          isLoading={isPaymentAccountLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Time zone"
@@ -740,18 +507,18 @@ export function EventReviewStepPage() {
           }
           onEdit={() => editStep("time-zone")}
           editLabel="Edit time zone"
-          isLoading={isTimeZoneLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Venue"
           value={
             <Text fontSize="sm" fontWeight="800" color="gray.900" wordBreak="break-word">
-              {selectedVenue?.name || "Not selected"}
+              {selectedVenue || "Not selected"}
             </Text>
           }
           onEdit={() => editStep("venue")}
           editLabel="Edit venue"
-          isLoading={isVenueLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Sessions"
@@ -775,7 +542,7 @@ export function EventReviewStepPage() {
           }
           onEdit={() => editStep("sessions")}
           editLabel="Edit sessions"
-          isLoading={isSessionsLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Event Window"
@@ -791,7 +558,7 @@ export function EventReviewStepPage() {
           }
           onEdit={() => editStep("date-time")}
           editLabel="Edit event window"
-          isLoading={Boolean(eventId) && dateTimeQuery.isLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Booking Window"
@@ -807,21 +574,21 @@ export function EventReviewStepPage() {
           }
           onEdit={() => editStep("date-time")}
           editLabel="Edit booking window"
-          isLoading={Boolean(eventId) && dateTimeQuery.isLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Discount Coupons"
           value={<ReviewPill label={getBooleanLabel(hasDiscountCoupons)} isSuccess={hasDiscountCoupons} />}
           onEdit={() => editStep("discount-coupon")}
           editLabel="Edit discount coupons"
-          isLoading={isDiscountCouponsLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Questions"
           value={<ReviewPill label={getBooleanLabel(hasQuestions)} isSuccess={hasQuestions} />}
           onEdit={() => editStep("questions")}
           editLabel="Edit questions"
-          isLoading={isQuestionsLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Advanced Settings"
@@ -835,7 +602,7 @@ export function EventReviewStepPage() {
           }
           onEdit={() => editStep("advanced-settings")}
           editLabel="Edit advanced settings"
-          isLoading={isAdvancedSettingsLoading}
+          isLoading={isSummaryLoading}
         />
       </Box>
 
@@ -955,12 +722,6 @@ export function EventReviewStepPage() {
       {summaryError ? (
         <Text fontSize="sm" color="red.500">
           {extractApiError(summaryError)}
-        </Text>
-      ) : null}
-
-      {setupStateMutation.isError ? (
-        <Text fontSize="sm" color="red.500">
-          {extractApiError(setupStateMutation.error)}
         </Text>
       ) : null}
 

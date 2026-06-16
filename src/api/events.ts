@@ -271,12 +271,19 @@ const eventWizardQuestionsInfoSchema = z.object({
 })
 
 const eventWizardSessionItemSchema = z.object({
+  UniqueId: z.string().optional(),
   uniqueId: z.string().min(1),
+  Name: z.string().optional(),
   name: z.string().min(1),
+  SetupState: z.string().optional(),
   setupState: z.string().min(1),
+  StartDate: z.string().nullable().optional(),
   startDate: z.string().nullable().optional(),
+  EndDate: z.string().nullable().optional(),
   endDate: z.string().nullable().optional(),
+  BookingStartDate: z.string().nullable().optional(),
   bookingStartDate: z.string().nullable().optional(),
+  BookingEndDate: z.string().nullable().optional(),
   bookingEndDate: z.string().nullable().optional(),
 })
 
@@ -294,6 +301,47 @@ const eventSetupStateOptionSchema = z.object({
 const eventSetupStateResponseSchema = z.object({
   SetupState: z.string().optional(),
   setupState: z.string().optional(),
+})
+
+const eventReviewSummaryResponseSchema = z.object({
+  Name: z.string().optional(),
+  name: z.string().optional(),
+  TermsConditions: z.string().nullable().optional(),
+  termsConditions: z.string().nullable().optional(),
+  ThemeColor: z.string().nullable().optional(),
+  themeColor: z.string().nullable().optional(),
+  PaymentAccountName: z.string().nullable().optional(),
+  paymentAccountName: z.string().nullable().optional(),
+  PaymentAccountMerchant: z.string().nullable().optional(),
+  paymentAccountMerchant: z.string().nullable().optional(),
+  PaymentAccountCurrency: z.string().nullable().optional(),
+  paymentAccountCurrency: z.string().nullable().optional(),
+  TimeZone: z.string().nullable().optional(),
+  timeZone: z.string().nullable().optional(),
+  VenueName: z.string().nullable().optional(),
+  venueName: z.string().nullable().optional(),
+  Visibility: z.string().optional(),
+  visibility: z.string().optional(),
+  PurchaseTimeLimit: z.number().int().positive().nullable().optional(),
+  purchaseTimeLimit: z.number().int().positive().nullable().optional(),
+  DiscountsEnabled: z.boolean().optional(),
+  discountsEnabled: z.boolean().optional(),
+  HasQuestions: z.boolean().optional(),
+  hasQuestions: z.boolean().optional(),
+  StartDate: z.string().nullable().optional(),
+  startDate: z.string().nullable().optional(),
+  EndDate: z.string().nullable().optional(),
+  endDate: z.string().nullable().optional(),
+  BookingStartDate: z.string().nullable().optional(),
+  bookingStartDate: z.string().nullable().optional(),
+  BookingEndDate: z.string().nullable().optional(),
+  bookingEndDate: z.string().nullable().optional(),
+  SetupState: z.string().optional(),
+  setupState: z.string().optional(),
+  SetupStateOptions: z.array(eventSetupStateOptionSchema).optional(),
+  setupStateOptions: z.array(eventSetupStateOptionSchema).optional(),
+  Sessions: z.array(eventWizardSessionItemSchema).optional(),
+  sessions: z.array(eventWizardSessionItemSchema).optional(),
 })
 
 const eventWizardProgressResponseSchema = z.object({
@@ -676,6 +724,59 @@ export async function fetchEventWizardSetupState(uniqueId: string): Promise<Even
 export async function fetchEventWizardSetupStateOptions(): Promise<EventSetupStateOption[]> {
   const res = await client.get<unknown>(API_ROUTES.eventWizardSetupStateOptions)
   return parseEventSetupStateOptions(res.data)
+}
+
+export interface EventReviewSummaryResponse {
+  name: string
+  termsConditions: string | null
+  themeColor: string | null
+  paymentAccountName: string | null
+  paymentAccountMerchant: string | null
+  paymentAccountCurrency: string | null
+  timeZone: string | null
+  venueName: string | null
+  visibility: string
+  purchaseTimeLimit: number | null
+  discountsEnabled: boolean
+  hasQuestions: boolean
+  startDate: string | null
+  endDate: string | null
+  bookingStartDate: string | null
+  bookingEndDate: string | null
+  setupState: string
+  setupStateOptions: EventSetupStateOption[]
+  sessions: EventWizardSessionItem[]
+}
+
+function parseEventReviewSummary(payload: unknown): EventReviewSummaryResponse {
+  const parsed = eventReviewSummaryResponseSchema.parse(payload)
+
+  return {
+    name: parsed.Name ?? parsed.name ?? "",
+    termsConditions: parsed.TermsConditions ?? parsed.termsConditions ?? null,
+    themeColor: parsed.ThemeColor ?? parsed.themeColor ?? null,
+    paymentAccountName: parsed.PaymentAccountName ?? parsed.paymentAccountName ?? null,
+    paymentAccountMerchant: parsed.PaymentAccountMerchant ?? parsed.paymentAccountMerchant ?? null,
+    paymentAccountCurrency: parsed.PaymentAccountCurrency ?? parsed.paymentAccountCurrency ?? null,
+    timeZone: parsed.TimeZone ?? parsed.timeZone ?? null,
+    venueName: parsed.VenueName ?? parsed.venueName ?? null,
+    visibility: parsed.Visibility ?? parsed.visibility ?? "",
+    purchaseTimeLimit: parsed.PurchaseTimeLimit ?? parsed.purchaseTimeLimit ?? null,
+    discountsEnabled: parsed.DiscountsEnabled ?? parsed.discountsEnabled ?? false,
+    hasQuestions: parsed.HasQuestions ?? parsed.hasQuestions ?? false,
+    startDate: parsed.StartDate ?? parsed.startDate ?? null,
+    endDate: parsed.EndDate ?? parsed.endDate ?? null,
+    bookingStartDate: parsed.BookingStartDate ?? parsed.bookingStartDate ?? null,
+    bookingEndDate: parsed.BookingEndDate ?? parsed.bookingEndDate ?? null,
+    setupState: parsed.SetupState ?? parsed.setupState ?? "",
+    setupStateOptions: parseEventSetupStateOptions(parsed.SetupStateOptions ?? parsed.setupStateOptions ?? []),
+    sessions: z.array(eventWizardSessionItemSchema).parse(parsed.Sessions ?? parsed.sessions ?? []),
+  }
+}
+
+export async function fetchEventWizardReviewSummary(uniqueId: string): Promise<EventReviewSummaryResponse> {
+  const res = await client.get<unknown>(API_ROUTES.eventWizardReviewSummary(uniqueId))
+  return parseEventReviewSummary(res.data)
 }
 
 export async function markEventWizardReadyForReview(uniqueId: string): Promise<EventSetupStateResponse> {

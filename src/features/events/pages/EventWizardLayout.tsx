@@ -1,6 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Box, Button, Field, Flex, Grid, Heading, Skeleton, SkeletonText, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
-import { useQuery } from "@tanstack/react-query"
 import { FormProvider, useForm, useWatch } from "react-hook-form"
 import { Navigate, Outlet, useLocation, useNavigate, useParams } from "react-router-dom"
 import { useEffect, useState } from "react"
@@ -12,12 +11,10 @@ import {
   updateEventWizardDescription,
   updateEventWizardName,
   updateEventWizardPaymentAccount,
-  fetchEventWizardSetupState,
   updateEventWizardTimeZone,
   updateEventWizardTermsConditions,
   updateEventWizardVenue,
   updateEventWizardThemeColor,
-  fetchEventWizardSetupStateOptions,
 } from "@/api/events"
 import { useAuthSession } from "@/hooks/useAuthSession"
 import { auth, sessionDataToUser } from "@/lib/auth"
@@ -26,6 +23,7 @@ import { APP_ROUTES } from "@/utils/routes"
 import { useEventWizardProgress } from "../hooks/useEventWizardProgress"
 import { useEventWizardDraft } from "../hooks/useEventWizardDraft"
 import { useEventWizardResumeValues } from "../hooks/useEventWizardResumeValues"
+import { useEventReviewSummary } from "../hooks/useEventReviewSummary"
 import { buildEventWizardSteps, getEventWizardStepNumber, useCreateEventDraft, useEventWizardNavigation, type EventWizardStep } from "../hooks/useEventWizard"
 import { defaultEventWizardValues, eventWizardFieldGroups, eventWizardSchema, type EventWizardValues } from "../schemas/eventWizard.schemas"
 import { EventWizardStepper } from "../components/EventWizardStepper"
@@ -215,28 +213,6 @@ function EventWizardLayoutContent() {
   const wizardProgressQuery = useEventWizardProgress(eventId)
   const lastCompletedStepNo = eventId ? wizardProgressQuery.data?.stepNo ?? 0 : 0
   const wizardSteps = buildEventWizardSteps(eventId)
-  const setupStateQuery = useQuery({
-    queryKey: ["events", "setup-state", eventId],
-    queryFn: () => {
-      if (!eventId) {
-        throw new Error("Event id is required.")
-      }
-
-      return fetchEventWizardSetupState(eventId)
-    },
-    enabled: Boolean(eventId),
-    retry: false,
-  })
-  const setupStateOptionsQuery = useQuery({
-    queryKey: ["events", "setup-state-options"],
-    queryFn: fetchEventWizardSetupStateOptions,
-    staleTime: 1000 * 60 * 60,
-    retry: false,
-  })
-  const finalSetupState = setupStateOptionsQuery.data?.find((option) => option.isFinal)?.value ?? ""
-  const currentSetupState = setupStateQuery.data?.setupState ?? ""
-  const isReviewComplete =
-    Boolean(eventId) && normalizeSetupState(currentSetupState) === normalizeSetupState(finalSetupState || "ReadyForSale")
   function mapProgressToVisibleStepIndex(stepNo: number) {
     if (stepNo <= 0) {
       return 0
@@ -246,9 +222,24 @@ function EventWizardLayoutContent() {
   }
 
   const resolvedStepIndex = eventId ? mapProgressToVisibleStepIndex(lastCompletedStepNo) : -1
-  const completedStepCount = eventId ? (isReviewComplete ? wizardSteps.length : Math.max(wizardSteps.length - 1, 0)) : 0
   const maxUnlockedStepIndex = eventId ? Math.max(resolvedStepIndex, 0) : 0
   const { activeStepIndex, activeStep, goToStep, goBack, goNext, isFirstStep, isLastStep } = useEventWizardNavigation(maxUnlockedStepIndex)
+  const isReviewStep = activeStep.slug === "review"
+  const reviewSummaryQuery = useEventReviewSummary(eventId)
+  const reviewSummary = reviewSummaryQuery.data
+  const setupStateOptions = reviewSummary?.setupStateOptions ?? []
+  const finalSetupState = setupStateOptions.find((option) => option.isFinal)?.value ?? ""
+  const currentSetupState = reviewSummary?.setupState ?? ""
+  const isReviewComplete =
+    Boolean(eventId) && normalizeSetupState(currentSetupState) === normalizeSetupState(finalSetupState || "ReadyForSale")
+  const hasReachedReviewStep = lastCompletedStepNo >= Math.max(wizardSteps.length - 1, 0)
+  const completedStepCount = eventId
+    ? hasReachedReviewStep
+      ? isReviewComplete
+        ? wizardSteps.length
+        : Math.max(wizardSteps.length - 1, 0)
+      : Math.max(lastCompletedStepNo, 0)
+    : 0
   const wizardDraftQuery = useEventWizardDraft(eventId, activeStep.slug)
   const resumeValuesQuery = useEventWizardResumeValues(eventId, lastCompletedStepNo)
   const { runPrimaryAction, runSkipAction, isPrimaryActionReady } = useEventWizardActions()
@@ -306,7 +297,6 @@ function EventWizardLayoutContent() {
   const paymentAccountId = useWatch({ control: form.control, name: "paymentAccountId" })
   const paymentMethods = useWatch({ control: form.control, name: "paymentMethods" })
   const venueUniqueId = useWatch({ control: form.control, name: "venueUniqueId" }) ?? ""
-  const isReviewStep = activeStep.slug === "review"
   const isOptionalStep =
     activeStep.slug === "description" ||
     activeStep.slug === "terms-conditions" ||
