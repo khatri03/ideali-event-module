@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Badge, Box, Flex, Menu, Portal, Text } from "@chakra-ui/react"
+import { Badge, Box, Flex, Menu, Portal, Text, useBreakpointValue } from "@chakra-ui/react"
 import { CalendarDays, Check, ChevronRight, MapPin, MoreHorizontal, PencilLine, Users } from "lucide-react"
 import { format } from "date-fns"
 import { useNavigate } from "react-router-dom"
@@ -37,6 +37,7 @@ interface OrganizerEventCardProps {
 export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
   const navigate = useNavigate()
   const [isStatusPanelOpen, setIsStatusPanelOpen] = useState(false)
+  const statusMenuPlacement = useBreakpointValue({ base: "bottom-start", sm: "right-start" }) ?? "right-start"
   const totalTickets = event.totalAvailableTickets + event.ticketsSold
   const soldPct = totalTickets > 0 ? Math.round((event.ticketsSold / totalTickets) * 100) : 0
   const statusLabel = formatSetupState(event.setupState, event.isCancelled)
@@ -60,7 +61,6 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
       boxShadow="card"
       border="1px solid"
       borderColor="border.subtle"
-      _hover={{ boxShadow: "cardHover", transform: "translateY(-2px)" }}
       transition="all 0.2s ease"
     >
       <Box
@@ -150,80 +150,83 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
                   {canEdit && canShowStatusActions ? <Menu.Separator borderColor="gray.100" _dark={{ borderColor: "whiteAlpha.100" }} mx={1} my={1} /> : null}
 
                   {canShowStatusActions ? (
-                    <Box
-                      position="relative"
-                      px={1}
+                    <Menu.Root
+                      open={isStatusPanelOpen}
+                      onOpenChange={(details) => setIsStatusPanelOpen(details.open)}
+                      positioning={{ placement: statusMenuPlacement, gutter: 8 }}
                     >
-                      <Box
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="space-between"
-                        w="full"
-                        borderRadius="10px"
-                        fontSize="sm"
-                        fontWeight="600"
-                        color="gray.700"
-                        _dark={{ color: "gray.200" }}
-                        _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
-                        px={3}
-                        py={2}
-                        cursor="pointer"
-                        onClick={() => setIsStatusPanelOpen((current) => !current)}
-                      >
-                        <Text as="span">Status</Text>
-                        <ChevronRight size={14} />
-                      </Box>
-
-                      {isStatusPanelOpen ? (
+                      <Menu.Trigger asChild>
                         <Box
-                          position="absolute"
-                          top="0"
-                          left="calc(100% + 8px)"
-                          minW="12rem"
-                          bg="white"
-                          _dark={{ bg: "navy.800" }}
-                          border="1px solid"
-                          borderColor="gray.200"
-                          boxShadow="0 16px 40px rgba(15, 23, 42, 0.12)"
-                          borderRadius="16px"
-                          p={1.5}
-                          zIndex={1}
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="space-between"
+                          w="full"
+                          borderRadius="10px"
+                          fontSize="sm"
+                          fontWeight="600"
+                          color="gray.700"
+                          _dark={{ color: "gray.200" }}
+                          _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
+                          px={3}
+                          py={2}
+                          cursor="pointer"
                         >
-                          <Box
-                            display="flex"
-                            alignItems="center"
-                            justifyContent="space-between"
-                            px={3}
-                            py={2}
-                            borderRadius="10px"
-                            color="gray.700"
-                            _dark={{ color: "gray.200" }}
-                            _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
-                          >
-                            <Text fontSize="sm" fontWeight="600">
-                              Online
-                            </Text>
-                            {isOnline ? <Check size={14} /> : null}
-                          </Box>
-                          <Box
-                            display="flex"
-                            alignItems="center"
-                            justifyContent="space-between"
-                            px={3}
-                            py={2}
-                            borderRadius="10px"
-                            color="gray.700"
-                            _dark={{ color: "gray.200" }}
-                            _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
-                          >
-                            <Text fontSize="sm" fontWeight="600">
-                              Offline
-                            </Text>
-                            {isOffline ? <Check size={14} /> : null}
-                          </Box>
+                          <Text as="span">Status</Text>
+                          <ChevronRight size={14} />
                         </Box>
-                      ) : null}
-                    </Box>
+                      </Menu.Trigger>
+                      <Portal>
+                        <Menu.Positioner>
+                          <Menu.Content
+                            minW={{ base: "12rem", sm: "11rem" }}
+                            borderRadius="16px"
+                            border="1px solid"
+                            borderColor="gray.200"
+                            boxShadow="0 16px 40px rgba(15, 23, 42, 0.12)"
+                            p={1.5}
+                            bg="white"
+                            _dark={{ bg: "navy.800", borderColor: "whiteAlpha.200" }}
+                          >
+                            <Menu.Item
+                              value="status-online"
+                              borderRadius="10px"
+                              fontSize="sm"
+                              fontWeight="600"
+                              color="gray.700"
+                              _dark={{ color: "gray.200" }}
+                              _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
+                              px={3}
+                              py={2}
+                              gap={2.5}
+                              disabled={!isOnline && !isOffline}
+                            >
+                              <Text as="span" flex="1" textAlign="left">
+                                Online
+                              </Text>
+                              {isOnline ? <Check size={14} /> : null}
+                            </Menu.Item>
+                            <Menu.Item
+                              value="status-offline"
+                              borderRadius="10px"
+                              fontSize="sm"
+                              fontWeight="600"
+                              color="gray.700"
+                              _dark={{ color: "gray.200" }}
+                              _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
+                              px={3}
+                              py={2}
+                              gap={2.5}
+                              disabled={!isOnline && !isOffline}
+                            >
+                              <Text as="span" flex="1" textAlign="left">
+                                Offline
+                              </Text>
+                              {isOffline ? <Check size={14} /> : null}
+                            </Menu.Item>
+                          </Menu.Content>
+                        </Menu.Positioner>
+                      </Portal>
+                    </Menu.Root>
                   ) : null}
                 </Menu.Content>
               </Menu.Positioner>

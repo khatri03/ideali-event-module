@@ -1,4 +1,5 @@
-import { Box, Flex, Skeleton, SkeletonText } from "@chakra-ui/react"
+import { Box, Drawer, Flex, Skeleton, SkeletonText, Portal } from "@chakra-ui/react"
+import { useState } from "react"
 import { Navigate, Outlet } from "react-router-dom"
 import { Sidebar } from "./Sidebar"
 import { TopBar } from "./TopBar"
@@ -35,6 +36,7 @@ function AppLayoutSkeleton() {
 }
 
 export function AppLayout() {
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
   const sessionQuery = useAuthSession()
   const currentUser = auth.getUser() ?? (sessionQuery.data ? sessionDataToUser(sessionQuery.data) : null)
 
@@ -47,14 +49,32 @@ export function AppLayout() {
   }
 
   return (
-    <Flex h="100vh" overflow="hidden" bg="app.bg">
-      <Sidebar />
-      <Flex flex={1} direction="column" overflow="hidden">
-        <TopBar />
-        <Box flex={1} overflowY="auto" p={6}>
+    <Flex minH="100dvh" overflow="hidden" bg="app.bg">
+      <Box display={{ base: "none", lg: "block" }}>
+        <Sidebar />
+      </Box>
+      <Flex flex={1} direction="column" overflow="hidden" minW={0}>
+        <TopBar onOpenMobileNav={() => setIsMobileNavOpen(true)} />
+        <Box flex={1} overflowY="auto" p={{ base: 4, md: 6 }} minW={0}>
           <Outlet />
         </Box>
       </Flex>
+
+      <Drawer.Root
+        open={isMobileNavOpen}
+        onOpenChange={(details) => setIsMobileNavOpen(details.open)}
+        placement="start"
+        size="full"
+      >
+        <Portal>
+          <Drawer.Backdrop />
+          <Drawer.Positioner>
+            <Drawer.Content p={0} border="none" bg="transparent" maxW="full">
+              <Sidebar variant="mobile" onNavigate={() => setIsMobileNavOpen(false)} />
+            </Drawer.Content>
+          </Drawer.Positioner>
+        </Portal>
+      </Drawer.Root>
     </Flex>
   )
 }

@@ -27,6 +27,11 @@ interface NavItem {
   badge?: string
 }
 
+interface SidebarProps {
+  variant?: "desktop" | "mobile"
+  onNavigate?: () => void
+}
+
 const mainNav: NavItem[] = [
   { label: "Dashboard", icon: <LayoutDashboard size={17} />, path: APP_ROUTES.dashboard },
   { label: "Events", icon: <Zap size={17} />, path: APP_ROUTES.events, badge: "12" },
@@ -44,7 +49,7 @@ const systemNav: NavItem[] = [
   { label: "Help Center", icon: <HelpCircle size={17} />, path: APP_ROUTES.help },
 ]
 
-function NavSection({ label, items }: { label: string; items: NavItem[] }) {
+function NavSection({ label, items, onNavigate }: { label: string; items: NavItem[]; onNavigate?: () => void }) {
   const { pathname } = useLocation()
 
   return (
@@ -64,7 +69,7 @@ function NavSection({ label, items }: { label: string; items: NavItem[] }) {
         {items.map((item) => {
           const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`)
           return (
-            <NavLink key={item.path} to={item.path} style={{ textDecoration: "none" }}>
+            <NavLink key={item.path} to={item.path} style={{ textDecoration: "none" }} onClick={onNavigate}>
               <Flex
                 align="center"
                 gap={3}
@@ -125,9 +130,10 @@ function NavSection({ label, items }: { label: string; items: NavItem[] }) {
   )
 }
 
-export function Sidebar() {
+export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
   const navigate = useNavigate()
   const currentUser = auth.getUser() ?? mockUser
+  const isMobile = variant === "mobile"
 
   async function handleSignOut() {
     try {
@@ -141,14 +147,14 @@ export function Sidebar() {
 
   return (
     <Box
-      w={SIDEBAR_W}
-      minW={SIDEBAR_W}
-      h="100vh"
+      w={isMobile ? "full" : SIDEBAR_W}
+      minW={isMobile ? "full" : SIDEBAR_W}
+      h={isMobile ? "full" : "100vh"}
       display="flex"
       flexDir="column"
       style={{ background: GRADIENT }}
-      position="sticky"
-      top={0}
+      position={isMobile ? "relative" : "sticky"}
+      top={isMobile ? undefined : 0}
       overflowY="auto"
       zIndex={10}
     >
@@ -205,9 +211,9 @@ export function Sidebar() {
 
       {/* Nav */}
       <Box flex={1} px={2} position="relative" zIndex={1}>
-        <NavSection label="Main" items={mainNav} />
-        <NavSection label="Management" items={managementNav} />
-        <NavSection label="System" items={systemNav} />
+        <NavSection label="Main" items={mainNav} onNavigate={onNavigate} />
+        <NavSection label="Management" items={managementNav} onNavigate={onNavigate} />
+        <NavSection label="System" items={systemNav} onNavigate={onNavigate} />
       </Box>
 
       {/* User Profile */}
@@ -252,7 +258,10 @@ export function Sidebar() {
             p={1}
             borderRadius="6px"
             aria-label="Sign out"
-            onClick={handleSignOut}
+            onClick={async () => {
+              await handleSignOut()
+              onNavigate?.()
+            }}
           >
             <LogOut size={15} />
           </Box>

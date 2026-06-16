@@ -1,5 +1,5 @@
 import { Box, Flex, Text, Input, InputGroup, IconButton, Badge, Menu, Portal } from "@chakra-ui/react"
-import { Search, Bell, Settings, LogOut, User } from "lucide-react"
+import { Menu as MenuIcon, Search, Bell, Settings, LogOut, User } from "lucide-react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { ColorModeToggle } from "../common/ColorModeToggle"
 import { auth } from "@/lib/auth"
@@ -18,7 +18,11 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   [APP_ROUTES.help]: { title: "Help Center", subtitle: "Documentation and support" },
 }
 
-export function TopBar() {
+interface TopBarProps {
+  onOpenMobileNav?: () => void
+}
+
+export function TopBar({ onOpenMobileNav }: TopBarProps) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const user = auth.getUser() ?? mockUser
@@ -40,8 +44,8 @@ export function TopBar() {
   return (
     <Flex
       as="header"
-      h="72px"
-      px={6}
+      h={{ base: "64px", md: "72px" }}
+      px={{ base: 4, md: 6 }}
       align="center"
       justify="space-between"
       bg="topbar.bg"
@@ -53,23 +57,39 @@ export function TopBar() {
       zIndex={9}
     >
       {/* Page title */}
-      <Box>
-        <Text fontSize="xl" fontWeight="800" color="text.primary" letterSpacing="-0.02em" lineHeight={1.1}>
+      <Flex align="center" gap={3} minW={0}>
+        <IconButton
+          aria-label="Open navigation"
+          variant="ghost"
+          size="sm"
+          borderRadius="12px"
+          color="gray.500"
+          display={{ base: "inline-flex", lg: "none" }}
+          _hover={{ bg: "gray.100", _dark: { bg: "navy.700" }, color: "brand.500" }}
+          onClick={onOpenMobileNav}
+        >
+          <MenuIcon size={18} />
+        </IconButton>
+
+        <Box minW={0}>
+          <Text fontSize={{ base: "lg", md: "xl" }} fontWeight="800" color="text.primary" letterSpacing="-0.02em" lineHeight={1.1}>
           {pageInfo.title}
-        </Text>
-        {pageInfo.subtitle && (
-          <Text fontSize="xs" color="text.secondary" fontWeight="500" mt={0.5}>
-            {pageInfo.subtitle}
           </Text>
-        )}
-      </Box>
+          {pageInfo.subtitle && (
+            <Text fontSize="xs" color="text.secondary" fontWeight="500" mt={0.5} display={{ base: "none", sm: "block" }}>
+            {pageInfo.subtitle}
+            </Text>
+          )}
+        </Box>
+      </Flex>
 
       {/* Search + Actions */}
-      <Flex align="center" gap={2}>
+      <Flex align="center" gap={{ base: 1, md: 2 }} minW={0}>
         {/* Search */}
         <InputGroup
           startElement={<Search size={15} color="#718096" />}
           maxW="260px"
+          display={{ base: "none", md: "flex" }}
         >
           <Input
             placeholder="Search events..."
@@ -92,6 +112,7 @@ export function TopBar() {
             size="sm"
             borderRadius="12px"
             color="gray.500"
+            display={{ base: "none", md: "inline-flex" }}
             _hover={{ bg: "gray.100", _dark: { bg: "navy.700" }, color: "brand.500" }}
           >
             <Bell size={18} />
@@ -117,6 +138,7 @@ export function TopBar() {
           size="sm"
           borderRadius="12px"
           color="gray.500"
+          display={{ base: "none", md: "inline-flex" }}
           _hover={{ bg: "gray.100", _dark: { bg: "navy.700" }, color: "brand.500" }}
         >
           <Settings size={18} />
