@@ -1,7 +1,10 @@
-import { Box, Badge, Flex, Text } from "@chakra-ui/react"
-import { CalendarDays, MapPin, Users } from "lucide-react"
+import { useState } from "react"
+import { Badge, Box, Flex, Menu, Portal, Text } from "@chakra-ui/react"
+import { CalendarDays, Check, ChevronRight, MapPin, MoreHorizontal, PencilLine, Users } from "lucide-react"
 import { format } from "date-fns"
+import { useNavigate } from "react-router-dom"
 import type { OrganizerEventListItem } from "@/api/events"
+import { APP_ROUTES } from "@/utils/routes"
 
 const SETUP_STATE_LABELS: Record<string, string> = {
   InProgress: "In Progress",
@@ -23,17 +26,31 @@ function formatSetupState(setupState: string, isCancelled: boolean) {
   return SETUP_STATE_LABELS[setupState] ?? setupState.replace(/([a-z])([A-Z])/g, "$1 $2")
 }
 
+function normalizeSetupStateToken(value: string) {
+  return value.replace(/[^a-z]/gi, "").toLowerCase()
+}
+
 interface OrganizerEventCardProps {
   event: OrganizerEventListItem
 }
 
 export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
+  const navigate = useNavigate()
+  const [isStatusPanelOpen, setIsStatusPanelOpen] = useState(false)
   const totalTickets = event.totalAvailableTickets + event.ticketsSold
   const soldPct = totalTickets > 0 ? Math.round((event.ticketsSold / totalTickets) * 100) : 0
   const statusLabel = formatSetupState(event.setupState, event.isCancelled)
   const statusColor = event.isCancelled ? "red" : SETUP_STATE_COLORS[event.setupState] ?? "gray"
   const startDate = event.startDate ? format(new Date(event.startDate), "MMM d, yyyy") : "Not set"
   const endDate = event.endDate ? format(new Date(event.endDate), "MMM d, yyyy") : "Not set"
+  const normalizedSetupState = normalizeSetupStateToken(event.setupState)
+  const canEdit = !event.isCancelled
+  const canShowStatusActions =
+    normalizedSetupState === "readyforreview" ||
+    normalizedSetupState === "readyforsale" ||
+    normalizedSetupState === "readytoreview"
+  const isOnline = normalizedSetupState === "readyforsale"
+  const isOffline = normalizedSetupState === "readyforreview" || normalizedSetupState === "readytoreview"
 
   return (
     <Box
@@ -65,6 +82,153 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
           >
             {statusLabel}
           </Badge>
+
+          <Menu.Root
+            positioning={{ placement: "bottom-end" }}
+            onOpenChange={(details) => {
+              if (!details.open) {
+                setIsStatusPanelOpen(false)
+              }
+            }}
+          >
+            <Menu.Trigger asChild>
+              <Box
+                as="button"
+                type="button"
+                aria-label="Event actions"
+                disabled={!canEdit && !canShowStatusActions}
+                w="9"
+                h="9"
+                minW="9"
+                minH="9"
+                display="inline-flex"
+                alignItems="center"
+                justifyContent="center"
+                border="1px solid"
+                borderColor="border.subtle"
+                borderRadius="full"
+                bg="white"
+                color="gray.500"
+                p={0}
+                _hover={{ bg: "gray.50", _dark: { bg: "navy.700" }, color: "brand.500" }}
+                _disabled={{ opacity: 0.5, cursor: "not-allowed" }}
+              >
+                <MoreHorizontal size={14} />
+              </Box>
+            </Menu.Trigger>
+            <Portal>
+              <Menu.Positioner>
+                <Menu.Content
+                  minW="14rem"
+                  borderRadius="16px"
+                  border="1px solid"
+                  borderColor="gray.200"
+                  boxShadow="0 16px 40px rgba(15, 23, 42, 0.12)"
+                  p={1.5}
+                  bg="white"
+                  _dark={{ bg: "navy.800", borderColor: "whiteAlpha.200" }}
+                >
+                  {canEdit ? (
+                    <Menu.Item
+                      value="edit"
+                      borderRadius="10px"
+                      fontSize="sm"
+                      fontWeight="600"
+                      color="gray.700"
+                      _dark={{ color: "gray.200" }}
+                      _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
+                      px={3}
+                      py={2}
+                      gap={2.5}
+                      onClick={() => navigate(APP_ROUTES.eventWizard.edit(event.uniqueId))}
+                    >
+                      <PencilLine size={14} />
+                      Edit
+                    </Menu.Item>
+                  ) : null}
+
+                  {canEdit && canShowStatusActions ? <Menu.Separator borderColor="gray.100" _dark={{ borderColor: "whiteAlpha.100" }} mx={1} my={1} /> : null}
+
+                  {canShowStatusActions ? (
+                    <Box
+                      position="relative"
+                      px={1}
+                    >
+                      <Box
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        w="full"
+                        borderRadius="10px"
+                        fontSize="sm"
+                        fontWeight="600"
+                        color="gray.700"
+                        _dark={{ color: "gray.200" }}
+                        _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
+                        px={3}
+                        py={2}
+                        cursor="pointer"
+                        onClick={() => setIsStatusPanelOpen((current) => !current)}
+                      >
+                        <Text as="span">Status</Text>
+                        <ChevronRight size={14} />
+                      </Box>
+
+                      {isStatusPanelOpen ? (
+                        <Box
+                          position="absolute"
+                          top="0"
+                          left="calc(100% + 8px)"
+                          minW="12rem"
+                          bg="white"
+                          _dark={{ bg: "navy.800" }}
+                          border="1px solid"
+                          borderColor="gray.200"
+                          boxShadow="0 16px 40px rgba(15, 23, 42, 0.12)"
+                          borderRadius="16px"
+                          p={1.5}
+                          zIndex={1}
+                        >
+                          <Box
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="space-between"
+                            px={3}
+                            py={2}
+                            borderRadius="10px"
+                            color="gray.700"
+                            _dark={{ color: "gray.200" }}
+                            _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
+                          >
+                            <Text fontSize="sm" fontWeight="600">
+                              Online
+                            </Text>
+                            {isOnline ? <Check size={14} /> : null}
+                          </Box>
+                          <Box
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="space-between"
+                            px={3}
+                            py={2}
+                            borderRadius="10px"
+                            color="gray.700"
+                            _dark={{ color: "gray.200" }}
+                            _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
+                          >
+                            <Text fontSize="sm" fontWeight="600">
+                              Offline
+                            </Text>
+                            {isOffline ? <Check size={14} /> : null}
+                          </Box>
+                        </Box>
+                      ) : null}
+                    </Box>
+                  ) : null}
+                </Menu.Content>
+              </Menu.Positioner>
+            </Portal>
+          </Menu.Root>
         </Flex>
 
         <Text
