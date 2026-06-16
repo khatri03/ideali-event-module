@@ -57,6 +57,8 @@ const sessionVenueSchema = z.object({
 const sessionMembershipAccessItemSchema = z.object({
   MembershipTypeUniqueId: z.string().optional(),
   membershipTypeUniqueId: z.string().optional(),
+  MembershipTypeName: z.string().optional(),
+  membershipTypeName: z.string().optional(),
   DiscountType: z.enum(["FixedAmount", "Percentage"]).nullable().optional(),
   discountType: z.enum(["FixedAmount", "Percentage"]).nullable().optional(),
   DiscountValue: z.union([z.number(), z.string()]).nullable().optional(),
@@ -275,6 +277,37 @@ const sessionQuestionsInfoSchema = z.object({
   stepNo: z.number().int().optional(),
 })
 
+const sessionReviewSummarySchema = z.object({
+  Name: z.string().optional(),
+  name: z.string().optional(),
+  EventName: z.string().nullable().optional(),
+  eventName: z.string().nullable().optional(),
+  VenueName: z.string().nullable().optional(),
+  venueName: z.string().nullable().optional(),
+  Genres: z.array(sessionGenreSchema).optional(),
+  genres: z.array(sessionGenreSchema).optional(),
+  MembershipAccess: sessionMembershipAccessSchema.optional(),
+  membershipAccess: sessionMembershipAccessSchema.optional(),
+  SeatSelection: sessionSeatSelectionSchema.optional(),
+  seatSelection: sessionSeatSelectionSchema.optional(),
+  Booking: sessionBookingSchema.optional(),
+  booking: sessionBookingSchema.optional(),
+  Duration: sessionDurationSchema.optional(),
+  duration: sessionDurationSchema.optional(),
+  Questions: sessionQuestionsInfoSchema.optional(),
+  questions: sessionQuestionsInfoSchema.optional(),
+  ETicketing: sessionETicketingSchema.optional(),
+  eTicketing: sessionETicketingSchema.optional(),
+  ScheduleCount: z.number().int().optional(),
+  scheduleCount: z.number().int().optional(),
+  TicketCount: z.number().int().optional(),
+  ticketCount: z.number().int().optional(),
+  SetupState: z.string().optional(),
+  setupState: z.string().optional(),
+  SetupStateOptions: z.array(z.lazy(() => sessionSetupStateOptionSchema)).optional(),
+  setupStateOptions: z.array(z.lazy(() => sessionSetupStateOptionSchema)).optional(),
+})
+
 function readResponseData(payload: unknown): unknown {
   if (!payload || typeof payload !== "object") {
     return payload
@@ -338,6 +371,7 @@ export type SessionWizardMembershipDiscountType = "FixedAmount" | "Percentage"
 
 export interface SessionWizardMembershipAccessItem {
   membershipTypeUniqueId: string
+  membershipTypeName?: string
   discountType: SessionWizardMembershipDiscountType | null
   discountValue: number | null
   maxDiscountAmount: number | null
@@ -482,6 +516,23 @@ export interface SessionWizardSetupStateRequest {
   setupState: string
 }
 
+export interface SessionReviewSummary {
+  name: string
+  eventName: string | null
+  venueName: string | null
+  genres: SessionWizardGenre[]
+  membershipAccess: SessionWizardMembershipAccess
+  seatSelection: SessionWizardSeatSelection
+  booking: SessionWizardBooking
+  duration: SessionWizardDuration
+  questions: SessionWizardQuestionsInfo
+  eTicketing: SessionWizardETicketing
+  scheduleCount: number
+  ticketCount: number
+  setupState: string
+  setupStateOptions: SessionWizardSetupStateOption[]
+}
+
 export interface SessionWizardETicketing {
   enableDigitalTicket: boolean
   requiresAttendeeInfo: boolean
@@ -614,6 +665,43 @@ function serializeQuestionForRequest(question: SessionWizardQuestion): Record<st
   }
 }
 
+function mapSessionQuestionsInfo(
+  questions: z.infer<typeof sessionQuestionsInfoSchema>,
+  stepNoFallback: number,
+): SessionWizardQuestionsInfo {
+  return {
+    uniqueId: questions.UniqueId ?? questions.uniqueId ?? "",
+    customFormUniqueIds: questions.CustomFormUniqueIds ?? questions.customFormUniqueIds ?? [],
+    customQuestions: (questions.CustomQuestions ?? questions.customQuestions ?? []).map((question) => ({
+      id: question.UniqueId ?? question.uniqueId ?? "",
+      controlId: question.ControlId ?? question.controlId ?? 0,
+      controlName: question.ControlName ?? question.controlName ?? "",
+      controlType: question.ControlType ?? question.controlType ?? "",
+      iconClass: question.IconClass ?? question.iconClass ?? "",
+      label: question.Label ?? question.label ?? "",
+      placeHolder: question.PlaceHolder ?? question.placeHolder ?? null,
+      tooltip: question.Tooltip ?? question.tooltip ?? null,
+      required: question.Required ?? question.required ?? false,
+      requiredMessage: question.RequiredMessage ?? question.requiredMessage ?? null,
+      acceptedFileTypes: (question.AcceptedFileTypes ?? question.acceptedFileTypes ?? "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0),
+      minLength: question.MinLength ?? question.minLength ?? null,
+      maxLength: question.MaxLength ?? question.maxLength ?? null,
+      defaultValue: question.DefaultValue ?? question.defaultValue ?? null,
+      displayOrder: question.DisplayOrder ?? question.displayOrder ?? 0,
+      options: (question.Options ?? question.options ?? []).map((option) => ({
+        id: option.UniqueId ?? option.uniqueId ?? "",
+        displayText: option.DisplayText ?? option.displayText ?? "",
+        value: option.Value ?? option.value ?? "",
+        isDefault: option.IsDefault ?? option.isDefault ?? false,
+      })),
+    })),
+    stepNo: questions.StepNo ?? questions.stepNo ?? stepNoFallback,
+  }
+}
+
 export async function fetchSessionWizardName(uniqueId: string): Promise<SessionWizardName> {
   const res = await client.get<unknown>(API_ROUTES.sessionWizardName(uniqueId))
   const responseData = parseServicePayload(res.data)
@@ -712,37 +800,7 @@ export async function fetchSessionWizardQuestions(uniqueId: string): Promise<Ses
   const responseData = parseServicePayload(res.data)
   const questions = sessionQuestionsInfoSchema.parse(responseData)
 
-  return {
-    uniqueId: questions.UniqueId ?? questions.uniqueId ?? "",
-    customFormUniqueIds: questions.CustomFormUniqueIds ?? questions.customFormUniqueIds ?? [],
-    customQuestions: (questions.CustomQuestions ?? questions.customQuestions ?? []).map((question) => ({
-      id: question.UniqueId ?? question.uniqueId ?? "",
-      controlId: question.ControlId ?? question.controlId ?? 0,
-      controlName: question.ControlName ?? question.controlName ?? "",
-      controlType: question.ControlType ?? question.controlType ?? "",
-      iconClass: question.IconClass ?? question.iconClass ?? "",
-      label: question.Label ?? question.label ?? "",
-      placeHolder: question.PlaceHolder ?? question.placeHolder ?? null,
-      tooltip: question.Tooltip ?? question.tooltip ?? null,
-      required: question.Required ?? question.required ?? false,
-      requiredMessage: question.RequiredMessage ?? question.requiredMessage ?? null,
-      acceptedFileTypes: (question.AcceptedFileTypes ?? question.acceptedFileTypes ?? "")
-        .split(",")
-        .map((item) => item.trim())
-        .filter((item) => item.length > 0),
-      minLength: question.MinLength ?? question.minLength ?? null,
-      maxLength: question.MaxLength ?? question.maxLength ?? null,
-      defaultValue: question.DefaultValue ?? question.defaultValue ?? null,
-      displayOrder: question.DisplayOrder ?? question.displayOrder ?? 0,
-      options: (question.Options ?? question.options ?? []).map((option) => ({
-        id: option.UniqueId ?? option.uniqueId ?? "",
-        displayText: option.DisplayText ?? option.displayText ?? "",
-        value: option.Value ?? option.value ?? "",
-        isDefault: option.IsDefault ?? option.isDefault ?? false,
-      })),
-    })),
-    stepNo: questions.StepNo ?? questions.stepNo ?? 12,
-  }
+  return mapSessionQuestionsInfo(questions, 12)
 }
 
 export async function updateSessionWizardQuestions(
@@ -761,37 +819,7 @@ export async function updateSessionWizardQuestions(
   const responseData = parseServicePayload(res.data)
   const questions = sessionQuestionsInfoSchema.parse(responseData)
 
-  return {
-    uniqueId: questions.UniqueId ?? questions.uniqueId ?? "",
-    customFormUniqueIds: questions.CustomFormUniqueIds ?? questions.customFormUniqueIds ?? [],
-    customQuestions: (questions.CustomQuestions ?? questions.customQuestions ?? []).map((question) => ({
-      id: question.UniqueId ?? question.uniqueId ?? "",
-      controlId: question.ControlId ?? question.controlId ?? 0,
-      controlName: question.ControlName ?? question.controlName ?? "",
-      controlType: question.ControlType ?? question.controlType ?? "",
-      iconClass: question.IconClass ?? question.iconClass ?? "",
-      label: question.Label ?? question.label ?? "",
-      placeHolder: question.PlaceHolder ?? question.placeHolder ?? null,
-      tooltip: question.Tooltip ?? question.tooltip ?? null,
-      required: question.Required ?? question.required ?? false,
-      requiredMessage: question.RequiredMessage ?? question.requiredMessage ?? null,
-      acceptedFileTypes: (question.AcceptedFileTypes ?? question.acceptedFileTypes ?? "")
-        .split(",")
-        .map((item) => item.trim())
-        .filter((item) => item.length > 0),
-      minLength: question.MinLength ?? question.minLength ?? null,
-      maxLength: question.MaxLength ?? question.maxLength ?? null,
-      defaultValue: question.DefaultValue ?? question.defaultValue ?? null,
-      displayOrder: question.DisplayOrder ?? question.displayOrder ?? 0,
-      options: (question.Options ?? question.options ?? []).map((option) => ({
-        id: option.UniqueId ?? option.uniqueId ?? "",
-        displayText: option.DisplayText ?? option.displayText ?? "",
-        value: option.Value ?? option.value ?? "",
-        isDefault: option.IsDefault ?? option.isDefault ?? false,
-      })),
-    })),
-    stepNo: questions.StepNo ?? questions.stepNo ?? stepNo,
-  }
+  return mapSessionQuestionsInfo(questions, stepNo)
 }
 
 export async function fetchSessionWizardGenres(uniqueId: string): Promise<SessionWizardGenre[]> {
@@ -927,6 +955,7 @@ export async function fetchSessionWizardMembershipAccess(uniqueId: string): Prom
     memberships: memberships
       .map((item) => ({
         membershipTypeUniqueId: item.MembershipTypeUniqueId ?? item.membershipTypeUniqueId ?? "",
+        membershipTypeName: item.MembershipTypeName ?? item.membershipTypeName ?? "",
         discountType: item.DiscountType ?? item.discountType ?? null,
         discountValue: normalizeNullableNumber(item.DiscountValue ?? item.discountValue),
         maxDiscountAmount: normalizeNullableNumber(item.MaxDiscountAmount ?? item.maxDiscountAmount),
@@ -952,6 +981,7 @@ export async function updateSessionWizardMembershipAccess(
     memberships: memberships
       .map((item) => ({
         membershipTypeUniqueId: item.MembershipTypeUniqueId ?? item.membershipTypeUniqueId ?? "",
+        membershipTypeName: item.MembershipTypeName ?? item.membershipTypeName ?? "",
         discountType: item.DiscountType ?? item.discountType ?? null,
         discountValue: normalizeNullableNumber(item.DiscountValue ?? item.discountValue),
         maxDiscountAmount: normalizeNullableNumber(item.MaxDiscountAmount ?? item.maxDiscountAmount),
@@ -1108,12 +1138,83 @@ export async function fetchSessionWizardSetupStateOptions(): Promise<SessionWiza
   const responseData = parseServicePayload(res.data)
   const setupStateOptions = z.array(sessionSetupStateOptionSchema).parse(responseData)
 
+  return parseSessionSetupStateOptions(setupStateOptions)
+}
+
+function parseSessionSetupStateOptions(
+  setupStateOptions: z.infer<typeof sessionSetupStateOptionSchema>[],
+): SessionWizardSetupStateOption[] {
   return setupStateOptions.map((option) => ({
     value: option.Value ?? option.value ?? "",
     label: option.Label ?? option.label ?? "",
     isSelectable: option.IsSelectable ?? option.isSelectable ?? false,
     isFinal: option.IsFinal ?? option.isFinal ?? false,
   }))
+}
+
+export async function fetchSessionWizardReviewSummary(uniqueId: string): Promise<SessionReviewSummary> {
+  const res = await client.get<unknown>(API_ROUTES.sessionWizardReviewSummary(uniqueId))
+  const responseData = parseServicePayload(res.data)
+  const summary = sessionReviewSummarySchema.parse(responseData)
+
+  const genres = (summary.Genres ?? summary.genres ?? []).map((genre) => ({
+    uniqueId: genre.UniqueId ?? genre.uniqueId ?? "",
+    name: genre.Name ?? genre.name ?? "",
+    isSystem: genre.IsSystem ?? genre.isSystem ?? false,
+    isSelected: genre.IsSelected ?? genre.isSelected ?? false,
+  }))
+
+  const membershipAccessItems = (summary.MembershipAccess?.Memberships ?? summary.MembershipAccess?.memberships ?? []).map(
+    (item) => ({
+      membershipTypeUniqueId: item.MembershipTypeUniqueId ?? item.membershipTypeUniqueId ?? "",
+      membershipTypeName: item.MembershipTypeName ?? item.membershipTypeName ?? "",
+      discountType: item.DiscountType ?? item.discountType ?? null,
+      discountValue: normalizeNullableNumber(item.DiscountValue ?? item.discountValue),
+      maxDiscountAmount: normalizeNullableNumber(item.MaxDiscountAmount ?? item.maxDiscountAmount),
+    }),
+  )
+
+  const booking = summary.Booking ?? summary.booking
+  const duration = summary.Duration ?? summary.duration
+  const questions = summary.Questions ?? summary.questions
+  const seatSelection = summary.SeatSelection ?? summary.seatSelection
+  const eTicketing = summary.ETicketing ?? summary.eTicketing
+  const setupStateOptions = parseSessionSetupStateOptions(summary.SetupStateOptions ?? summary.setupStateOptions ?? [])
+
+  return {
+    name: summary.Name ?? summary.name ?? "",
+    eventName: summary.EventName ?? summary.eventName ?? null,
+    venueName: summary.VenueName ?? summary.venueName ?? null,
+    genres,
+    membershipAccess: {
+      isRestricted: membershipAccessItems.length > 0,
+      memberships: membershipAccessItems,
+    },
+    seatSelection: {
+      offerPickingSeats: seatSelection?.OfferPickingSeats ?? seatSelection?.offerPickingSeats ?? false,
+      seatsIoEventUniqueId: seatSelection?.SeatsIoEventUniqueId ?? seatSelection?.seatsIoEventUniqueId ?? null,
+      seatsIoChartUniqueId: seatSelection?.SeatsIoChartUniqueId ?? seatSelection?.seatsIoChartUniqueId ?? null,
+      seatsIoChartName: seatSelection?.SeatsIoChartName ?? seatSelection?.seatsIoChartName ?? null,
+      seatsIoEventLabel: seatSelection?.SeatsIoEventLabel ?? seatSelection?.seatsIoEventLabel ?? null,
+    },
+    booking: {
+      bookingStartDate: booking?.BookingStartDate ?? booking?.bookingStartDate ?? null,
+      bookingEndDate: booking?.BookingEndDate ?? booking?.bookingEndDate ?? null,
+    },
+    duration: {
+      startDate: duration?.StartDate ?? duration?.startDate ?? null,
+      endDate: duration?.EndDate ?? duration?.endDate ?? null,
+    },
+    questions: mapSessionQuestionsInfo(questions ?? ({} as z.infer<typeof sessionQuestionsInfoSchema>), 0),
+    eTicketing: {
+      enableDigitalTicket: eTicketing?.EnableDigitalTicket ?? eTicketing?.enableDigitalTicket ?? false,
+      requiresAttendeeInfo: eTicketing?.RequiresAttendeeInfo ?? eTicketing?.requiresAttendeeInfo ?? false,
+    },
+    scheduleCount: summary.ScheduleCount ?? summary.scheduleCount ?? 0,
+    ticketCount: summary.TicketCount ?? summary.ticketCount ?? 0,
+    setupState: summary.SetupState ?? summary.setupState ?? "",
+    setupStateOptions,
+  }
 }
 
 export async function fetchSessionWizardETicketing(uniqueId: string): Promise<SessionWizardETicketing> {

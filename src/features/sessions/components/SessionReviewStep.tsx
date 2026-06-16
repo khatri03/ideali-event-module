@@ -1,32 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import type { ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Badge, Box, Button, CloseButton, Dialog, Flex, Grid, Skeleton, Stack, Switch, Text, useBreakpointValue } from "@chakra-ui/react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { CheckCircle2, PencilLine, X } from "lucide-react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { format, parseISO } from "date-fns"
-import { fetchMembershipTypeOptions } from "@/api/memberships"
-import { fetchOrganizerEvents, fetchOrganizerVenues } from "@/api/organizer"
-import {
-  fetchSessionWizardBooking,
-  fetchSessionWizardDuration,
-  fetchSessionWizardEvent,
-  fetchSessionWizardETicketing,
-  fetchSessionWizardGenres,
-  fetchSessionWizardName,
-  fetchSessionWizardMembershipAccess,
-  fetchSessionWizardQuestions,
-  fetchSessionWizardSetupStateOptions,
-  fetchSessionWizardSchedule,
-  fetchSessionWizardSeatSelection,
-  fetchSessionWizardTickets,
-  fetchSessionWizardVenue,
-  markSessionWizardReadyForReview,
-  updateSessionWizardSetupState,
-  type SessionWizardSetupState,
-  type SessionWizardSetupStateOption,
-} from "@/api/sessions"
-import { APP_ROUTES } from "@/utils/routes"
+import { type SessionWizardSetupState, type SessionWizardSetupStateOption, markSessionWizardReadyForReview, updateSessionWizardSetupState } from "@/api/sessions"
 import { extractApiError } from "@/utils/errors"
+import { APP_ROUTES } from "@/utils/routes"
+import { useSessionReviewSummary } from "../hooks/useSessionReviewSummary"
 import { useSessionWizardActions } from "../hooks/useSessionWizardActions"
 
 interface SessionReviewStepProps {
@@ -87,11 +69,6 @@ function getSetupStateTheme(setupState: string, setupStateOptions: SessionWizard
   }
 }
 
-interface FinishConfirmationDeferred {
-  resolve: () => void
-  reject: (error: Error) => void
-}
-
 function ReviewItem({ label, value, onEdit, editLabel, isLoading = false }: ReviewItemProps) {
   return (
     <Grid
@@ -147,6 +124,21 @@ function ReviewItem({ label, value, onEdit, editLabel, isLoading = false }: Revi
   )
 }
 
+function TextPill({ children }: { children: string }) {
+  return (
+    <Badge variant="subtle" colorPalette="gray" borderRadius="999px" px={3} py={1}>
+      <Text as="span" fontSize="xs" fontWeight="800" lineHeight={1}>
+        {children}
+      </Text>
+    </Badge>
+  )
+}
+
+interface FinishConfirmationDeferred {
+  resolve: () => void
+  reject: (error: Error) => void
+}
+
 export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -162,31 +154,32 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   const finishConfirmationDeferredRef = useRef<FinishConfirmationDeferred | null>(null)
 
   const reviewReturnUrl = useMemo(() => `${location.pathname}${location.search}`, [location.pathname, location.search])
-
-  const setupStateOptionsQuery = useQuery({
-    queryKey: ["sessions", "setup-state-options"],
-    queryFn: fetchSessionWizardSetupStateOptions,
-    staleTime: 1000 * 60 * 60,
-  })
-  const setupStateOptions = useMemo(() => setupStateOptionsQuery.data ?? [], [setupStateOptionsQuery.data])
+  const reviewSummaryQuery = useSessionReviewSummary(sessionId)
+  const reviewSummary = reviewSummaryQuery.data
+  const setupStateOptions = reviewSummary?.setupStateOptions ?? []
   const selectableSetupStates = useMemo(
     () => setupStateOptions.filter((option) => option.isSelectable),
     [setupStateOptions],
   )
   const finalSetupState = setupStateOptions.find((option) => option.isFinal)?.value ?? ""
-  const setupStateTheme = getSetupStateTheme(setupState, setupStateOptions)
+  const setupStateTheme = getSetupStateTheme(setupState || reviewSummary?.setupState || "", setupStateOptions)
   const resolvedFinishSetupState =
-    finishSetupState ?? selectableSetupStates.find((option) => option.isFinal)?.value ?? selectableSetupStates[0]?.value ?? ""
+    finishSetupState ??
+    selectableSetupStates.find((option) => option.value === reviewSummary?.setupState)?.value ??
+    selectableSetupStates.find((option) => !option.isFinal)?.value ??
+    selectableSetupStates.find((option) => option.isFinal)?.value ??
+    ""
   const finishSetupStateLabel = setupStateOptions.find((option) => option.value === resolvedFinishSetupState)?.label ?? "Loading"
 
   const setupStateMutation = useMutation({
     mutationFn: () => markSessionWizardReadyForReview(sessionId),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setSetupState(data.setupState)
       setFinishSetupState(selectableSetupStates.find((option) => option.value === data.setupState)?.value ?? null)
       setIsInitialised(true)
       setPrimaryActionReady(true)
-      queryClient.invalidateQueries({ queryKey: ["sessions", "setup-state", sessionId] })
+      await queryClient.invalidateQueries({ queryKey: ["sessions", "review-summary", sessionId] })
+      await queryClient.invalidateQueries({ queryKey: ["sessions", "wizard-progress", sessionId] })
     },
     onError: () => {
       setSetupState("")
@@ -197,107 +190,16 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   })
 
   const finishMutation = useMutation<SessionWizardSetupState, Error, string>({
-    mutationFn: (setupState) => updateSessionWizardSetupState(sessionId, { setupState }),
+    mutationFn: (setupStateValue) => updateSessionWizardSetupState(sessionId, { setupState: setupStateValue }),
     onSuccess: async (data) => {
       setSetupState(data.setupState)
       setFinishSetupState(selectableSetupStates.find((option) => option.value === data.setupState)?.value ?? null)
+      await queryClient.invalidateQueries({ queryKey: ["sessions", "review-summary", sessionId] })
       await queryClient.invalidateQueries({ queryKey: ["sessions", "wizard-progress", sessionId] })
-      await queryClient.invalidateQueries({ queryKey: ["sessions", "setup-state", sessionId] })
     },
     onSettled: () => {
       setPrimaryActionReady(true)
     },
-  })
-
-  const nameQuery = useQuery({
-    queryKey: ["sessions", "review", sessionId, "name"],
-    queryFn: () => fetchSessionWizardName(sessionId),
-    enabled: !!sessionId,
-    retry: false,
-  })
-  const sessionEventQuery = useQuery({
-    queryKey: ["sessions", "review", sessionId, "event"],
-    queryFn: () => fetchSessionWizardEvent(sessionId),
-    enabled: !!sessionId,
-    retry: false,
-  })
-  const eTicketingQuery = useQuery({
-    queryKey: ["sessions", "review", sessionId, "e-ticketing"],
-    queryFn: () => fetchSessionWizardETicketing(sessionId),
-    enabled: !!sessionId,
-    retry: false,
-  })
-  const organizerEventsQuery = useQuery({
-    queryKey: ["sessions", "review", sessionId, "organizer-events"],
-    queryFn: fetchOrganizerEvents,
-    enabled: !!sessionId,
-    retry: false,
-  })
-  const sessionVenueQuery = useQuery({
-    queryKey: ["sessions", "review", sessionId, "venue"],
-    queryFn: () => fetchSessionWizardVenue(sessionId),
-    enabled: !!sessionId,
-    retry: false,
-  })
-  const seatSelectionQuery = useQuery({
-    queryKey: ["sessions", "review", sessionId, "seat-selection"],
-    queryFn: () => fetchSessionWizardSeatSelection(sessionId),
-    enabled: !!sessionId,
-    retry: false,
-  })
-  const organizerVenuesQuery = useQuery({
-    queryKey: ["sessions", "review", sessionId, "organizer-venues"],
-    queryFn: fetchOrganizerVenues,
-    enabled: !!sessionId,
-    retry: false,
-  })
-  const membershipTypesQuery = useQuery({
-    queryKey: ["sessions", "review", sessionId, "membership-types"],
-    queryFn: fetchMembershipTypeOptions,
-    enabled: !!sessionId,
-    retry: false,
-  })
-  const bookingQuery = useQuery({
-    queryKey: ["sessions", "review", sessionId, "booking"],
-    queryFn: () => fetchSessionWizardBooking(sessionId),
-    enabled: !!sessionId,
-    retry: false,
-  })
-  const genreQuery = useQuery({
-    queryKey: ["sessions", "review", sessionId, "genre"],
-    queryFn: () => fetchSessionWizardGenres(sessionId),
-    enabled: !!sessionId,
-    retry: false,
-  })
-  const membershipAccessQuery = useQuery({
-    queryKey: ["sessions", "review", sessionId, "membership-access"],
-    queryFn: () => fetchSessionWizardMembershipAccess(sessionId),
-    enabled: !!sessionId,
-    retry: false,
-  })
-  const durationQuery = useQuery({
-    queryKey: ["sessions", "review", sessionId, "duration"],
-    queryFn: () => fetchSessionWizardDuration(sessionId),
-    enabled: !!sessionId,
-    retry: false,
-  })
-  const questionsQuery = useQuery({
-    queryKey: ["sessions", "review", sessionId, "questions"],
-    queryFn: () => fetchSessionWizardQuestions(sessionId),
-    enabled: !!sessionId,
-    retry: false,
-  })
-  const schedulesQuery = useQuery({
-    queryKey: ["sessions", "review", sessionId, "schedule"],
-    queryFn: () => fetchSessionWizardSchedule(sessionId),
-    enabled: !!sessionId,
-    retry: false,
-  })
-  const ticketsQuery = useQuery({
-    queryKey: ["sessions", "review", sessionId, "ticket"],
-    queryFn: () => fetchSessionWizardTickets(sessionId),
-    enabled: !!sessionId,
-    retry: false,
   })
 
   const openFinishConfirmation = useCallback(() => {
@@ -352,58 +254,58 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   }, [sessionId, setPrimaryAction, setPrimaryActionReady, setupStateMutation])
 
   useEffect(() => {
-    if (!isInitialised) {
+    if (!isInitialised || !reviewSummary) {
+      setPrimaryAction(null)
+      setPrimaryActionReady(false)
       return
     }
 
+    setSetupState(reviewSummary.setupState)
+    setFinishSetupState(
+      selectableSetupStates.find((option) => option.value === reviewSummary.setupState)?.value ??
+        selectableSetupStates.find((option) => !option.isFinal)?.value ??
+        selectableSetupStates.find((option) => option.isFinal)?.value ??
+        null,
+    )
     setPrimaryAction(async () => {
       await openFinishConfirmation()
     })
-  }, [isInitialised, openFinishConfirmation, setPrimaryAction])
+    setPrimaryActionReady(true)
+  }, [isInitialised, openFinishConfirmation, reviewSummary, selectableSetupStates, setPrimaryAction, setPrimaryActionReady])
 
-  const eventUniqueId = sessionEventQuery.data?.eventUniqueId ?? ""
-  const venueUniqueId = sessionVenueQuery.data?.venueUniqueId ?? ""
-  const eventName = organizerEventsQuery.data?.find((item) => item.uniqueId === eventUniqueId)?.name || "Not set"
-  const venueName = organizerVenuesQuery.data?.find((item) => item.uniqueId === venueUniqueId)?.name || "Not set"
-  const membershipTypeNameByUniqueId = useMemo(
-    () => new Map((membershipTypesQuery.data ?? []).map((item) => [item.value, item.text])),
-    [membershipTypesQuery.data],
-  )
-  const selectedMembershipNames = useMemo(
-    () =>
-      (membershipAccessQuery.data?.memberships ?? [])
-        .map((membership) => membershipTypeNameByUniqueId.get(membership.membershipTypeUniqueId))
-        .filter((name): name is string => Boolean(name)),
-    [membershipAccessQuery.data?.memberships, membershipTypeNameByUniqueId],
-  )
-  const isSeatSelectionEnabled = seatSelectionQuery.data?.offerPickingSeats ?? false
+  const selectedGenres = reviewSummary?.genres ?? []
+  const selectedMembershipNames = (reviewSummary?.membershipAccess.memberships ?? [])
+    .map((membership) => membership.membershipTypeName?.trim() || membership.membershipTypeUniqueId)
+    .filter((name): name is string => Boolean(name))
+  const isSeatSelectionEnabled = reviewSummary?.seatSelection.offerPickingSeats ?? false
   const seatSelectionEventName =
-    seatSelectionQuery.data?.seatsIoEventLabel ||
-    (seatSelectionQuery.data?.seatsIoEventUniqueId
-      ? "Selected event"
-      : "Not set")
-  const seatSelectionChartName = seatSelectionQuery.data?.seatsIoChartName ?? "Not set"
-  const bookingWindow = formatRange(bookingQuery.data?.bookingStartDate, bookingQuery.data?.bookingEndDate)
-  const sessionDateTime = formatRange(durationQuery.data?.startDate, durationQuery.data?.endDate)
-  const scheduleCount = schedulesQuery.data?.length ?? 0
-  const ticketsCount = ticketsQuery.data?.length ?? 0
-  const summaryError =
-    nameQuery.error ??
-    setupStateOptionsQuery.error ??
-    sessionEventQuery.error ??
-    eTicketingQuery.error ??
-    organizerEventsQuery.error ??
-    sessionVenueQuery.error ??
-    seatSelectionQuery.error ??
-    organizerVenuesQuery.error ??
-    membershipTypesQuery.error ??
-    membershipAccessQuery.error ??
-    bookingQuery.error ??
-    genreQuery.error ??
-    questionsQuery.error ??
-    durationQuery.error ??
-    schedulesQuery.error ??
-    ticketsQuery.error
+    reviewSummary?.seatSelection.seatsIoEventLabel ||
+    (reviewSummary?.seatSelection.seatsIoEventUniqueId ? "Selected event" : "Not set")
+  const seatSelectionChartName = reviewSummary?.seatSelection.seatsIoChartName ?? "Not set"
+  const bookingWindow = formatRange(reviewSummary?.booking.bookingStartDate, reviewSummary?.booking.bookingEndDate)
+  const sessionDateTime = formatRange(reviewSummary?.duration.startDate, reviewSummary?.duration.endDate)
+  const scheduleCount = reviewSummary?.scheduleCount ?? 0
+  const ticketsCount = reviewSummary?.ticketCount ?? 0
+  const selectedFormCount = reviewSummary?.questions.customFormUniqueIds.length ?? 0
+  const customQuestionCount = reviewSummary?.questions.customQuestions.length ?? 0
+  const selectedQuestionsSummary = (() => {
+    const formLabel = `${selectedFormCount} Custom Form${selectedFormCount === 1 ? "" : "s"}`
+    const questionLabel = `${customQuestionCount} Question${customQuestionCount === 1 ? "" : "s"}`
+
+    if (selectedFormCount > 0 && customQuestionCount > 0) {
+      return `${formLabel} and ${questionLabel}`
+    }
+
+    if (selectedFormCount > 0) {
+      return formLabel
+    }
+
+    if (customQuestionCount > 0) {
+      return questionLabel
+    }
+
+    return "None"
+  })()
 
   function buildEditUrl(
     step:
@@ -444,27 +346,8 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     navigate(buildEditUrl(step))
   }
 
-  const selectedGenres = genreQuery.data?.filter((genre) => genre.isSelected) ?? []
-  const selectedFormCount = questionsQuery.data?.customFormUniqueIds.length ?? 0
-  const customQuestionCount = questionsQuery.data?.customQuestions.length ?? 0
-  const selectedQuestionsSummary = (() => {
-    const formLabel = `${selectedFormCount} Custom Form${selectedFormCount === 1 ? "" : "s"}`
-    const questionLabel = `${customQuestionCount} Question${customQuestionCount === 1 ? "" : "s"}`
-
-    if (selectedFormCount > 0 && customQuestionCount > 0) {
-      return `${formLabel} and ${questionLabel}`
-    }
-
-    if (selectedFormCount > 0) {
-      return formLabel
-    }
-
-    if (customQuestionCount > 0) {
-      return questionLabel
-    }
-
-    return "None"
-  })()
+  const summaryError = reviewSummaryQuery.error
+  const isSummaryLoading = Boolean(sessionId) && reviewSummaryQuery.isLoading
 
   return (
     <Stack gap={5}>
@@ -535,14 +418,18 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
             </Badge>
           }
           editLabel="Setup state"
-          isLoading={false}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Name"
-          value={nameQuery.data?.name || "Not set"}
+          value={
+            <Text fontSize="sm" fontWeight="800" color="gray.900" wordBreak="break-word">
+              {reviewSummary?.name || "Not set"}
+            </Text>
+          }
           onEdit={() => handleEdit("name")}
           editLabel="Edit session name"
-          isLoading={nameQuery.isLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Genres"
@@ -550,14 +437,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
             selectedGenres.length > 0 ? (
               <Flex wrap="wrap" gap={2}>
                 {selectedGenres.map((genre) => (
-                  <Badge
-                    key={genre.uniqueId}
-                    variant="subtle"
-                    colorPalette="gray"
-                    borderRadius="999px"
-                    px={3}
-                    py={1}
-                  >
+                  <Badge key={genre.uniqueId} variant="subtle" colorPalette="gray" borderRadius="999px" px={3} py={1}>
                     {genre.name}
                   </Badge>
                 ))}
@@ -570,21 +450,29 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
           }
           onEdit={() => handleEdit("genre")}
           editLabel="Edit genres"
-          isLoading={genreQuery.isLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Event Name"
-          value={eventName}
+          value={
+            <Text fontSize="sm" fontWeight="800" color="gray.900" wordBreak="break-word">
+              {reviewSummary?.eventName || "Not set"}
+            </Text>
+          }
           onEdit={() => handleEdit("event")}
           editLabel="Edit event"
-          isLoading={sessionEventQuery.isLoading || organizerEventsQuery.isLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Venue Name"
-          value={venueName}
+          value={
+            <Text fontSize="sm" fontWeight="800" color="gray.900" wordBreak="break-word">
+              {reviewSummary?.venueName || "Not set"}
+            </Text>
+          }
           onEdit={() => handleEdit("venue")}
           editLabel="Edit venue"
-          isLoading={sessionVenueQuery.isLoading || organizerVenuesQuery.isLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Membership Access"
@@ -627,13 +515,20 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
           }
           onEdit={() => handleEdit("membership-access")}
           editLabel="Edit membership access"
-          isLoading={membershipTypesQuery.isLoading || membershipAccessQuery.isLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Seat Selection"
-          value={ 
+          value={
             <Stack gap={1}>
-              <Badge variant="subtle" colorPalette={isSeatSelectionEnabled ? "green" : "gray"} borderRadius="999px" px={3} py={1} alignSelf="flex-start">
+              <Badge
+                variant="subtle"
+                colorPalette={isSeatSelectionEnabled ? "green" : "gray"}
+                borderRadius="999px"
+                px={3}
+                py={1}
+                alignSelf="flex-start"
+              >
                 <Flex align="center" gap={1.5}>
                   {isSeatSelectionEnabled ? <CheckCircle2 size={14} /> : <X size={14} />}
                   <Text as="span" fontSize="xs" fontWeight="800">
@@ -651,33 +546,27 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
           }
           onEdit={() => handleEdit("seat-selection")}
           editLabel="Edit seat selection"
-          isLoading={seatSelectionQuery.isLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Booking Window"
           value={bookingWindow}
           onEdit={() => handleEdit("dates-time")}
           editLabel="Edit booking window"
-          isLoading={bookingQuery.isLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Session Start/End"
           value={sessionDateTime}
           onEdit={() => handleEdit("dates-time")}
           editLabel="Edit session start/end"
-          isLoading={durationQuery.isLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Schedule"
           value={
             scheduleCount > 0 ? (
-              <Badge
-                variant="subtle"
-                colorPalette="green"
-                borderRadius="999px"
-                px={3}
-                py={1}
-              >
+              <Badge variant="subtle" colorPalette="green" borderRadius="999px" px={3} py={1}>
                 <Flex align="center" gap={1.5}>
                   <CheckCircle2 size={14} />
                   <Text as="span" fontSize="xs" fontWeight="800">
@@ -698,38 +587,43 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
           }
           onEdit={() => handleEdit("schedule")}
           editLabel="Edit schedule"
-          isLoading={schedulesQuery.isLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Questions"
           value={selectedQuestionsSummary}
           onEdit={() => handleEdit("questions")}
           editLabel="Edit questions"
-          isLoading={questionsQuery.isLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="Number Of Tickets"
-          value={ 
+          value={
             <Text fontSize="sm" fontWeight="800" color="gray.900">
               {ticketsCount}
             </Text>
           }
           onEdit={() => handleEdit("ticket")}
           editLabel="Edit tickets"
-          isLoading={ticketsQuery.isLoading}
+          isLoading={isSummaryLoading}
         />
         <ReviewItem
           label="e-Ticketing"
           value={
-            eTicketingQuery.data?.enableDigitalTicket ? (
-              <Badge variant="subtle" colorPalette="green" borderRadius="999px" px={3} py={1}>
-                <Flex align="center" gap={1.5}>
-                  <CheckCircle2 size={14} />
-                  <Text as="span" fontSize="xs" fontWeight="800">
-                    Yes
-                  </Text>
+            reviewSummary?.eTicketing.enableDigitalTicket ? (
+              <Stack gap={2}>
+                <Badge variant="subtle" colorPalette="green" borderRadius="999px" px={3} py={1} alignSelf="flex-start">
+                  <Flex align="center" gap={1.5}>
+                    <CheckCircle2 size={14} />
+                    <Text as="span" fontSize="xs" fontWeight="800">
+                      Yes
+                    </Text>
+                  </Flex>
+                </Badge>
+                <Flex wrap="wrap" gap={2}>
+                  <TextPill>{reviewSummary.eTicketing.requiresAttendeeInfo ? "Attendee info required" : "Attendee info optional"}</TextPill>
                 </Flex>
-              </Badge>
+              </Stack>
             ) : (
               <Badge variant="subtle" colorPalette="gray" borderRadius="999px" px={3} py={1}>
                 <Flex align="center" gap={1.5}>
@@ -743,7 +637,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
           }
           onEdit={() => handleEdit("e-ticketing")}
           editLabel="Edit e-ticketing"
-          isLoading={eTicketingQuery.isLoading}
+          isLoading={isSummaryLoading}
         />
       </Box>
 
@@ -860,21 +754,15 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
         </Dialog.Positioner>
       </Dialog.Root>
 
-      {setupStateMutation.isError ? (
+      {summaryError ? (
         <Text fontSize="sm" color="red.500">
-          {extractApiError(setupStateMutation.error)}
+          {extractApiError(summaryError)}
         </Text>
       ) : null}
 
       {finishMutation.isError ? (
         <Text fontSize="sm" color="red.500">
           {extractApiError(finishMutation.error)}
-        </Text>
-      ) : null}
-
-      {summaryError ? (
-        <Text fontSize="sm" color="red.500">
-          {extractApiError(summaryError)}
         </Text>
       ) : null}
     </Stack>
