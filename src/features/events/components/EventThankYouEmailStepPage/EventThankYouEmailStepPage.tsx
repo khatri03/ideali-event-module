@@ -120,11 +120,6 @@ function NotificationEmailTagsField({
               return
             }
 
-            if (isValidEmailAddress(nextValue.trim())) {
-              addDraftValue(nextValue)
-              return
-            }
-
             setDraftValue(nextValue)
           }}
           onKeyDown={(event) => {

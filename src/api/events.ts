@@ -280,6 +280,22 @@ const eventWizardSessionItemSchema = z.object({
   bookingEndDate: z.string().nullable().optional(),
 })
 
+const eventSetupStateOptionSchema = z.object({
+  Value: z.string().optional(),
+  value: z.string().optional(),
+  Label: z.string().optional(),
+  label: z.string().optional(),
+  IsSelectable: z.boolean().optional(),
+  isSelectable: z.boolean().optional(),
+  IsFinal: z.boolean().optional(),
+  isFinal: z.boolean().optional(),
+})
+
+const eventSetupStateResponseSchema = z.object({
+  SetupState: z.string().optional(),
+  setupState: z.string().optional(),
+})
+
 const eventWizardProgressResponseSchema = z.object({
   stepNo: z.number().int().min(0),
 })
@@ -613,13 +629,66 @@ export async function updateEventWizardThankYouEmail(
     notifyOrganizer: boolean
     otherNotificationEmails: string | null
   },
-  stepNo = 12,
+  stepNo = 13,
 ): Promise<EventThankYouEmailResponse> {
   const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "thank-you-email")}`, payload, {
     params: { stepNo },
   })
 
   return eventThankYouEmailResponseSchema.parse(res.data)
+}
+
+export interface EventSetupStateOption {
+  value: string
+  label: string
+  isSelectable: boolean
+  isFinal: boolean
+}
+
+export interface EventSetupStateResponse {
+  setupState: string
+}
+
+function parseEventSetupStateResponse(payload: unknown): EventSetupStateResponse {
+  const parsed = eventSetupStateResponseSchema.parse(payload)
+  return {
+    setupState: parsed.SetupState ?? parsed.setupState ?? "",
+  }
+}
+
+function parseEventSetupStateOptions(payload: unknown): EventSetupStateOption[] {
+  return z
+    .array(eventSetupStateOptionSchema)
+    .parse(payload)
+    .map((item) => ({
+      value: item.Value ?? item.value ?? "",
+      label: item.Label ?? item.label ?? "",
+      isSelectable: item.IsSelectable ?? item.isSelectable ?? false,
+      isFinal: item.IsFinal ?? item.isFinal ?? false,
+    }))
+}
+
+export async function fetchEventWizardSetupState(uniqueId: string): Promise<EventSetupStateResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "setup-state")}`)
+  return parseEventSetupStateResponse(res.data)
+}
+
+export async function fetchEventWizardSetupStateOptions(): Promise<EventSetupStateOption[]> {
+  const res = await client.get<unknown>(API_ROUTES.eventWizardSetupStateOptions)
+  return parseEventSetupStateOptions(res.data)
+}
+
+export async function markEventWizardReadyForReview(uniqueId: string): Promise<EventSetupStateResponse> {
+  const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "setup-state/review")}`)
+  return parseEventSetupStateResponse(res.data)
+}
+
+export async function updateEventWizardSetupState(
+  uniqueId: string,
+  setupState: string,
+): Promise<EventSetupStateResponse> {
+  const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "setup-state")}`, { setupState })
+  return parseEventSetupStateResponse(res.data)
 }
 
 export interface EventEmailSnippet {

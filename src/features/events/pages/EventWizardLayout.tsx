@@ -1,23 +1,23 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Box, Button, Field, Flex, Grid, Heading, Skeleton, SkeletonText, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
-import { useMutation } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { FormProvider, useForm, useWatch } from "react-hook-form"
 import { Navigate, Outlet, useLocation, useNavigate, useParams } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { ArrowLeft, ChevronLeft, ChevronRight, Sparkles } from "lucide-react"
 import {
-  createEvent,
   skipEventWizardStep,
-  updateEvent,
   updateEventWizardDateTime,
   updateEventWizardAdvancedSettings,
   updateEventWizardDescription,
   updateEventWizardName,
   updateEventWizardPaymentAccount,
+  fetchEventWizardSetupState,
   updateEventWizardTimeZone,
   updateEventWizardTermsConditions,
   updateEventWizardVenue,
   updateEventWizardThemeColor,
+  fetchEventWizardSetupStateOptions,
 } from "@/api/events"
 import { useAuthSession } from "@/hooks/useAuthSession"
 import { auth, sessionDataToUser } from "@/lib/auth"
@@ -31,7 +31,6 @@ import { defaultEventWizardValues, eventWizardFieldGroups, eventWizardSchema, ty
 import { EventWizardStepper } from "../components/EventWizardStepper"
 import { EventWizardStepSkeleton } from "../components/EventWizardStepSkeleton"
 import { EventWizardActions } from "../components/EventWizardActions"
-import { buildCreateEventPayload } from "../hooks/useEventWizard"
 import { EventWizardActionsProvider, useEventWizardActions } from "../hooks/useEventWizardActions"
 
 function WizardLoadingState() {
@@ -73,6 +72,10 @@ function WizardLoadingState() {
       </Box>
     </Flex>
   )
+}
+
+function normalizeSetupState(value: string) {
+  return value.replace(/\s+/g, "").toLowerCase()
 }
 
 function PreviewFrame() {
@@ -212,8 +215,39 @@ function EventWizardLayoutContent() {
   const wizardProgressQuery = useEventWizardProgress(eventId)
   const lastCompletedStepNo = eventId ? wizardProgressQuery.data?.stepNo ?? 0 : 0
   const wizardSteps = buildEventWizardSteps(eventId)
-  const completedStepCount = eventId ? Math.min(lastCompletedStepNo, wizardSteps.length - 1) : 0
-  const maxUnlockedStepIndex = eventId ? Math.min(lastCompletedStepNo, wizardSteps.length - 1) : 0
+  const setupStateQuery = useQuery({
+    queryKey: ["events", "setup-state", eventId],
+    queryFn: () => {
+      if (!eventId) {
+        throw new Error("Event id is required.")
+      }
+
+      return fetchEventWizardSetupState(eventId)
+    },
+    enabled: Boolean(eventId),
+    retry: false,
+  })
+  const setupStateOptionsQuery = useQuery({
+    queryKey: ["events", "setup-state-options"],
+    queryFn: fetchEventWizardSetupStateOptions,
+    staleTime: 1000 * 60 * 60,
+    retry: false,
+  })
+  const finalSetupState = setupStateOptionsQuery.data?.find((option) => option.isFinal)?.value ?? ""
+  const currentSetupState = setupStateQuery.data?.setupState ?? ""
+  const isReviewComplete =
+    Boolean(eventId) && normalizeSetupState(currentSetupState) === normalizeSetupState(finalSetupState || "ReadyForSale")
+  function mapProgressToVisibleStepIndex(stepNo: number) {
+    if (stepNo <= 0) {
+      return 0
+    }
+
+    return Math.min(stepNo, wizardSteps.length - 1)
+  }
+
+  const resolvedStepIndex = eventId ? mapProgressToVisibleStepIndex(lastCompletedStepNo) : -1
+  const completedStepCount = eventId ? (isReviewComplete ? wizardSteps.length : Math.max(wizardSteps.length - 1, 0)) : 0
+  const maxUnlockedStepIndex = eventId ? Math.max(resolvedStepIndex, 0) : 0
   const { activeStepIndex, activeStep, goToStep, goBack, goNext, isFirstStep, isLastStep } = useEventWizardNavigation(maxUnlockedStepIndex)
   const wizardDraftQuery = useEventWizardDraft(eventId, activeStep.slug)
   const resumeValuesQuery = useEventWizardResumeValues(eventId, lastCompletedStepNo)
@@ -222,23 +256,6 @@ function EventWizardLayoutContent() {
   const [isStepsCollapsedOverride, setIsStepsCollapsedOverride] = useState<boolean | null>(null)
   const isStepsCollapsed = isStepsCollapsedOverride ?? isMobile
   const createEventDraftMutation = useCreateEventDraft()
-  const finalSaveMutation = useMutation({
-    mutationFn: async () => {
-      const payload = buildCreateEventPayload(form.getValues())
-      if (eventId) {
-        return updateEvent(eventId, payload)
-      }
-
-      return createEvent(payload)
-    },
-    onError: () => {
-      // handled inline below
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["events"] })
-    },
-  })
-
   function setWizardStepCache(
     step:
       | "name"
@@ -309,7 +326,6 @@ function EventWizardLayoutContent() {
     activeStep.slug === "questions" ||
     activeStep.slug === "thank-you-email"
   const isLastWizardStep = isLastStep
-  const resolvedStepIndex = eventId ? Math.min(lastCompletedStepNo, wizardSteps.length - 1) : -1
   const resolvedStepPath = eventId ? wizardSteps[resolvedStepIndex]?.path : undefined
   const currentStepIndex = eventId ? wizardSteps.findIndex((step) => step.path === location.pathname) : -1
   const shouldRedirectToResolvedStep =
@@ -503,7 +519,13 @@ function EventWizardLayoutContent() {
     }
 
     if (isReviewStep) {
-      await finalSaveMutation.mutateAsync()
+      try {
+        await runPrimaryAction()
+      } catch {
+        return
+      }
+
+      navigate(APP_ROUTES.events, { replace: true })
       return
     }
 
@@ -626,7 +648,12 @@ function EventWizardLayoutContent() {
     }
 
     if (isReviewStep) {
-      await finalSaveMutation.mutateAsync()
+      try {
+        await runPrimaryAction()
+      } catch {
+        return
+      }
+
       return
     }
 
@@ -915,7 +942,7 @@ function EventWizardLayoutContent() {
                 borderColor="gray.200"
               >
                 <Stack gap={3}>
-                  {createEventDraftMutation.isError || finalSaveMutation.isError ? (
+                  {createEventDraftMutation.isError ? (
                     <Field.Root invalid>
                       <Field.ErrorText>We could not create the event. Please try again.</Field.ErrorText>
                     </Field.Root>
@@ -926,23 +953,21 @@ function EventWizardLayoutContent() {
                     showSkip={isOptionalStep && !isLastWizardStep}
                     isPrimaryDisabled={
                       (isPaymentAccountStep && (!paymentAccountId || (paymentMethods?.length ?? 0) === 0)) ||
-                      (isPageManagedSaveStep && !isPrimaryActionReady)
+                      ((isPageManagedSaveStep || isReviewStep) && !isPrimaryActionReady)
                     }
                     isSecondaryDisabled={
                       (isPaymentAccountStep && (!paymentAccountId || (paymentMethods?.length ?? 0) === 0)) ||
-                      (isPageManagedSaveStep && !isPrimaryActionReady)
+                      ((isPageManagedSaveStep || isReviewStep) && !isPrimaryActionReady)
                     }
                     isPrimaryLoading={
                       createEventDraftMutation.isPending ||
-                      finalSaveMutation.isPending ||
-                      (isPageManagedSaveStep && !isPrimaryActionReady)
+                      ((isPageManagedSaveStep || isReviewStep) && !isPrimaryActionReady)
                     }
                     isSecondaryLoading={
                       createEventDraftMutation.isPending ||
-                      finalSaveMutation.isPending ||
-                      (isPageManagedSaveStep && !isPrimaryActionReady)
+                      ((isPageManagedSaveStep || isReviewStep) && !isPrimaryActionReady)
                     }
-                    primaryLabel={!eventId && activeStep.slug === "name" ? "Create Event" : isReviewStep ? "Save Changes" : "Save & Continue"}
+                    primaryLabel={!eventId && activeStep.slug === "name" ? "Create Event" : isReviewStep ? "Finish" : "Save & Continue"}
                     secondaryLabel="Save & Exit"
                     onBack={goBack}
                     onPrimary={handleSaveContinue}

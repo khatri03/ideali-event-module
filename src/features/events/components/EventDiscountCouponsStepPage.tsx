@@ -1,6 +1,7 @@
 import { Badge, Box, Button, Flex, SimpleGrid, Skeleton, Stack, Switch, Table, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useParams } from "react-router-dom"
+import { queryClient } from "@/lib/queryClient"
 import { Check, Copy, Pencil, Plus, Trash2 } from "lucide-react"
 import { useEventWizardActions } from "../hooks/useEventWizardActions"
 import { useEventDiscountCoupons, useSaveEventDiscountCoupons } from "../hooks/useEventDiscountCoupons"
@@ -47,6 +48,7 @@ function CouponStepSkeleton() {
 export function EventDiscountCouponsStepPage() {
   const { eventId } = useParams<{ eventId?: string }>()
   const currentEventId = eventId ?? ""
+  const DISCOUNT_COUPON_STEP_NO = 11
   const { setPrimaryAction, setPrimaryActionReady, setPrimaryActionEnabled } = useEventWizardActions()
   const { data, isLoading, isError, error } = useEventDiscountCoupons(currentEventId)
   const saveMutation = useSaveEventDiscountCoupons(currentEventId)
@@ -121,6 +123,10 @@ export function EventDiscountCouponsStepPage() {
           })),
           deletedCouponIds,
         })
+
+        queryClient.setQueryData(["events", "wizard-progress", currentEventId], (current: { stepNo?: number } | undefined) => ({
+          stepNo: Math.max(current?.stepNo ?? 0, DISCOUNT_COUPON_STEP_NO),
+        }))
       } catch (saveError) {
         const message = extractApiError(saveError)
         setStepError(message)

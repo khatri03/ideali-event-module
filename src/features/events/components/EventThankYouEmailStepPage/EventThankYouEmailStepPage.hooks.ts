@@ -254,13 +254,20 @@ export function useEventThankYouEmailStep(): EventThankYouEmailStepState {
       }
 
       queryClient.setQueryData(["events", "wizard-draft", currentEventId, "thank-you-email"], result)
-      queryClient.setQueryData(["events", "wizard-progress", currentEventId], { stepNo: result.stepNo })
+      queryClient.setQueryData(["events", "wizard-progress", currentEventId], (current: { stepNo?: number } | undefined) => ({
+        stepNo: Math.max(current?.stepNo ?? 0, EVENT_THANK_YOU_EMAIL_STEP_NUMBER),
+      }))
     },
     onError: (saveError) => {
       setError(extractApiError(saveError))
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["events"] })
+      if (!currentEventId) {
+        return
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["events", "email-template", "snippets"] })
+      queryClient.invalidateQueries({ queryKey: ["events", "review", currentEventId] })
     },
   })
 

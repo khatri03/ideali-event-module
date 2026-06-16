@@ -36,7 +36,6 @@ export function useSaveEventDiscountCoupons(eventId?: string) {
         return
       }
 
-      queryClient.invalidateQueries({ queryKey: ["events"] })
       queryClient.invalidateQueries({ queryKey: ["events", "discount-coupons", eventId] })
     },
     onSettled: () => {
@@ -44,7 +43,7 @@ export function useSaveEventDiscountCoupons(eventId?: string) {
         return
       }
 
-      queryClient.invalidateQueries({ queryKey: ["events", eventId] })
+      queryClient.invalidateQueries({ queryKey: ["events", "review", eventId] })
     },
   })
 }
