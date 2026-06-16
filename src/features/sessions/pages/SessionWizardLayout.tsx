@@ -131,7 +131,7 @@ function SessionWizardLayoutContent() {
 
   const resolvedStepIndex = sessionId ? mapProgressToVisibleStepIndex(lastCompletedStepNo) : -1
   const completedStepCount = sessionId ? (isReviewDone ? steps.length : Math.max(lastCompletedStepNo, 0)) : 0
-  const maxUnlockedStepIndex = sessionId ? Math.max(0, Math.min(resolvedStepIndex, currentStepIndex >= 0 ? currentStepIndex : resolvedStepIndex)) : 0
+  const maxUnlockedStepIndex = sessionId ? Math.max(resolvedStepIndex, 0) : 0
   const resolvedStepPath = sessionId ? steps[resolvedStepIndex]?.path : undefined
   const shouldRedirectToResolvedStep =
     Boolean(sessionId) &&
