@@ -1,7 +1,7 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Badge, Box, Button, CloseButton, Dialog, Flex, Menu, Portal, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
-import { CalendarDays, Check, ChevronRight, MapPin, MoreHorizontal, PencilLine, Users } from "lucide-react"
+import { CalendarDays, Check, ChevronRight, Copy, Eye, MapPin, MoreHorizontal, PencilLine, Users } from "lucide-react"
 import { format } from "date-fns"
 import { Link } from "react-router-dom"
 import { updateEventWizardSetupState } from "@/api/events"
@@ -60,6 +60,7 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
   const [isStatusPanelOpen, setIsStatusPanelOpen] = useState(false)
   const [isStatusConfirmOpen, setIsStatusConfirmOpen] = useState(false)
   const [pendingStatusAction, setPendingStatusAction] = useState<StatusTransitionKey | null>(null)
+  const [isCopyToastVisible, setIsCopyToastVisible] = useState(false)
   const statusMenuPlacement = useBreakpointValue({ base: "bottom-start", sm: "right-start" }) ?? "right-start"
   const totalTickets = event.totalAvailableTickets + event.ticketsSold
   const soldPct = totalTickets > 0 ? Math.round((event.ticketsSold / totalTickets) * 100) : 0
@@ -75,7 +76,9 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
     normalizedSetupState === "readytoreview"
   const isOnline = normalizedSetupState === "readyforsale"
   const isOffline = normalizedSetupState === "readyforreview" || normalizedSetupState === "readytoreview"
+  const canViewRegistration = isOnline
   const pendingTransition = pendingStatusAction ? STATUS_TRANSITIONS[pendingStatusAction] : null
+  const registrationUrl = new URL(APP_ROUTES.eventRegister(event.uniqueId), window.location.origin).toString()
 
   const statusMutation = useMutation({
     mutationFn: (setupState: string) => updateEventWizardSetupState(event.uniqueId, setupState),
@@ -96,6 +99,23 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
     setIsStatusPanelOpen(false)
     setIsStatusConfirmOpen(false)
     setPendingStatusAction(null)
+  }
+
+  useEffect(() => {
+    if (!isCopyToastVisible) {
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      setIsCopyToastVisible(false)
+    }, 2200)
+
+    return () => window.clearTimeout(timer)
+  }, [isCopyToastVisible])
+
+  async function handleCopyRegistrationUrl() {
+    await navigator.clipboard.writeText(registrationUrl)
+    setIsCopyToastVisible(true)
   }
 
   async function confirmStatusChange() {
@@ -201,6 +221,32 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
                       >
                         <PencilLine size={14} />
                         Edit
+                      </Box>
+                    </Menu.Item>
+                  ) : null}
+
+                  {canViewRegistration ? (
+                    <Menu.Item value="view" asChild>
+                      <Box
+                        as={Link}
+                        to={APP_ROUTES.eventRegister(event.uniqueId)}
+                        target="_blank"
+                        rel="noreferrer"
+                        borderRadius="10px"
+                        fontSize="sm"
+                        fontWeight="600"
+                        color="gray.700"
+                        cursor="pointer"
+                        _dark={{ color: "gray.200" }}
+                        _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
+                        px={3}
+                        py={2}
+                        gap={2.5}
+                        display="flex"
+                        alignItems="center"
+                      >
+                        <Eye size={14} />
+                        View
                       </Box>
                     </Menu.Item>
                   ) : null}
@@ -405,16 +451,74 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
           </Dialog.Positioner>
         </Dialog.Root>
 
-        <Text
-          fontSize="md"
-          fontWeight="700"
-          color="text.primary"
-          lineHeight={1.3}
-          mb={4}
-          lineClamp={2}
-        >
-          {event.name}
-        </Text>
+        <Portal>
+          <Box
+            position="fixed"
+            top={4}
+            left="50%"
+            transform={isCopyToastVisible ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(-12px)"}
+            opacity={isCopyToastVisible ? 1 : 0}
+            pointerEvents="none"
+            transition="all 0.2s ease"
+            zIndex="toast"
+          >
+            <Box
+              bg="gray.900"
+              color="white"
+              px={4}
+              py={3}
+              borderRadius="999px"
+              boxShadow="0 18px 40px rgba(15, 23, 42, 0.24)"
+              border="1px solid"
+              borderColor="whiteAlpha.200"
+            >
+              <Text fontSize="sm" fontWeight="600">
+                Registration URL copied to clipboard
+              </Text>
+            </Box>
+          </Box>
+        </Portal>
+
+        <Flex align="flex-start" justify="space-between" gap={3} mb={4}>
+          <Flex align="center" gap={2} minW={0}>
+            <Text
+              fontSize="md"
+              fontWeight="700"
+              color="text.primary"
+              lineHeight={1.3}
+              lineClamp={2}
+            >
+              {event.name}
+            </Text>
+
+            <Box
+              as="button"
+              type="button"
+              aria-label="Copy registration URL"
+              title="Copy registration URL"
+              display="inline-flex"
+              alignItems="center"
+              justifyContent="center"
+              w="7"
+              h="7"
+              minW="7"
+              minH="7"
+              borderRadius="full"
+              border="1px solid"
+              borderColor="border.subtle"
+              bg="white"
+              color="gray.500"
+              cursor="pointer"
+              flexShrink={0}
+              transition="all 0.15s ease"
+              _hover={{ bg: "gray.50", color: "brand.500", _dark: { bg: "navy.700" } }}
+              _active={{ transform: "scale(0.96)" }}
+              onClick={handleCopyRegistrationUrl}
+            >
+              <Copy size={12} />
+            </Box>
+          </Flex>
+        </Flex>
 
         <Flex direction={{ base: "column", sm: "row" }} align={{ base: "stretch", sm: "center" }} justify="space-between" gap={3} mb={4}>
           <Flex align="center" gap={2} minW={0}>
