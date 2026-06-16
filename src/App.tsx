@@ -18,6 +18,7 @@ import {
   EventPaymentAccountStepPage,
   EventPurchaseTimeLimitStepPage,
   EventQuestionsStepPage,
+  EventRegisterPage,
   EventReviewStepPage,
   EventSessionsStepPage,
   EventVenueStepPage,
@@ -101,6 +102,7 @@ export default function App() {
           <Route path={APP_ROUTES.sessionWizard.slugs.review} element={<SessionWizardStepPage />} />
         </Route>
         <Route path={APP_ROUTES.sessionWizard.list} element={<SessionListPage />} />
+        <Route path={APP_ROUTES.eventRegisterRoute} element={<EventRegisterPage />} />
 
         {/* App */}
         <Route element={<AppLayout />}>

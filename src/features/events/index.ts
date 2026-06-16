@@ -1,4 +1,5 @@
 export { EventWizardLayout } from "./pages/EventWizardLayout"
+export { EventRegisterPage } from "./pages/EventRegisterPage"
 export { EventBannerStepPage } from "./pages/EventBannerStepPage"
 export { EventDescriptionEditor } from "./components/EventDescriptionEditor"
 export { EventDescriptionStepPage } from "./pages/EventDescriptionStepPage"
