@@ -1,8 +1,10 @@
 import { useState } from "react"
-import { Badge, Box, Flex, Menu, Portal, Text, useBreakpointValue } from "@chakra-ui/react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { Badge, Box, Button, CloseButton, Dialog, Flex, Menu, Portal, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
 import { CalendarDays, Check, ChevronRight, MapPin, MoreHorizontal, PencilLine, Users } from "lucide-react"
 import { format } from "date-fns"
 import { Link } from "react-router-dom"
+import { updateEventWizardSetupState } from "@/api/events"
 import type { OrganizerEventListItem } from "@/api/events"
 import { APP_ROUTES } from "@/utils/routes"
 
@@ -30,12 +32,34 @@ function normalizeSetupStateToken(value: string) {
   return value.replace(/[^a-z]/gi, "").toLowerCase()
 }
 
+const STATUS_TRANSITIONS = {
+  online: {
+    label: "Online",
+    targetState: "ReadyForSale",
+    title: "Set event online?",
+    description: "This will confirm the event is ready for sale.",
+    tone: "green" as const,
+  },
+  offline: {
+    label: "Offline",
+    targetState: "ReadyForReview",
+    title: "Set event offline?",
+    description: "This will move the event back to the review state.",
+    tone: "orange" as const,
+  },
+}
+
+type StatusTransitionKey = keyof typeof STATUS_TRANSITIONS
+
 interface OrganizerEventCardProps {
   event: OrganizerEventListItem
 }
 
 export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
+  const queryClient = useQueryClient()
   const [isStatusPanelOpen, setIsStatusPanelOpen] = useState(false)
+  const [isStatusConfirmOpen, setIsStatusConfirmOpen] = useState(false)
+  const [pendingStatusAction, setPendingStatusAction] = useState<StatusTransitionKey | null>(null)
   const statusMenuPlacement = useBreakpointValue({ base: "bottom-start", sm: "right-start" }) ?? "right-start"
   const totalTickets = event.totalAvailableTickets + event.ticketsSold
   const soldPct = totalTickets > 0 ? Math.round((event.ticketsSold / totalTickets) * 100) : 0
@@ -51,6 +75,36 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
     normalizedSetupState === "readytoreview"
   const isOnline = normalizedSetupState === "readyforsale"
   const isOffline = normalizedSetupState === "readyforreview" || normalizedSetupState === "readytoreview"
+  const pendingTransition = pendingStatusAction ? STATUS_TRANSITIONS[pendingStatusAction] : null
+
+  const statusMutation = useMutation({
+    mutationFn: (setupState: string) => updateEventWizardSetupState(event.uniqueId, setupState),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["events"] })
+      setIsStatusConfirmOpen(false)
+      setPendingStatusAction(null)
+    },
+  })
+
+  function openStatusConfirmation(action: StatusTransitionKey) {
+    setIsStatusPanelOpen(false)
+    setPendingStatusAction(action)
+    setIsStatusConfirmOpen(true)
+  }
+
+  function closeStatusConfirmation() {
+    setIsStatusPanelOpen(false)
+    setIsStatusConfirmOpen(false)
+    setPendingStatusAction(null)
+  }
+
+  async function confirmStatusChange() {
+    if (!pendingTransition) {
+      return
+    }
+
+    await statusMutation.mutateAsync(pendingTransition.targetState)
+  }
 
   return (
     <Box
@@ -136,6 +190,7 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
                         fontSize="sm"
                         fontWeight="600"
                         color="gray.700"
+                        cursor="pointer"
                         _dark={{ color: "gray.200" }}
                         _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
                         px={3}
@@ -202,6 +257,7 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
                               py={2}
                               gap={2.5}
                               disabled={!isOnline && !isOffline}
+                              onClick={() => openStatusConfirmation("online")}
                             >
                               <Text as="span" flex="1" textAlign="left">
                                 Online
@@ -220,6 +276,7 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
                               py={2}
                               gap={2.5}
                               disabled={!isOnline && !isOffline}
+                              onClick={() => openStatusConfirmation("offline")}
                             >
                               <Text as="span" flex="1" textAlign="left">
                                 Offline
@@ -236,6 +293,117 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
             </Portal>
           </Menu.Root>
         </Flex>
+
+        <Dialog.Root
+          open={isStatusConfirmOpen}
+          onOpenChange={(details) => {
+            if (details.open) {
+              setIsStatusConfirmOpen(true)
+              return
+            }
+
+            closeStatusConfirmation()
+          }}
+          size="sm"
+        >
+          <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
+          <Dialog.Positioner>
+            <Dialog.Content
+              bg="white"
+              borderRadius="24px"
+              maxW={{ base: "100vw", md: "480px" }}
+              m={{ base: 0, md: "auto" }}
+              overflow="hidden"
+            >
+              <Box px={5} pt={5} pb={4} borderBottom="1px solid" borderColor="gray.200">
+                <Flex align="flex-start" justify="space-between" gap={4}>
+                  <Box>
+                    <Text fontSize="xl" fontWeight="900" color="gray.900" lineHeight="1.05">
+                      {pendingTransition?.title ?? "Confirm status change"}
+                    </Text>
+                    <Text mt={1.5} fontSize="sm" color="gray.600">
+                      {pendingTransition?.description ?? "Please confirm this event status update."}
+                    </Text>
+                  </Box>
+
+                  <Dialog.CloseTrigger asChild>
+                    <CloseButton aria-label="Close status confirmation" />
+                  </Dialog.CloseTrigger>
+                </Flex>
+              </Box>
+
+              <Dialog.Body px={5} py={4}>
+                <Stack gap={4}>
+                  <Box border="1px solid" borderColor="gray.200" bg="gray.50" borderRadius="18px" px={4} py={3}>
+                    <Text fontSize="xs" fontWeight="900" color="gray.500" letterSpacing="0.18em" textTransform="uppercase">
+                      Selected action
+                    </Text>
+                    <Badge
+                      mt={1.5}
+                      variant="subtle"
+                      colorPalette={pendingTransition?.tone ?? "gray"}
+                      borderRadius="999px"
+                      px={3}
+                      py={0.75}
+                    >
+                      <Text as="span" fontSize="xs" fontWeight="800">
+                        {pendingTransition?.label ?? "Update"}
+                      </Text>
+                    </Badge>
+                  </Box>
+
+                  <Text fontSize="sm" color="gray.700" lineHeight="1.55">
+                    The backend will set SetupState to <Text as="span" fontWeight="800">{pendingTransition?.targetState ?? "the selected state"}</Text>.
+                  </Text>
+                </Stack>
+              </Dialog.Body>
+
+              <Flex
+                px={5}
+                pb={4}
+                pt={3}
+                borderTop="1px solid"
+                borderColor="gray.200"
+                align="center"
+                justify="flex-end"
+                gap={2.5}
+                flexWrap="wrap"
+              >
+                <Button
+                  variant="outline"
+                  colorPalette="gray"
+                  borderRadius="14px"
+                  h="38px"
+                  px={4.5}
+                  minW={{ base: "full", md: "104px" }}
+                  onClick={closeStatusConfirmation}
+                  disabled={statusMutation.isPending}
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  borderRadius="14px"
+                  h="38px"
+                  px={4.5}
+                  minW={{ base: "full", md: "122px" }}
+                  color="white"
+                  style={{
+                    background:
+                      pendingTransition?.tone === "green"
+                        ? "linear-gradient(135deg, #22C55E 0%, #16A34A 100%)"
+                        : "linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)",
+                  }}
+                  loading={statusMutation.isPending}
+                  loadingText="Updating"
+                  onClick={confirmStatusChange}
+                >
+                  Confirm
+                </Button>
+              </Flex>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Dialog.Root>
 
         <Text
           fontSize="md"
