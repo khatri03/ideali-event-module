@@ -21,7 +21,15 @@ import { format, parseISO } from "date-fns"
 import { Timepicker } from "timepicker-ui-react"
 import type { ConfirmEventData } from "timepicker-ui"
 import { EventDescriptionEditor } from "@/features/events"
-import { SessionBannerStep, SessionETicketingStep, SessionGenreStep, SessionQuestionsStep, SessionSeatSelectionStep, SessionTicketStep } from "../components"
+import {
+  SessionBannerStep,
+  SessionETicketingStep,
+  SessionGenreStep,
+  SessionMembershipAccessStep,
+  SessionQuestionsStep,
+  SessionSeatSelectionStep,
+  SessionTicketStep,
+} from "../components"
 import {
   createOrganizerVenue,
   fetchOrganizerEvents,
@@ -81,6 +89,10 @@ export function SessionWizardStepPage() {
 
   if (activeStep?.slug === "venue") {
     return <SessionVenueStep sessionId={sessionId} />
+  }
+
+  if (activeStep?.slug === "membership-access") {
+    return <SessionMembershipAccessStep sessionId={sessionId} />
   }
 
   if (activeStep?.slug === "seat-selection") {

@@ -54,6 +54,24 @@ const sessionVenueSchema = z.object({
   venueUniqueId: z.string().optional(),
 })
 
+const sessionMembershipAccessItemSchema = z.object({
+  MembershipTypeUniqueId: z.string().optional(),
+  membershipTypeUniqueId: z.string().optional(),
+  DiscountType: z.enum(["FixedAmount", "Percentage"]).nullable().optional(),
+  discountType: z.enum(["FixedAmount", "Percentage"]).nullable().optional(),
+  DiscountValue: z.union([z.number(), z.string()]).nullable().optional(),
+  discountValue: z.union([z.number(), z.string()]).nullable().optional(),
+  MaxDiscountAmount: z.union([z.number(), z.string()]).nullable().optional(),
+  maxDiscountAmount: z.union([z.number(), z.string()]).nullable().optional(),
+})
+
+const sessionMembershipAccessSchema = z.object({
+  IsRestricted: z.boolean().optional(),
+  isRestricted: z.boolean().optional(),
+  Memberships: z.array(sessionMembershipAccessItemSchema).optional(),
+  memberships: z.array(sessionMembershipAccessItemSchema).optional(),
+})
+
 const sessionSeatSelectionSchema = z.object({
   OfferPickingSeats: z.boolean().optional(),
   offerPickingSeats: z.boolean().optional(),
@@ -316,6 +334,24 @@ export interface SessionWizardVenue {
   venueUniqueId: string
 }
 
+export type SessionWizardMembershipDiscountType = "FixedAmount" | "Percentage"
+
+export interface SessionWizardMembershipAccessItem {
+  membershipTypeUniqueId: string
+  discountType: SessionWizardMembershipDiscountType | null
+  discountValue: number | null
+  maxDiscountAmount: number | null
+}
+
+export interface SessionWizardMembershipAccess {
+  isRestricted: boolean
+  memberships: SessionWizardMembershipAccessItem[]
+}
+
+export interface SessionWizardMembershipAccessRequest {
+  memberships: SessionWizardMembershipAccessItem[]
+}
+
 export interface SessionWizardSeatSelection {
   offerPickingSeats: boolean
   seatsIoEventUniqueId: string | null
@@ -526,6 +562,15 @@ function normalizeTicketPrice(value: string | number | null | undefined): string
   }
 
   return typeof value === "number" ? value.toString() : value
+}
+
+function normalizeNullableNumber(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined || value === "") {
+    return null
+  }
+
+  const parsed = typeof value === "number" ? value : Number(value)
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 function normalizeDateTime(value: string | undefined): string {
@@ -871,10 +916,54 @@ export async function fetchSessionWizardSeatSelection(uniqueId: string): Promise
   }
 }
 
+export async function fetchSessionWizardMembershipAccess(uniqueId: string): Promise<SessionWizardMembershipAccess> {
+  const res = await client.get<unknown>(API_ROUTES.sessionWizardMembershipAccess(uniqueId))
+  const responseData = parseServicePayload(res.data)
+  const access = sessionMembershipAccessSchema.parse(responseData)
+  const memberships = access.Memberships ?? access.memberships ?? []
+
+  return {
+    isRestricted: (access.IsRestricted ?? access.isRestricted ?? false) && memberships.length > 0,
+    memberships: memberships
+      .map((item) => ({
+        membershipTypeUniqueId: item.MembershipTypeUniqueId ?? item.membershipTypeUniqueId ?? "",
+        discountType: item.DiscountType ?? item.discountType ?? null,
+        discountValue: normalizeNullableNumber(item.DiscountValue ?? item.discountValue),
+        maxDiscountAmount: normalizeNullableNumber(item.MaxDiscountAmount ?? item.maxDiscountAmount),
+      }))
+      .filter((item) => item.membershipTypeUniqueId.length > 0),
+  }
+}
+
+export async function updateSessionWizardMembershipAccess(
+  uniqueId: string,
+  payload: SessionWizardMembershipAccessRequest,
+  stepNo = 7,
+): Promise<SessionWizardMembershipAccess> {
+  const res = await client.post<unknown>(API_ROUTES.sessionWizardMembershipAccess(uniqueId), payload, {
+    params: { stepNo },
+  })
+  const responseData = parseServicePayload(res.data)
+  const access = sessionMembershipAccessSchema.parse(responseData)
+  const memberships = access.Memberships ?? access.memberships ?? []
+
+  return {
+    isRestricted: (access.IsRestricted ?? access.isRestricted ?? false) && memberships.length > 0,
+    memberships: memberships
+      .map((item) => ({
+        membershipTypeUniqueId: item.MembershipTypeUniqueId ?? item.membershipTypeUniqueId ?? "",
+        discountType: item.DiscountType ?? item.discountType ?? null,
+        discountValue: normalizeNullableNumber(item.DiscountValue ?? item.discountValue),
+        maxDiscountAmount: normalizeNullableNumber(item.MaxDiscountAmount ?? item.maxDiscountAmount),
+      }))
+      .filter((item) => item.membershipTypeUniqueId.length > 0),
+  }
+}
+
 export async function updateSessionWizardSeatSelection(
   uniqueId: string,
   payload: SessionWizardSeatSelectionRequest,
-  stepNo = 7,
+  stepNo = 8,
 ): Promise<SessionWizardSeatSelection> {
   const res = await client.post<unknown>(API_ROUTES.sessionWizardSeatSelection(uniqueId), payload, {
     params: { stepNo },
@@ -908,7 +997,7 @@ export async function fetchSessionWizardDateTime(uniqueId: string): Promise<Sess
 export async function updateSessionWizardDateTime(
   uniqueId: string,
   payload: SessionWizardDateTimeRequest,
-  stepNo = 8,
+  stepNo = 9,
 ): Promise<SessionWizardDateTime> {
   const res = await client.post<unknown>(API_ROUTES.sessionWizardDateTime(uniqueId), payload, {
     params: { stepNo },
@@ -939,7 +1028,7 @@ export async function fetchSessionWizardBooking(uniqueId: string): Promise<Sessi
 export async function updateSessionWizardBooking(
   uniqueId: string,
   payload: SessionWizardBookingRequest,
-  stepNo = 7,
+  stepNo = 9,
 ): Promise<SessionWizardBooking> {
   const res = await client.post<unknown>(API_ROUTES.sessionWizardBooking(uniqueId), payload, {
     params: { stepNo },
@@ -967,7 +1056,7 @@ export async function fetchSessionWizardDuration(uniqueId: string): Promise<Sess
 export async function updateSessionWizardDuration(
   uniqueId: string,
   payload: SessionWizardDurationRequest,
-  stepNo = 8,
+  stepNo = 9,
 ): Promise<SessionWizardDuration> {
   const res = await client.post<unknown>(API_ROUTES.sessionWizardDuration(uniqueId), payload, {
     params: { stepNo },

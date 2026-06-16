@@ -112,6 +112,7 @@ function SessionWizardLayoutContent() {
     activeStep?.slug === "description" ||
     activeStep?.slug === "banner" ||
     activeStep?.slug === "genre" ||
+    activeStep?.slug === "membership-access" ||
     activeStep?.slug === "schedule" ||
     activeStep?.slug === "questions"
   const isReviewStep = activeStep?.slug === "review"
@@ -122,43 +123,15 @@ function SessionWizardLayoutContent() {
   const isReviewDone = setupStateQuery.data?.setupState === finalSetupState
   function mapProgressToVisibleStepIndex(stepNo: number) {
     if (stepNo <= 0) {
-      return -1
+      return 0
     }
 
-    if (stepNo <= 6) {
-      return stepNo - 1
-    }
-
-    if (stepNo === 7) {
-      return 6
-    }
-
-    if (stepNo === 8) {
-      return 7
-    }
-
-    if (stepNo === 9) {
-      return 8
-    }
-
-    if (stepNo === 10) {
-      return 9
-    }
-
-    if (stepNo === 11) {
-      return 10
-    }
-
-    if (stepNo === 12) {
-      return 11
-    }
-
-    return 12
+    return Math.min(stepNo, steps.length - 1)
   }
 
-  const resolvedStepIndex = sessionId ? Math.min(mapProgressToVisibleStepIndex(lastCompletedStepNo), steps.length - 1) : -1
-  const completedStepCount = sessionId ? (isReviewDone ? steps.length : Math.max(resolvedStepIndex + 1, 0)) : 0
-  const maxUnlockedStepIndex = sessionId ? Math.max(resolvedStepIndex, 0) : 0
+  const resolvedStepIndex = sessionId ? mapProgressToVisibleStepIndex(lastCompletedStepNo) : -1
+  const completedStepCount = sessionId ? (isReviewDone ? steps.length : Math.max(lastCompletedStepNo, 0)) : 0
+  const maxUnlockedStepIndex = sessionId ? Math.max(0, Math.min(resolvedStepIndex, currentStepIndex >= 0 ? currentStepIndex : resolvedStepIndex)) : 0
   const resolvedStepPath = sessionId ? steps[resolvedStepIndex]?.path : undefined
   const shouldRedirectToResolvedStep =
     Boolean(sessionId) &&

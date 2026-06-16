@@ -4,6 +4,7 @@ import { Badge, Box, Button, CloseButton, Dialog, Flex, Grid, Skeleton, Stack, S
 import { CheckCircle2, PencilLine, X } from "lucide-react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { format, parseISO } from "date-fns"
+import { fetchMembershipTypeOptions } from "@/api/memberships"
 import { fetchOrganizerEvents, fetchOrganizerVenues } from "@/api/organizer"
 import {
   fetchSessionWizardBooking,
@@ -12,6 +13,7 @@ import {
   fetchSessionWizardETicketing,
   fetchSessionWizardGenres,
   fetchSessionWizardName,
+  fetchSessionWizardMembershipAccess,
   fetchSessionWizardQuestions,
   fetchSessionWizardSetupStateOptions,
   fetchSessionWizardSchedule,
@@ -249,6 +251,12 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     enabled: !!sessionId,
     retry: false,
   })
+  const membershipTypesQuery = useQuery({
+    queryKey: ["sessions", "review", sessionId, "membership-types"],
+    queryFn: fetchMembershipTypeOptions,
+    enabled: !!sessionId,
+    retry: false,
+  })
   const bookingQuery = useQuery({
     queryKey: ["sessions", "review", sessionId, "booking"],
     queryFn: () => fetchSessionWizardBooking(sessionId),
@@ -258,6 +266,12 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   const genreQuery = useQuery({
     queryKey: ["sessions", "review", sessionId, "genre"],
     queryFn: () => fetchSessionWizardGenres(sessionId),
+    enabled: !!sessionId,
+    retry: false,
+  })
+  const membershipAccessQuery = useQuery({
+    queryKey: ["sessions", "review", sessionId, "membership-access"],
+    queryFn: () => fetchSessionWizardMembershipAccess(sessionId),
     enabled: !!sessionId,
     retry: false,
   })
@@ -351,6 +365,17 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   const venueUniqueId = sessionVenueQuery.data?.venueUniqueId ?? ""
   const eventName = organizerEventsQuery.data?.find((item) => item.uniqueId === eventUniqueId)?.name || "Not set"
   const venueName = organizerVenuesQuery.data?.find((item) => item.uniqueId === venueUniqueId)?.name || "Not set"
+  const membershipTypeNameByUniqueId = useMemo(
+    () => new Map((membershipTypesQuery.data ?? []).map((item) => [item.value, item.text])),
+    [membershipTypesQuery.data],
+  )
+  const selectedMembershipNames = useMemo(
+    () =>
+      (membershipAccessQuery.data?.memberships ?? [])
+        .map((membership) => membershipTypeNameByUniqueId.get(membership.membershipTypeUniqueId))
+        .filter((name): name is string => Boolean(name)),
+    [membershipAccessQuery.data?.memberships, membershipTypeNameByUniqueId],
+  )
   const isSeatSelectionEnabled = seatSelectionQuery.data?.offerPickingSeats ?? false
   const seatSelectionEventName =
     seatSelectionQuery.data?.seatsIoEventLabel ||
@@ -371,6 +396,8 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     sessionVenueQuery.error ??
     seatSelectionQuery.error ??
     organizerVenuesQuery.error ??
+    membershipTypesQuery.error ??
+    membershipAccessQuery.error ??
     bookingQuery.error ??
     genreQuery.error ??
     questionsQuery.error ??
@@ -379,14 +406,40 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
     ticketsQuery.error
 
   function buildEditUrl(
-    step: "name" | "genre" | "event" | "venue" | "seat-selection" | "booking" | "start-end" | "dates-time" | "schedule" | "ticket" | "e-ticketing" | "questions",
+    step:
+      | "name"
+      | "genre"
+      | "event"
+      | "venue"
+      | "membership-access"
+      | "seat-selection"
+      | "booking"
+      | "start-end"
+      | "dates-time"
+      | "schedule"
+      | "ticket"
+      | "e-ticketing"
+      | "questions",
   ) {
     const target = APP_ROUTES.sessionWizard.editStep(sessionId, step)
     return `${target}?returnUrl=${encodeURIComponent(reviewReturnUrl)}`
   }
 
   function handleEdit(
-    step: "name" | "genre" | "event" | "venue" | "seat-selection" | "booking" | "start-end" | "dates-time" | "schedule" | "ticket" | "e-ticketing" | "questions",
+    step:
+      | "name"
+      | "genre"
+      | "event"
+      | "venue"
+      | "membership-access"
+      | "seat-selection"
+      | "booking"
+      | "start-end"
+      | "dates-time"
+      | "schedule"
+      | "ticket"
+      | "e-ticketing"
+      | "questions",
   ) {
     navigate(buildEditUrl(step))
   }
@@ -534,8 +587,51 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
           isLoading={sessionVenueQuery.isLoading || organizerVenuesQuery.isLoading}
         />
         <ReviewItem
-          label="Seat Selection"
+          label="Membership Access"
           value={
+            selectedMembershipNames.length > 0 ? (
+              <Stack gap={2}>
+                <Badge variant="subtle" colorPalette="green" borderRadius="999px" px={3} py={1} alignSelf="flex-start">
+                  <Flex align="center" gap={1.5}>
+                    <CheckCircle2 size={14} />
+                    <Text as="span" fontSize="xs" fontWeight="800">
+                      Restricted
+                    </Text>
+                  </Flex>
+                </Badge>
+                <Flex wrap="wrap" gap={2}>
+                  {selectedMembershipNames.map((membershipName, index) => (
+                    <Badge
+                      key={`${membershipName}-${index}`}
+                      variant="subtle"
+                      colorPalette="gray"
+                      borderRadius="999px"
+                      px={3}
+                      py={1}
+                    >
+                      {membershipName}
+                    </Badge>
+                  ))}
+                </Flex>
+              </Stack>
+            ) : (
+              <Badge variant="subtle" colorPalette="gray" borderRadius="999px" px={3} py={1}>
+                <Flex align="center" gap={1.5}>
+                  <X size={14} />
+                  <Text as="span" fontSize="xs" fontWeight="800">
+                    Public
+                  </Text>
+                </Flex>
+              </Badge>
+            )
+          }
+          onEdit={() => handleEdit("membership-access")}
+          editLabel="Edit membership access"
+          isLoading={membershipTypesQuery.isLoading || membershipAccessQuery.isLoading}
+        />
+        <ReviewItem
+          label="Seat Selection"
+          value={ 
             <Stack gap={1}>
               <Badge variant="subtle" colorPalette={isSeatSelectionEnabled ? "green" : "gray"} borderRadius="999px" px={3} py={1} alignSelf="flex-start">
                 <Flex align="center" gap={1.5}>
