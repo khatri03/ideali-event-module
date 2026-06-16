@@ -189,6 +189,22 @@ export function Events() {
           </Box>
 
           <Flex direction="column" align={{ base: "stretch", lg: "end" }} gap={2} w={{ base: "full", lg: "auto" }}>
+            <Button
+              borderRadius="12px"
+              fontWeight="700"
+              fontSize="sm"
+              h="42px"
+              px={5}
+              onClick={() => navigate(APP_ROUTES.eventWizard.createBase)}
+              style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)", color: "white" }}
+              _hover={{ opacity: 0.9, transform: "translateY(-1px)" }}
+              transition="all 0.2s ease"
+              w={{ base: "full", lg: "auto" }}
+            >
+              <Plus size={16} />
+              Create Event
+            </Button>
+
             <Flex
               w={{ base: "full", lg: "auto" }}
               border="1px solid"
@@ -410,9 +426,9 @@ export function Events() {
         {/* Header */}
         <Flex align="flex-start" justify="space-between" mb={6}>
           <Box>
-            <Text fontSize="xs" fontWeight="800" textTransform="uppercase" letterSpacing="0.12em" color="gray.500">
-              Legacy mock preview
-            </Text>
+          <Text fontSize="xs" fontWeight="800" textTransform="uppercase" letterSpacing="0.12em" color="gray.500">
+            Legacy mock preview
+          </Text>
             <Text fontSize="2xl" fontWeight="800" color="text.primary" letterSpacing="-0.02em" mt={1}>
               Mock Data Preview
             </Text>
@@ -420,20 +436,6 @@ export function Events() {
               {filtered.length} mock events{filtered.length !== events.length ? ` of ${events.length}` : ""}
             </Text>
           </Box>
-          <Button
-            borderRadius="12px"
-            fontWeight="700"
-            fontSize="sm"
-            h="42px"
-            px={5}
-            onClick={() => navigate(APP_ROUTES.eventWizard.createBase)}
-            style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)", color: "white" }}
-            _hover={{ opacity: 0.9, transform: "translateY(-1px)" }}
-            transition="all 0.2s ease"
-          >
-            <Plus size={16} />
-            Create Event
-          </Button>
         </Flex>
 
         {/* Filter bar */}

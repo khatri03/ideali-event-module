@@ -5,6 +5,14 @@ const config = defineConfig({
   conditions: {
     _dark: "[data-theme=dark] &",
   },
+  globalCss: {
+    "button:not(:disabled), [role='button'], [role='menuitem'], a[href], summary, label[for]": {
+      cursor: "pointer",
+    },
+    "button:disabled, [aria-disabled='true'], [disabled], [readonly], input[readonly], textarea[readonly], select[readonly], input:disabled, textarea:disabled, select:disabled": {
+      cursor: "not-allowed",
+    },
+  },
   theme: {
     tokens: {
       fonts: {

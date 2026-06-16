@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Badge, Box, Flex, Menu, Portal, Text, useBreakpointValue } from "@chakra-ui/react"
 import { CalendarDays, Check, ChevronRight, MapPin, MoreHorizontal, PencilLine, Users } from "lucide-react"
 import { format } from "date-fns"
-import { useNavigate } from "react-router-dom"
+import { Link } from "react-router-dom"
 import type { OrganizerEventListItem } from "@/api/events"
 import { APP_ROUTES } from "@/utils/routes"
 
@@ -35,7 +35,6 @@ interface OrganizerEventCardProps {
 }
 
 export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
-  const navigate = useNavigate()
   const [isStatusPanelOpen, setIsStatusPanelOpen] = useState(false)
   const statusMenuPlacement = useBreakpointValue({ base: "bottom-start", sm: "right-start" }) ?? "right-start"
   const totalTickets = event.totalAvailableTickets + event.ticketsSold
@@ -129,21 +128,25 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
                   _dark={{ bg: "navy.800", borderColor: "whiteAlpha.200" }}
                 >
                   {canEdit ? (
-                    <Menu.Item
-                      value="edit"
-                      borderRadius="10px"
-                      fontSize="sm"
-                      fontWeight="600"
-                      color="gray.700"
-                      _dark={{ color: "gray.200" }}
-                      _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
-                      px={3}
-                      py={2}
-                      gap={2.5}
-                      onClick={() => navigate(APP_ROUTES.eventWizard.edit(event.uniqueId))}
-                    >
-                      <PencilLine size={14} />
-                      Edit
+                    <Menu.Item value="edit" asChild>
+                      <Box
+                        as={Link}
+                        to={APP_ROUTES.eventWizard.edit(event.uniqueId)}
+                        borderRadius="10px"
+                        fontSize="sm"
+                        fontWeight="600"
+                        color="gray.700"
+                        _dark={{ color: "gray.200" }}
+                        _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
+                        px={3}
+                        py={2}
+                        gap={2.5}
+                        display="flex"
+                        alignItems="center"
+                      >
+                        <PencilLine size={14} />
+                        Edit
+                      </Box>
                     </Menu.Item>
                   ) : null}
 

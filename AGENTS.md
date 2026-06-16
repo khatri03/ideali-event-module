@@ -28,6 +28,11 @@ These rules govern how you work in this repo, not just how the code is structure
 - `src/data/mock.ts` is temporary. Before adding any new feature, check whether a real API endpoint exists in `src/api/`. If it does, wire to it. If it doesn't, say so and ask whether to use mock data or wait.
 - Do not expand `mock.ts`. Do not add new mock shapes unless explicitly told to.
 
+**Universal UI cursor rules:**
+
+- Every clickable item should show a pointer cursor when hovered.
+- Every disabled or readonly item should show a `not-allowed` cursor when hovered.
+
 **When in doubt about architecture:**
 
 - Follow the decision ladder in State Management below.
