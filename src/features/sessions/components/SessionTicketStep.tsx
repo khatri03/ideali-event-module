@@ -515,6 +515,15 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
     updateTicketMutation.reset()
   }
 
+  function resetTicketDraftForNextEntry() {
+    keepDraftTenureOnCloseRef.current = false
+    tenurePricingSectionRef.current?.resetDrafts()
+    resetTicketForm()
+    setEditingTicket(null)
+    setEditingTicketId(null)
+    setTicketEditorInstanceId((current) => current + 1)
+  }
+
   function openNewTicketDialog() {
     resetTicketForm()
     keepDraftTenureOnCloseRef.current = false
@@ -651,12 +660,13 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
       await tenurePricingSectionRef.current?.persistDrafts(savedTicket.uniqueId)
 
       if (closeAfterSave) {
-        keepDraftTenureOnCloseRef.current = true
         setIsOpen(false)
-        resetTicketForm()
+        resetTicketDraftForNextEntry()
         return
       }
 
+      resetTicketDraftForNextEntry()
+      setIsOpen(true)
       return
     } catch {
       return

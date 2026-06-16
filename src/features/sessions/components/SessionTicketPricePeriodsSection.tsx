@@ -458,10 +458,13 @@ export const SessionTicketPricePeriodsSection = forwardRef<
 
     try {
       if (editingPricePeriodId) {
-        await updateMutation.mutateAsync({
+        const updatedPeriod = await updateMutation.mutateAsync({
           pricePeriodUniqueId: editingPricePeriodId,
           ...payload,
         })
+        setPricePeriods((current) =>
+          current.map((item) => (item.uniqueId === editingPricePeriodId ? updatedPeriod : item)),
+        )
       } else {
         const createdPeriod = await createMutation.mutateAsync(payload)
         setPricePeriods((current) => [...current.filter((item) => item.uniqueId !== createdPeriod.uniqueId), createdPeriod])
