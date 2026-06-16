@@ -10,6 +10,21 @@ export interface EventFilters {
   category?: EventCategory
 }
 
+export interface OrganizerEventListItem {
+  uniqueId: string
+  name: string
+  themeColor: string | null
+  setupState: string
+  isCancelled: boolean
+  venueName: string | null
+  startDate: string | null
+  endDate: string | null
+  totalAvailableTickets: number
+  ticketsSold: number
+}
+
+export type OrganizerEventsPage = PaginatedResponse<OrganizerEventListItem>
+
 const appEventSchema = z
   .object({
     id: z.string(),
@@ -53,6 +68,42 @@ const appEventSchema = z
     ...event,
     purchaseTimeLimitMinutes: purchaseTimeLimitMinutes ?? purchaseTimeLimitHours ?? purchaseTimeLimit ?? null,
   }))
+
+const organizerEventListItemSchema = z.object({
+  UniqueId: z.string().min(1).optional(),
+  uniqueId: z.string().min(1).optional(),
+  Name: z.string().min(1).optional(),
+  name: z.string().min(1).optional(),
+  ThemeColor: z.string().nullable().optional(),
+  themeColor: z.string().nullable().optional(),
+  SetupState: z.string().min(1).optional(),
+  setupState: z.string().min(1).optional(),
+  IsCancelled: z.boolean().optional(),
+  isCancelled: z.boolean().optional(),
+  VenueName: z.string().nullable().optional(),
+  venueName: z.string().nullable().optional(),
+  StartDate: z.string().nullable().optional(),
+  startDate: z.string().nullable().optional(),
+  EndDate: z.string().nullable().optional(),
+  endDate: z.string().nullable().optional(),
+  TotalAvailableTickets: z.number().int().optional(),
+  totalAvailableTickets: z.number().int().optional(),
+  TicketsSold: z.number().int().optional(),
+  ticketsSold: z.number().int().optional(),
+})
+
+const organizerEventListPageSchema = z.object({
+  PageNo: z.number().int().optional(),
+  pageNo: z.number().int().optional(),
+  PageSize: z.number().int().optional(),
+  pageSize: z.number().int().optional(),
+  PageCount: z.number().int().optional(),
+  pageCount: z.number().int().optional(),
+  TotalRecordsCount: z.number().int().optional(),
+  totalRecordsCount: z.number().int().optional(),
+  PageData: z.array(organizerEventListItemSchema).optional(),
+  pageData: z.array(organizerEventListItemSchema).optional(),
+})
 
 const eventWizardCreateResponseSchema = z.object({
   uniqueId: z.string().min(1),
@@ -354,6 +405,41 @@ export async function fetchEvents(
   const res = await client.get<PaginatedResponse<AppEvent>>(API_ROUTES.events, { params: filters })
   const validated = z.array(appEventSchema).parse(res.data.items)
   return { ...res.data, items: validated }
+}
+
+function normalizeOrganizerEventListItem(item: z.infer<typeof organizerEventListItemSchema>): OrganizerEventListItem {
+  return {
+    uniqueId: item.UniqueId ?? item.uniqueId ?? "",
+    name: item.Name ?? item.name ?? "",
+    themeColor: item.ThemeColor ?? item.themeColor ?? null,
+    setupState: item.SetupState ?? item.setupState ?? "",
+    isCancelled: item.IsCancelled ?? item.isCancelled ?? false,
+    venueName: item.VenueName ?? item.venueName ?? null,
+    startDate: item.StartDate ?? item.startDate ?? null,
+    endDate: item.EndDate ?? item.endDate ?? null,
+    totalAvailableTickets: item.TotalAvailableTickets ?? item.totalAvailableTickets ?? 0,
+    ticketsSold: item.TicketsSold ?? item.ticketsSold ?? 0,
+  }
+}
+
+export async function fetchOrganizerEvents(
+  pageNo = 1,
+  pageSize = 12
+): Promise<OrganizerEventsPage> {
+  const res = await client.get<unknown>(API_ROUTES.organizerEvents, {
+    params: { pageNo, pageSize },
+  })
+  const responseData = parseServiceResponseData(res.data)
+  const parsed = organizerEventListPageSchema.parse(responseData)
+  const items = (parsed.PageData ?? parsed.pageData ?? []).map(normalizeOrganizerEventListItem)
+
+  return {
+    items,
+    total: parsed.TotalRecordsCount ?? parsed.totalRecordsCount ?? items.length,
+    page: parsed.PageNo ?? parsed.pageNo ?? pageNo,
+    pageSize: parsed.PageSize ?? parsed.pageSize ?? pageSize,
+    totalPages: parsed.PageCount ?? parsed.pageCount ?? 0,
+  }
 }
 
 export async function fetchEvent(id: string): Promise<AppEvent> {
