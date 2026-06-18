@@ -98,6 +98,13 @@ export const API_ROUTES = {
   eventWizardSessions: (id: string) => `/api/organizer/events/${id}/sessions`,
   eventWizardDiscountCoupon: (id: string) => `/api/organizer/events/${id}/discount-coupon`,
   eventWizardQuestions: (id: string) => `/api/organizer/events/${id}/questions`,
+  organizerPaymentMerchants: "/api/organizer/payment-merchant/list",
+  organizerPaymentMerchantMethods: (paymentMerchantId: number) =>
+    `/api/organizer/payment-merchant/${paymentMerchantId}/payment-methods`,
+  organizerPaymentProcessorFees: "/api/organizer/payment-processor-fee/list",
+  organizerPaymentProcessorFeeCreate: "/api/organizer/payment-processor-fee/create",
+  organizerPaymentProcessorFeeUpdate: (paymentProcessorFeeId: string) =>
+    `/api/organizer/payment-processor-fee/${paymentProcessorFeeId}/update`,
   adminTimeZones: "/api/admin/list-items/time-zones",
   organizerEvents: "/api/organizer/events/list",
   membershipTypeOptions: "/api/organizer/membership/type/options",
