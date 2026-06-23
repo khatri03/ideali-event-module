@@ -29,10 +29,10 @@ export function SettingsPage() {
 
           <Box flex={1}>
             <Badge variant="subtle" colorPalette="purple" borderRadius="999px" px={3} py={1} mb={2}>
-              Organizer settings
+              Organizer billing
             </Badge>
             <Heading fontSize={{ base: "2xl", md: "3xl" }} fontWeight="800" letterSpacing="-0.03em" color="gray.900">
-              Settings
+              Payment Processor Fees
             </Heading>
             <Text mt={2} fontSize={{ base: "sm", md: "md" }} color="gray.600" maxW="3xl">
               Keep the platform charge separate from payment processor cut offsets. This area is where organizers define fee recovery by merchant and payment method.

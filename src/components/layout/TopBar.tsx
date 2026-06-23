@@ -12,7 +12,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   [APP_ROUTES.dashboard]: { title: "Dashboard", subtitle: "Welcome back!" },
   [APP_ROUTES.events]: { title: "Events", subtitle: "Manage and track all your events" },
   [APP_ROUTES.calendar]: { title: "Calendar", subtitle: "Your event schedule at a glance" },
-  [APP_ROUTES.settings]: { title: "Settings", subtitle: "Configure your workspace" },
+  [APP_ROUTES.settings]: { title: "Payment Processor Fees", subtitle: "Configure processor fee recovery" },
   [APP_ROUTES.team]: { title: "Team", subtitle: "Manage your team members" },
   [APP_ROUTES.analytics]: { title: "Analytics", subtitle: "Insights and performance metrics" },
   [APP_ROUTES.help]: { title: "Help Center", subtitle: "Documentation and support" },
