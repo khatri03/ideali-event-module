@@ -4,6 +4,9 @@ export const APP_ROUTES = {
   events: "/events",
   calendar: "/calendar",
   settings: "/organizer/payment-processor-fee/list",
+  adminRevenuePlans: "/admin/admin-revenue-plans/list",
+  adminFeePlans: "/admin/admin-revenue-plans/list",
+  adminFeePlansLegacy: "/admin/admin-fee-plans/list",
   team: "/team",
   analytics: "/analytics",
   help: "/help",
@@ -105,6 +108,17 @@ export const API_ROUTES = {
   organizerPaymentProcessorFeeCreate: "/api/organizer/payment-processor-fee/create",
   organizerPaymentProcessorFeeUpdate: (paymentProcessorFeeId: string) =>
     `/api/organizer/payment-processor-fee/${paymentProcessorFeeId}/update`,
+  adminRevenuePlans: "/api/admin/admin-revenue-plans/list",
+  adminFeePlans: "/api/admin/admin-revenue-plans/list",
+  adminRevenuePlanDetail: (uniqueId: string) => `/api/admin/admin-revenue-plans/${uniqueId}/detail`,
+  adminRevenuePlanCreate: "/api/admin/admin-revenue-plans/create",
+  adminRevenuePlanUpdate: (uniqueId: string) => `/api/admin/admin-revenue-plans/${uniqueId}/update`,
+  adminRevenuePlanAssignOrganizer: (uniqueId: string, organizerUniqueId: string) =>
+    `/api/admin/admin-revenue-plans/${uniqueId}/map/${organizerUniqueId}`,
+  adminRevenuePlanUnassignOrganizer: (uniqueId: string, organizerUniqueId: string) =>
+    `/api/admin/admin-revenue-plans/${uniqueId}/unmap/${organizerUniqueId}`,
+  adminRevenuePlanModules: "/api/admin/list-items/modules",
+  adminOrganizersList: "/api/admin/organizer/list/Active",
   adminTimeZones: "/api/admin/list-items/time-zones",
   organizerEvents: "/api/organizer/events/list",
   membershipTypeOptions: "/api/organizer/membership/type/options",

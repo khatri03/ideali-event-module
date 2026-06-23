@@ -8,6 +8,7 @@ import { Dashboard } from "./pages/Dashboard"
 import { Events } from "./pages/Events"
 import { CalendarPage } from "./pages/CalendarPage"
 import { Settings } from "./pages/Settings"
+import { AdminFeePlansPage } from "./features/admin-fee-plans"
 import { SeatingLayoutDesignerPage, SeatingLayoutsPage } from "./features/seating-layouts"
 import {
   EventBannerStepPage,
@@ -110,6 +111,8 @@ export default function App() {
           <Route path={APP_ROUTES.events} element={<Events />} />
           <Route path={APP_ROUTES.calendar} element={<CalendarPage />} />
           <Route path={APP_ROUTES.settings} element={<Settings />} />
+          <Route path={APP_ROUTES.adminRevenuePlans} element={<AdminFeePlansPage />} />
+          <Route path={APP_ROUTES.adminFeePlansLegacy} element={<Navigate to={APP_ROUTES.adminRevenuePlans} replace />} />
           <Route path={APP_ROUTES.team} element={<Settings />} />
           <Route path={APP_ROUTES.analytics} element={<Settings />} />
           <Route path={APP_ROUTES.help} element={<Settings />} />

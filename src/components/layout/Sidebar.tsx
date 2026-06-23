@@ -133,13 +133,15 @@ function NavSection({ label, items, onNavigate }: { label: string; items: NavIte
 }
 
 function SettingsSection({
-  isActive,
   isOpen,
+  isAdmin,
+  pathname,
   onToggle,
   onNavigate,
 }: {
-  isActive: boolean
   isOpen: boolean
+  isAdmin: boolean
+  pathname: string
   onToggle: () => void
   onNavigate?: () => void
 }) {
@@ -158,7 +160,6 @@ function SettingsSection({
       </Text>
       <Flex
         as="button"
-        type="button"
         align="center"
         gap={3}
         px={3}
@@ -203,29 +204,65 @@ function SettingsSection({
               borderRadius="12px"
               mx={2}
               transition="all 0.18s ease"
-              bg={isActive ? "rgba(255,255,255,0.92)" : "transparent"}
-              _hover={!isActive ? { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" } : {}}
-              boxShadow={isActive ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
+              bg={pathname === APP_ROUTES.settings ? "rgba(255,255,255,0.92)" : "transparent"}
+              _hover={pathname !== APP_ROUTES.settings ? { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" } : {}}
+              boxShadow={pathname === APP_ROUTES.settings ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
             >
               <Box
                 w="6px"
                 h="6px"
                 borderRadius="full"
-                bg={isActive ? "#7551FF" : "rgba(255,255,255,0.6)"}
+                bg={pathname === APP_ROUTES.settings ? "#7551FF" : "rgba(255,255,255,0.6)"}
                 flexShrink={0}
               />
               <Text
                 fontSize="sm"
-                fontWeight={isActive ? "700" : "500"}
-                color={isActive ? "#422AFB" : "rgba(255,255,255,0.85)"}
+                fontWeight={pathname === APP_ROUTES.settings ? "700" : "500"}
+                color={pathname === APP_ROUTES.settings ? "#422AFB" : "rgba(255,255,255,0.85)"}
                 transition="color 0.18s"
                 flex={1}
-                letterSpacing={isActive ? "-0.01em" : "0"}
+                letterSpacing={pathname === APP_ROUTES.settings ? "-0.01em" : "0"}
               >
                 Processor Fees
               </Text>
             </Flex>
           </NavLink>
+
+          {isAdmin ? (
+            <NavLink to={APP_ROUTES.adminRevenuePlans} style={{ textDecoration: "none" }} onClick={onNavigate}>
+              <Flex
+                align="center"
+                gap={3}
+                pl={10}
+                pr={3}
+                py={2.5}
+                borderRadius="12px"
+                mx={2}
+                transition="all 0.18s ease"
+                bg={pathname === APP_ROUTES.adminRevenuePlans ? "rgba(255,255,255,0.92)" : "transparent"}
+                _hover={pathname !== APP_ROUTES.adminRevenuePlans ? { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" } : {}}
+                boxShadow={pathname === APP_ROUTES.adminRevenuePlans ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
+              >
+                <Box
+                  w="6px"
+                  h="6px"
+                  borderRadius="full"
+                  bg={pathname === APP_ROUTES.adminRevenuePlans ? "#7551FF" : "rgba(255,255,255,0.6)"}
+                  flexShrink={0}
+                />
+                <Text
+                  fontSize="sm"
+                  fontWeight={pathname === APP_ROUTES.adminRevenuePlans ? "700" : "500"}
+                  color={pathname === APP_ROUTES.adminRevenuePlans ? "#422AFB" : "rgba(255,255,255,0.85)"}
+                  transition="color 0.18s"
+                  flex={1}
+                  letterSpacing={pathname === APP_ROUTES.adminRevenuePlans ? "-0.01em" : "0"}
+                >
+                  Revenue Plans
+                </Text>
+              </Flex>
+            </NavLink>
+          ) : null}
         </VStack>
       ) : null}
     </Box>
@@ -238,7 +275,9 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
   const currentUser = auth.getUser() ?? mockUser
   const isMobile = variant === "mobile"
   const [isSettingsManualOpen, setIsSettingsManualOpen] = useState(false)
-  const isSettingsChildActive = pathname === APP_ROUTES.settings
+  const isAdmin = currentUser.role === "Admin"
+  const isSettingsRouteActive = pathname === APP_ROUTES.settings || pathname === APP_ROUTES.adminRevenuePlans
+  const isSettingsOpen = isSettingsManualOpen || isSettingsRouteActive
 
   async function handleSignOut() {
     try {
@@ -318,7 +357,13 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
       <Box flex={1} px={2} position="relative" zIndex={1}>
         <NavSection label="Main" items={mainNav} onNavigate={onNavigate} />
         <NavSection label="Management" items={managementNav} onNavigate={onNavigate} />
-        <SettingsSection isActive={isSettingsChildActive} isOpen={isSettingsManualOpen} onToggle={() => setIsSettingsManualOpen((current) => !current)} onNavigate={onNavigate} />
+        <SettingsSection
+          isAdmin={isAdmin}
+          pathname={pathname}
+          isOpen={isSettingsOpen}
+          onToggle={() => setIsSettingsManualOpen((current) => !current)}
+          onNavigate={onNavigate}
+        />
         <NavSection label="System" items={systemNav} onNavigate={onNavigate} />
       </Box>
 
