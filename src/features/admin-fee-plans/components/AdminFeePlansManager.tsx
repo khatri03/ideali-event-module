@@ -219,6 +219,17 @@ export function AdminFeePlansManager() {
     )
   }
 
+  function handleRemoveOrganizer(uniqueId: string) {
+    setValue(
+      "organizerUniqueIds",
+      organizerUniqueIds.filter((current) => current !== uniqueId),
+      {
+        shouldDirty: true,
+        shouldValidate: true,
+      },
+    )
+  }
+
   const organizerMultiSelectStyles = useMemo(
     () =>
       ({
@@ -252,21 +263,27 @@ export function AdminFeePlansManager() {
         multiValue: (base) => ({
           ...base,
           borderRadius: 999,
-          backgroundColor: "#EEF2FF",
+          backgroundColor: "rgba(117, 81, 255, 0.12)",
+          border: "1px solid rgba(117, 81, 255, 0.18)",
+          margin: "2px",
         }),
         multiValueLabel: (base) => ({
           ...base,
           fontSize: 12,
           fontWeight: 700,
-          color: "#1E293B",
+          color: "#422AFB",
+          paddingLeft: "8px",
+          paddingRight: "4px",
         }),
         multiValueRemove: (base) => ({
           ...base,
           borderRadius: 999,
-          color: "#475569",
+          color: "#7551FF",
+          paddingLeft: "4px",
+          paddingRight: "8px",
           ":hover": {
-            backgroundColor: "#C7D2FE",
-            color: "#111827",
+            backgroundColor: "rgba(117, 81, 255, 0.18)",
+            color: "#422AFB",
           },
         }),
       }) satisfies StylesConfig<OrganizerSelectOption, true>,
@@ -754,9 +771,43 @@ export function AdminFeePlansManager() {
                     hideSelectedOptions={false}
                     isClearable={false}
                     isDisabled={organizersQuery.isLoading}
+                    controlShouldRenderValue={false}
                     components={{ Option: OrganizerOption }}
                     styles={organizerMultiSelectStyles}
                   />
+                  {selectedOrganizerOptions.length > 0 ? (
+                    <Flex wrap="wrap" gap={2} mt={3}>
+                      {selectedOrganizerOptions.map((option) => (
+                        <Box
+                          key={option.value}
+                          as="button"
+                          type="button"
+                          onClick={() => handleRemoveOrganizer(option.value)}
+                          display="inline-flex"
+                          alignItems="center"
+                          gap={2}
+                          borderRadius="999px"
+                          border="1px solid"
+                          borderColor="rgba(117, 81, 255, 0.18)"
+                          bg="rgba(117, 81, 255, 0.12)"
+                          color="brand.500"
+                          px={3}
+                          py={1.5}
+                          fontSize="sm"
+                          fontWeight="700"
+                          cursor="pointer"
+                          _hover={{ bg: "rgba(117, 81, 255, 0.18)" }}
+                        >
+                          <Text as="span" lineHeight={1.1}>
+                            {option.label}
+                          </Text>
+                          <Text as="span" fontSize="xs" lineHeight={1} aria-hidden="true">
+                            ×
+                          </Text>
+                        </Box>
+                      ))}
+                    </Flex>
+                  ) : null}
                 </Field.Root>
 
                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
