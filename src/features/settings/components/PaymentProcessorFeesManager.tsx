@@ -270,11 +270,16 @@ export function PaymentProcessorFeesManager() {
         <Button
           w={{ base: "full", md: "auto" }}
           minH="11"
-          px={5}
+          px={6}
+          py={3}
           borderRadius="14px"
           fontWeight="700"
           bg="linear-gradient(135deg, #7551FF 0%, #422AFB 100%)"
           color="white"
+          display="inline-flex"
+          alignItems="center"
+          justifyContent="center"
+          gap={2}
           onClick={openCreateDialog}
         >
           <Plus size={16} />
@@ -373,7 +378,18 @@ export function PaymentProcessorFeesManager() {
                         <Text mt={2} fontSize="sm" color="gray.600">
                           Add the first fee to map processor cut offsets by merchant and payment method.
                         </Text>
-                        <Button mt={5} onClick={openCreateDialog}>
+                        <Button
+                          mt={5}
+                          px={6}
+                          py={3}
+                          minH="11"
+                          borderRadius="14px"
+                          display="inline-flex"
+                          alignItems="center"
+                          justifyContent="center"
+                          gap={2}
+                          onClick={openCreateDialog}
+                        >
                           <Plus size={16} />
                           Add Fee
                         </Button>
