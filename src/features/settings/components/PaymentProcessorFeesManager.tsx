@@ -512,7 +512,7 @@ export function PaymentProcessorFeesManager() {
                   </Field.Root>
 
                   <Field.Root invalid={Boolean(errors.label)}>
-                    <Field.Label>Label</Field.Label>
+                    <Field.Label>Display Text</Field.Label>
                     <Input {...register("label")} minH="11" borderRadius="14px" px={4} placeholder="Processor fee offset" />
                     {errors.label ? <Field.ErrorText>{errors.label.message}</Field.ErrorText> : null}
                   </Field.Root>
