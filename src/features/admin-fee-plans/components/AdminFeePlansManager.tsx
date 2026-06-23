@@ -733,18 +733,6 @@ export function AdminFeePlansManager() {
 
             <Dialog.Body px={6} py={6} overflowY="auto">
               <form onSubmit={handleSubmit(handleSave)} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-                <Field.Root invalid={Boolean(errors.moduleId)}>
-                  <RequiredFieldLabel>Module</RequiredFieldLabel>
-                  <StyledSelect
-                    options={moduleOptions}
-                    value={moduleId > 0 ? String(moduleId) : ""}
-                    onChange={(value) => setValue("moduleId", Number(value), { shouldDirty: true, shouldValidate: true })}
-                    placeholder={modulesQuery.isLoading ? "Loading modules..." : "Select module"}
-                    disabled={modulesQuery.isLoading}
-                  />
-                  {errors.moduleId ? <Field.ErrorText>{errors.moduleId.message}</Field.ErrorText> : null}
-                </Field.Root>
-
                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                   <Field.Root w="full" invalid={Boolean(errors.name)}>
                     <RequiredFieldLabel>Name</RequiredFieldLabel>
@@ -867,6 +855,18 @@ export function AdminFeePlansManager() {
                     </Box>
                   </Field.Root>
                 </SimpleGrid>
+
+                <Field.Root invalid={Boolean(errors.moduleId)}>
+                  <RequiredFieldLabel>Module</RequiredFieldLabel>
+                  <StyledSelect
+                    options={moduleOptions}
+                    value={moduleId > 0 ? String(moduleId) : ""}
+                    onChange={(value) => setValue("moduleId", Number(value), { shouldDirty: true, shouldValidate: true })}
+                    placeholder={modulesQuery.isLoading ? "Loading modules..." : "Select module"}
+                    disabled={modulesQuery.isLoading}
+                  />
+                  {errors.moduleId ? <Field.ErrorText>{errors.moduleId.message}</Field.ErrorText> : null}
+                </Field.Root>
 
                 <Box borderRadius="18px" border="1px solid" borderColor="border.subtle" bg="white" p={4}>
                   <Flex align="center" gap={2} mb={4}>
