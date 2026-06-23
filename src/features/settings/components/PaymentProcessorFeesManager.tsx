@@ -13,6 +13,7 @@ import {
   Flex,
   Heading,
   Input,
+  Menu,
   SimpleGrid,
   Skeleton,
   SkeletonText,
@@ -20,8 +21,9 @@ import {
   Switch,
   Table,
   Text,
+  Portal,
 } from "@chakra-ui/react"
-import { PencilLine, Plus, RefreshCcw } from "lucide-react"
+import { MoreHorizontal, PencilLine, Plus, RefreshCcw } from "lucide-react"
 import { StyledSelect } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
 import {
@@ -189,6 +191,12 @@ export function PaymentProcessorFeesManager() {
     },
   })
 
+  function resetDialogState() {
+    setBanner(null)
+    createMutation.reset()
+    updateMutation.reset()
+  }
+
   useEffect(() => {
     if (!isDialogOpen || editingFee || paymentMerchantId > 0 || !merchantsQuery.data?.length) {
       return
@@ -212,14 +220,14 @@ export function PaymentProcessorFeesManager() {
   }, [methodsQuery.data, paymentProductId, setValue])
 
   function openCreateDialog() {
-    setBanner(null)
+    resetDialogState()
     setEditingFee(null)
     reset(EMPTY_FORM_VALUES)
     setIsDialogOpen(true)
   }
 
   function openEditDialog(fee: OrganizerPaymentProcessorFee) {
-    setBanner(null)
+    resetDialogState()
     setEditingFee(fee)
     reset({
       name: fee.name,
@@ -356,6 +364,9 @@ export function PaymentProcessorFeesManager() {
             <Table.Root variant="line" size="sm">
               <Table.Header>
                 <Table.Row bg="app.bg">
+                  <Table.ColumnHeader px={4} py={3} textAlign="right">
+                    Actions
+                  </Table.ColumnHeader>
                   <Table.ColumnHeader px={6} py={3}>
                     Name
                   </Table.ColumnHeader>
@@ -373,9 +384,6 @@ export function PaymentProcessorFeesManager() {
                   </Table.ColumnHeader>
                   <Table.ColumnHeader px={4} py={3}>
                     Status
-                  </Table.ColumnHeader>
-                  <Table.ColumnHeader px={4} py={3} textAlign="right">
-                    Actions
                   </Table.ColumnHeader>
                 </Table.Row>
               </Table.Header>
@@ -411,6 +419,53 @@ export function PaymentProcessorFeesManager() {
                 ) : (
                   fees.map((fee) => (
                     <Table.Row key={fee.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
+                      <Table.Cell px={4} py={4} textAlign="right">
+                        <Menu.Root>
+                          <Menu.Trigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              aria-label={`Fee actions for ${fee.name}`}
+                              title={`Fee actions for ${fee.name}`}
+                              borderRadius="full"
+                              h="36px"
+                              w="36px"
+                              minW="36px"
+                              p={0}
+                            >
+                              <MoreHorizontal size={15} />
+                            </Button>
+                          </Menu.Trigger>
+                          <Portal>
+                            <Menu.Positioner>
+                              <Menu.Content
+                                minW="12rem"
+                                borderRadius="14px"
+                                border="1px solid"
+                                borderColor="gray.200"
+                                bg="white"
+                                boxShadow="0 16px 40px rgba(15, 23, 42, 0.12)"
+                                p={1}
+                              >
+                                <Menu.Item
+                                  value={`edit-${fee.uniqueId}`}
+                                  onClick={() => openEditDialog(fee)}
+                                  borderRadius="10px"
+                                  fontSize="sm"
+                                  fontWeight="600"
+                                  color="gray.700"
+                                  px={3}
+                                  py={2}
+                                  cursor="pointer"
+                                >
+                                  <PencilLine size={14} />
+                                  Edit
+                                </Menu.Item>
+                              </Menu.Content>
+                            </Menu.Positioner>
+                          </Portal>
+                        </Menu.Root>
+                      </Table.Cell>
                       <Table.Cell px={6} py={4}>
                         <Text fontSize="sm" fontWeight="700" color="text.primary">
                           {fee.name}
@@ -451,12 +506,6 @@ export function PaymentProcessorFeesManager() {
                           {fee.isActive ? "Active" : "Inactive"}
                         </Badge>
                       </Table.Cell>
-                      <Table.Cell px={4} py={4} textAlign="right">
-                        <Button variant="outline" minH="11" px={4} onClick={() => openEditDialog(fee)}>
-                          <PencilLine size={16} />
-                          Edit
-                        </Button>
-                      </Table.Cell>
                     </Table.Row>
                   ))
                 )}
@@ -473,6 +522,7 @@ export function PaymentProcessorFeesManager() {
           if (!details.open) {
             setEditingFee(null)
             reset(EMPTY_FORM_VALUES)
+            resetDialogState()
           }
         }}
         size="lg"
