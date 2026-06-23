@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { useMemo, useState } from "react"
 import { useForm, useWatch } from "react-hook-form"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
@@ -108,6 +108,8 @@ const EMPTY_FORM_VALUES: AdminRevenuePlanFormValues = {
   },
 }
 
+const ADMIN_REVENUE_PLAN_PAGE_SIZE = 6
+
 function formatValue(valueType: AdminRevenuePlan["rules"][number]["valueType"], value: number) {
   const formattedValue = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value)
   return valueType === "Percent" ? `${formattedValue}%` : `$${formattedValue}`
@@ -125,6 +127,18 @@ function getModuleRuleSummary(plan: AdminRevenuePlan, moduleIndex: number) {
   }
 
   return moduleRules.map(planRuleLabel).join("\n")
+}
+
+function buildPageNumbers(page: number, totalPages: number) {
+  const pages: number[] = []
+  const start = Math.max(1, page - 2)
+  const end = Math.min(totalPages, page + 2)
+
+  for (let current = start; current <= end; current += 1) {
+    pages.push(current)
+  }
+
+  return pages
 }
 
 function formatNumericInput(value: string) {
@@ -252,6 +266,7 @@ function AdminFeePlansSkeleton() {
 
 export function AdminFeePlansManager() {
   const queryClient = useQueryClient()
+  const [planPage, setPlanPage] = useState(1)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingPlan, setEditingPlan] = useState<AdminRevenuePlan | null>(null)
   const [isMapDialogOpen, setIsMapDialogOpen] = useState(false)
@@ -263,8 +278,9 @@ export function AdminFeePlansManager() {
   const [buyerRuleValueInput, setBuyerRuleValueInput] = useState("")
 
   const plansQuery = useQuery({
-    queryKey: ["admin-revenue-plans"],
-    queryFn: fetchAdminRevenuePlans,
+    queryKey: ["admin-revenue-plans", { pageNo: planPage, pageSize: ADMIN_REVENUE_PLAN_PAGE_SIZE }],
+    queryFn: () => fetchAdminRevenuePlans(planPage, ADMIN_REVENUE_PLAN_PAGE_SIZE),
+    placeholderData: keepPreviousData,
   })
 
   const modulesQuery = useQuery({
@@ -676,7 +692,14 @@ export function AdminFeePlansManager() {
   const isBusy = saveMutation.isPending || mapMutation.isPending
   const saveError = saveMutation.error
   const mapError = mapMutation.error
-  const plans = plansQuery.data ?? []
+  const plans = plansQuery.data?.items ?? []
+  const totalPlans = plansQuery.data?.total ?? 0
+  const currentPlanPage = planPage
+  const totalPlanPages = plansQuery.data?.totalPages ?? 0
+  const planPageNumbers = useMemo(
+    () => buildPageNumbers(planPage, totalPlanPages),
+    [planPage, totalPlanPages],
+  )
 
   return (
     <Stack gap={5}>
@@ -759,19 +782,24 @@ export function AdminFeePlansManager() {
                 Available plans
               </Text>
               <Text fontSize="sm" color="text.secondary">
-                {plans.length} plan{plans.length === 1 ? "" : "s"} configured
+                {totalPlans} plan{totalPlans === 1 ? "" : "s"} total
               </Text>
             </Box>
-            <Button
-              variant="outline"
-              minH="11"
-              px={4}
-              onClick={() => plansQuery.refetch()}
-              loading={plansQuery.isFetching}
-            >
-              <RotateCcw size={16} />
-              Refresh
-            </Button>
+            <Flex direction="column" align={{ base: "stretch", md: "end" }} gap={2}>
+              <Button
+                variant="outline"
+                minH="11"
+                px={4}
+                onClick={() => plansQuery.refetch()}
+                loading={plansQuery.isFetching}
+              >
+                <RotateCcw size={16} />
+                Refresh
+              </Button>
+              <Badge variant="subtle" colorPalette="purple" borderRadius="999px" px={3} py={1}>
+                Page {currentPlanPage} of {Math.max(totalPlanPages, 1)}
+              </Badge>
+            </Flex>
           </Flex>
 
           <Box overflowX="auto">
@@ -1026,6 +1054,55 @@ export function AdminFeePlansManager() {
           </Box>
         </Box>
       )}
+
+      {plansQuery.data ? (
+        <Flex
+          mt={6}
+          direction={{ base: "column", md: "row" }}
+          align={{ base: "stretch", md: "center" }}
+          justify="space-between"
+          gap={3}
+        >
+          <Text fontSize="sm" color="gray.600">
+            Page {currentPlanPage} of {Math.max(totalPlanPages, 1)}
+          </Text>
+
+          <Flex gap={2} wrap="wrap">
+            <Button
+              minH="11"
+              px={4}
+              variant="outline"
+              disabled={currentPlanPage <= 1 || plansQuery.isFetching}
+              onClick={() => setPlanPage((current) => Math.max(1, current - 1))}
+            >
+              Previous
+            </Button>
+            {planPageNumbers.map((item) => (
+              <Button
+                key={item}
+                minH="11"
+                px={4}
+                variant={item === currentPlanPage ? "solid" : "outline"}
+                bg={item === currentPlanPage ? "brand.500" : undefined}
+                color={item === currentPlanPage ? "white" : undefined}
+                disabled={plansQuery.isFetching}
+                onClick={() => setPlanPage(item)}
+              >
+                {item}
+              </Button>
+            ))}
+            <Button
+              minH="11"
+              px={4}
+              variant="outline"
+              disabled={currentPlanPage >= totalPlanPages || plansQuery.isFetching || totalPlanPages === 0}
+              onClick={() => setPlanPage((current) => current + 1)}
+            >
+              Next
+            </Button>
+          </Flex>
+        </Flex>
+      ) : null}
 
       <Dialog.Root
         open={isDialogOpen}

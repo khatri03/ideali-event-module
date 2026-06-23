@@ -2,6 +2,7 @@ import { z } from "zod"
 import { client } from "@/api/client"
 import { API_ROUTES } from "@/utils/routes"
 import type { ServiceResponse } from "@/api/types"
+import type { PaginatedResponse } from "@/api/types"
 
 const serviceResponseSchema = z.object({
   success: z.boolean().optional(),
@@ -69,6 +70,19 @@ const adminFeePlanSchema = z.object({
   assignedOrganizerUniqueIds: z.array(z.string()).optional(),
   Rules: z.array(adminFeePlanRuleSchema).optional(),
   rules: z.array(adminFeePlanRuleSchema).optional(),
+})
+
+const adminFeePlanPageSchema = z.object({
+  PageNo: z.number().int().optional(),
+  pageNo: z.number().int().optional(),
+  PageSize: z.number().int().optional(),
+  pageSize: z.number().int().optional(),
+  PageCount: z.number().int().optional(),
+  pageCount: z.number().int().optional(),
+  TotalRecordsCount: z.number().int().optional(),
+  totalRecordsCount: z.number().int().optional(),
+  PageData: z.array(adminFeePlanSchema).optional(),
+  pageData: z.array(adminFeePlanSchema).optional(),
 })
 
 const moduleOptionSchema = z.object({
@@ -199,11 +213,21 @@ function normalizePlan(plan: z.infer<typeof adminFeePlanSchema>): AdminRevenuePl
   }
 }
 
-export async function fetchAdminRevenuePlans(): Promise<AdminRevenuePlan[]> {
-  const response = await client.get<unknown>(API_ROUTES.adminRevenuePlans)
+export async function fetchAdminRevenuePlans(pageNo = 1, pageSize = 6): Promise<PaginatedResponse<AdminRevenuePlan>> {
+  const response = await client.get<unknown>(API_ROUTES.adminRevenuePlans, {
+    params: { pageNo, pageSize },
+  })
   const data = parseServicePayload(response.data)
+  const parsed = adminFeePlanPageSchema.parse(data)
+  const items = (parsed.PageData ?? parsed.pageData ?? []).map(normalizePlan)
 
-  return z.array(adminFeePlanSchema).parse(data).map(normalizePlan)
+  return {
+    items,
+    total: parsed.TotalRecordsCount ?? parsed.totalRecordsCount ?? items.length,
+    page: parsed.PageNo ?? parsed.pageNo ?? pageNo,
+    pageSize: parsed.PageSize ?? parsed.pageSize ?? pageSize,
+    totalPages: parsed.PageCount ?? parsed.pageCount ?? 0,
+  }
 }
 
 export async function fetchAdminRevenuePlan(uniqueId: string): Promise<AdminRevenuePlan> {
