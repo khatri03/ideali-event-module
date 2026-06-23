@@ -61,6 +61,8 @@ const adminFeePlanSchema = z.object({
   assignedOrganizerCount: z.number().int().optional(),
   MappedOrganizerCount: z.number().int().optional(),
   mappedOrganizerCount: z.number().int().optional(),
+  AssignedOrganizerUniqueIds: z.array(z.string()).optional(),
+  assignedOrganizerUniqueIds: z.array(z.string()).optional(),
   Rules: z.array(adminFeePlanRuleSchema).optional(),
   rules: z.array(adminFeePlanRuleSchema).optional(),
 })
@@ -92,6 +94,7 @@ const adminRevenuePlanInputSchema = z.object({
   moduleId: z.coerce.number().int().positive(),
   isDefault: z.boolean(),
   isActive: z.boolean(),
+  organizerUniqueIds: z.array(z.string()),
   rules: z.array(adminFeePlanRuleInputSchema).min(1),
 })
 
@@ -116,6 +119,7 @@ export interface AdminRevenuePlan {
   isActive: boolean
   sourceType: string
   assignedOrganizerCount: number
+  assignedOrganizerUniqueIds: string[]
   rules: AdminRevenuePlanRule[]
 }
 
@@ -179,6 +183,7 @@ function normalizePlan(plan: z.infer<typeof adminFeePlanSchema>): AdminRevenuePl
     sourceType: plan.SourceType ?? plan.sourceType ?? "Global",
     assignedOrganizerCount:
       plan.AssignedOrganizerCount ?? plan.assignedOrganizerCount ?? plan.MappedOrganizerCount ?? plan.mappedOrganizerCount ?? 0,
+    assignedOrganizerUniqueIds: plan.AssignedOrganizerUniqueIds ?? plan.assignedOrganizerUniqueIds ?? [],
     rules: (plan.Rules ?? plan.rules ?? []).map(normalizeRule),
   }
 }

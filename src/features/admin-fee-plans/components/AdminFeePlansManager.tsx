@@ -24,7 +24,8 @@ import {
   Table,
   Text,
 } from "@chakra-ui/react"
-import { Layers3, MoreHorizontal, PencilLine, Plus, RotateCcw, UserRound } from "lucide-react"
+import { Layers3, MoreHorizontal, PencilLine, Plus, RotateCcw, UserRound, Check } from "lucide-react"
+import ReactSelect, { components, type MultiValue, type OptionProps, type StylesConfig } from "react-select"
 import { StyledSelect } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
 import {
@@ -53,11 +54,17 @@ const adminRevenuePlanSchema = z.object({
   moduleId: z.number().int().positive("Module is required."),
   isDefault: z.boolean(),
   isActive: z.boolean(),
+  organizerUniqueIds: z.array(z.string()),
   organizerRule: ruleSchema,
   buyerRule: ruleSchema,
 })
 
 type AdminRevenuePlanFormValues = z.infer<typeof adminRevenuePlanSchema>
+
+interface OrganizerSelectOption {
+  label: string
+  value: string
+}
 
 const EMPTY_FORM_VALUES: AdminRevenuePlanFormValues = {
   name: "",
@@ -65,6 +72,7 @@ const EMPTY_FORM_VALUES: AdminRevenuePlanFormValues = {
   moduleId: 0,
   isDefault: true,
   isActive: true,
+  organizerUniqueIds: [],
   organizerRule: {
     target: "Organizer",
     valueType: "Percent",
@@ -96,6 +104,34 @@ function RequiredFieldLabel({ children }: { children: ReactNode }) {
         *
       </Text>
     </Field.Label>
+  )
+}
+
+function OrganizerOption(props: OptionProps<OrganizerSelectOption, true>) {
+  return (
+    <components.Option {...props}>
+      <Flex align="center" gap={3}>
+        <Box
+          flexShrink={0}
+          boxSize="18px"
+          borderRadius="6px"
+          border="1px solid"
+          borderColor={props.isSelected ? "brand.500" : "gray.300"}
+          bg={props.isSelected ? "brand.500" : "white"}
+          color="white"
+          display="inline-flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          {props.isSelected ? <Check size={12} /> : null}
+        </Box>
+        <Box minW={0}>
+          <Text fontSize="sm" fontWeight="600" color="gray.800" lineClamp={1}>
+            {props.label}
+          </Text>
+        </Box>
+      </Flex>
+    </components.Option>
   )
 }
 
@@ -148,6 +184,7 @@ export function AdminFeePlansManager() {
   const isActive = useWatch({ control, name: "isActive" })
   const isDefault = useWatch({ control, name: "isDefault" })
   const moduleId = useWatch({ control, name: "moduleId" })
+  const organizerUniqueIds = useWatch({ control, name: "organizerUniqueIds" })
   const organizerRuleValueType = useWatch({ control, name: "organizerRule.valueType" })
   const buyerRuleValueType = useWatch({ control, name: "buyerRule.valueType" })
   const organizerRuleIsActive = useWatch({ control, name: "organizerRule.isActive" })
@@ -159,8 +196,81 @@ export function AdminFeePlansManager() {
   )
 
   const organizerOptions = useMemo(
-    () => organizersQuery.data?.map((organizer: AdminOrganizerOption) => ({ label: organizer.text, value: organizer.value })) ?? [],
+    () =>
+      (organizersQuery.data?.map((organizer: AdminOrganizerOption) => ({ label: organizer.text, value: organizer.value })) ?? []).sort((a, b) =>
+        a.label.localeCompare(b.label)
+      ),
     [organizersQuery.data]
+  )
+
+  const selectedOrganizerOptions = useMemo(
+    () => organizerOptions.filter((option) => organizerUniqueIds.includes(option.value)),
+    [organizerOptions, organizerUniqueIds],
+  )
+
+  function handleOrganizerChange(values: MultiValue<OrganizerSelectOption>) {
+    setValue(
+      "organizerUniqueIds",
+      values.map((item) => item.value),
+      {
+        shouldDirty: true,
+        shouldValidate: true,
+      },
+    )
+  }
+
+  const organizerMultiSelectStyles = useMemo(
+    () =>
+      ({
+        control: (base, state) => ({
+          ...base,
+          width: "100%",
+          minHeight: 44,
+          borderRadius: 16,
+          borderColor: state.isFocused ? "#7551FF" : "#E2E8F0",
+          boxShadow: state.isFocused ? "0 0 0 3px rgba(117, 81, 255, 0.15)" : "none",
+          backgroundColor: "#fff",
+        }),
+        container: (base) => ({
+          ...base,
+          width: "100%",
+        }),
+        valueContainer: (base) => ({
+          ...base,
+          flex: 1,
+          minWidth: 0,
+        }),
+        input: (base) => ({
+          ...base,
+          width: "100%",
+        }),
+        menu: (base) => ({
+          ...base,
+          zIndex: 40,
+          borderRadius: 14,
+        }),
+        multiValue: (base) => ({
+          ...base,
+          borderRadius: 999,
+          backgroundColor: "#EEF2FF",
+        }),
+        multiValueLabel: (base) => ({
+          ...base,
+          fontSize: 12,
+          fontWeight: 700,
+          color: "#1E293B",
+        }),
+        multiValueRemove: (base) => ({
+          ...base,
+          borderRadius: 999,
+          color: "#475569",
+          ":hover": {
+            backgroundColor: "#C7D2FE",
+            color: "#111827",
+          },
+        }),
+      }) satisfies StylesConfig<OrganizerSelectOption, true>,
+    [],
   )
 
   const saveMutation = useMutation({
@@ -171,6 +281,7 @@ export function AdminFeePlansManager() {
         moduleId: values.moduleId,
         isDefault: values.isDefault,
         isActive: values.isActive,
+        organizerUniqueIds: values.organizerUniqueIds,
         rules: [values.organizerRule, values.buyerRule],
       }
 
@@ -233,6 +344,7 @@ export function AdminFeePlansManager() {
       moduleId: plan.moduleId,
       isDefault: plan.isDefault,
       isActive: plan.isActive,
+      organizerUniqueIds: plan.assignedOrganizerUniqueIds,
       organizerRule:
         plan.rules.find((rule) => rule.target === "Organizer") ??
         {
@@ -604,33 +716,53 @@ export function AdminFeePlansManager() {
 
             <Dialog.Body px={6} py={6} overflowY="auto">
               <form onSubmit={handleSubmit(handleSave)} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                <Field.Root invalid={Boolean(errors.moduleId)}>
+                  <RequiredFieldLabel>Module</RequiredFieldLabel>
+                  <StyledSelect
+                    options={moduleOptions}
+                    value={moduleId > 0 ? String(moduleId) : ""}
+                    onChange={(value) => setValue("moduleId", Number(value), { shouldDirty: true, shouldValidate: true })}
+                    placeholder={modulesQuery.isLoading ? "Loading modules..." : "Select module"}
+                    disabled={modulesQuery.isLoading}
+                  />
+                  {errors.moduleId ? <Field.ErrorText>{errors.moduleId.message}</Field.ErrorText> : null}
+                </Field.Root>
+
                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                  <Field.Root invalid={Boolean(errors.name)}>
+                  <Field.Root w="full" invalid={Boolean(errors.name)}>
                     <RequiredFieldLabel>Name</RequiredFieldLabel>
-                    <Input {...register("name")} minH="11" borderRadius="14px" px={4} placeholder="Stripe checkout plan" />
+                    <Input w="full" {...register("name")} minH="11" borderRadius="14px" px={4} placeholder="Stripe checkout plan" />
                     {errors.name ? <Field.ErrorText>{errors.name.message}</Field.ErrorText> : null}
                   </Field.Root>
 
-                  <Field.Root invalid={Boolean(errors.label)}>
+                  <Field.Root w="full" invalid={Boolean(errors.label)}>
                     <RequiredFieldLabel>Display Text</RequiredFieldLabel>
-                    <Input {...register("label")} minH="11" borderRadius="14px" px={4} placeholder="Checkout processing" />
+                    <Input w="full" {...register("label")} minH="11" borderRadius="14px" px={4} placeholder="Checkout processing" />
                     {errors.label ? <Field.ErrorText>{errors.label.message}</Field.ErrorText> : null}
                   </Field.Root>
+                </SimpleGrid>
 
-                  <Field.Root invalid={Boolean(errors.moduleId)}>
-                    <RequiredFieldLabel>Module</RequiredFieldLabel>
-                    <StyledSelect
-                      options={moduleOptions}
-                      value={moduleId > 0 ? String(moduleId) : ""}
-                      onChange={(value) => setValue("moduleId", Number(value), { shouldDirty: true, shouldValidate: true })}
-                      placeholder={modulesQuery.isLoading ? "Loading modules..." : "Select module"}
-                      disabled={modulesQuery.isLoading}
-                    />
-                    {errors.moduleId ? <Field.ErrorText>{errors.moduleId.message}</Field.ErrorText> : null}
-                  </Field.Root>
+                <Field.Root w="full">
+                  <RequiredFieldLabel>Organizers</RequiredFieldLabel>
+                  <ReactSelect
+                    isMulti
+                    options={organizerOptions}
+                    value={selectedOrganizerOptions}
+                    onChange={handleOrganizerChange}
+                    placeholder={organizersQuery.isLoading ? "Loading organizers..." : "Select organizers"}
+                    closeMenuOnSelect={false}
+                    hideSelectedOptions={false}
+                    isClearable={false}
+                    isDisabled={organizersQuery.isLoading}
+                    components={{ Option: OrganizerOption }}
+                    styles={organizerMultiSelectStyles}
+                  />
+                </Field.Root>
 
-                  <Field.Root>
+                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                  <Field.Root w="full">
                     <Box
+                      w="full"
                       borderRadius="18px"
                       border="1px solid"
                       borderColor="border.subtle"
@@ -641,7 +773,7 @@ export function AdminFeePlansManager() {
                       <Flex align="center" justify="space-between" gap={4}>
                         <Box>
                           <Text fontSize="sm" fontWeight="700" color="text.primary">
-                            Default fallback
+                            Is Default
                           </Text>
                         </Box>
                         <Switch.Root
@@ -656,8 +788,9 @@ export function AdminFeePlansManager() {
                     </Box>
                   </Field.Root>
 
-                  <Field.Root>
+                  <Field.Root w="full">
                     <Box
+                      w="full"
                       borderRadius="18px"
                       border="1px solid"
                       borderColor="border.subtle"
@@ -669,9 +802,6 @@ export function AdminFeePlansManager() {
                         <Box>
                           <Text fontSize="sm" fontWeight="700" color="text.primary">
                             Active
-                          </Text>
-                          <Text fontSize="xs" color="text.secondary">
-                            Disabled plans remain saved but will not apply.
                           </Text>
                         </Box>
                         <Switch.Root
@@ -695,101 +825,105 @@ export function AdminFeePlansManager() {
                     </Text>
                   </Flex>
 
-                  <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                    <Box borderRadius="16px" border="1px solid" borderColor="border.subtle" p={4} bg="app.bg">
-                      <Flex align="center" justify="space-between" mb={3}>
-                        <Text fontSize="sm" fontWeight="800" color="text.primary">
-                          Organizer Rule
-                        </Text>
-                        <Switch.Root
-                          checked={organizerRuleIsActive}
-                          colorPalette="brand"
-                          onCheckedChange={(details) => setValue("organizerRule.isActive", details.checked, { shouldDirty: true })}
-                        >
-                          <Switch.HiddenInput />
-                          <Switch.Control />
-                        </Switch.Root>
-                      </Flex>
-                      <SimpleGrid columns={2} gap={3}>
-                        <Field.Root>
-                          <Field.Label fontSize="xs" color="text.secondary">
-                            Value type
-                          </Field.Label>
-                          <StyledSelect
-                            options={[
-                              { label: "Fixed Amount", value: "Fixed" },
-                              { label: "Percentage", value: "Percent" },
-                            ]}
-                            value={organizerRuleValueType}
-                            onChange={(value) => setValue("organizerRule.valueType", value as "Fixed" | "Percent", { shouldDirty: true })}
-                            placeholder="Select"
-                          />
-                        </Field.Root>
-                        <Field.Root>
-                          <Field.Label fontSize="xs" color="text.secondary">
+                  <Box overflowX="auto">
+                    <Table.Root variant="line" size="sm">
+                      <Table.Header>
+                        <Table.Row bg="app.bg">
+                          <Table.ColumnHeader px={4} py={3}>
+                            Rule
+                          </Table.ColumnHeader>
+                          <Table.ColumnHeader px={4} py={3}>
+                            Value Type
+                          </Table.ColumnHeader>
+                          <Table.ColumnHeader px={4} py={3}>
                             Value
-                          </Field.Label>
-                          <Input
-                            {...register("organizerRule.value", { valueAsNumber: true })}
-                            type="number"
-                            min="0"
-                            step={organizerRuleValueType === "Percent" ? "0.01" : "1"}
-                            minH="11"
-                            borderRadius="14px"
-                            px={4}
-                            placeholder={organizerRuleValueType === "Percent" ? "2.00" : "5.00"}
-                          />
-                        </Field.Root>
-                      </SimpleGrid>
-                    </Box>
+                          </Table.ColumnHeader>
+                          <Table.ColumnHeader px={4} py={3} textAlign="center">
+                            Is Active
+                          </Table.ColumnHeader>
+                        </Table.Row>
+                      </Table.Header>
+                      <Table.Body>
+                        <Table.Row>
+                          <Table.Cell px={4} py={4} fontWeight="700" color="text.primary">
+                            Organizer Rule
+                          </Table.Cell>
+                          <Table.Cell px={4} py={4}>
+                            <StyledSelect
+                              options={[
+                                { label: "Fixed Amount", value: "Fixed" },
+                                { label: "Percentage", value: "Percent" },
+                              ]}
+                              value={organizerRuleValueType}
+                              onChange={(value) => setValue("organizerRule.valueType", value as "Fixed" | "Percent", { shouldDirty: true })}
+                              placeholder="Select"
+                            />
+                          </Table.Cell>
+                          <Table.Cell px={4} py={4}>
+                            <Input
+                              {...register("organizerRule.value", { valueAsNumber: true })}
+                              type="number"
+                              min="0"
+                              step={organizerRuleValueType === "Percent" ? "0.01" : "1"}
+                              minH="11"
+                              borderRadius="14px"
+                              px={4}
+                              placeholder={organizerRuleValueType === "Percent" ? "2.00" : "5.00"}
+                            />
+                          </Table.Cell>
+                          <Table.Cell px={4} py={4} textAlign="center">
+                            <Switch.Root
+                              checked={organizerRuleIsActive}
+                              colorPalette="brand"
+                              onCheckedChange={(details) => setValue("organizerRule.isActive", details.checked, { shouldDirty: true })}
+                            >
+                              <Switch.HiddenInput />
+                              <Switch.Control />
+                            </Switch.Root>
+                          </Table.Cell>
+                        </Table.Row>
 
-                    <Box borderRadius="16px" border="1px solid" borderColor="border.subtle" p={4} bg="app.bg">
-                      <Flex align="center" justify="space-between" mb={3}>
-                        <Text fontSize="sm" fontWeight="800" color="text.primary">
-                          Buyer Rule
-                        </Text>
-                        <Switch.Root
-                          checked={buyerRuleIsActive}
-                          colorPalette="brand"
-                          onCheckedChange={(details) => setValue("buyerRule.isActive", details.checked, { shouldDirty: true })}
-                        >
-                          <Switch.HiddenInput />
-                          <Switch.Control />
-                        </Switch.Root>
-                      </Flex>
-                      <SimpleGrid columns={2} gap={3}>
-                        <Field.Root>
-                          <Field.Label fontSize="xs" color="text.secondary">
-                            Value type
-                          </Field.Label>
-                          <StyledSelect
-                            options={[
-                              { label: "Fixed Amount", value: "Fixed" },
-                              { label: "Percentage", value: "Percent" },
-                            ]}
-                            value={buyerRuleValueType}
-                            onChange={(value) => setValue("buyerRule.valueType", value as "Fixed" | "Percent", { shouldDirty: true })}
-                            placeholder="Select"
-                          />
-                        </Field.Root>
-                        <Field.Root>
-                          <Field.Label fontSize="xs" color="text.secondary">
-                            Value
-                          </Field.Label>
-                          <Input
-                            {...register("buyerRule.value", { valueAsNumber: true })}
-                            type="number"
-                            min="0"
-                            step={buyerRuleValueType === "Percent" ? "0.01" : "1"}
-                            minH="11"
-                            borderRadius="14px"
-                            px={4}
-                            placeholder={buyerRuleValueType === "Percent" ? "2.00" : "5.00"}
-                          />
-                        </Field.Root>
-                      </SimpleGrid>
-                    </Box>
-                  </SimpleGrid>
+                        <Table.Row>
+                          <Table.Cell px={4} py={4} fontWeight="700" color="text.primary">
+                            Buyer Rule
+                          </Table.Cell>
+                          <Table.Cell px={4} py={4}>
+                            <StyledSelect
+                              options={[
+                                { label: "Fixed Amount", value: "Fixed" },
+                                { label: "Percentage", value: "Percent" },
+                              ]}
+                              value={buyerRuleValueType}
+                              onChange={(value) => setValue("buyerRule.valueType", value as "Fixed" | "Percent", { shouldDirty: true })}
+                              placeholder="Select"
+                            />
+                          </Table.Cell>
+                          <Table.Cell px={4} py={4}>
+                            <Input
+                              {...register("buyerRule.value", { valueAsNumber: true })}
+                              type="number"
+                              min="0"
+                              step={buyerRuleValueType === "Percent" ? "0.01" : "1"}
+                              minH="11"
+                              borderRadius="14px"
+                              px={4}
+                              placeholder={buyerRuleValueType === "Percent" ? "2.00" : "5.00"}
+                            />
+                          </Table.Cell>
+                          <Table.Cell px={4} py={4} textAlign="center">
+                            <Switch.Root
+                              checked={buyerRuleIsActive}
+                              colorPalette="brand"
+                              onCheckedChange={(details) => setValue("buyerRule.isActive", details.checked, { shouldDirty: true })}
+                            >
+                              <Switch.HiddenInput />
+                              <Switch.Control />
+                            </Switch.Root>
+                          </Table.Cell>
+                        </Table.Row>
+                      </Table.Body>
+                    </Table.Root>
+                  </Box>
                 </Box>
 
                 {saveError ? (
