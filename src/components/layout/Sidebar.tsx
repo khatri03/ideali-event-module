@@ -238,7 +238,7 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
   const { pathname } = useLocation()
   const currentUser = auth.getUser() ?? mockUser
   const isMobile = variant === "mobile"
-  const [isSettingsManualOpen, setIsSettingsManualOpen] = useState(pathname.startsWith(APP_ROUTES.settings))
+  const [isSettingsManualOpen, setIsSettingsManualOpen] = useState(false)
   const isSettingsChildActive = pathname === APP_ROUTES.settings
 
   async function handleSignOut() {
@@ -319,13 +319,7 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
       <Box flex={1} px={2} position="relative" zIndex={1}>
         <NavSection label="Main" items={mainNav} onNavigate={onNavigate} />
         <NavSection label="Management" items={managementNav} onNavigate={onNavigate} />
-        <SettingsSection
-          key={pathname.startsWith(APP_ROUTES.settings) ? "settings" : "other"}
-          isActive={isSettingsChildActive}
-          isOpen={isSettingsManualOpen}
-          onToggle={() => setIsSettingsManualOpen((current) => !current)}
-          onNavigate={onNavigate}
-        />
+        <SettingsSection isActive={isSettingsChildActive} isOpen={isSettingsManualOpen} onToggle={() => setIsSettingsManualOpen((current) => !current)} onNavigate={onNavigate} />
         <NavSection label="System" items={systemNav} onNavigate={onNavigate} />
       </Box>
 
