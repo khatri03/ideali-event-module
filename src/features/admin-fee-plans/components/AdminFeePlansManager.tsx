@@ -24,7 +24,7 @@ import {
   Table,
   Text,
 } from "@chakra-ui/react"
-import { Layers3, MoreHorizontal, PencilLine, Plus, RotateCcw, UserRound, Check } from "lucide-react"
+import { Check, CheckCircle2, Layers3, MoreHorizontal, PencilLine, Plus, RotateCcw, UserRound } from "lucide-react"
 import ReactSelect, {
   components,
   type InputActionMeta,
@@ -1037,22 +1037,40 @@ export function AdminFeePlansManager() {
                           )}
                         </Box>
                       </Table.Cell>
-                      <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
-                        <Stack gap={1}>
-                          <Badge
-                            colorPalette={plan.isDefault ? "purple" : "blue"}
-                            variant="subtle"
-                            borderRadius="999px"
-                            px={3}
-                            py={1}
-                            fontSize="10px"
-                            fontWeight="800"
-                            textTransform="uppercase"
-                            letterSpacing="0.08em"
-                          >
-                            {plan.isDefault ? "Default" : plan.sourceType}
-                          </Badge>
-                        </Stack>
+                      <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} textAlign="center">
+                        <Flex align="center" justify="center">
+                          {plan.isDefault ? (
+                            <Box
+                              display="inline-flex"
+                              alignItems="center"
+                              justifyContent="center"
+                              boxSize="32px"
+                              borderRadius="999px"
+                              bg="green.50"
+                              color="green.600"
+                              border="1px solid"
+                              borderColor="green.200"
+                              aria-label="Default plan"
+                              title="Default"
+                            >
+                              <CheckCircle2 size={18} strokeWidth={2.4} />
+                            </Box>
+                          ) : (
+                            <Badge
+                              colorPalette="blue"
+                              variant="subtle"
+                              borderRadius="999px"
+                              px={3}
+                              py={1}
+                              fontSize="10px"
+                              fontWeight="800"
+                              textTransform="uppercase"
+                              letterSpacing="0.08em"
+                            >
+                              {plan.sourceType}
+                            </Badge>
+                          )}
+                        </Flex>
                       </Table.Cell>
                       <Table.Cell borderColor="border.subtle" px={4} py={4}>
                         <Badge
