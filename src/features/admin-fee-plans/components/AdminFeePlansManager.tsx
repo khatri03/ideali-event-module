@@ -51,7 +51,7 @@ const ruleSchema = z.object({
 const adminRevenuePlanSchema = z.object({
   name: z.string().trim().min(1, "Name is required.").max(80, "Maximum 80 characters allowed."),
   label: z.string().trim().min(1, "Display text is required.").max(120, "Maximum 120 characters allowed."),
-  moduleId: z.number().int().positive("Module is required."),
+  moduleIds: z.array(z.number().int().positive()).min(1, "At least one module is required."),
   isDefault: z.boolean(),
   isActive: z.boolean(),
   organizerUniqueIds: z.array(z.string()),
@@ -66,10 +66,15 @@ interface OrganizerSelectOption {
   value: string
 }
 
+interface ModuleSelectOption {
+  label: string
+  value: string
+}
+
 const EMPTY_FORM_VALUES: AdminRevenuePlanFormValues = {
   name: "",
   label: "",
-  moduleId: 0,
+  moduleIds: [],
   isDefault: true,
   isActive: true,
   organizerUniqueIds: [],
@@ -108,6 +113,34 @@ function RequiredFieldLabel({ children }: { children: ReactNode }) {
 }
 
 function OrganizerOption(props: OptionProps<OrganizerSelectOption, true>) {
+  return (
+    <components.Option {...props}>
+      <Flex align="center" gap={3}>
+        <Box
+          flexShrink={0}
+          boxSize="18px"
+          borderRadius="6px"
+          border="1px solid"
+          borderColor={props.isSelected ? "brand.500" : "gray.300"}
+          bg={props.isSelected ? "brand.500" : "white"}
+          color="white"
+          display="inline-flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          {props.isSelected ? <Check size={12} /> : null}
+        </Box>
+        <Box minW={0}>
+          <Text fontSize="sm" fontWeight="600" color="gray.800" lineClamp={1}>
+            {props.label}
+          </Text>
+        </Box>
+      </Flex>
+    </components.Option>
+  )
+}
+
+function ModuleOption(props: OptionProps<ModuleSelectOption, true>) {
   return (
     <components.Option {...props}>
       <Flex align="center" gap={3}>
@@ -183,7 +216,7 @@ export function AdminFeePlansManager() {
 
   const isActive = useWatch({ control, name: "isActive" })
   const isDefault = useWatch({ control, name: "isDefault" })
-  const moduleId = useWatch({ control, name: "moduleId" })
+  const moduleIds = useWatch({ control, name: "moduleIds" })
   const organizerUniqueIds = useWatch({ control, name: "organizerUniqueIds" })
   const organizerRuleValueType = useWatch({ control, name: "organizerRule.valueType" })
   const buyerRuleValueType = useWatch({ control, name: "buyerRule.valueType" })
@@ -191,8 +224,16 @@ export function AdminFeePlansManager() {
   const buyerRuleIsActive = useWatch({ control, name: "buyerRule.isActive" })
 
   const moduleOptions = useMemo(
-    () => modulesQuery.data?.map((module: AdminRevenuePlanModuleOption) => ({ label: module.text, value: String(module.value) })) ?? [],
+    () =>
+      (modulesQuery.data?.map((module: AdminRevenuePlanModuleOption) => ({ label: module.text, value: String(module.value) })) ?? []).sort((a, b) =>
+        a.label.localeCompare(b.label)
+      ),
     [modulesQuery.data]
+  )
+
+  const selectedModuleOptions = useMemo(
+    () => moduleOptions.filter((option) => moduleIds.includes(Number(option.value))),
+    [moduleIds, moduleOptions],
   )
 
   const organizerOptions = useMemo(
@@ -207,6 +248,28 @@ export function AdminFeePlansManager() {
     () => organizerOptions.filter((option) => organizerUniqueIds.includes(option.value)),
     [organizerOptions, organizerUniqueIds],
   )
+
+  function handleModuleChange(values: MultiValue<ModuleSelectOption>) {
+    setValue(
+      "moduleIds",
+      values.map((item) => Number(item.value)),
+      {
+        shouldDirty: true,
+        shouldValidate: true,
+      },
+    )
+  }
+
+  function handleRemoveModule(moduleId: number) {
+    setValue(
+      "moduleIds",
+      moduleIds.filter((current) => current !== moduleId),
+      {
+        shouldDirty: true,
+        shouldValidate: true,
+      },
+    )
+  }
 
   function handleOrganizerChange(values: MultiValue<OrganizerSelectOption>) {
     setValue(
@@ -290,12 +353,72 @@ export function AdminFeePlansManager() {
     [],
   )
 
+  const moduleMultiSelectStyles = useMemo(
+    () =>
+      ({
+        control: (base, state) => ({
+          ...base,
+          width: "100%",
+          minHeight: 44,
+          borderRadius: 16,
+          borderColor: state.isFocused ? "#7551FF" : "#E2E8F0",
+          boxShadow: state.isFocused ? "0 0 0 3px rgba(117, 81, 255, 0.15)" : "none",
+          backgroundColor: "#fff",
+        }),
+        container: (base) => ({
+          ...base,
+          width: "100%",
+        }),
+        valueContainer: (base) => ({
+          ...base,
+          flex: 1,
+          minWidth: 0,
+        }),
+        input: (base) => ({
+          ...base,
+          width: "100%",
+        }),
+        menu: (base) => ({
+          ...base,
+          zIndex: 40,
+          borderRadius: 14,
+        }),
+        multiValue: (base) => ({
+          ...base,
+          borderRadius: 999,
+          backgroundColor: "rgba(117, 81, 255, 0.12)",
+          border: "1px solid rgba(117, 81, 255, 0.18)",
+          margin: "2px",
+        }),
+        multiValueLabel: (base) => ({
+          ...base,
+          fontSize: 12,
+          fontWeight: 700,
+          color: "#422AFB",
+          paddingLeft: "8px",
+          paddingRight: "4px",
+        }),
+        multiValueRemove: (base) => ({
+          ...base,
+          borderRadius: 999,
+          color: "#7551FF",
+          paddingLeft: "4px",
+          paddingRight: "8px",
+          ":hover": {
+            backgroundColor: "rgba(117, 81, 255, 0.18)",
+            color: "#422AFB",
+          },
+        }),
+      }) satisfies StylesConfig<ModuleSelectOption, true>,
+    [],
+  )
+
   const saveMutation = useMutation({
     mutationFn: async (values: AdminRevenuePlanFormValues) => {
       const payload: AdminRevenuePlanInput = {
         name: values.name.trim(),
         label: values.label.trim(),
-        moduleId: values.moduleId,
+        moduleIds: values.moduleIds,
         isDefault: values.isDefault,
         isActive: values.isActive,
         organizerUniqueIds: values.organizerUniqueIds,
@@ -358,7 +481,7 @@ export function AdminFeePlansManager() {
     reset({
       name: plan.name,
       label: plan.label,
-      moduleId: plan.moduleId,
+      moduleIds: plan.moduleIds.length > 0 ? plan.moduleIds : plan.moduleId > 0 ? [plan.moduleId] : [],
       isDefault: plan.isDefault,
       isActive: plan.isActive,
       organizerUniqueIds: plan.assignedOrganizerUniqueIds,
@@ -621,9 +744,11 @@ export function AdminFeePlansManager() {
                         </Box>
                       </Table.Cell>
                       <Table.Cell px={4} py={4}>
-                        <Text fontSize="sm" color="text.primary">
-                          {plan.moduleName}
-                        </Text>
+                        <Box minW={0}>
+                          <Text fontSize="sm" color="text.primary" lineClamp={2}>
+                            {plan.moduleNames.length > 0 ? plan.moduleNames.join(", ") : plan.moduleName}
+                          </Text>
+                        </Box>
                       </Table.Cell>
                       <Table.Cell px={4} py={4}>
                         <Stack gap={1}>
@@ -856,16 +981,56 @@ export function AdminFeePlansManager() {
                   </Field.Root>
                 </SimpleGrid>
 
-                <Field.Root invalid={Boolean(errors.moduleId)}>
+                <Field.Root invalid={Boolean(errors.moduleIds)}>
                   <RequiredFieldLabel>Module</RequiredFieldLabel>
-                  <StyledSelect
+                  <ReactSelect
+                    isMulti
                     options={moduleOptions}
-                    value={moduleId > 0 ? String(moduleId) : ""}
-                    onChange={(value) => setValue("moduleId", Number(value), { shouldDirty: true, shouldValidate: true })}
-                    placeholder={modulesQuery.isLoading ? "Loading modules..." : "Select module"}
-                    disabled={modulesQuery.isLoading}
+                    value={selectedModuleOptions}
+                    onChange={handleModuleChange}
+                    placeholder={modulesQuery.isLoading ? "Loading modules..." : "Select modules"}
+                    closeMenuOnSelect={false}
+                    hideSelectedOptions={false}
+                    isClearable={false}
+                    isDisabled={modulesQuery.isLoading}
+                    controlShouldRenderValue={false}
+                    components={{ Option: ModuleOption }}
+                    styles={moduleMultiSelectStyles}
                   />
-                  {errors.moduleId ? <Field.ErrorText>{errors.moduleId.message}</Field.ErrorText> : null}
+                  {selectedModuleOptions.length > 0 ? (
+                    <Flex wrap="wrap" gap={2} mt={3}>
+                      {selectedModuleOptions.map((option) => (
+                        <Box
+                          key={option.value}
+                          as="button"
+                          type="button"
+                          onClick={() => handleRemoveModule(Number(option.value))}
+                          display="inline-flex"
+                          alignItems="center"
+                          gap={2}
+                          borderRadius="999px"
+                          border="1px solid"
+                          borderColor="rgba(117, 81, 255, 0.18)"
+                          bg="rgba(117, 81, 255, 0.12)"
+                          color="brand.500"
+                          px={3}
+                          py={1.5}
+                          fontSize="sm"
+                          fontWeight="700"
+                          cursor="pointer"
+                          _hover={{ bg: "rgba(117, 81, 255, 0.18)" }}
+                        >
+                          <Text as="span" lineHeight={1.1}>
+                            {option.label}
+                          </Text>
+                          <Text as="span" fontSize="xs" lineHeight={1} aria-hidden="true">
+                            ×
+                          </Text>
+                        </Box>
+                      ))}
+                    </Flex>
+                  ) : null}
+                  {errors.moduleIds ? <Field.ErrorText>{errors.moduleIds.message}</Field.ErrorText> : null}
                 </Field.Root>
 
                 <Box borderRadius="18px" border="1px solid" borderColor="border.subtle" bg="white" p={4}>
@@ -881,7 +1046,10 @@ export function AdminFeePlansManager() {
                       <Table.Header>
                         <Table.Row bg="app.bg">
                           <Table.ColumnHeader px={4} py={3}>
-                            Rule
+                            Rule For
+                          </Table.ColumnHeader>
+                          <Table.ColumnHeader px={4} py={3}>
+                            Active
                           </Table.ColumnHeader>
                           <Table.ColumnHeader px={4} py={3}>
                             Value Type
@@ -889,15 +1057,22 @@ export function AdminFeePlansManager() {
                           <Table.ColumnHeader px={4} py={3}>
                             Value
                           </Table.ColumnHeader>
-                          <Table.ColumnHeader px={4} py={3} textAlign="center">
-                            Is Active
-                          </Table.ColumnHeader>
                         </Table.Row>
                       </Table.Header>
                       <Table.Body>
                         <Table.Row>
                           <Table.Cell px={4} py={4} fontWeight="700" color="text.primary">
-                            Organizer Rule
+                            Organizer
+                          </Table.Cell>
+                          <Table.Cell px={4} py={4}>
+                            <Switch.Root
+                              checked={organizerRuleIsActive}
+                              colorPalette="brand"
+                              onCheckedChange={(details) => setValue("organizerRule.isActive", details.checked, { shouldDirty: true })}
+                            >
+                              <Switch.HiddenInput />
+                              <Switch.Control />
+                            </Switch.Root>
                           </Table.Cell>
                           <Table.Cell px={4} py={4}>
                             <StyledSelect
@@ -922,21 +1097,21 @@ export function AdminFeePlansManager() {
                               placeholder={organizerRuleValueType === "Percent" ? "2.00" : "5.00"}
                             />
                           </Table.Cell>
-                          <Table.Cell px={4} py={4} textAlign="center">
-                            <Switch.Root
-                              checked={organizerRuleIsActive}
-                              colorPalette="brand"
-                              onCheckedChange={(details) => setValue("organizerRule.isActive", details.checked, { shouldDirty: true })}
-                            >
-                              <Switch.HiddenInput />
-                              <Switch.Control />
-                            </Switch.Root>
-                          </Table.Cell>
                         </Table.Row>
 
                         <Table.Row>
                           <Table.Cell px={4} py={4} fontWeight="700" color="text.primary">
-                            Buyer Rule
+                            Buyer
+                          </Table.Cell>
+                          <Table.Cell px={4} py={4}>
+                            <Switch.Root
+                              checked={buyerRuleIsActive}
+                              colorPalette="brand"
+                              onCheckedChange={(details) => setValue("buyerRule.isActive", details.checked, { shouldDirty: true })}
+                            >
+                              <Switch.HiddenInput />
+                              <Switch.Control />
+                            </Switch.Root>
                           </Table.Cell>
                           <Table.Cell px={4} py={4}>
                             <StyledSelect
@@ -960,16 +1135,6 @@ export function AdminFeePlansManager() {
                               px={4}
                               placeholder={buyerRuleValueType === "Percent" ? "2.00" : "5.00"}
                             />
-                          </Table.Cell>
-                          <Table.Cell px={4} py={4} textAlign="center">
-                            <Switch.Root
-                              checked={buyerRuleIsActive}
-                              colorPalette="brand"
-                              onCheckedChange={(details) => setValue("buyerRule.isActive", details.checked, { shouldDirty: true })}
-                            >
-                              <Switch.HiddenInput />
-                              <Switch.Control />
-                            </Switch.Root>
                           </Table.Cell>
                         </Table.Row>
                       </Table.Body>

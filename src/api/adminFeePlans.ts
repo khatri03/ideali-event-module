@@ -57,6 +57,10 @@ const adminFeePlanSchema = z.object({
   isActive: z.boolean().optional(),
   SourceType: z.string().optional(),
   sourceType: z.string().optional(),
+  ModuleIds: z.array(z.number().int().positive()).optional(),
+  moduleIds: z.array(z.number().int().positive()).optional(),
+  ModuleNames: z.array(z.string()).optional(),
+  moduleNames: z.array(z.string()).optional(),
   AssignedOrganizerCount: z.number().int().optional(),
   assignedOrganizerCount: z.number().int().optional(),
   MappedOrganizerCount: z.number().int().optional(),
@@ -91,7 +95,7 @@ const adminFeePlanRuleInputSchema = z.object({
 const adminRevenuePlanInputSchema = z.object({
   name: z.string().trim().min(1).max(80),
   label: z.string().trim().min(1).max(120),
-  moduleId: z.coerce.number().int().positive(),
+  moduleIds: z.array(z.coerce.number().int().positive()).min(1),
   isDefault: z.boolean(),
   isActive: z.boolean(),
   organizerUniqueIds: z.array(z.string()),
@@ -113,6 +117,8 @@ export interface AdminRevenuePlan {
   uniqueId: string
   moduleId: number
   moduleName: string
+  moduleIds: number[]
+  moduleNames: string[]
   name: string
   label: string
   isDefault: boolean
@@ -171,11 +177,16 @@ function normalizeRule(rule: z.infer<typeof adminFeePlanRuleSchema>): AdminReven
 }
 
 function normalizePlan(plan: z.infer<typeof adminFeePlanSchema>): AdminRevenuePlan {
+  const moduleIds = plan.ModuleIds ?? plan.moduleIds ?? (plan.ModuleId ?? plan.moduleId ? [plan.ModuleId ?? plan.moduleId ?? 0] : [])
+  const moduleNames = plan.ModuleNames ?? plan.moduleNames ?? (plan.ModuleName ?? plan.moduleName ? [plan.ModuleName ?? plan.moduleName ?? ""] : [])
+
   return {
     id: plan.Id ?? plan.id ?? 0,
     uniqueId: plan.UniqueId ?? plan.uniqueId ?? "",
-    moduleId: plan.ModuleId ?? plan.moduleId ?? 0,
-    moduleName: plan.ModuleName ?? plan.moduleName ?? "",
+    moduleId: moduleIds[0] ?? plan.ModuleId ?? plan.moduleId ?? 0,
+    moduleName: moduleNames[0] ?? plan.ModuleName ?? plan.moduleName ?? "",
+    moduleIds,
+    moduleNames,
     name: plan.Name ?? plan.name ?? "",
     label: plan.Label ?? plan.label ?? "",
     isDefault: plan.IsDefault ?? plan.isDefault ?? false,
