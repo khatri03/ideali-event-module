@@ -1,9 +1,12 @@
+import { useState } from "react"
 import { Box, Flex, Text, VStack } from "@chakra-ui/react"
 import { NavLink, useLocation, useNavigate } from "react-router-dom"
 import {
   LayoutDashboard,
   CalendarDays,
   Settings,
+  ChevronDown,
+  ChevronRight,
   LogOut,
   Zap,
   Users,
@@ -132,8 +135,12 @@ function NavSection({ label, items, onNavigate }: { label: string; items: NavIte
 
 export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const currentUser = auth.getUser() ?? mockUser
   const isMobile = variant === "mobile"
+  const [isSettingsManualOpen, setIsSettingsManualOpen] = useState(false)
+  const isSettingsOpen = pathname.startsWith(APP_ROUTES.settings) || isSettingsManualOpen
+  const isSettingsActive = pathname.startsWith(APP_ROUTES.settings)
 
   async function handleSignOut() {
     try {
@@ -213,6 +220,108 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
       <Box flex={1} px={2} position="relative" zIndex={1}>
         <NavSection label="Main" items={mainNav} onNavigate={onNavigate} />
         <NavSection label="Management" items={managementNav} onNavigate={onNavigate} />
+        <Box mb={6}>
+          <Text
+            fontSize="9px"
+            fontWeight="800"
+            color="rgba(255,255,255,0.38)"
+            textTransform="uppercase"
+            letterSpacing="0.12em"
+            mb={2}
+            px={4}
+          >
+            Settings
+          </Text>
+          <Flex
+            as="button"
+            type="button"
+            align="center"
+            gap={3}
+            px={3}
+            py={2.5}
+            borderRadius="12px"
+            mx={2}
+            transition="all 0.18s ease"
+            bg={isSettingsActive ? "rgba(255,255,255,0.92)" : "transparent"}
+            boxShadow={isSettingsActive ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
+            _hover={
+              !isSettingsActive
+                ? { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }
+                : {}
+            }
+            onClick={() => setIsSettingsManualOpen((current) => !current)}
+            cursor="pointer"
+          >
+            <Box
+              color={isSettingsActive ? "#7551FF" : "rgba(255,255,255,0.7)"}
+              transition="color 0.18s"
+              display="flex"
+              alignItems="center"
+            >
+              <Settings size={17} />
+            </Box>
+            <Text
+              fontSize="sm"
+              fontWeight={isSettingsActive ? "700" : "500"}
+              color={isSettingsActive ? "#422AFB" : "rgba(255,255,255,0.85)"}
+              transition="color 0.18s"
+              flex={1}
+              letterSpacing={isSettingsActive ? "-0.01em" : "0"}
+              textAlign="left"
+            >
+              Settings
+            </Text>
+            <Box
+              color={isSettingsActive ? "#7551FF" : "rgba(255,255,255,0.7)"}
+              display="flex"
+              alignItems="center"
+            >
+              {isSettingsOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </Box>
+          </Flex>
+
+          {isSettingsOpen ? (
+            <VStack gap={0.5} align="stretch" mt={1.5}>
+              <NavLink to={APP_ROUTES.settings} style={{ textDecoration: "none" }} onClick={onNavigate}>
+                <Flex
+                  align="center"
+                  gap={3}
+                  pl={10}
+                  pr={3}
+                  py={2.5}
+                  borderRadius="12px"
+                  mx={2}
+                  transition="all 0.18s ease"
+                  bg={isSettingsActive ? "rgba(255,255,255,0.92)" : "transparent"}
+                  _hover={
+                    !isSettingsActive
+                      ? { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }
+                      : {}
+                  }
+                  boxShadow={isSettingsActive ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
+                >
+                  <Box
+                    w="6px"
+                    h="6px"
+                    borderRadius="full"
+                    bg={isSettingsActive ? "#7551FF" : "rgba(255,255,255,0.6)"}
+                    flexShrink={0}
+                  />
+                  <Text
+                    fontSize="sm"
+                    fontWeight={isSettingsActive ? "700" : "500"}
+                    color={isSettingsActive ? "#422AFB" : "rgba(255,255,255,0.85)"}
+                    transition="color 0.18s"
+                    flex={1}
+                    letterSpacing={isSettingsActive ? "-0.01em" : "0"}
+                  >
+                    Processor Fees
+                  </Text>
+                </Flex>
+              </NavLink>
+            </VStack>
+          ) : null}
+        </Box>
         <NavSection label="System" items={systemNav} onNavigate={onNavigate} />
       </Box>
 
