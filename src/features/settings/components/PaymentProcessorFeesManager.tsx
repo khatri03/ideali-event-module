@@ -64,15 +64,13 @@ const FEE_VALUE_TYPE_OPTIONS = [
 ]
 
 function formatFeeValue(valueType: OrganizerPaymentProcessorFee["valueType"], value: number) {
+  const formattedValue = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value)
+
   if (valueType === "Percent") {
-    return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value)}%`
+    return `${formattedValue}%`
   }
 
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  }).format(value)
+  return `$${formattedValue}`
 }
 
 function PaymentProcessorFeesSkeleton() {
@@ -88,6 +86,17 @@ function PaymentProcessorFeesSkeleton() {
 
 function asNumber(value: string) {
   return Number(value || 0)
+}
+
+function RequiredFieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <Field.Label display="flex" alignItems="center" gap={2} flexWrap="wrap">
+      <Text as="span">{children}</Text>
+      <Text as="span" color="red.500" fontWeight="800" aria-hidden="true">
+        *
+      </Text>
+    </Field.Label>
+  )
 }
 
 export function PaymentProcessorFeesManager() {
@@ -351,6 +360,9 @@ export function PaymentProcessorFeesManager() {
                     Name
                   </Table.ColumnHeader>
                   <Table.ColumnHeader px={4} py={3}>
+                    Display Text
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader px={4} py={3}>
                     Merchant
                   </Table.ColumnHeader>
                   <Table.ColumnHeader px={4} py={3}>
@@ -370,7 +382,7 @@ export function PaymentProcessorFeesManager() {
               <Table.Body>
                 {fees.length === 0 ? (
                   <Table.Row>
-                    <Table.Cell colSpan={6} py={14}>
+                    <Table.Cell colSpan={7} py={14}>
                       <Box textAlign="center">
                         <Text fontSize="lg" fontWeight="700" color="gray.900">
                           No processor fees configured
@@ -400,14 +412,14 @@ export function PaymentProcessorFeesManager() {
                   fees.map((fee) => (
                     <Table.Row key={fee.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
                       <Table.Cell px={6} py={4}>
-                        <Box>
-                          <Text fontSize="sm" fontWeight="700" color="text.primary">
-                            {fee.name}
-                          </Text>
-                          <Text fontSize="xs" color="text.secondary" lineClamp={1}>
-                            {fee.label}
-                          </Text>
-                        </Box>
+                        <Text fontSize="sm" fontWeight="700" color="text.primary">
+                          {fee.name}
+                        </Text>
+                      </Table.Cell>
+                      <Table.Cell px={4} py={4}>
+                        <Text fontSize="sm" color="text.primary" lineClamp={1}>
+                          {fee.label}
+                        </Text>
                       </Table.Cell>
                       <Table.Cell px={4} py={4}>
                         <Text fontSize="sm" color="text.primary">
@@ -420,14 +432,9 @@ export function PaymentProcessorFeesManager() {
                         </Text>
                       </Table.Cell>
                       <Table.Cell px={4} py={4}>
-                        <Flex direction="column" gap={1}>
-                          <Badge variant="subtle" colorPalette={fee.valueType === "Percent" ? "cyan" : "orange"} borderRadius="999px" px={3} py={1} alignSelf="start">
-                            {fee.valueType === "Percent" ? "Percentage" : "Fixed Amount"}
-                          </Badge>
-                          <Text fontSize="sm" fontWeight="700" color="text.primary">
-                            {formatFeeValue(fee.valueType, fee.value)}
-                          </Text>
-                        </Flex>
+                        <Text fontSize="sm" fontWeight="700" color="text.primary">
+                          {formatFeeValue(fee.valueType, fee.value)}
+                        </Text>
                       </Table.Cell>
                       <Table.Cell px={4} py={4}>
                         <Badge
@@ -506,19 +513,19 @@ export function PaymentProcessorFeesManager() {
               >
                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                   <Field.Root invalid={Boolean(errors.name)}>
-                    <Field.Label>Name</Field.Label>
+                    <RequiredFieldLabel>Name</RequiredFieldLabel>
                     <Input {...register("name")} minH="11" borderRadius="14px" px={4} placeholder="Stripe card fee" />
                     {errors.name ? <Field.ErrorText>{errors.name.message}</Field.ErrorText> : null}
                   </Field.Root>
 
                   <Field.Root invalid={Boolean(errors.label)}>
-                    <Field.Label>Display Text</Field.Label>
+                    <RequiredFieldLabel>Display Text</RequiredFieldLabel>
                     <Input {...register("label")} minH="11" borderRadius="14px" px={4} placeholder="Processor fee offset" />
                     {errors.label ? <Field.ErrorText>{errors.label.message}</Field.ErrorText> : null}
                   </Field.Root>
 
                   <Field.Root invalid={Boolean(errors.paymentMerchantId)}>
-                    <Field.Label>Payment merchant</Field.Label>
+                    <RequiredFieldLabel>Payment merchant</RequiredFieldLabel>
                     <StyledSelect
                       options={merchantOptions}
                       value={paymentMerchantId > 0 ? String(paymentMerchantId) : ""}
@@ -534,7 +541,7 @@ export function PaymentProcessorFeesManager() {
                   </Field.Root>
 
                   <Field.Root invalid={Boolean(errors.paymentProductId)}>
-                    <Field.Label>Payment method</Field.Label>
+                    <RequiredFieldLabel>Payment method</RequiredFieldLabel>
                     <StyledSelect
                       options={methodOptions}
                       value={paymentProductId > 0 ? String(paymentProductId) : ""}
@@ -551,7 +558,7 @@ export function PaymentProcessorFeesManager() {
                   </Field.Root>
 
                   <Field.Root invalid={Boolean(errors.valueType)}>
-                    <Field.Label>Value type</Field.Label>
+                    <RequiredFieldLabel>Value type</RequiredFieldLabel>
                     <StyledSelect
                       options={FEE_VALUE_TYPE_OPTIONS}
                       value={currentValueType}
@@ -562,7 +569,7 @@ export function PaymentProcessorFeesManager() {
                   </Field.Root>
 
                   <Field.Root invalid={Boolean(errors.value)}>
-                    <Field.Label>Value</Field.Label>
+                    <RequiredFieldLabel>Value</RequiredFieldLabel>
                     <Input
                       {...register("value", { valueAsNumber: true })}
                       type="number"
