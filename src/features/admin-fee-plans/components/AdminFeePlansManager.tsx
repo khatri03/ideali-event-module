@@ -775,7 +775,34 @@ export function AdminFeePlansManager() {
           </Flex>
 
           <Box overflowX="auto">
-            <Table.Root variant="line" size="sm">
+            <Table.Root
+              variant="line"
+              size="sm"
+              border="1px solid"
+              borderColor="border.subtle"
+              borderRadius="16px"
+              overflow="hidden"
+              sx={{
+                "& thead th": {
+                  borderRight: "1px solid",
+                  borderRightColor: "border.subtle",
+                  borderBottom: "1px solid",
+                  borderBottomColor: "border.subtle",
+                },
+                "& tbody td": {
+                  borderRight: "1px solid",
+                  borderRightColor: "border.subtle",
+                  borderBottom: "1px solid",
+                  borderBottomColor: "border.subtle",
+                },
+                "& thead th:last-of-type, & tbody td:last-of-type": {
+                  borderRight: "none",
+                },
+                "& tbody tr:last-of-type td": {
+                  borderBottom: "none",
+                },
+              }}
+            >
               <Table.Header>
                 <Table.Row bg="app.bg">
                   <Table.ColumnHeader px={4} py={3} textAlign="right">
@@ -952,9 +979,6 @@ export function AdminFeePlansManager() {
                           >
                             {plan.isDefault ? "Default" : plan.sourceType}
                           </Badge>
-                          <Text fontSize="xs" color="text.secondary">
-                            {plan.assignedOrganizerCount} organizer{plan.assignedOrganizerCount === 1 ? "" : "s"} assigned
-                          </Text>
                         </Stack>
                       </Table.Cell>
                       <Table.Cell px={4} py={4}>
@@ -1238,7 +1262,34 @@ export function AdminFeePlansManager() {
                   </Flex>
 
                   <Box overflowX="auto">
-                    <Table.Root variant="line" size="sm">
+                    <Table.Root
+                      variant="line"
+                      size="sm"
+                      border="1px solid"
+                      borderColor="border.subtle"
+                      borderRadius="16px"
+                      overflow="hidden"
+                      sx={{
+                        "& thead th": {
+                          borderRight: "1px solid",
+                          borderRightColor: "border.subtle",
+                          borderBottom: "1px solid",
+                          borderBottomColor: "border.subtle",
+                        },
+                        "& tbody td": {
+                          borderRight: "1px solid",
+                          borderRightColor: "border.subtle",
+                          borderBottom: "1px solid",
+                          borderBottomColor: "border.subtle",
+                        },
+                        "& thead th:last-of-type, & tbody td:last-of-type": {
+                          borderRight: "none",
+                        },
+                        "& tbody tr:last-of-type td": {
+                          borderBottom: "none",
+                        },
+                      }}
+                    >
                       <Table.Header>
                         <Table.Row bg="app.bg">
                           <Table.ColumnHeader px={4} py={3}>
