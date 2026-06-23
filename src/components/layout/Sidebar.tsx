@@ -13,6 +13,7 @@ import {
   BarChart3,
   HelpCircle,
   LayoutGrid,
+  ShieldCheck,
 } from "lucide-react"
 import { mockUser } from "../../data/mock"
 import { logoutUser } from "@/api/auth"
@@ -269,15 +270,117 @@ function SettingsSection({
   )
 }
 
+function AdminSection({
+  isOpen,
+  pathname,
+  onToggle,
+  onNavigate,
+}: {
+  isOpen: boolean
+  pathname: string
+  onToggle: () => void
+  onNavigate?: () => void
+}) {
+  return (
+    <Box mb={6}>
+      <Text
+        fontSize="9px"
+        fontWeight="800"
+        color="rgba(255,255,255,0.38)"
+        textTransform="uppercase"
+        letterSpacing="0.12em"
+        mb={2}
+        px={4}
+      >
+        Admin
+      </Text>
+      <Flex
+        as="button"
+        align="center"
+        gap={3}
+        px={3}
+        py={2.5}
+        borderRadius="12px"
+        mx={2}
+        transition="all 0.18s ease"
+        bg="transparent"
+        boxShadow="none"
+        _hover={{ bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }}
+        onClick={onToggle}
+        cursor="pointer"
+      >
+        <Box color="rgba(255,255,255,0.7)" transition="color 0.18s" display="flex" alignItems="center">
+          <ShieldCheck size={17} />
+        </Box>
+        <Text
+          fontSize="sm"
+          fontWeight="500"
+          color="rgba(255,255,255,0.85)"
+          transition="color 0.18s"
+          flex={1}
+          letterSpacing="0"
+          textAlign="left"
+        >
+          Admin
+        </Text>
+        <Box color="rgba(255,255,255,0.7)" display="flex" alignItems="center" ml="auto">
+          {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </Box>
+      </Flex>
+
+      {isOpen ? (
+        <VStack gap={0.5} align="stretch" mt={1.5}>
+          <NavLink to={APP_ROUTES.adminRevenuePlans} style={{ textDecoration: "none" }} onClick={onNavigate}>
+            <Flex
+              align="center"
+              gap={3}
+              pl={10}
+              pr={3}
+              py={2.5}
+              borderRadius="12px"
+              mx={2}
+              transition="all 0.18s ease"
+              bg={pathname === APP_ROUTES.adminRevenuePlans ? "rgba(255,255,255,0.92)" : "transparent"}
+              _hover={pathname !== APP_ROUTES.adminRevenuePlans ? { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" } : {}}
+              boxShadow={pathname === APP_ROUTES.adminRevenuePlans ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
+            >
+              <Box
+                w="6px"
+                h="6px"
+                borderRadius="full"
+                bg={pathname === APP_ROUTES.adminRevenuePlans ? "#7551FF" : "rgba(255,255,255,0.6)"}
+                flexShrink={0}
+              />
+              <Text
+                fontSize="sm"
+                fontWeight={pathname === APP_ROUTES.adminRevenuePlans ? "700" : "500"}
+                color={pathname === APP_ROUTES.adminRevenuePlans ? "#422AFB" : "rgba(255,255,255,0.85)"}
+                transition="color 0.18s"
+                flex={1}
+                letterSpacing={pathname === APP_ROUTES.adminRevenuePlans ? "-0.01em" : "0"}
+              >
+                Revenue Plans
+              </Text>
+            </Flex>
+          </NavLink>
+        </VStack>
+      ) : null}
+    </Box>
+  )
+}
+
 export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const currentUser = auth.getUser() ?? mockUser
   const isMobile = variant === "mobile"
   const [isSettingsManualOpen, setIsSettingsManualOpen] = useState(false)
+  const [isAdminManualOpen, setIsAdminManualOpen] = useState(false)
   const isAdmin = currentUser.role === "Admin"
-  const isSettingsRouteActive = pathname === APP_ROUTES.settings || pathname === APP_ROUTES.adminRevenuePlans
+  const isSettingsRouteActive = pathname === APP_ROUTES.settings
   const isSettingsOpen = isSettingsManualOpen || isSettingsRouteActive
+  const isAdminRouteActive = pathname === APP_ROUTES.adminRevenuePlans
+  const isAdminOpen = isAdminManualOpen || isAdminRouteActive
 
   async function handleSignOut() {
     try {
@@ -364,6 +467,14 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
           onToggle={() => setIsSettingsManualOpen((current) => !current)}
           onNavigate={onNavigate}
         />
+        {isAdmin ? (
+          <AdminSection
+            pathname={pathname}
+            isOpen={isAdminOpen}
+            onToggle={() => setIsAdminManualOpen((current) => !current)}
+            onNavigate={onNavigate}
+          />
+        ) : null}
         <NavSection label="System" items={systemNav} onNavigate={onNavigate} />
       </Box>
 
