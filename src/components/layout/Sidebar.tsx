@@ -187,7 +187,7 @@ function SettingsSection({
         >
           Settings
         </Text>
-        <Box color="rgba(255,255,255,0.7)" display="flex" alignItems="center">
+        <Box color="rgba(255,255,255,0.7)" display="flex" alignItems="center" ml="auto">
           {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         </Box>
       </Flex>
