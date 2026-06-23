@@ -25,7 +25,13 @@ import {
   Text,
 } from "@chakra-ui/react"
 import { Layers3, MoreHorizontal, PencilLine, Plus, RotateCcw, UserRound, Check } from "lucide-react"
-import ReactSelect, { components, type MultiValue, type OptionProps, type StylesConfig } from "react-select"
+import ReactSelect, {
+  components,
+  type InputActionMeta,
+  type MultiValue,
+  type OptionProps,
+  type StylesConfig,
+} from "react-select"
 import { StyledSelect } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
 import {
@@ -41,12 +47,22 @@ import {
   updateAdminRevenuePlan,
 } from "@/api/adminFeePlans"
 
-const ruleSchema = z.object({
-  target: z.enum(["Organizer", "Buyer"], { message: "Target is required." }),
-  valueType: z.enum(["Fixed", "Percent"], { message: "Value type is required." }),
-  value: z.number().positive("Value must be greater than zero."),
-  isActive: z.boolean(),
-})
+const ruleSchema = z
+  .object({
+    target: z.enum(["Organizer", "Buyer"], { message: "Target is required." }),
+    valueType: z.enum(["Fixed", "Percent"], { message: "Value type is required." }),
+    value: z.number().positive("Value must be greater than zero."),
+    isActive: z.boolean(),
+  })
+  .superRefine((rule, ctx) => {
+    if (rule.valueType === "Percent" && rule.value > 100) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["value"],
+        message: "Percentage value cannot exceed 100.",
+      })
+    }
+  })
 
 const adminRevenuePlanSchema = z.object({
   name: z.string().trim().min(1, "Name is required.").max(80, "Maximum 80 characters allowed."),
@@ -88,7 +104,7 @@ const EMPTY_FORM_VALUES: AdminRevenuePlanFormValues = {
     target: "Buyer",
     valueType: "Percent",
     value: 0,
-    isActive: true,
+    isActive: false,
   },
 }
 
@@ -99,6 +115,61 @@ function formatValue(valueType: AdminRevenuePlan["rules"][number]["valueType"], 
 
 function planRuleLabel(rule: AdminRevenuePlan["rules"][number]) {
   return `${rule.target}: ${formatValue(rule.valueType, rule.value)}`
+}
+
+function getModuleRuleSummary(plan: AdminRevenuePlan, moduleIndex: number) {
+  const moduleRules = plan.rules.slice(moduleIndex * 2, moduleIndex * 2 + 2).filter((rule) => rule.isActive)
+
+  if (moduleRules.length === 0) {
+    return ""
+  }
+
+  return moduleRules.map(planRuleLabel).join("\n")
+}
+
+function formatNumericInput(value: string) {
+  const normalized = value.replace(/,/g, "").replace(/[^\d.]/g, "")
+
+  if (!normalized) {
+    return ""
+  }
+
+  const hasDot = normalized.includes(".")
+  const [integerPartRaw = "", decimalPartRaw = ""] = normalized.split(".")
+  const integerPart = integerPartRaw === "" ? "0" : integerPartRaw
+  const formattedIntegerPart = new Intl.NumberFormat("en-US").format(Number(integerPart))
+  const decimalPart = decimalPartRaw.slice(0, 2)
+
+  if (!hasDot) {
+    return formattedIntegerPart
+  }
+
+  return decimalPart.length > 0 ? `${formattedIntegerPart}.${decimalPart}` : `${formattedIntegerPart}.`
+}
+
+function formatNumericBlurValue(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)
+}
+
+function parseNumericInput(value: string) {
+  const normalized = value.replace(/,/g, "")
+  if (!normalized || normalized === ".") {
+    return null
+  }
+
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function clampRuleValue(valueType: "Fixed" | "Percent", value: number) {
+  if (valueType === "Percent") {
+    return Math.min(value, 100)
+  }
+
+  return value
 }
 
 function RequiredFieldLabel({ children }: { children: ReactNode }) {
@@ -186,6 +257,10 @@ export function AdminFeePlansManager() {
   const [isMapDialogOpen, setIsMapDialogOpen] = useState(false)
   const [mappingPlan, setMappingPlan] = useState<AdminRevenuePlan | null>(null)
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null)
+  const [organizerSearchValue, setOrganizerSearchValue] = useState("")
+  const [moduleSearchValue, setModuleSearchValue] = useState("")
+  const [organizerRuleValueInput, setOrganizerRuleValueInput] = useState("")
+  const [buyerRuleValueInput, setBuyerRuleValueInput] = useState("")
 
   const plansQuery = useQuery({
     queryKey: ["admin-revenue-plans"],
@@ -291,6 +366,67 @@ export function AdminFeePlansManager() {
         shouldValidate: true,
       },
     )
+  }
+
+  function handleRuleValueChange(
+    nextValue: string,
+    valueType: "Fixed" | "Percent",
+    setInputValue: (value: string) => void,
+    fieldName: "organizerRule.value" | "buyerRule.value",
+  ) {
+    const formattedValue = formatNumericInput(nextValue)
+    const parsedValue = parseNumericInput(formattedValue)
+    const clampedValue = clampRuleValue(valueType, parsedValue ?? 0)
+    const displayValue = valueType === "Percent" && parsedValue !== null && parsedValue > 100 ? formatNumericInput("100") : formattedValue
+
+    setInputValue(displayValue)
+    setValue(fieldName, clampedValue, {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+  }
+
+  function handleRuleValueBlur(
+    value: string,
+    valueType: "Fixed" | "Percent",
+    setInputValue: (value: string) => void,
+    fieldName: "organizerRule.value" | "buyerRule.value",
+  ) {
+    const parsedValue = parseNumericInput(value)
+
+    if (parsedValue === null) {
+      setInputValue("")
+      setValue(fieldName, 0, {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
+      return
+    }
+
+    const nextValue = clampRuleValue(valueType, parsedValue)
+    setInputValue(formatNumericBlurValue(nextValue))
+    setValue(fieldName, nextValue, {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+  }
+
+  function handleOrganizerInputChange(nextValue: string, actionMeta: InputActionMeta) {
+    if (actionMeta.action === "input-change") {
+      setOrganizerSearchValue(nextValue)
+      return nextValue
+    }
+
+    return organizerSearchValue
+  }
+
+  function handleModuleInputChange(nextValue: string, actionMeta: InputActionMeta) {
+    if (actionMeta.action === "input-change") {
+      setModuleSearchValue(nextValue)
+      return nextValue
+    }
+
+    return moduleSearchValue
   }
 
   const organizerMultiSelectStyles = useMemo(
@@ -466,12 +602,18 @@ export function AdminFeePlansManager() {
     setBanner(null)
     saveMutation.reset()
     mapMutation.reset()
+    setOrganizerSearchValue("")
+    setModuleSearchValue("")
+    setOrganizerRuleValueInput("")
+    setBuyerRuleValueInput("")
   }
 
   function openCreateDialog() {
     resetDialogState()
     setEditingPlan(null)
     reset(EMPTY_FORM_VALUES)
+    setOrganizerRuleValueInput("")
+    setBuyerRuleValueInput("")
     setIsDialogOpen(true)
   }
 
@@ -502,6 +644,22 @@ export function AdminFeePlansManager() {
           isActive: true,
         },
     })
+    setOrganizerRuleValueInput(
+      formatNumericBlurValue(
+        clampRuleValue(
+          (plan.rules.find((rule) => rule.target === "Organizer")?.valueType ?? "Percent") as "Fixed" | "Percent",
+          plan.rules.find((rule) => rule.target === "Organizer")?.value ?? 0,
+        ),
+      ),
+    )
+    setBuyerRuleValueInput(
+      formatNumericBlurValue(
+        clampRuleValue(
+          (plan.rules.find((rule) => rule.target === "Buyer")?.valueType ?? "Percent") as "Fixed" | "Percent",
+          plan.rules.find((rule) => rule.target === "Buyer")?.value ?? 0,
+        ),
+      ),
+    )
     setIsDialogOpen(true)
   }
 
@@ -623,14 +781,17 @@ export function AdminFeePlansManager() {
                   <Table.ColumnHeader px={4} py={3} textAlign="right">
                     Actions
                   </Table.ColumnHeader>
+                  <Table.ColumnHeader px={4} py={3}>
+                    Name
+                  </Table.ColumnHeader>
                   <Table.ColumnHeader px={6} py={3}>
-                    Label
+                    Display Text
                   </Table.ColumnHeader>
                   <Table.ColumnHeader px={4} py={3}>
-                    Module
+                    Modules
                   </Table.ColumnHeader>
                   <Table.ColumnHeader px={4} py={3}>
-                    Scope
+                    Default
                   </Table.ColumnHeader>
                   <Table.ColumnHeader px={4} py={3}>
                     Rules
@@ -643,7 +804,7 @@ export function AdminFeePlansManager() {
               <Table.Body>
                 {plans.length === 0 ? (
                   <Table.Row>
-                    <Table.Cell colSpan={6} py={14}>
+                    <Table.Cell colSpan={7} py={14}>
                       <Box textAlign="center">
                         <Text fontSize="lg" fontWeight="700" color="gray.900">
                           No revenue plans configured
@@ -670,8 +831,11 @@ export function AdminFeePlansManager() {
                     </Table.Cell>
                   </Table.Row>
                 ) : (
-                  plans.map((plan) => (
-                    <Table.Row key={plan.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
+                  plans.map((plan) => {
+                    const modules = plan.moduleNames.length > 0 ? plan.moduleNames : plan.moduleName ? [plan.moduleName] : []
+
+                    return (
+                      <Table.Row key={plan.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
                       <Table.Cell px={4} py={4} textAlign="right">
                         <Menu.Root>
                           <Menu.Trigger asChild>
@@ -733,21 +897,44 @@ export function AdminFeePlansManager() {
                           </Portal>
                         </Menu.Root>
                       </Table.Cell>
+                      <Table.Cell px={4} py={4}>
+                        <Text fontSize="sm" fontWeight="700" color="text.primary">
+                          {plan.name}
+                        </Text>
+                      </Table.Cell>
                       <Table.Cell px={6} py={4}>
-                        <Box>
-                          <Text fontSize="sm" fontWeight="700" color="text.primary">
-                            {plan.label}
-                          </Text>
-                          <Text fontSize="xs" color="text.secondary" mt={0.5}>
-                            {plan.name}
-                          </Text>
-                        </Box>
+                        <Text fontSize="sm" fontWeight="700" color="text.primary">
+                          {plan.label}
+                        </Text>
                       </Table.Cell>
                       <Table.Cell px={4} py={4}>
                         <Box minW={0}>
-                          <Text fontSize="sm" color="text.primary" lineClamp={2}>
-                            {plan.moduleNames.length > 0 ? plan.moduleNames.join(", ") : plan.moduleName}
-                          </Text>
+                          <Flex wrap="wrap" gap={2}>
+                            {modules.map((module, moduleIndex) => {
+                              const moduleRuleSummary = getModuleRuleSummary(plan, moduleIndex)
+
+                              return (
+                                <Badge
+                                  key={`${plan.uniqueId}-${module}`}
+                                  colorPalette="gray"
+                                  variant="subtle"
+                                  borderRadius="999px"
+                                  px={3}
+                                  py={1}
+                                  fontSize="10px"
+                                  fontWeight="800"
+                                  textTransform="uppercase"
+                                  letterSpacing="0.08em"
+                                  w="fit-content"
+                                  cursor={moduleRuleSummary ? "help" : "default"}
+                                  title={moduleRuleSummary || undefined}
+                                  aria-label={moduleRuleSummary ? `${module}. ${moduleRuleSummary.replaceAll("\n", ". ")}` : module}
+                                >
+                                  {module}
+                                </Badge>
+                              )
+                            })}
+                          </Flex>
                         </Box>
                       </Table.Cell>
                       <Table.Cell px={4} py={4}>
@@ -763,7 +950,7 @@ export function AdminFeePlansManager() {
                             textTransform="uppercase"
                             letterSpacing="0.08em"
                           >
-                            {plan.isDefault ? "Default fallback" : plan.sourceType}
+                            {plan.isDefault ? "Default" : plan.sourceType}
                           </Badge>
                           <Text fontSize="xs" color="text.secondary">
                             {plan.assignedOrganizerCount} organizer{plan.assignedOrganizerCount === 1 ? "" : "s"} assigned
@@ -807,7 +994,8 @@ export function AdminFeePlansManager() {
                         </Badge>
                       </Table.Cell>
                     </Table.Row>
-                  ))
+                    )
+                  })
                 )}
               </Table.Body>
             </Table.Root>
@@ -880,11 +1068,15 @@ export function AdminFeePlansManager() {
                     value={selectedOrganizerOptions}
                     onChange={handleOrganizerChange}
                     placeholder={organizersQuery.isLoading ? "Loading organizers..." : "Select organizers"}
+                    inputValue={organizerSearchValue}
+                    onInputChange={handleOrganizerInputChange}
                     closeMenuOnSelect={false}
                     hideSelectedOptions={false}
                     isClearable={false}
                     isDisabled={organizersQuery.isLoading}
                     controlShouldRenderValue={false}
+                    blurInputOnSelect={false}
+                    menuShouldScrollIntoView={false}
                     components={{ Option: OrganizerOption }}
                     styles={organizerMultiSelectStyles}
                   />
@@ -989,11 +1181,15 @@ export function AdminFeePlansManager() {
                     value={selectedModuleOptions}
                     onChange={handleModuleChange}
                     placeholder={modulesQuery.isLoading ? "Loading modules..." : "Select modules"}
+                    inputValue={moduleSearchValue}
+                    onInputChange={handleModuleInputChange}
                     closeMenuOnSelect={false}
                     hideSelectedOptions={false}
                     isClearable={false}
                     isDisabled={modulesQuery.isLoading}
                     controlShouldRenderValue={false}
+                    blurInputOnSelect={false}
+                    menuShouldScrollIntoView={false}
                     components={{ Option: ModuleOption }}
                     styles={moduleMultiSelectStyles}
                   />
@@ -1052,10 +1248,20 @@ export function AdminFeePlansManager() {
                             Active
                           </Table.ColumnHeader>
                           <Table.ColumnHeader px={4} py={3}>
-                            Value Type
+                            <Flex align="center" gap={1} wrap="wrap">
+                              <Text as="span">Value Type</Text>
+                              <Text as="span" color="red.500" fontWeight="800" aria-hidden="true">
+                                *
+                              </Text>
+                            </Flex>
                           </Table.ColumnHeader>
                           <Table.ColumnHeader px={4} py={3}>
-                            Value
+                            <Flex align="center" gap={1} wrap="wrap">
+                              <Text as="span">Value</Text>
+                              <Text as="span" color="red.500" fontWeight="800" aria-hidden="true">
+                                *
+                              </Text>
+                            </Flex>
                           </Table.ColumnHeader>
                         </Table.Row>
                       </Table.Header>
@@ -1081,16 +1287,47 @@ export function AdminFeePlansManager() {
                                 { label: "Percentage", value: "Percent" },
                               ]}
                               value={organizerRuleValueType}
-                              onChange={(value) => setValue("organizerRule.valueType", value as "Fixed" | "Percent", { shouldDirty: true })}
+                              onChange={
+                                organizerRuleIsActive
+                                  ? (value) => {
+                                      const nextValueType = value as "Fixed" | "Percent"
+                                      setValue("organizerRule.valueType", nextValueType, { shouldDirty: true, shouldValidate: true })
+
+                                      const currentValue = parseNumericInput(organizerRuleValueInput)
+                                      if (nextValueType === "Percent" && currentValue !== null && currentValue > 100) {
+                                        setOrganizerRuleValueInput(formatNumericBlurValue(100))
+                                        setValue("organizerRule.value", 100, { shouldDirty: true, shouldValidate: true })
+                                      }
+                                    }
+                                  : undefined
+                              }
+                              disabled={!organizerRuleIsActive}
                               placeholder="Select"
                             />
                           </Table.Cell>
                           <Table.Cell px={4} py={4}>
                             <Input
-                              {...register("organizerRule.value", { valueAsNumber: true })}
-                              type="number"
-                              min="0"
-                              step={organizerRuleValueType === "Percent" ? "0.01" : "1"}
+                              value={organizerRuleValueInput}
+                              onChange={(event) =>
+                                handleRuleValueChange(
+                                  event.target.value,
+                                  organizerRuleValueType,
+                                  setOrganizerRuleValueInput,
+                                  "organizerRule.value",
+                                )
+                              }
+                              onBlur={() =>
+                                handleRuleValueBlur(
+                                  organizerRuleValueInput,
+                                  organizerRuleValueType,
+                                  setOrganizerRuleValueInput,
+                                  "organizerRule.value",
+                                )
+                              }
+                              type="text"
+                              inputMode="decimal"
+                              disabled={!organizerRuleIsActive}
+                              cursor={!organizerRuleIsActive ? "not-allowed" : "text"}
                               minH="11"
                               borderRadius="14px"
                               px={4}
@@ -1120,16 +1357,47 @@ export function AdminFeePlansManager() {
                                 { label: "Percentage", value: "Percent" },
                               ]}
                               value={buyerRuleValueType}
-                              onChange={(value) => setValue("buyerRule.valueType", value as "Fixed" | "Percent", { shouldDirty: true })}
+                              onChange={
+                                buyerRuleIsActive
+                                  ? (value) => {
+                                      const nextValueType = value as "Fixed" | "Percent"
+                                      setValue("buyerRule.valueType", nextValueType, { shouldDirty: true, shouldValidate: true })
+
+                                      const currentValue = parseNumericInput(buyerRuleValueInput)
+                                      if (nextValueType === "Percent" && currentValue !== null && currentValue > 100) {
+                                        setBuyerRuleValueInput(formatNumericBlurValue(100))
+                                        setValue("buyerRule.value", 100, { shouldDirty: true, shouldValidate: true })
+                                      }
+                                    }
+                                  : undefined
+                              }
+                              disabled={!buyerRuleIsActive}
                               placeholder="Select"
                             />
                           </Table.Cell>
                           <Table.Cell px={4} py={4}>
                             <Input
-                              {...register("buyerRule.value", { valueAsNumber: true })}
-                              type="number"
-                              min="0"
-                              step={buyerRuleValueType === "Percent" ? "0.01" : "1"}
+                              value={buyerRuleValueInput}
+                              onChange={(event) =>
+                                handleRuleValueChange(
+                                  event.target.value,
+                                  buyerRuleValueType,
+                                  setBuyerRuleValueInput,
+                                  "buyerRule.value",
+                                )
+                              }
+                              onBlur={() =>
+                                handleRuleValueBlur(
+                                  buyerRuleValueInput,
+                                  buyerRuleValueType,
+                                  setBuyerRuleValueInput,
+                                  "buyerRule.value",
+                                )
+                              }
+                              type="text"
+                              inputMode="decimal"
+                              disabled={!buyerRuleIsActive}
+                              cursor={!buyerRuleIsActive ? "not-allowed" : "text"}
                               minH="11"
                               borderRadius="14px"
                               px={4}

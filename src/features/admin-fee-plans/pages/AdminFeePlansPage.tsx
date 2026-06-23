@@ -1,14 +1,20 @@
 import { Navigate } from "react-router-dom"
 import { Box, Badge, Heading, Stack, Text } from "@chakra-ui/react"
 import { ShieldCheck } from "lucide-react"
-import { auth } from "@/lib/auth"
+import { useAuthSession } from "@/hooks/useAuthSession"
+import { auth, sessionDataToUser } from "@/lib/auth"
 import { APP_ROUTES } from "@/utils/routes"
 import { AdminFeePlansManager } from "../components/AdminFeePlansManager"
 
 export function AdminFeePlansPage() {
-  const user = auth.getUser()
+  const sessionQuery = useAuthSession()
+  const user = auth.getUser() ?? (sessionQuery.data ? sessionDataToUser(sessionQuery.data) : null)
 
-  if (user?.role !== "Admin") {
+  if (!user) {
+    return null
+  }
+
+  if (user.role !== "Admin") {
     return <Navigate to={APP_ROUTES.settings} replace />
   }
 

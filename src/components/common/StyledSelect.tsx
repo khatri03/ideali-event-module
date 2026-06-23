@@ -69,7 +69,11 @@ export function StyledSelect({
         _placeholder={{ color: "secondaryGray.500" }}
         transition="all 0.15s ease"
         minW={minW}
-        cursor="pointer"
+        cursor={disabled ? "not-allowed" : "pointer"}
+        _disabled={{
+          opacity: 0.6,
+          cursor: "not-allowed",
+        }}
       >
         <Select.ValueText placeholder={placeholder} />
         <Select.Indicator color="secondaryGray.600" _dark={{ color: "secondaryGray.500" }}>
