@@ -3,7 +3,7 @@ export const APP_ROUTES = {
   dashboard: "/dashboard",
   events: "/events",
   calendar: "/calendar",
-  settings: "/settings",
+  settings: "/organizer/payment-processor-fee/list",
   team: "/team",
   analytics: "/analytics",
   help: "/help",

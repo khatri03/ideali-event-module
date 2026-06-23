@@ -45,7 +45,6 @@ const managementNav: NavItem[] = [
   { label: "Seating Layouts", icon: <LayoutGrid size={17} />, path: APP_ROUTES.seatingLayouts.list },
   { label: "Team", icon: <Users size={17} />, path: APP_ROUTES.team },
   { label: "Analytics", icon: <BarChart3 size={17} />, path: APP_ROUTES.analytics },
-  { label: "Processor Fees", icon: <Settings size={17} />, path: APP_ROUTES.settings },
 ]
 
 const systemNav: NavItem[] = [
