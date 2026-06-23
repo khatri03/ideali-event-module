@@ -643,11 +643,12 @@ export function AdminFeePlansManager() {
                           <Text fontSize="sm" fontWeight="700" color="text.primary">
                             Default fallback
                           </Text>
-                          <Text fontSize="xs" color="text.secondary">
-                            Used when no organizer-specific plan is mapped for this module.
-                          </Text>
                         </Box>
-                        <Switch.Root checked={isDefault} onCheckedChange={(details) => setValue("isDefault", details.checked, { shouldDirty: true })}>
+                        <Switch.Root
+                          checked={isDefault}
+                          colorPalette="brand"
+                          onCheckedChange={(details) => setValue("isDefault", details.checked, { shouldDirty: true })}
+                        >
                           <Switch.HiddenInput />
                           <Switch.Control />
                         </Switch.Root>
@@ -673,7 +674,11 @@ export function AdminFeePlansManager() {
                             Disabled plans remain saved but will not apply.
                           </Text>
                         </Box>
-                        <Switch.Root checked={isActive} onCheckedChange={(details) => setValue("isActive", details.checked, { shouldDirty: true })}>
+                        <Switch.Root
+                          checked={isActive}
+                          colorPalette="brand"
+                          onCheckedChange={(details) => setValue("isActive", details.checked, { shouldDirty: true })}
+                        >
                           <Switch.HiddenInput />
                           <Switch.Control />
                         </Switch.Root>
@@ -690,43 +695,15 @@ export function AdminFeePlansManager() {
                     </Text>
                   </Flex>
 
-                  <Box mb={4} borderRadius="16px" border="1px solid" borderColor="border.subtle" bg="app.bg" px={4} py={3}>
-                    <SimpleGrid columns={{ base: 1, md: 3 }} gap={3}>
-                      <Box>
-                        <Text fontSize="xs" fontWeight="800" textTransform="uppercase" letterSpacing="0.08em" color="text.secondary">
-                          Precedence
-                        </Text>
-                        <Text fontSize="sm" fontWeight="600" color="text.primary" mt={1}>
-                          Organizer custom rule, organizer mapping, then default fallback.
-                        </Text>
-                      </Box>
-                      <Box>
-                        <Text fontSize="xs" fontWeight="800" textTransform="uppercase" letterSpacing="0.08em" color="text.secondary">
-                          Buyer rule
-                        </Text>
-                        <Text fontSize="sm" color="text.primary" mt={1}>
-                          Adds to checkout total.
-                        </Text>
-                      </Box>
-                      <Box>
-                        <Text fontSize="xs" fontWeight="800" textTransform="uppercase" letterSpacing="0.08em" color="text.secondary">
-                          Organizer rule
-                        </Text>
-                        <Text fontSize="sm" color="text.primary" mt={1}>
-                          Passed through as Admin Fee to Stripe.
-                        </Text>
-                      </Box>
-                    </SimpleGrid>
-                  </Box>
-
                   <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                     <Box borderRadius="16px" border="1px solid" borderColor="border.subtle" p={4} bg="app.bg">
                       <Flex align="center" justify="space-between" mb={3}>
                         <Text fontSize="sm" fontWeight="800" color="text.primary">
-                          Organizer rule
+                          Organizer Rule
                         </Text>
                         <Switch.Root
                           checked={organizerRuleIsActive}
+                          colorPalette="brand"
                           onCheckedChange={(details) => setValue("organizerRule.isActive", details.checked, { shouldDirty: true })}
                         >
                           <Switch.HiddenInput />
@@ -764,18 +741,16 @@ export function AdminFeePlansManager() {
                           />
                         </Field.Root>
                       </SimpleGrid>
-                      <Text fontSize="xs" color="text.secondary" mt={3}>
-                        This amount does not increase checkout total. It is passed as Admin Fee when charging the organizer side.
-                      </Text>
                     </Box>
 
                     <Box borderRadius="16px" border="1px solid" borderColor="border.subtle" p={4} bg="app.bg">
                       <Flex align="center" justify="space-between" mb={3}>
                         <Text fontSize="sm" fontWeight="800" color="text.primary">
-                          Buyer surcharge
+                          Buyer Rule
                         </Text>
                         <Switch.Root
                           checked={buyerRuleIsActive}
+                          colorPalette="brand"
                           onCheckedChange={(details) => setValue("buyerRule.isActive", details.checked, { shouldDirty: true })}
                         >
                           <Switch.HiddenInput />
@@ -813,9 +788,6 @@ export function AdminFeePlansManager() {
                           />
                         </Field.Root>
                       </SimpleGrid>
-                      <Text fontSize="xs" color="text.secondary" mt={3}>
-                        This amount is added to checkout total and also counted in the Admin Fee sent to Stripe.
-                      </Text>
                     </Box>
                   </SimpleGrid>
                 </Box>
