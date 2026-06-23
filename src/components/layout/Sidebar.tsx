@@ -140,7 +140,7 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
   const isMobile = variant === "mobile"
   const [isSettingsManualOpen, setIsSettingsManualOpen] = useState(false)
   const isSettingsOpen = pathname.startsWith(APP_ROUTES.settings) || isSettingsManualOpen
-  const isSettingsActive = pathname.startsWith(APP_ROUTES.settings)
+  const isSettingsChildActive = pathname === APP_ROUTES.settings
 
   async function handleSignOut() {
     try {
@@ -242,18 +242,14 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
             borderRadius="12px"
             mx={2}
             transition="all 0.18s ease"
-            bg={isSettingsActive ? "rgba(255,255,255,0.92)" : "transparent"}
-            boxShadow={isSettingsActive ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
-            _hover={
-              !isSettingsActive
-                ? { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }
-                : {}
-            }
+            bg="transparent"
+            boxShadow="none"
+            _hover={{ bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }}
             onClick={() => setIsSettingsManualOpen((current) => !current)}
             cursor="pointer"
           >
             <Box
-              color={isSettingsActive ? "#7551FF" : "rgba(255,255,255,0.7)"}
+              color="rgba(255,255,255,0.7)"
               transition="color 0.18s"
               display="flex"
               alignItems="center"
@@ -262,17 +258,17 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
             </Box>
             <Text
               fontSize="sm"
-              fontWeight={isSettingsActive ? "700" : "500"}
-              color={isSettingsActive ? "#422AFB" : "rgba(255,255,255,0.85)"}
+              fontWeight="500"
+              color="rgba(255,255,255,0.85)"
               transition="color 0.18s"
               flex={1}
-              letterSpacing={isSettingsActive ? "-0.01em" : "0"}
+              letterSpacing="0"
               textAlign="left"
             >
               Settings
             </Text>
             <Box
-              color={isSettingsActive ? "#7551FF" : "rgba(255,255,255,0.7)"}
+              color="rgba(255,255,255,0.7)"
               display="flex"
               alignItems="center"
             >
@@ -292,28 +288,28 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
                   borderRadius="12px"
                   mx={2}
                   transition="all 0.18s ease"
-                  bg={isSettingsActive ? "rgba(255,255,255,0.92)" : "transparent"}
+                  bg={isSettingsChildActive ? "rgba(255,255,255,0.92)" : "transparent"}
                   _hover={
-                    !isSettingsActive
+                    !isSettingsChildActive
                       ? { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }
                       : {}
                   }
-                  boxShadow={isSettingsActive ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
+                  boxShadow={isSettingsChildActive ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
                 >
                   <Box
                     w="6px"
                     h="6px"
                     borderRadius="full"
-                    bg={isSettingsActive ? "#7551FF" : "rgba(255,255,255,0.6)"}
+                    bg={isSettingsChildActive ? "#7551FF" : "rgba(255,255,255,0.6)"}
                     flexShrink={0}
                   />
                   <Text
                     fontSize="sm"
-                    fontWeight={isSettingsActive ? "700" : "500"}
-                    color={isSettingsActive ? "#422AFB" : "rgba(255,255,255,0.85)"}
+                    fontWeight={isSettingsChildActive ? "700" : "500"}
+                    color={isSettingsChildActive ? "#422AFB" : "rgba(255,255,255,0.85)"}
                     transition="color 0.18s"
                     flex={1}
-                    letterSpacing={isSettingsActive ? "-0.01em" : "0"}
+                    letterSpacing={isSettingsChildActive ? "-0.01em" : "0"}
                   >
                     Processor Fees
                   </Text>
