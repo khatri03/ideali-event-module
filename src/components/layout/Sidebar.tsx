@@ -133,13 +133,112 @@ function NavSection({ label, items, onNavigate }: { label: string; items: NavIte
   )
 }
 
+function SettingsSection({
+  isActive,
+  isOpen,
+  onToggle,
+  onNavigate,
+}: {
+  isActive: boolean
+  isOpen: boolean
+  onToggle: () => void
+  onNavigate?: () => void
+}) {
+  return (
+    <Box mb={6}>
+      <Text
+        fontSize="9px"
+        fontWeight="800"
+        color="rgba(255,255,255,0.38)"
+        textTransform="uppercase"
+        letterSpacing="0.12em"
+        mb={2}
+        px={4}
+      >
+        Settings
+      </Text>
+      <Flex
+        as="button"
+        type="button"
+        align="center"
+        gap={3}
+        px={3}
+        py={2.5}
+        borderRadius="12px"
+        mx={2}
+        transition="all 0.18s ease"
+        bg="transparent"
+        boxShadow="none"
+        _hover={{ bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }}
+        onClick={onToggle}
+        cursor="pointer"
+      >
+        <Box color="rgba(255,255,255,0.7)" transition="color 0.18s" display="flex" alignItems="center">
+          <Settings size={17} />
+        </Box>
+        <Text
+          fontSize="sm"
+          fontWeight="500"
+          color="rgba(255,255,255,0.85)"
+          transition="color 0.18s"
+          flex={1}
+          letterSpacing="0"
+          textAlign="left"
+        >
+          Settings
+        </Text>
+        <Box color="rgba(255,255,255,0.7)" display="flex" alignItems="center">
+          {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </Box>
+      </Flex>
+
+      {isOpen ? (
+        <VStack gap={0.5} align="stretch" mt={1.5}>
+          <NavLink to={APP_ROUTES.settings} style={{ textDecoration: "none" }} onClick={onNavigate}>
+            <Flex
+              align="center"
+              gap={3}
+              pl={10}
+              pr={3}
+              py={2.5}
+              borderRadius="12px"
+              mx={2}
+              transition="all 0.18s ease"
+              bg={isActive ? "rgba(255,255,255,0.92)" : "transparent"}
+              _hover={!isActive ? { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" } : {}}
+              boxShadow={isActive ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
+            >
+              <Box
+                w="6px"
+                h="6px"
+                borderRadius="full"
+                bg={isActive ? "#7551FF" : "rgba(255,255,255,0.6)"}
+                flexShrink={0}
+              />
+              <Text
+                fontSize="sm"
+                fontWeight={isActive ? "700" : "500"}
+                color={isActive ? "#422AFB" : "rgba(255,255,255,0.85)"}
+                transition="color 0.18s"
+                flex={1}
+                letterSpacing={isActive ? "-0.01em" : "0"}
+              >
+                Processor Fees
+              </Text>
+            </Flex>
+          </NavLink>
+        </VStack>
+      ) : null}
+    </Box>
+  )
+}
+
 export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const currentUser = auth.getUser() ?? mockUser
   const isMobile = variant === "mobile"
-  const [isSettingsManualOpen, setIsSettingsManualOpen] = useState(false)
-  const isSettingsOpen = pathname.startsWith(APP_ROUTES.settings) || isSettingsManualOpen
+  const [isSettingsManualOpen, setIsSettingsManualOpen] = useState(pathname.startsWith(APP_ROUTES.settings))
   const isSettingsChildActive = pathname === APP_ROUTES.settings
 
   async function handleSignOut() {
@@ -220,104 +319,13 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
       <Box flex={1} px={2} position="relative" zIndex={1}>
         <NavSection label="Main" items={mainNav} onNavigate={onNavigate} />
         <NavSection label="Management" items={managementNav} onNavigate={onNavigate} />
-        <Box mb={6}>
-          <Text
-            fontSize="9px"
-            fontWeight="800"
-            color="rgba(255,255,255,0.38)"
-            textTransform="uppercase"
-            letterSpacing="0.12em"
-            mb={2}
-            px={4}
-          >
-            Settings
-          </Text>
-          <Flex
-            as="button"
-            type="button"
-            align="center"
-            gap={3}
-            px={3}
-            py={2.5}
-            borderRadius="12px"
-            mx={2}
-            transition="all 0.18s ease"
-            bg="transparent"
-            boxShadow="none"
-            _hover={{ bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }}
-            onClick={() => setIsSettingsManualOpen((current) => !current)}
-            cursor="pointer"
-          >
-            <Box
-              color="rgba(255,255,255,0.7)"
-              transition="color 0.18s"
-              display="flex"
-              alignItems="center"
-            >
-              <Settings size={17} />
-            </Box>
-            <Text
-              fontSize="sm"
-              fontWeight="500"
-              color="rgba(255,255,255,0.85)"
-              transition="color 0.18s"
-              flex={1}
-              letterSpacing="0"
-              textAlign="left"
-            >
-              Settings
-            </Text>
-            <Box
-              color="rgba(255,255,255,0.7)"
-              display="flex"
-              alignItems="center"
-            >
-              {isSettingsOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            </Box>
-          </Flex>
-
-          {isSettingsOpen ? (
-            <VStack gap={0.5} align="stretch" mt={1.5}>
-              <NavLink to={APP_ROUTES.settings} style={{ textDecoration: "none" }} onClick={onNavigate}>
-                <Flex
-                  align="center"
-                  gap={3}
-                  pl={10}
-                  pr={3}
-                  py={2.5}
-                  borderRadius="12px"
-                  mx={2}
-                  transition="all 0.18s ease"
-                  bg={isSettingsChildActive ? "rgba(255,255,255,0.92)" : "transparent"}
-                  _hover={
-                    !isSettingsChildActive
-                      ? { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }
-                      : {}
-                  }
-                  boxShadow={isSettingsChildActive ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
-                >
-                  <Box
-                    w="6px"
-                    h="6px"
-                    borderRadius="full"
-                    bg={isSettingsChildActive ? "#7551FF" : "rgba(255,255,255,0.6)"}
-                    flexShrink={0}
-                  />
-                  <Text
-                    fontSize="sm"
-                    fontWeight={isSettingsChildActive ? "700" : "500"}
-                    color={isSettingsChildActive ? "#422AFB" : "rgba(255,255,255,0.85)"}
-                    transition="color 0.18s"
-                    flex={1}
-                    letterSpacing={isSettingsChildActive ? "-0.01em" : "0"}
-                  >
-                    Processor Fees
-                  </Text>
-                </Flex>
-              </NavLink>
-            </VStack>
-          ) : null}
-        </Box>
+        <SettingsSection
+          key={pathname.startsWith(APP_ROUTES.settings) ? "settings" : "other"}
+          isActive={isSettingsChildActive}
+          isOpen={isSettingsManualOpen}
+          onToggle={() => setIsSettingsManualOpen((current) => !current)}
+          onNavigate={onNavigate}
+        />
         <NavSection label="System" items={systemNav} onNavigate={onNavigate} />
       </Box>
 
