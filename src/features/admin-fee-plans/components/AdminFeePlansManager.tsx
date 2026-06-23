@@ -37,6 +37,7 @@ import { extractApiError } from "@/utils/errors"
 import {
   createAdminRevenuePlan,
   fetchAdminRevenuePlanModules,
+  fetchAdminRevenuePlanOrganizerNames,
   fetchAdminRevenuePlanOrganizers,
   fetchAdminRevenuePlans,
   assignAdminRevenuePlanOrganizer,
@@ -271,6 +272,7 @@ export function AdminFeePlansManager() {
   const [editingPlan, setEditingPlan] = useState<AdminRevenuePlan | null>(null)
   const [isMapDialogOpen, setIsMapDialogOpen] = useState(false)
   const [mappingPlan, setMappingPlan] = useState<AdminRevenuePlan | null>(null)
+  const [organizerNamesPlan, setOrganizerNamesPlan] = useState<AdminRevenuePlan | null>(null)
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [organizerSearchValue, setOrganizerSearchValue] = useState("")
   const [moduleSearchValue, setModuleSearchValue] = useState("")
@@ -291,6 +293,18 @@ export function AdminFeePlansManager() {
   const organizersQuery = useQuery({
     queryKey: ["admin-revenue-plan-organizers"],
     queryFn: fetchAdminRevenuePlanOrganizers,
+  })
+
+  const organizerNamesQuery = useQuery({
+    queryKey: ["admin-revenue-plan-organizer-names", organizerNamesPlan?.uniqueId ?? ""],
+    queryFn: () => {
+      if (!organizerNamesPlan?.uniqueId) {
+        return Promise.resolve([])
+      }
+
+      return fetchAdminRevenuePlanOrganizerNames(organizerNamesPlan.uniqueId)
+    },
+    enabled: Boolean(organizerNamesPlan?.uniqueId),
   })
 
   const {
@@ -700,6 +714,15 @@ export function AdminFeePlansManager() {
     () => buildPageNumbers(planPage, totalPlanPages),
     [planPage, totalPlanPages],
   )
+  const organizerNames = organizerNamesQuery.data ?? []
+
+  function openOrganizerNamesDialog(plan: AdminRevenuePlan) {
+    setOrganizerNamesPlan(plan)
+  }
+
+  function closeOrganizerNamesDialog() {
+    setOrganizerNamesPlan(null)
+  }
 
   return (
     <Stack gap={5}>
@@ -802,56 +825,29 @@ export function AdminFeePlansManager() {
             </Flex>
           </Flex>
 
-          <Box overflowX="auto">
-            <Table.Root
-              variant="line"
-              size="sm"
-              border="1px solid"
-              borderColor="border.subtle"
-              borderRadius="16px"
-              overflow="hidden"
-              sx={{
-                "& thead th": {
-                  borderRight: "1px solid",
-                  borderRightColor: "border.subtle",
-                  borderBottom: "1px solid",
-                  borderBottomColor: "border.subtle",
-                },
-                "& tbody td": {
-                  borderRight: "1px solid",
-                  borderRightColor: "border.subtle",
-                  borderBottom: "1px solid",
-                  borderBottomColor: "border.subtle",
-                },
-                "& thead th:last-of-type, & tbody td:last-of-type": {
-                  borderRight: "none",
-                },
-                "& tbody tr:last-of-type td": {
-                  borderBottom: "none",
-                },
-              }}
-            >
+          <Box overflowX="auto" border="1px solid" borderColor="border.subtle" bg="app.bg">
+            <Table.Root variant="line" size="sm" borderColor="border.subtle" minW={{ base: "760px", md: "auto" }}>
               <Table.Header>
                 <Table.Row bg="app.bg">
-                  <Table.ColumnHeader px={4} py={3} textAlign="right">
+                  <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
                     Actions
                   </Table.ColumnHeader>
-                  <Table.ColumnHeader px={4} py={3}>
+                  <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
                     Name
                   </Table.ColumnHeader>
-                  <Table.ColumnHeader px={6} py={3}>
+                  <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
                     Display Text
                   </Table.ColumnHeader>
-                  <Table.ColumnHeader px={4} py={3}>
+                  <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
                     Modules
                   </Table.ColumnHeader>
-                  <Table.ColumnHeader px={4} py={3}>
+                  <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
+                    Organizers
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
                     Default
                   </Table.ColumnHeader>
-                  <Table.ColumnHeader px={4} py={3}>
-                    Rules
-                  </Table.ColumnHeader>
-                  <Table.ColumnHeader px={4} py={3}>
+                  <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" px={4} py={3} textAlign="center">
                     Status
                   </Table.ColumnHeader>
                 </Table.Row>
@@ -888,10 +884,13 @@ export function AdminFeePlansManager() {
                 ) : (
                   plans.map((plan) => {
                     const modules = plan.moduleNames.length > 0 ? plan.moduleNames : plan.moduleName ? [plan.moduleName] : []
+                    const organizerCount = plan.organizerCount ?? plan.assignedOrganizerCount
+                    const organizerNames = plan.topOrganizerNames.slice(0, 3)
+                    const remainingOrganizerCount = Math.max(organizerCount - organizerNames.length, 0)
 
                     return (
                       <Table.Row key={plan.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
-                      <Table.Cell px={4} py={4} textAlign="right">
+                      <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
                         <Menu.Root>
                           <Menu.Trigger asChild>
                             <Button
@@ -952,17 +951,17 @@ export function AdminFeePlansManager() {
                           </Portal>
                         </Menu.Root>
                       </Table.Cell>
-                      <Table.Cell px={4} py={4}>
+                      <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
                         <Text fontSize="sm" fontWeight="700" color="text.primary">
                           {plan.name}
                         </Text>
                       </Table.Cell>
-                      <Table.Cell px={6} py={4}>
+                      <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
                         <Text fontSize="sm" fontWeight="700" color="text.primary">
                           {plan.label}
                         </Text>
                       </Table.Cell>
-                      <Table.Cell px={4} py={4}>
+                      <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
                         <Box minW={0}>
                           <Flex wrap="wrap" gap={2}>
                             {modules.map((module, moduleIndex) => {
@@ -992,7 +991,53 @@ export function AdminFeePlansManager() {
                           </Flex>
                         </Box>
                       </Table.Cell>
-                      <Table.Cell px={4} py={4}>
+                      <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
+                        <Box minW={0}>
+                          {organizerCount > 0 ? (
+                            <Flex wrap="wrap" gap={2}>
+                              {organizerNames.map((organizerName) => (
+                                <Badge
+                                  key={`${plan.uniqueId}-${organizerName}`}
+                                  colorPalette="gray"
+                                  variant="subtle"
+                                  borderRadius="999px"
+                                  px={3}
+                                  py={1}
+                                  fontSize="10px"
+                                  fontWeight="800"
+                                  textTransform="uppercase"
+                                  letterSpacing="0.08em"
+                                  w="fit-content"
+                                >
+                                  {organizerName}
+                                </Badge>
+                              ))}
+                              {remainingOrganizerCount > 0 ? (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  colorPalette="gray"
+                                  borderRadius="999px"
+                                  h="28px"
+                                  px={3}
+                                  fontSize="10px"
+                                  fontWeight="800"
+                                  textTransform="uppercase"
+                                  letterSpacing="0.08em"
+                                  onClick={() => openOrganizerNamesDialog(plan)}
+                                >
+                                  +{remainingOrganizerCount} more
+                                </Button>
+                              ) : null}
+                            </Flex>
+                          ) : (
+                            <Text fontSize="sm" color="text.secondary">
+                              -
+                            </Text>
+                          )}
+                        </Box>
+                      </Table.Cell>
+                      <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
                         <Stack gap={1}>
                           <Badge
                             colorPalette={plan.isDefault ? "purple" : "blue"}
@@ -1009,28 +1054,7 @@ export function AdminFeePlansManager() {
                           </Badge>
                         </Stack>
                       </Table.Cell>
-                      <Table.Cell px={4} py={4}>
-                        <Stack gap={1.5}>
-                          {plan.rules.map((rule) => (
-                            <Badge
-                              key={`${plan.uniqueId}-${rule.target}`}
-                              colorPalette={rule.target === "Organizer" ? "orange" : "cyan"}
-                              variant="subtle"
-                              borderRadius="999px"
-                              px={3}
-                              py={1}
-                              fontSize="10px"
-                              fontWeight="800"
-                              textTransform="uppercase"
-                              letterSpacing="0.08em"
-                              w="fit-content"
-                            >
-                              {planRuleLabel(rule)}
-                            </Badge>
-                          ))}
-                        </Stack>
-                      </Table.Cell>
-                      <Table.Cell px={4} py={4}>
+                      <Table.Cell borderColor="border.subtle" px={4} py={4}>
                         <Badge
                           colorPalette={plan.isActive ? "green" : "gray"}
                           variant="subtle"
@@ -1054,6 +1078,85 @@ export function AdminFeePlansManager() {
           </Box>
         </Box>
       )}
+
+      <Dialog.Root
+        open={Boolean(organizerNamesPlan)}
+        onOpenChange={(details) => {
+          if (!details.open) {
+            closeOrganizerNamesDialog()
+          }
+        }}
+        size="md"
+      >
+        <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
+        <Dialog.Positioner>
+          <Dialog.Content
+            bg="white"
+            borderRadius={{ base: 0, md: "24px" }}
+            maxW={{ base: "100vw", md: "560px" }}
+            maxH={{ base: "100dvh", md: "90vh" }}
+            m={{ base: 0, md: "auto" }}
+            overflow="hidden"
+            display="flex"
+            flexDirection="column"
+          >
+            <Box px={6} pt={6} pb={4} borderBottom="1px solid" borderColor="gray.200">
+              <Flex align="flex-start" justify="space-between" gap={4}>
+                <Box>
+                  <Text fontSize="lg" fontWeight="800" color="gray.900">
+                    Organizers
+                  </Text>
+                  <Text fontSize="sm" color="gray.600">
+                    {organizerNamesPlan?.label ?? "Selected plan"}
+                  </Text>
+                </Box>
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton aria-label="Close organizers dialog" onClick={closeOrganizerNamesDialog} />
+                </Dialog.CloseTrigger>
+              </Flex>
+            </Box>
+
+            <Dialog.Body px={6} py={6} overflowY="auto">
+              {organizerNamesQuery.isLoading ? (
+                <Stack gap={3}>
+                  <Skeleton height="24px" width="180px" />
+                  <SkeletonText noOfLines={4} />
+                </Stack>
+              ) : organizerNamesQuery.isError ? (
+                <Box p={4} borderRadius="16px" border="1px solid" borderColor="red.200" bg="red.50">
+                  <Text fontSize="sm" fontWeight="700" color="red.700">
+                    {extractApiError(organizerNamesQuery.error)}
+                  </Text>
+                </Box>
+              ) : organizerNames.length === 0 ? (
+                <Text fontSize="sm" color="text.secondary">
+                  No organizers mapped.
+                </Text>
+              ) : (
+                <Flex wrap="wrap" gap={2}>
+                  {organizerNames.map((organizerName) => (
+                    <Badge
+                      key={organizerName}
+                      colorPalette="gray"
+                      variant="subtle"
+                      borderRadius="999px"
+                      px={3}
+                      py={1}
+                      fontSize="10px"
+                      fontWeight="800"
+                      textTransform="uppercase"
+                      letterSpacing="0.08em"
+                      w="fit-content"
+                    >
+                      {organizerName}
+                    </Badge>
+                  ))}
+                </Flex>
+              )}
+            </Dialog.Body>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
 
       {plansQuery.data ? (
         <Flex
@@ -1339,43 +1442,16 @@ export function AdminFeePlansManager() {
                   </Flex>
 
                   <Box overflowX="auto">
-                    <Table.Root
-                      variant="line"
-                      size="sm"
-                      border="1px solid"
-                      borderColor="border.subtle"
-                      borderRadius="16px"
-                      overflow="hidden"
-                      sx={{
-                        "& thead th": {
-                          borderRight: "1px solid",
-                          borderRightColor: "border.subtle",
-                          borderBottom: "1px solid",
-                          borderBottomColor: "border.subtle",
-                        },
-                        "& tbody td": {
-                          borderRight: "1px solid",
-                          borderRightColor: "border.subtle",
-                          borderBottom: "1px solid",
-                          borderBottomColor: "border.subtle",
-                        },
-                        "& thead th:last-of-type, & tbody td:last-of-type": {
-                          borderRight: "none",
-                        },
-                        "& tbody tr:last-of-type td": {
-                          borderBottom: "none",
-                        },
-                      }}
-                    >
+                    <Table.Root variant="line" size="sm" borderColor="border.subtle" minW={{ base: "760px", md: "auto" }}>
                       <Table.Header>
                         <Table.Row bg="app.bg">
-                          <Table.ColumnHeader px={4} py={3}>
+                          <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
                             Rule For
                           </Table.ColumnHeader>
-                          <Table.ColumnHeader px={4} py={3}>
+                          <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
                             Active
                           </Table.ColumnHeader>
-                          <Table.ColumnHeader px={4} py={3}>
+                          <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
                             <Flex align="center" gap={1} wrap="wrap">
                               <Text as="span">Value Type</Text>
                               <Text as="span" color="red.500" fontWeight="800" aria-hidden="true">
@@ -1383,7 +1459,7 @@ export function AdminFeePlansManager() {
                               </Text>
                             </Flex>
                           </Table.ColumnHeader>
-                          <Table.ColumnHeader px={4} py={3}>
+                          <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" px={4} py={3} textAlign="center">
                             <Flex align="center" gap={1} wrap="wrap">
                               <Text as="span">Value</Text>
                               <Text as="span" color="red.500" fontWeight="800" aria-hidden="true">
@@ -1395,10 +1471,10 @@ export function AdminFeePlansManager() {
                       </Table.Header>
                       <Table.Body>
                         <Table.Row>
-                          <Table.Cell px={4} py={4} fontWeight="700" color="text.primary">
+                          <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} fontWeight="700" color="text.primary">
                             Organizer
                           </Table.Cell>
-                          <Table.Cell px={4} py={4}>
+                          <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
                             <Switch.Root
                               checked={organizerRuleIsActive}
                               colorPalette="brand"
@@ -1408,7 +1484,7 @@ export function AdminFeePlansManager() {
                               <Switch.Control />
                             </Switch.Root>
                           </Table.Cell>
-                          <Table.Cell px={4} py={4}>
+                          <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
                             <StyledSelect
                               options={[
                                 { label: "Fixed Amount", value: "Fixed" },
@@ -1433,7 +1509,7 @@ export function AdminFeePlansManager() {
                               placeholder="Select"
                             />
                           </Table.Cell>
-                          <Table.Cell px={4} py={4}>
+                          <Table.Cell borderColor="border.subtle" px={4} py={4}>
                             <Input
                               value={organizerRuleValueInput}
                               onChange={(event) =>
@@ -1465,10 +1541,10 @@ export function AdminFeePlansManager() {
                         </Table.Row>
 
                         <Table.Row>
-                          <Table.Cell px={4} py={4} fontWeight="700" color="text.primary">
+                          <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} fontWeight="700" color="text.primary">
                             Buyer
                           </Table.Cell>
-                          <Table.Cell px={4} py={4}>
+                          <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
                             <Switch.Root
                               checked={buyerRuleIsActive}
                               colorPalette="brand"
@@ -1478,7 +1554,7 @@ export function AdminFeePlansManager() {
                               <Switch.Control />
                             </Switch.Root>
                           </Table.Cell>
-                          <Table.Cell px={4} py={4}>
+                          <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
                             <StyledSelect
                               options={[
                                 { label: "Fixed Amount", value: "Fixed" },
@@ -1503,7 +1579,7 @@ export function AdminFeePlansManager() {
                               placeholder="Select"
                             />
                           </Table.Cell>
-                          <Table.Cell px={4} py={4}>
+                          <Table.Cell borderColor="border.subtle" px={4} py={4}>
                             <Input
                               value={buyerRuleValueInput}
                               onChange={(event) =>

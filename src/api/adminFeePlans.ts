@@ -64,10 +64,14 @@ const adminFeePlanSchema = z.object({
   moduleNames: z.array(z.string()).optional(),
   AssignedOrganizerCount: z.number().int().optional(),
   assignedOrganizerCount: z.number().int().optional(),
+  OrganizerCount: z.number().int().optional(),
+  organizerCount: z.number().int().optional(),
   MappedOrganizerCount: z.number().int().optional(),
   mappedOrganizerCount: z.number().int().optional(),
   AssignedOrganizerUniqueIds: z.array(z.string()).optional(),
   assignedOrganizerUniqueIds: z.array(z.string()).optional(),
+  TopOrganizerNames: z.array(z.string()).optional(),
+  topOrganizerNames: z.array(z.string()).optional(),
   Rules: z.array(adminFeePlanRuleSchema).optional(),
   rules: z.array(adminFeePlanRuleSchema).optional(),
 })
@@ -139,9 +143,13 @@ export interface AdminRevenuePlan {
   isActive: boolean
   sourceType: string
   assignedOrganizerCount: number
+  organizerCount: number
+  topOrganizerNames: string[]
   assignedOrganizerUniqueIds: string[]
   rules: AdminRevenuePlanRule[]
 }
+
+const adminRevenuePlanOrganizerNamesSchema = z.array(z.string())
 
 export interface AdminRevenuePlanModuleOption {
   value: number
@@ -207,7 +215,22 @@ function normalizePlan(plan: z.infer<typeof adminFeePlanSchema>): AdminRevenuePl
     isActive: plan.IsActive ?? plan.isActive ?? false,
     sourceType: plan.SourceType ?? plan.sourceType ?? "Global",
     assignedOrganizerCount:
-      plan.AssignedOrganizerCount ?? plan.assignedOrganizerCount ?? plan.MappedOrganizerCount ?? plan.mappedOrganizerCount ?? 0,
+      plan.AssignedOrganizerCount ??
+      plan.assignedOrganizerCount ??
+      plan.OrganizerCount ??
+      plan.organizerCount ??
+      plan.MappedOrganizerCount ??
+      plan.mappedOrganizerCount ??
+      0,
+    organizerCount:
+      plan.OrganizerCount ??
+      plan.organizerCount ??
+      plan.AssignedOrganizerCount ??
+      plan.assignedOrganizerCount ??
+      plan.MappedOrganizerCount ??
+      plan.mappedOrganizerCount ??
+      0,
+    topOrganizerNames: adminRevenuePlanOrganizerNamesSchema.parse(plan.TopOrganizerNames ?? plan.topOrganizerNames ?? []),
     assignedOrganizerUniqueIds: plan.AssignedOrganizerUniqueIds ?? plan.assignedOrganizerUniqueIds ?? [],
     rules: (plan.Rules ?? plan.rules ?? []).map(normalizeRule),
   }
@@ -234,6 +257,12 @@ export async function fetchAdminRevenuePlan(uniqueId: string): Promise<AdminReve
   const response = await client.get<unknown>(API_ROUTES.adminRevenuePlanDetail(uniqueId))
   const data = parseServicePayload(response.data)
   return normalizePlan(adminFeePlanSchema.parse(data))
+}
+
+export async function fetchAdminRevenuePlanOrganizerNames(uniqueId: string): Promise<string[]> {
+  const response = await client.get<unknown>(API_ROUTES.adminRevenuePlanOrganizers(uniqueId))
+  const data = parseServicePayload(response.data)
+  return adminRevenuePlanOrganizerNamesSchema.parse(data)
 }
 
 export async function fetchAdminRevenuePlanModules(): Promise<AdminRevenuePlanModuleOption[]> {
