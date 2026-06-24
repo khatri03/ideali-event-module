@@ -595,6 +595,7 @@ export function AdminFeePlansManager() {
 
       const payload: AdminRevenuePlanModuleInput = {
         moduleId: values.moduleId,
+        isEdit: isModuleLocked,
         rules: [values.organizerRule, values.buyerRule],
       }
 
@@ -692,6 +693,7 @@ export function AdminFeePlansManager() {
   function resetDialogState() {
     setBanner(null)
     saveMutation.reset()
+    moduleMutation.reset()
     mapMutation.reset()
     unmapOrganizerMutation.reset()
     unmapModuleMutation.reset()

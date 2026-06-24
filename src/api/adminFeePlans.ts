@@ -149,6 +149,7 @@ const adminRevenuePlanMetadataInputSchema = z.object({
 
 const adminRevenuePlanModuleInputSchema = z.object({
   moduleId: z.coerce.number().int().positive(),
+  isEdit: z.boolean(),
   rules: z.array(adminFeePlanRuleInputSchema).min(1),
 })
 
