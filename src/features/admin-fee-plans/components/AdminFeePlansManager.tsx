@@ -37,6 +37,7 @@ import { extractApiError } from "@/utils/errors"
 import {
   createAdminRevenuePlan,
   fetchAdminRevenuePlanModules,
+  fetchAdminRevenuePlan,
   fetchAdminRevenuePlanOrganizerNames,
   fetchAdminRevenuePlanOrganizers,
   fetchAdminRevenuePlans,
@@ -52,10 +53,22 @@ const ruleSchema = z
   .object({
     target: z.enum(["Organizer", "Buyer"], { message: "Target is required." }),
     valueType: z.enum(["Fixed", "Percent"], { message: "Value type is required." }),
-    value: z.number().positive("Value must be greater than zero."),
+    value: z.number().nonnegative(),
     isActive: z.boolean(),
   })
   .superRefine((rule, ctx) => {
+    if (!rule.isActive) {
+      return
+    }
+
+    if (rule.value <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["value"],
+        message: "Value must be greater than zero.",
+      })
+    }
+
     if (rule.valueType === "Percent" && rule.value > 100) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -118,6 +131,22 @@ function formatValue(valueType: AdminRevenuePlan["rules"][number]["valueType"], 
 
 function planRuleLabel(rule: AdminRevenuePlan["rules"][number]) {
   return `${rule.target}: ${formatValue(rule.valueType, rule.value)}`
+}
+
+function getPlanRuleDefaults(
+  plan: AdminRevenuePlan,
+  target: "Organizer" | "Buyer",
+  fallbackIsActive: boolean,
+) {
+  const matchedRules = plan.rules.filter((rule) => rule.target === target)
+  const selectedRule = matchedRules[0]
+
+  return {
+    target,
+    valueType: selectedRule?.valueType ?? "Percent",
+    value: selectedRule?.value ?? 0,
+    isActive: matchedRules.length > 0 ? matchedRules.every((rule) => rule.isActive) : fallbackIsActive,
+  }
 }
 
 function getModuleRuleSummary(plan: AdminRevenuePlan, moduleIndex: number) {
@@ -657,22 +686,8 @@ export function AdminFeePlansManager() {
       isDefault: plan.isDefault,
       isActive: plan.isActive,
       organizerUniqueIds: plan.assignedOrganizerUniqueIds,
-      organizerRule:
-        plan.rules.find((rule) => rule.target === "Organizer") ??
-        {
-          target: "Organizer",
-          valueType: "Percent",
-          value: 0,
-          isActive: true,
-        },
-      buyerRule:
-        plan.rules.find((rule) => rule.target === "Buyer") ??
-        {
-          target: "Buyer",
-          valueType: "Percent",
-          value: 0,
-          isActive: true,
-        },
+      organizerRule: getPlanRuleDefaults(plan, "Organizer", true),
+      buyerRule: getPlanRuleDefaults(plan, "Buyer", false),
     })
     setOrganizerRuleValueInput(
       formatNumericBlurValue(
@@ -691,6 +706,17 @@ export function AdminFeePlansManager() {
       ),
     )
     setIsDialogOpen(true)
+  }
+
+  async function handleEditPlan(uniqueId: string) {
+    resetDialogState()
+
+    try {
+      const plan = await fetchAdminRevenuePlan(uniqueId)
+      openEditDialog(plan)
+    } catch (error) {
+      setBanner({ type: "error", message: extractApiError(error) })
+    }
   }
 
   function openMapDialog(plan: AdminRevenuePlan) {
@@ -890,23 +916,27 @@ export function AdminFeePlansManager() {
 
                     return (
                       <Table.Row key={plan.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
-                      <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
-                        <Menu.Root>
-                          <Menu.Trigger asChild>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              aria-label={`Plan actions for ${plan.label}`}
-                              title={`Plan actions for ${plan.label}`}
-                              borderRadius="full"
-                              h="36px"
-                              w="36px"
-                              minW="36px"
-                              p={0}
-                            >
-                              <MoreHorizontal size={15} />
-                            </Button>
-                          </Menu.Trigger>
+                      <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} textAlign="center">
+                        <Flex align="center" justify="center" w="full">
+                          <Menu.Root>
+                            <Menu.Trigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                aria-label={`Plan actions for ${plan.label}`}
+                                title={`Plan actions for ${plan.label}`}
+                                borderRadius="full"
+                                h="36px"
+                                w="36px"
+                                minW="36px"
+                                p={0}
+                                display="inline-flex"
+                                alignItems="center"
+                                justifyContent="center"
+                              >
+                                <MoreHorizontal size={15} />
+                              </Button>
+                            </Menu.Trigger>
                           <Portal>
                             <Menu.Positioner>
                               <Menu.Content
@@ -920,7 +950,7 @@ export function AdminFeePlansManager() {
                               >
                                 <Menu.Item
                                   value={`edit-${plan.uniqueId}`}
-                                  onClick={() => openEditDialog(plan)}
+                                  onClick={() => void handleEditPlan(plan.uniqueId)}
                                   borderRadius="10px"
                                   fontSize="sm"
                                   fontWeight="600"
@@ -950,6 +980,7 @@ export function AdminFeePlansManager() {
                             </Menu.Positioner>
                           </Portal>
                         </Menu.Root>
+                        </Flex>
                       </Table.Cell>
                       <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
                         <Text fontSize="sm" fontWeight="700" color="text.primary">

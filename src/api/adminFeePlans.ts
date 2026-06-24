@@ -194,7 +194,7 @@ function normalizeRule(rule: z.infer<typeof adminFeePlanRuleSchema>): AdminReven
     target: rule.Target ?? rule.target ?? "Organizer",
     valueType: rule.ValueType ?? rule.valueType ?? "Percent",
     value: rule.Value ?? rule.value ?? 0,
-    isActive: rule.IsActive ?? rule.isActive ?? true,
+    isActive: rule.IsActive ?? rule.isActive ?? false,
   }
 }
 
