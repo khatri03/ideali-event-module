@@ -41,13 +41,15 @@ import {
   fetchAdminRevenuePlanOrganizerNames,
   fetchAdminRevenuePlanOrganizers,
   fetchAdminRevenuePlans,
-  assignAdminRevenuePlanOrganizer,
+  assignAdminRevenuePlanOrganizers,
+  saveAdminRevenuePlanModule,
   unmapAdminRevenuePlanModule,
   unmapAdminRevenuePlanOrganizer,
   updateAdminRevenuePlanMetadata,
   type AdminRevenuePlan,
   type AdminRevenuePlanInput,
   type AdminRevenuePlanModuleOption,
+  type AdminRevenuePlanModuleInput,
   type AdminRevenuePlanMetadataInput,
   type AdminOrganizerOption,
   updateAdminRevenuePlan,
@@ -271,7 +273,7 @@ export function AdminFeePlansManager() {
   const [isModuleLocked, setIsModuleLocked] = useState(false)
   const [isMapDialogOpen, setIsMapDialogOpen] = useState(false)
   const [mappingPlan, setMappingPlan] = useState<AdminRevenuePlan | null>(null)
-  const [selectedMappingOrganizerUniqueId, setSelectedMappingOrganizerUniqueId] = useState("")
+  const [selectedMappingOrganizerUniqueIds, setSelectedMappingOrganizerUniqueIds] = useState<string[]>([])
   const [organizerNamesPlan, setOrganizerNamesPlan] = useState<AdminRevenuePlan | null>(null)
   const [pendingRemoval, setPendingRemoval] = useState<
     | { kind: "module"; planUniqueId: string; moduleId: number; label: string }
@@ -280,6 +282,7 @@ export function AdminFeePlansManager() {
   >(null)
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [organizerSearchValue, setOrganizerSearchValue] = useState("")
+  const [mappingOrganizerSearchValue, setMappingOrganizerSearchValue] = useState("")
   const [organizerRuleValueInput, setOrganizerRuleValueInput] = useState("")
   const [buyerRuleValueInput, setBuyerRuleValueInput] = useState("")
 
@@ -369,6 +372,16 @@ export function AdminFeePlansManager() {
     [organizerOptions, organizerUniqueIds],
   )
 
+  const assignedOrganizerIds = useMemo(
+    () => new Set(mappingPlan?.assignedOrganizerUniqueIds ?? []),
+    [mappingPlan?.assignedOrganizerUniqueIds],
+  )
+
+  const selectedMappingOrganizerOptions = useMemo(
+    () => organizerOptions.filter((option) => selectedMappingOrganizerUniqueIds.includes(option.value)),
+    [organizerOptions, selectedMappingOrganizerUniqueIds],
+  )
+
   function handleModuleChange(value: string) {
     setValue("moduleId", Number(value), {
       shouldDirty: true,
@@ -385,6 +398,10 @@ export function AdminFeePlansManager() {
         shouldValidate: true,
       },
     )
+  }
+
+  function handleMappingOrganizerChange(values: MultiValue<OrganizerSelectOption>) {
+    setSelectedMappingOrganizerUniqueIds(values.map((item) => item.value))
   }
 
   function handleRemoveOrganizer(uniqueId: string) {
@@ -462,6 +479,15 @@ export function AdminFeePlansManager() {
     }
 
     return organizerSearchValue
+  }
+
+  function handleMappingOrganizerInputChange(nextValue: string, actionMeta: InputActionMeta) {
+    if (actionMeta.action === "input-change") {
+      setMappingOrganizerSearchValue(nextValue)
+      return nextValue
+    }
+
+    return mappingOrganizerSearchValue
   }
 
   const organizerMultiSelectStyles = useMemo(
@@ -561,6 +587,33 @@ export function AdminFeePlansManager() {
     },
   })
 
+  const moduleMutation = useMutation({
+    mutationFn: async (values: AdminRevenuePlanFormValues) => {
+      if (!editingPlan?.uniqueId) {
+        return
+      }
+
+      const payload: AdminRevenuePlanModuleInput = {
+        moduleId: values.moduleId,
+        rules: [values.organizerRule, values.buyerRule],
+      }
+
+      await saveAdminRevenuePlanModule(editingPlan.uniqueId, payload)
+    },
+    onSuccess: () => {
+      setBanner({ type: "success", message: "Revenue plan module saved." })
+      setEditingPlan(null)
+      setIsDialogOpen(false)
+      reset(EMPTY_FORM_VALUES)
+    },
+    onError: () => {
+      setBanner(null)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-revenue-plans"] })
+    },
+  })
+
   const metadataMutation = useMutation({
     mutationFn: async (values: AdminRevenuePlanMetadataFormValues) => {
       if (!editingMetadataPlan?.uniqueId) {
@@ -591,13 +644,13 @@ export function AdminFeePlansManager() {
   })
 
   const mapMutation = useMutation({
-    mutationFn: ({ uniqueId, organizerUniqueId }: { uniqueId: string; organizerUniqueId: string }) =>
-      assignAdminRevenuePlanOrganizer(uniqueId, organizerUniqueId),
+    mutationFn: ({ uniqueId, organizerUniqueIds }: { uniqueId: string; organizerUniqueIds: string[] }) =>
+      assignAdminRevenuePlanOrganizers(uniqueId, { organizerUniqueIds }),
     onSuccess: () => {
-      setBanner({ type: "success", message: "Revenue plan assigned to organizer." })
+      setBanner({ type: "success", message: "Revenue plan assigned to selected organizers." })
       setMappingPlan(null)
       setIsMapDialogOpen(false)
-      setSelectedMappingOrganizerUniqueId("")
+      setSelectedMappingOrganizerUniqueIds([])
     },
     onError: () => {
       setBanner(null)
@@ -644,7 +697,8 @@ export function AdminFeePlansManager() {
     unmapModuleMutation.reset()
     setPendingRemoval(null)
     setOrganizerSearchValue("")
-    setSelectedMappingOrganizerUniqueId("")
+    setMappingOrganizerSearchValue("")
+    setSelectedMappingOrganizerUniqueIds([])
     setOrganizerRuleValueInput("")
     setBuyerRuleValueInput("")
     setIsModuleLocked(false)
@@ -718,7 +772,7 @@ export function AdminFeePlansManager() {
       moduleId: 0,
       isDefault: plan.isDefault,
       isActive: plan.isActive,
-      organizerUniqueIds: plan.assignedOrganizerUniqueIds,
+      organizerUniqueIds: [],
       organizerRule: {
         target: "Organizer",
         valueType: "Percent",
@@ -755,16 +809,29 @@ export function AdminFeePlansManager() {
   function openMapDialog(plan: AdminRevenuePlan) {
     resetDialogState()
     setMappingPlan(plan)
-    setSelectedMappingOrganizerUniqueId("")
+    setSelectedMappingOrganizerUniqueIds([])
+    setMappingOrganizerSearchValue("")
     setIsMapDialogOpen(true)
   }
 
+  const isModuleDialog = Boolean(editingPlan)
+
   async function handleSave(values: AdminRevenuePlanFormValues) {
+    if (isModuleDialog) {
+      await moduleMutation.mutateAsync(values)
+      return
+    }
+
     await saveMutation.mutateAsync(values)
   }
 
-  const isBusy = saveMutation.isPending || mapMutation.isPending || unmapOrganizerMutation.isPending || unmapModuleMutation.isPending
-  const saveError = saveMutation.error
+  const isBusy =
+    saveMutation.isPending ||
+    moduleMutation.isPending ||
+    mapMutation.isPending ||
+    unmapOrganizerMutation.isPending ||
+    unmapModuleMutation.isPending
+  const saveError = isModuleDialog ? moduleMutation.error : saveMutation.error
   const metadataSaveError = metadataMutation.error
   const mapError = mapMutation.error
   const plans = plansQuery.data?.items ?? []
@@ -779,11 +846,6 @@ export function AdminFeePlansManager() {
     () => organizerNamesQuery.data ?? [],
     [organizerNamesQuery.data],
   )
-  const assignedOrganizerIds = useMemo(
-    () => new Set(organizerNames.map((organizer) => organizer.uniqueId)),
-    [organizerNames],
-  )
-  const isModuleDialog = Boolean(editingPlan)
 
   async function confirmPendingRemoval() {
     if (!pendingRemoval) {
@@ -1052,7 +1114,7 @@ export function AdminFeePlansManager() {
                                   cursor="pointer"
                                 >
                                   <UserRound size={14} />
-                                  Assign organizer
+                                  Add Organizers
                                 </Menu.Item>
                               </Menu.Content>
                             </Menu.Positioner>
@@ -1506,118 +1568,122 @@ export function AdminFeePlansManager() {
                   </Field.Root>
                 </SimpleGrid>
 
-                <Field.Root w="full">
-                  <RequiredFieldLabel>Organizers</RequiredFieldLabel>
-                  <ReactSelect
-                    isMulti
-                    options={organizerOptions}
-                    value={selectedOrganizerOptions}
-                    onChange={handleOrganizerChange}
-                    placeholder={organizersQuery.isLoading ? "Loading organizers..." : "Select organizers"}
-                    inputValue={organizerSearchValue}
-                    onInputChange={handleOrganizerInputChange}
-                    closeMenuOnSelect={false}
-                    hideSelectedOptions={false}
-                    isClearable={false}
-                    isDisabled={organizersQuery.isLoading}
-                    controlShouldRenderValue={false}
-                    blurInputOnSelect={false}
-                    menuShouldScrollIntoView={false}
-                    components={{ Option: OrganizerOption }}
-                    styles={organizerMultiSelectStyles}
-                  />
-                  {selectedOrganizerOptions.length > 0 ? (
-                    <Flex wrap="wrap" gap={2} mt={3}>
-                      {selectedOrganizerOptions.map((option) => (
+                {!isModuleDialog ? (
+                  <>
+                    <Field.Root w="full">
+                      <RequiredFieldLabel>Organizers</RequiredFieldLabel>
+                      <ReactSelect
+                        isMulti
+                        options={organizerOptions}
+                        value={selectedOrganizerOptions}
+                        onChange={handleOrganizerChange}
+                        placeholder={organizersQuery.isLoading ? "Loading organizers..." : "Select organizers"}
+                        inputValue={organizerSearchValue}
+                        onInputChange={handleOrganizerInputChange}
+                        closeMenuOnSelect={false}
+                        hideSelectedOptions={false}
+                        isClearable={false}
+                        isDisabled={organizersQuery.isLoading}
+                        controlShouldRenderValue={false}
+                        blurInputOnSelect={false}
+                        menuShouldScrollIntoView={false}
+                        components={{ Option: OrganizerOption }}
+                        styles={organizerMultiSelectStyles}
+                      />
+                      {selectedOrganizerOptions.length > 0 ? (
+                        <Flex wrap="wrap" gap={2} mt={3}>
+                          {selectedOrganizerOptions.map((option) => (
+                            <Box
+                              key={option.value}
+                              as="button"
+                              type="button"
+                              onClick={() => handleRemoveOrganizer(option.value)}
+                              display="inline-flex"
+                              alignItems="center"
+                              gap={2}
+                              borderRadius="999px"
+                              border="1px solid"
+                              borderColor="rgba(117, 81, 255, 0.18)"
+                              bg="rgba(117, 81, 255, 0.12)"
+                              color="brand.500"
+                              px={3}
+                              py={1.5}
+                              fontSize="sm"
+                              fontWeight="700"
+                              cursor="pointer"
+                              _hover={{ bg: "rgba(117, 81, 255, 0.18)" }}
+                            >
+                              <Text as="span" lineHeight={1.1}>
+                                {option.label}
+                              </Text>
+                              <Text as="span" fontSize="xs" lineHeight={1} aria-hidden="true">
+                                ×
+                              </Text>
+                            </Box>
+                          ))}
+                        </Flex>
+                      ) : null}
+                    </Field.Root>
+
+                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                      <Field.Root w="full">
                         <Box
-                          key={option.value}
-                          as="button"
-                          type="button"
-                          onClick={() => handleRemoveOrganizer(option.value)}
-                          display="inline-flex"
-                          alignItems="center"
-                          gap={2}
-                          borderRadius="999px"
+                          w="full"
+                          borderRadius="18px"
                           border="1px solid"
-                          borderColor="rgba(117, 81, 255, 0.18)"
-                          bg="rgba(117, 81, 255, 0.12)"
-                          color="brand.500"
-                          px={3}
-                          py={1.5}
-                          fontSize="sm"
-                          fontWeight="700"
-                          cursor="pointer"
-                          _hover={{ bg: "rgba(117, 81, 255, 0.18)" }}
+                          borderColor="border.subtle"
+                          bg="app.bg"
+                          px={4}
+                          py={4}
                         >
-                          <Text as="span" lineHeight={1.1}>
-                            {option.label}
-                          </Text>
-                          <Text as="span" fontSize="xs" lineHeight={1} aria-hidden="true">
-                            ×
-                          </Text>
+                          <Flex align="center" justify="space-between" gap={4}>
+                            <Box>
+                              <Text fontSize="sm" fontWeight="700" color="text.primary">
+                                Is Default
+                              </Text>
+                            </Box>
+                            <Switch.Root
+                              checked={isDefault}
+                              colorPalette="brand"
+                              onCheckedChange={(details) => setValue("isDefault", details.checked, { shouldDirty: true })}
+                            >
+                              <Switch.HiddenInput />
+                              <Switch.Control />
+                            </Switch.Root>
+                          </Flex>
                         </Box>
-                      ))}
-                    </Flex>
-                  ) : null}
-                </Field.Root>
+                      </Field.Root>
 
-                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                  <Field.Root w="full">
-                    <Box
-                      w="full"
-                      borderRadius="18px"
-                      border="1px solid"
-                      borderColor="border.subtle"
-                      bg="app.bg"
-                      px={4}
-                      py={4}
-                    >
-                      <Flex align="center" justify="space-between" gap={4}>
-                        <Box>
-                          <Text fontSize="sm" fontWeight="700" color="text.primary">
-                            Is Default
-                          </Text>
-                        </Box>
-                        <Switch.Root
-                          checked={isDefault}
-                          colorPalette="brand"
-                          onCheckedChange={(details) => setValue("isDefault", details.checked, { shouldDirty: true })}
+                      <Field.Root w="full">
+                        <Box
+                          w="full"
+                          borderRadius="18px"
+                          border="1px solid"
+                          borderColor="border.subtle"
+                          bg="app.bg"
+                          px={4}
+                          py={4}
                         >
-                          <Switch.HiddenInput />
-                          <Switch.Control />
-                        </Switch.Root>
-                      </Flex>
-                    </Box>
-                  </Field.Root>
-
-                  <Field.Root w="full">
-                    <Box
-                      w="full"
-                      borderRadius="18px"
-                      border="1px solid"
-                      borderColor="border.subtle"
-                      bg="app.bg"
-                      px={4}
-                      py={4}
-                    >
-                      <Flex align="center" justify="space-between" gap={4}>
-                        <Box>
-                          <Text fontSize="sm" fontWeight="700" color="text.primary">
-                            Active
-                          </Text>
+                          <Flex align="center" justify="space-between" gap={4}>
+                            <Box>
+                              <Text fontSize="sm" fontWeight="700" color="text.primary">
+                                Active
+                              </Text>
+                            </Box>
+                            <Switch.Root
+                              checked={isActive}
+                              colorPalette="brand"
+                              onCheckedChange={(details) => setValue("isActive", details.checked, { shouldDirty: true })}
+                            >
+                              <Switch.HiddenInput />
+                              <Switch.Control />
+                            </Switch.Root>
+                          </Flex>
                         </Box>
-                        <Switch.Root
-                          checked={isActive}
-                          colorPalette="brand"
-                          onCheckedChange={(details) => setValue("isActive", details.checked, { shouldDirty: true })}
-                        >
-                          <Switch.HiddenInput />
-                          <Switch.Control />
-                        </Switch.Root>
-                      </Flex>
-                    </Box>
-                  </Field.Root>
-                </SimpleGrid>
+                      </Field.Root>
+                    </SimpleGrid>
+                  </>
+                ) : null}
 
                 <Field.Root invalid={Boolean(errors.moduleId)}>
                   <RequiredFieldLabel>Module</RequiredFieldLabel>
@@ -2138,10 +2204,10 @@ export function AdminFeePlansManager() {
               <Flex align="flex-start" justify="space-between" gap={4}>
                 <Box>
                   <Text fontSize="lg" fontWeight="800" color="gray.900">
-                    Assign organizer
+                    Add Organizers
                   </Text>
                   <Text fontSize="sm" color="gray.600">
-                    Apply an existing revenue plan to an organizer for the selected module.
+                    Apply the selected revenue plan to one or more organizers for the selected module.
                   </Text>
                 </Box>
                 <Dialog.CloseTrigger asChild>
@@ -2162,18 +2228,60 @@ export function AdminFeePlansManager() {
                 </Box>
 
                 <Field.Root>
-                  <RequiredFieldLabel>Organizer</RequiredFieldLabel>
-                  <StyledSelect
+                  <RequiredFieldLabel>Organizers</RequiredFieldLabel>
+                  <ReactSelect
+                    isMulti
                     options={organizerOptions}
-                    value={selectedMappingOrganizerUniqueId}
-                    onChange={(value) => setSelectedMappingOrganizerUniqueId(value)}
-                    placeholder={organizersQuery.isLoading ? "Loading organizers..." : "Select organizer"}
-                    disabled={organizersQuery.isLoading || mapMutation.isPending}
+                    value={selectedMappingOrganizerOptions}
+                    onChange={handleMappingOrganizerChange}
+                    placeholder={organizersQuery.isLoading ? "Loading organizers..." : "Select organizers"}
+                    inputValue={mappingOrganizerSearchValue}
+                    onInputChange={handleMappingOrganizerInputChange}
+                    closeMenuOnSelect={false}
+                    hideSelectedOptions={false}
+                    isClearable={false}
+                    isDisabled={organizersQuery.isLoading || mapMutation.isPending}
+                    controlShouldRenderValue={false}
+                    blurInputOnSelect={false}
+                    menuShouldScrollIntoView={false}
+                    components={{ Option: OrganizerOption }}
+                    styles={organizerMultiSelectStyles}
+                    isOptionDisabled={(option) => assignedOrganizerIds.has(option.value)}
                   />
-                  {selectedMappingOrganizerUniqueId && assignedOrganizerIds.has(selectedMappingOrganizerUniqueId) ? (
-                    <Text mt={2} fontSize="sm" color="orange.600">
-                      This organizer is already assigned to the selected plan.
-                    </Text>
+                  {selectedMappingOrganizerOptions.length > 0 ? (
+                    <Flex wrap="wrap" gap={2} mt={3}>
+                      {selectedMappingOrganizerOptions.map((option) => (
+                        <Box
+                          key={option.value}
+                          as="button"
+                          type="button"
+                          onClick={() =>
+                            setSelectedMappingOrganizerUniqueIds((current) => current.filter((uniqueId) => uniqueId !== option.value))
+                          }
+                          display="inline-flex"
+                          alignItems="center"
+                          gap={2}
+                          borderRadius="999px"
+                          border="1px solid"
+                          borderColor="rgba(117, 81, 255, 0.18)"
+                          bg="rgba(117, 81, 255, 0.12)"
+                          color="brand.500"
+                          px={3}
+                          py={1.5}
+                          fontSize="sm"
+                          fontWeight="700"
+                          cursor="pointer"
+                          _hover={{ bg: "rgba(117, 81, 255, 0.18)" }}
+                        >
+                          <Text as="span" lineHeight={1.1}>
+                            {option.label}
+                          </Text>
+                          <Text as="span" fontSize="xs" lineHeight={1} aria-hidden="true">
+                            ×
+                          </Text>
+                        </Box>
+                      ))}
+                    </Flex>
                   ) : null}
                   {mapError ? (
                     <Text mt={2} fontSize="sm" color="red.600">
@@ -2201,26 +2309,21 @@ export function AdminFeePlansManager() {
                     minW={{ base: "full", md: "160px" }}
                     loading={mapMutation.isPending}
                     loadingText="Saving..."
-                    disabled={!mappingPlan?.uniqueId || !selectedMappingOrganizerUniqueId}
+                    disabled={!mappingPlan?.uniqueId || selectedMappingOrganizerUniqueIds.length === 0}
                     color="white"
                     style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
-                    title={
-                      selectedMappingOrganizerUniqueId && assignedOrganizerIds.has(selectedMappingOrganizerUniqueId)
-                        ? "This organizer has already been assigned to this plan."
-                        : undefined
-                    }
                     onClick={async () => {
-                      if (!mappingPlan?.uniqueId || !selectedMappingOrganizerUniqueId) {
+                      if (!mappingPlan?.uniqueId || selectedMappingOrganizerUniqueIds.length === 0) {
                         return
                       }
 
                       await mapMutation.mutateAsync({
                         uniqueId: mappingPlan.uniqueId,
-                        organizerUniqueId: selectedMappingOrganizerUniqueId,
+                        organizerUniqueIds: selectedMappingOrganizerUniqueIds,
                       })
                     }}
                   >
-                    Save organizer
+                    Save organizers
                   </Button>
                 </Flex>
               </Stack>

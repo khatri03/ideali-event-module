@@ -114,9 +114,9 @@ export const API_ROUTES = {
   adminRevenuePlanOrganizers: (uniqueId: string) => `/api/admin/revenue-plans/${uniqueId}/organizers`,
   adminRevenuePlanCreate: "/api/admin/revenue-plans/create",
   adminRevenuePlanUpdate: (uniqueId: string) => `/api/admin/revenue-plans/${uniqueId}/update`,
+  adminRevenuePlanModuleSave: (uniqueId: string) => `/api/admin/revenue-plans/${uniqueId}/modules`,
   adminRevenuePlanMetadataUpdate: (uniqueId: string) => `/api/admin/revenue-plans/${uniqueId}/metadata`,
-  adminRevenuePlanAssignOrganizer: (uniqueId: string, organizerUniqueId: string) =>
-    `/api/admin/revenue-plans/${uniqueId}/map/${organizerUniqueId}`,
+  adminRevenuePlanAssignOrganizers: (uniqueId: string) => `/api/admin/revenue-plans/${uniqueId}/map`,
   adminRevenuePlanUnassignOrganizer: (uniqueId: string, organizerUniqueId: string) =>
     `/api/admin/revenue-plans/${uniqueId}/unmap/${organizerUniqueId}`,
   adminRevenuePlanUnmapModule: (uniqueId: string, moduleId: number) => `/api/admin/revenue-plans/${uniqueId}/modules/${moduleId}`,

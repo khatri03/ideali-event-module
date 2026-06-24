@@ -106,8 +106,28 @@ const organizerListItemSchema = z.object({
 const adminFeePlanRuleInputSchema = z.object({
   target: z.enum(["Organizer", "Buyer"]),
   valueType: z.enum(["Fixed", "Percent"]),
-  value: z.coerce.number().positive(),
+  value: z.coerce.number().nonnegative(),
   isActive: z.boolean(),
+}).superRefine((rule, ctx) => {
+  if (!rule.isActive) {
+    return
+  }
+
+  if (rule.value <= 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["value"],
+      message: "Value must be greater than zero.",
+    })
+  }
+
+  if (rule.valueType === "Percent" && rule.value > 100) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["value"],
+      message: "Percentage value cannot exceed 100.",
+    })
+  }
 })
 
 const adminRevenuePlanInputSchema = z.object({
@@ -127,9 +147,20 @@ const adminRevenuePlanMetadataInputSchema = z.object({
   isActive: z.boolean(),
 })
 
+const adminRevenuePlanModuleInputSchema = z.object({
+  moduleId: z.coerce.number().int().positive(),
+  rules: z.array(adminFeePlanRuleInputSchema).min(1),
+})
+
+const adminRevenuePlanAssignOrganizersInputSchema = z.object({
+  organizerUniqueIds: z.array(z.string()).min(1),
+})
+
 export type AdminRevenuePlanRuleInput = z.infer<typeof adminFeePlanRuleInputSchema>
 export type AdminRevenuePlanInput = z.infer<typeof adminRevenuePlanInputSchema>
 export type AdminRevenuePlanMetadataInput = z.infer<typeof adminRevenuePlanMetadataInputSchema>
+export type AdminRevenuePlanModuleInput = z.infer<typeof adminRevenuePlanModuleInputSchema>
+export type AdminRevenuePlanAssignOrganizersInput = z.infer<typeof adminRevenuePlanAssignOrganizersInputSchema>
 
 export interface AdminRevenuePlanRule {
   target: "Organizer" | "Buyer"
@@ -341,9 +372,16 @@ export async function updateAdminRevenuePlanMetadata(uniqueId: string, input: Ad
   assertSuccess(response.data, "Failed to update admin revenue plan.")
 }
 
-export async function assignAdminRevenuePlanOrganizer(uniqueId: string, organizerUniqueId: string): Promise<void> {
-  const response = await client.post<unknown>(API_ROUTES.adminRevenuePlanAssignOrganizer(uniqueId, organizerUniqueId))
-  assertSuccess(response.data, "Failed to assign admin revenue plan to organizer.")
+export async function saveAdminRevenuePlanModule(uniqueId: string, input: AdminRevenuePlanModuleInput): Promise<void> {
+  const payload = adminRevenuePlanModuleInputSchema.parse(input)
+  const response = await client.post<unknown>(API_ROUTES.adminRevenuePlanModuleSave(uniqueId), payload)
+  assertSuccess(response.data, "Failed to save admin revenue plan module.")
+}
+
+export async function assignAdminRevenuePlanOrganizers(uniqueId: string, input: AdminRevenuePlanAssignOrganizersInput): Promise<void> {
+  const payload = adminRevenuePlanAssignOrganizersInputSchema.parse(input)
+  const response = await client.post<unknown>(API_ROUTES.adminRevenuePlanAssignOrganizers(uniqueId), payload)
+  assertSuccess(response.data, "Failed to assign admin revenue plan to organizers.")
 }
 
 export async function unmapAdminRevenuePlanOrganizer(uniqueId: string, organizerUniqueId: string): Promise<void> {
