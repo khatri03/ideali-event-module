@@ -1770,32 +1770,14 @@ export function AdminFeePlansManager() {
 
                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                   <Field.Root w="full" invalid={Boolean(errors.scope)}>
-                    <Box
-                      w="full"
-                      borderRadius="18px"
-                      border="1px solid"
-                      borderColor="border.subtle"
-                      bg="app.bg"
-                      px={4}
-                      py={4}
-                    >
-                      <Flex align="center" justify="space-between" gap={4}>
-                        <Box>
-                          <Text fontSize="sm" fontWeight="700" color="text.primary">
-                            Scope
-                          </Text>
-                        </Box>
-                        <Box minW="180px">
-                          <StyledSelect
-                            options={scopeOptions}
-                            value={scope}
-                            onChange={(value) => setValue("scope", value as AdminRevenuePlanScope, { shouldDirty: true, shouldValidate: true })}
-                            disabled={isModuleDialog}
-                            placeholder="Select scope"
-                          />
-                        </Box>
-                      </Flex>
-                    </Box>
+                    <RequiredFieldLabel>Scope</RequiredFieldLabel>
+                    <StyledSelect
+                      options={scopeOptions}
+                      value={scope}
+                      onChange={(value) => setValue("scope", value as AdminRevenuePlanScope, { shouldDirty: true, shouldValidate: true })}
+                      disabled={isModuleDialog}
+                      placeholder="Select scope"
+                    />
                     {errors.scope ? <Field.ErrorText>{errors.scope.message?.toString()}</Field.ErrorText> : null}
                   </Field.Root>
 
