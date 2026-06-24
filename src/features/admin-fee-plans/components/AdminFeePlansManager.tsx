@@ -49,7 +49,6 @@ import {
   type AdminRevenuePlanInput,
   type AdminRevenuePlanModuleOption,
   type AdminRevenuePlanMetadataInput,
-  type AdminRevenuePlanOrganizer,
   type AdminOrganizerOption,
   updateAdminRevenuePlan,
 } from "@/api/adminFeePlans"
@@ -776,7 +775,14 @@ export function AdminFeePlansManager() {
     () => buildPageNumbers(planPage, totalPlanPages),
     [planPage, totalPlanPages],
   )
-  const organizerNames: AdminRevenuePlanOrganizer[] = organizerNamesQuery.data ?? []
+  const organizerNames = useMemo(
+    () => organizerNamesQuery.data ?? [],
+    [organizerNamesQuery.data],
+  )
+  const assignedOrganizerIds = useMemo(
+    () => new Set(organizerNames.map((organizer) => organizer.uniqueId)),
+    [organizerNames],
+  )
   const isModuleDialog = Boolean(editingPlan)
 
   async function confirmPendingRemoval() {
@@ -2164,6 +2170,11 @@ export function AdminFeePlansManager() {
                     placeholder={organizersQuery.isLoading ? "Loading organizers..." : "Select organizer"}
                     disabled={organizersQuery.isLoading || mapMutation.isPending}
                   />
+                  {selectedMappingOrganizerUniqueId && assignedOrganizerIds.has(selectedMappingOrganizerUniqueId) ? (
+                    <Text mt={2} fontSize="sm" color="orange.600">
+                      This organizer is already assigned to the selected plan.
+                    </Text>
+                  ) : null}
                   {mapError ? (
                     <Text mt={2} fontSize="sm" color="red.600">
                       {extractApiError(mapError)}
@@ -2193,6 +2204,11 @@ export function AdminFeePlansManager() {
                     disabled={!mappingPlan?.uniqueId || !selectedMappingOrganizerUniqueId}
                     color="white"
                     style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+                    title={
+                      selectedMappingOrganizerUniqueId && assignedOrganizerIds.has(selectedMappingOrganizerUniqueId)
+                        ? "This organizer has already been assigned to this plan."
+                        : undefined
+                    }
                     onClick={async () => {
                       if (!mappingPlan?.uniqueId || !selectedMappingOrganizerUniqueId) {
                         return
