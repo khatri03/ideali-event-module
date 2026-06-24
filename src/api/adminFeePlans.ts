@@ -41,6 +41,8 @@ const adminFeePlanRuleSchema = z.object({
 
 const adminRevenuePlanScopeSchema = z.enum(["OrganizerSpecific", "Reusable", "Default"])
 export type AdminRevenuePlanStatusFilter = "All" | "Active" | "Inactive"
+export type AdminRevenuePlanSortBy = "Name" | "Scope" | "DisplayText" | "Status"
+export type AdminRevenuePlanSortOrder = "asc" | "desc"
 
 const adminFeePlanSchema = z.object({
   Id: z.number().int().positive().optional(),
@@ -251,6 +253,8 @@ export interface AdminRevenuePlanListRequest {
   organizerUniqueIds?: string[]
   scopes?: AdminRevenuePlanScope[]
   status?: AdminRevenuePlanStatusFilter
+  sortBy?: AdminRevenuePlanSortBy
+  sortOrder?: AdminRevenuePlanSortOrder
 }
 
 export interface AdminOrganizerOption {
@@ -372,6 +376,14 @@ export async function fetchAdminRevenuePlans(
 
   if (request.status && request.status !== "All") {
     params.set("status", request.status)
+  }
+
+  if (request.sortBy) {
+    params.set("sortBy", request.sortBy)
+  }
+
+  if (request.sortOrder) {
+    params.set("sortOrder", request.sortOrder)
   }
 
   const response = await client.get<unknown>(API_ROUTES.adminRevenuePlans, {

@@ -24,7 +24,7 @@ import {
   Table,
   Text,
 } from "@chakra-ui/react"
-import { Check, CheckCircle2, Layers3, MoreHorizontal, PencilLine, Plus, Trash2, UserRound } from "lucide-react"
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, CheckCircle2, Layers3, MoreHorizontal, PencilLine, Plus, Trash2, UserRound } from "lucide-react"
 import ReactSelect, {
   components,
   type InputActionMeta,
@@ -58,6 +58,8 @@ import {
   type AdminRevenuePlanScopeOption,
   type AdminRevenuePlanScope,
   type AdminRevenuePlanStatusFilter,
+  type AdminRevenuePlanSortBy,
+  type AdminRevenuePlanSortOrder,
   updateAdminRevenuePlan,
 } from "@/api/adminFeePlans"
 
@@ -292,6 +294,50 @@ function RequiredFieldLabel({ children }: { children: ReactNode }) {
   )
 }
 
+interface SortHeaderButtonProps {
+  label: string
+  sortKey: AdminRevenuePlanSortBy
+  currentSortBy: AdminRevenuePlanSortBy | null
+  sortOrder: AdminRevenuePlanSortOrder
+  onSort: (sortKey: AdminRevenuePlanSortBy) => void
+}
+
+function SortHeaderButton({ label, sortKey, currentSortBy, sortOrder, onSort }: SortHeaderButtonProps) {
+  const isActive = currentSortBy === sortKey
+  const tooltipLabel = isActive ? (sortOrder === "asc" ? "Ascending" : "Descending") : "Sort ascending"
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      color={isActive ? "brand.500" : "text.primary"}
+      px={0}
+      minH="auto"
+      h="auto"
+      fontSize="sm"
+      fontWeight="800"
+      onClick={() => onSort(sortKey)}
+      cursor="pointer"
+      aria-pressed={isActive}
+      aria-label={`${label}, ${tooltipLabel}`}
+      title={tooltipLabel}
+    >
+      <Flex align="center" justify="center" gap={1}>
+        <Text as="span">{label}</Text>
+        {isActive ? (
+          sortOrder === "asc" ? (
+            <ArrowUp size={13} aria-hidden="true" />
+          ) : (
+            <ArrowDown size={13} aria-hidden="true" />
+          )
+        ) : (
+          <ArrowUpDown size={13} aria-hidden="true" />
+        )}
+      </Flex>
+    </Button>
+  )
+}
+
 function useBackendErrorToast(error: unknown, source: string) {
   const lastToastKeyRef = useRef<string | null>(null)
 
@@ -402,13 +448,19 @@ export function AdminFeePlansManager() {
   >(null)
   const [draftFilters, setDraftFilters] = useState<AdminRevenuePlanFilterState>(EMPTY_FILTER_STATE)
   const [appliedFilters, setAppliedFilters] = useState<AdminRevenuePlanFilterState>(EMPTY_FILTER_STATE)
+  const [sortBy, setSortBy] = useState<AdminRevenuePlanSortBy | null>(null)
+  const [sortOrder, setSortOrder] = useState<AdminRevenuePlanSortOrder>("asc")
+  const [sortRevision, setSortRevision] = useState(0)
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [mappingOrganizerSearchValue, setMappingOrganizerSearchValue] = useState("")
   const [organizerRuleValueInput, setOrganizerRuleValueInput] = useState("")
   const [buyerRuleValueInput, setBuyerRuleValueInput] = useState("")
 
   const plansQuery = useQuery({
-    queryKey: ["admin-revenue-plans", { pageNo: planPage, pageSize: ADMIN_REVENUE_PLAN_PAGE_SIZE, filters: appliedFilters }],
+    queryKey: [
+      "admin-revenue-plans",
+      { pageNo: planPage, pageSize: ADMIN_REVENUE_PLAN_PAGE_SIZE, filters: appliedFilters, sortBy, sortOrder, sortRevision },
+    ],
     queryFn: () => {
       const filters: AdminRevenuePlanListRequest = {
         pageNo: planPage,
@@ -418,6 +470,8 @@ export function AdminFeePlansManager() {
         organizerUniqueIds: appliedFilters.organizerUniqueIds,
         scopes: appliedFilters.scopes,
         status: appliedFilters.status,
+        sortBy: sortBy ?? undefined,
+        sortOrder: sortBy ? sortOrder : undefined,
       }
 
       return fetchAdminRevenuePlans(filters)
@@ -542,6 +596,8 @@ export function AdminFeePlansManager() {
     [draftFilters.scopes, scopeOptions],
   )
 
+  const hasAppliedSort = sortBy !== null
+
   const hasAppliedFilters = useMemo(
     () =>
       Boolean(
@@ -637,6 +693,26 @@ export function AdminFeePlansManager() {
   function clearFilters() {
     setDraftFilters(EMPTY_FILTER_STATE)
     setAppliedFilters(EMPTY_FILTER_STATE)
+    setPlanPage(1)
+  }
+
+  function handleSortChange(nextSortBy: AdminRevenuePlanSortBy) {
+    setPlanPage(1)
+    setSortRevision((currentRevision) => currentRevision + 1)
+
+    if (sortBy === nextSortBy) {
+      setSortOrder((currentSortOrder) => (currentSortOrder === "asc" ? "desc" : "asc"))
+      return
+    }
+
+    setSortBy(nextSortBy)
+    setSortOrder("asc")
+  }
+
+  function clearSort() {
+    setSortBy(null)
+    setSortOrder("asc")
+    setSortRevision((currentRevision) => currentRevision + 1)
     setPlanPage(1)
   }
 
@@ -1383,6 +1459,11 @@ export function AdminFeePlansManager() {
               <Badge variant="subtle" colorPalette="purple" borderRadius="999px" px={3} py={1}>
                 Page {currentPlanPage} of {Math.max(totalPlanPages, 1)}
               </Badge>
+              {hasAppliedSort ? (
+                <Button type="button" variant="outline" minH="11" px={5} onClick={clearSort} alignSelf={{ base: "stretch", md: "end" }}>
+                  Clear Sort
+                </Button>
+              ) : null}
             </Flex>
           </Flex>
 
@@ -1394,13 +1475,19 @@ export function AdminFeePlansManager() {
                     Actions
                   </Table.ColumnHeader>
                   <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
-                    Name
+                    <SortHeaderButton label="Name" sortKey="Name" currentSortBy={sortBy} sortOrder={sortOrder} onSort={handleSortChange} />
                   </Table.ColumnHeader>
                   <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
-                    Scope
+                    <SortHeaderButton label="Scope" sortKey="Scope" currentSortBy={sortBy} sortOrder={sortOrder} onSort={handleSortChange} />
                   </Table.ColumnHeader>
                   <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
-                    Display Text
+                    <SortHeaderButton
+                      label="Display Text"
+                      sortKey="DisplayText"
+                      currentSortBy={sortBy}
+                      sortOrder={sortOrder}
+                      onSort={handleSortChange}
+                    />
                   </Table.ColumnHeader>
                   <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
                     Modules
@@ -1409,7 +1496,7 @@ export function AdminFeePlansManager() {
                     Organizers
                   </Table.ColumnHeader>
                   <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" px={4} py={3} textAlign="center">
-                    Status
+                    <SortHeaderButton label="Status" sortKey="Status" currentSortBy={sortBy} sortOrder={sortOrder} onSort={handleSortChange} />
                   </Table.ColumnHeader>
                 </Table.Row>
               </Table.Header>
