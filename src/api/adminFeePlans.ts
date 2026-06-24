@@ -106,6 +106,13 @@ const moduleOptionSchema = z.object({
   value: z.number().int().positive().optional(),
 })
 
+const scopeOptionSchema = z.object({
+  Text: z.string().optional(),
+  text: z.string().optional(),
+  Value: z.string().optional(),
+  value: z.string().optional(),
+})
+
 const organizerListItemSchema = z.object({
   UniqueId: z.string().optional(),
   uniqueId: z.string().optional(),
@@ -219,6 +226,11 @@ const adminRevenuePlanOrganizerNamesSchema = z.array(
 
 export interface AdminRevenuePlanModuleOption {
   value: number
+  text: string
+}
+
+export interface AdminRevenuePlanScopeOption {
+  value: string
   text: string
 }
 
@@ -356,6 +368,20 @@ export async function fetchAdminRevenuePlanModules(): Promise<AdminRevenuePlanMo
       value: item.Value ?? item.value ?? 0,
       text: item.Text ?? item.text ?? "",
     }))
+}
+
+export async function fetchAdminRevenuePlanScopes(): Promise<AdminRevenuePlanScopeOption[]> {
+  const response = await client.get<unknown>(API_ROUTES.adminRevenuePlanScopes)
+  const data = parseServicePayload(response.data)
+
+  return z
+    .array(scopeOptionSchema)
+    .parse(data)
+    .map((item) => ({
+      value: item.Value ?? item.value ?? "",
+      text: item.Text ?? item.text ?? "",
+    }))
+    .filter((item) => item.value.length > 0)
 }
 
 export async function fetchAdminRevenuePlanOrganizers(): Promise<AdminOrganizerOption[]> {

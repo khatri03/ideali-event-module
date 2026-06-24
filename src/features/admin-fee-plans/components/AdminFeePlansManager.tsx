@@ -41,6 +41,7 @@ import {
   fetchAdminRevenuePlan,
   fetchAdminRevenuePlanOrganizerNames,
   fetchAdminRevenuePlanOrganizers,
+  fetchAdminRevenuePlanScopes,
   fetchAdminRevenuePlans,
   assignAdminRevenuePlanOrganizers,
   saveAdminRevenuePlanModule,
@@ -53,6 +54,7 @@ import {
   type AdminRevenuePlanModuleInput,
   type AdminRevenuePlanMetadataInput,
   type AdminOrganizerOption,
+  type AdminRevenuePlanScopeOption,
   type AdminRevenuePlanScope,
   updateAdminRevenuePlan,
 } from "@/api/adminFeePlans"
@@ -340,6 +342,11 @@ export function AdminFeePlansManager() {
     queryFn: fetchAdminRevenuePlanModules,
   })
 
+  const scopesQuery = useQuery({
+    queryKey: ["admin-revenue-plan-scopes"],
+    queryFn: fetchAdminRevenuePlanScopes,
+  })
+
   const organizersQuery = useQuery({
     queryKey: ["admin-revenue-plan-organizers"],
     queryFn: fetchAdminRevenuePlanOrganizers,
@@ -359,6 +366,7 @@ export function AdminFeePlansManager() {
 
   useBackendErrorToast(plansQuery.error, "admin-revenue-plans")
   useBackendErrorToast(modulesQuery.error, "admin-revenue-plan-modules")
+  useBackendErrorToast(scopesQuery.error, "admin-revenue-plan-scopes")
   useBackendErrorToast(organizersQuery.error, "admin-revenue-plan-organizers")
   useBackendErrorToast(organizerNamesQuery.error, "admin-revenue-plan-organizer-names")
 
@@ -417,12 +425,8 @@ export function AdminFeePlansManager() {
   )
 
   const scopeOptions = useMemo(
-    () => [
-      { label: "Organizer Specific", value: "OrganizerSpecific" },
-      { label: "Reusable", value: "Reusable" },
-      { label: "Default", value: "Default" },
-    ],
-    [],
+    () => (scopesQuery.data?.map((scope: AdminRevenuePlanScopeOption) => ({ label: scope.text, value: scope.value })) ?? []),
+    [scopesQuery.data],
   )
 
   const assignedOrganizerIds = useMemo(
@@ -1775,8 +1779,8 @@ export function AdminFeePlansManager() {
                       options={scopeOptions}
                       value={scope}
                       onChange={(value) => setValue("scope", value as AdminRevenuePlanScope, { shouldDirty: true, shouldValidate: true })}
-                      disabled={isModuleDialog}
-                      placeholder="Select scope"
+                      disabled={isModuleDialog || scopesQuery.isLoading}
+                      placeholder={scopesQuery.isLoading ? "Loading scopes..." : "Select scope"}
                     />
                     {errors.scope ? <Field.ErrorText>{errors.scope.message?.toString()}</Field.ErrorText> : null}
                   </Field.Root>
@@ -2168,7 +2172,8 @@ export function AdminFeePlansManager() {
                               shouldValidate: true,
                             })
                           }
-                          placeholder="Select scope"
+                          disabled={scopesQuery.isLoading}
+                          placeholder={scopesQuery.isLoading ? "Loading scopes..." : "Select scope"}
                         />
                       </Box>
                     </Flex>

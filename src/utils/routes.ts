@@ -121,6 +121,7 @@ export const API_ROUTES = {
     `/api/admin/revenue-plans/${uniqueId}/unmap/${organizerUniqueId}`,
   adminRevenuePlanUnmapModule: (uniqueId: string, moduleId: number) => `/api/admin/revenue-plans/${uniqueId}/modules/${moduleId}`,
   adminRevenuePlanModules: "/api/admin/revenue-plans/modules",
+  adminRevenuePlanScopes: "/api/admin/list-items/revenue-plan-scopes",
   adminOrganizersList: "/api/admin/organizer/list/Active",
   adminTimeZones: "/api/admin/list-items/time-zones",
   organizerEvents: "/api/organizer/events/list",
