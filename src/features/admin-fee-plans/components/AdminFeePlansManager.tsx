@@ -1039,8 +1039,11 @@ export function AdminFeePlansManager() {
                     const modules = plan.moduleNames.length > 0 ? plan.moduleNames : plan.moduleName ? [plan.moduleName] : []
                     const moduleIds = plan.moduleIds.length > 0 ? plan.moduleIds : plan.moduleId > 0 ? [plan.moduleId] : []
                     const organizerCount = plan.organizerCount ?? plan.assignedOrganizerCount
-                    const organizerNames = plan.topOrganizerNames.slice(0, 3)
-                    const remainingOrganizerCount = Math.max(organizerCount - organizerNames.length, 0)
+                    const organizerPills = plan.topOrganizerNames.slice(0, 3).map((organizerName, index) => ({
+                      name: organizerName,
+                      uniqueId: plan.topOrganizerUniqueIds[index] ?? "",
+                    }))
+                    const remainingOrganizerCount = Math.max(organizerCount - organizerPills.length, 0)
 
                     return (
                       <Table.Row key={`${plan.uniqueId}-${plan.moduleId}`} _hover={{ bg: "app.bg" }} transition="background 0.15s">
@@ -1226,12 +1229,17 @@ export function AdminFeePlansManager() {
                         <Box minW={0}>
                           {organizerCount > 0 ? (
                             <Flex wrap="wrap" gap={2}>
-                              {organizerNames.map((organizerName) => (
-                                <Badge
-                                  key={`${plan.uniqueId}-${organizerName}`}
-                                  colorPalette="gray"
-                                  variant="subtle"
+                              {organizerPills.map((organizer) => (
+                                <Box
+                                  key={`${plan.uniqueId}-${organizer.uniqueId || organizer.name}`}
+                                  display="inline-flex"
+                                  alignItems="center"
+                                  gap={1.5}
                                   borderRadius="999px"
+                                  bg="gray.100"
+                                  border="1px solid"
+                                  borderColor="gray.200"
+                                  color="gray.700"
                                   px={3}
                                   py={1}
                                   fontSize="10px"
@@ -1240,8 +1248,42 @@ export function AdminFeePlansManager() {
                                   letterSpacing="0.08em"
                                   w="fit-content"
                                 >
-                                  {organizerName}
-                                </Badge>
+                                  <Text as="span">{organizer.name}</Text>
+                                  {organizer.uniqueId ? (
+                                    <Box
+                                      as="button"
+                                      type="button"
+                                      display="inline-flex"
+                                      alignItems="center"
+                                      justifyContent="center"
+                                      color="red.500"
+                                      aria-label={`Remove organizer ${organizer.name}`}
+                                      title={`Remove organizer ${organizer.name}`}
+                                      cursor="pointer"
+                                      onClick={(event) => {
+                                        event.stopPropagation()
+                                        if (!plan.uniqueId) {
+                                          return
+                                        }
+
+                                        trackTrashClick({
+                                          kind: "organizer",
+                                          planUniqueId: plan.uniqueId,
+                                          organizerUniqueId: organizer.uniqueId,
+                                          label: organizer.name,
+                                        })
+                                        setPendingRemoval({
+                                          kind: "organizer",
+                                          planUniqueId: plan.uniqueId,
+                                          organizerUniqueId: organizer.uniqueId,
+                                          label: organizer.name,
+                                        })
+                                      }}
+                                    >
+                                      <Trash2 size={11} />
+                                    </Box>
+                                  ) : null}
+                                </Box>
                               ))}
                               {remainingOrganizerCount > 0 ? (
                                 <Button

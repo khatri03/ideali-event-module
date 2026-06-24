@@ -72,6 +72,8 @@ const adminFeePlanSchema = z.object({
   assignedOrganizerUniqueIds: z.array(z.string()).optional(),
   TopOrganizerNames: z.array(z.string()).optional(),
   topOrganizerNames: z.array(z.string()).optional(),
+  TopOrganizerUniqueIds: z.array(z.string()).optional(),
+  topOrganizerUniqueIds: z.array(z.string()).optional(),
   Rules: z.array(adminFeePlanRuleSchema).optional(),
   rules: z.array(adminFeePlanRuleSchema).optional(),
 })
@@ -185,6 +187,7 @@ export interface AdminRevenuePlan {
   assignedOrganizerCount: number
   organizerCount: number
   topOrganizerNames: string[]
+  topOrganizerUniqueIds: string[]
   assignedOrganizerUniqueIds: string[]
   rules: AdminRevenuePlanRule[]
 }
@@ -285,6 +288,7 @@ function normalizePlan(plan: z.infer<typeof adminFeePlanSchema>): AdminRevenuePl
       plan.mappedOrganizerCount ??
       0,
     topOrganizerNames: adminRevenuePlanTopOrganizerNamesSchema.parse(plan.TopOrganizerNames ?? plan.topOrganizerNames ?? []),
+    topOrganizerUniqueIds: plan.TopOrganizerUniqueIds ?? plan.topOrganizerUniqueIds ?? [],
     assignedOrganizerUniqueIds: plan.AssignedOrganizerUniqueIds ?? plan.assignedOrganizerUniqueIds ?? [],
     rules: (plan.Rules ?? plan.rules ?? []).map(normalizeRule),
   }
