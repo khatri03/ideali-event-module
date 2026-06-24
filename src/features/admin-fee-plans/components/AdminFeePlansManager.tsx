@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { z } from "zod"
@@ -114,7 +114,7 @@ const EMPTY_FORM_VALUES: AdminRevenuePlanFormValues = {
   name: "",
   label: "",
   moduleId: 0,
-  isDefault: true,
+  isDefault: false,
   isActive: true,
   organizerUniqueIds: [],
   organizerRule: {
@@ -382,6 +382,17 @@ export function AdminFeePlansManager() {
     [organizerOptions, selectedMappingOrganizerUniqueIds],
   )
 
+  useEffect(() => {
+    if (!isDefault || organizerUniqueIds.length === 0) {
+      return
+    }
+
+    setValue("organizerUniqueIds", [], {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+  }, [isDefault, organizerUniqueIds.length, setValue])
+
   function handleModuleChange(value: string) {
     setValue("moduleId", Number(value), {
       shouldDirty: true,
@@ -560,7 +571,7 @@ export function AdminFeePlansManager() {
         isDefault: values.isDefault,
         isActive: values.isActive,
         organizerUniqueIds: values.organizerUniqueIds,
-        rules: [values.organizerRule, values.buyerRule],
+        rules: [values.buyerRule, values.organizerRule],
       }
 
       if (editingPlan?.uniqueId) {
@@ -596,7 +607,7 @@ export function AdminFeePlansManager() {
       const payload: AdminRevenuePlanModuleInput = {
         moduleId: values.moduleId,
         isEdit: isModuleLocked,
-        rules: [values.organizerRule, values.buyerRule],
+        rules: [values.buyerRule, values.organizerRule],
       }
 
       await saveAdminRevenuePlanModule(editingPlan.uniqueId, payload)
@@ -743,8 +754,8 @@ export function AdminFeePlansManager() {
       isDefault: plan.isDefault,
       isActive: plan.isActive,
       organizerUniqueIds: plan.assignedOrganizerUniqueIds,
-      organizerRule: getPlanRuleDefaults(plan, "Organizer", true),
       buyerRule: getPlanRuleDefaults(plan, "Buyer", false),
+      organizerRule: getPlanRuleDefaults(plan, "Organizer", true),
     })
     setOrganizerRuleValueInput(
       formatNumericBlurValue(
@@ -775,17 +786,17 @@ export function AdminFeePlansManager() {
       isDefault: plan.isDefault,
       isActive: plan.isActive,
       organizerUniqueIds: [],
-      organizerRule: {
-        target: "Organizer",
-        valueType: "Percent",
-        value: 0,
-        isActive: true,
-      },
       buyerRule: {
         target: "Buyer",
         valueType: "Percent",
         value: 0,
         isActive: false,
+      },
+      organizerRule: {
+        target: "Organizer",
+        valueType: "Percent",
+        value: 0,
+        isActive: true,
       },
     })
     setOrganizerRuleValueInput("")
@@ -809,6 +820,10 @@ export function AdminFeePlansManager() {
   }
 
   function openMapDialog(plan: AdminRevenuePlan) {
+    if (plan.isDefault) {
+      return
+    }
+
     resetDialogState()
     setMappingPlan(plan)
     setSelectedMappingOrganizerUniqueIds([])
@@ -1038,12 +1053,14 @@ export function AdminFeePlansManager() {
                   plans.map((plan) => {
                     const modules = plan.moduleNames.length > 0 ? plan.moduleNames : plan.moduleName ? [plan.moduleName] : []
                     const moduleIds = plan.moduleIds.length > 0 ? plan.moduleIds : plan.moduleId > 0 ? [plan.moduleId] : []
-                    const organizerCount = plan.organizerCount ?? plan.assignedOrganizerCount
-                    const organizerPills = plan.topOrganizerNames.slice(0, 3).map((organizerName, index) => ({
-                      name: organizerName,
-                      uniqueId: plan.topOrganizerUniqueIds[index] ?? "",
-                    }))
-                    const remainingOrganizerCount = Math.max(organizerCount - organizerPills.length, 0)
+                    const organizerCount = plan.isDefault ? 0 : (plan.organizerCount ?? plan.assignedOrganizerCount)
+                    const organizerPills = plan.isDefault
+                      ? []
+                      : plan.topOrganizerNames.slice(0, 3).map((organizerName, index) => ({
+                          name: organizerName,
+                          uniqueId: plan.topOrganizerUniqueIds[index] ?? "",
+                        }))
+                    const remainingOrganizerCount = plan.isDefault ? 0 : Math.max(organizerCount - organizerPills.length, 0)
 
                     return (
                       <Table.Row key={`${plan.uniqueId}-${plan.moduleId}`} _hover={{ bg: "app.bg" }} transition="background 0.15s">
@@ -1109,6 +1126,7 @@ export function AdminFeePlansManager() {
                                 </Menu.Item>
                                 <Menu.Item
                                   value={`assign-${plan.uniqueId}`}
+                                  disabled={plan.isDefault}
                                   onClick={() => openMapDialog(plan)}
                                   borderRadius="10px"
                                   fontSize="sm"
@@ -1116,7 +1134,7 @@ export function AdminFeePlansManager() {
                                   color="gray.700"
                                   px={3}
                                   py={2}
-                                  cursor="pointer"
+                                  cursor={plan.isDefault ? "not-allowed" : "pointer"}
                                 >
                                   <UserRound size={14} />
                                   Add Organizers
@@ -1236,17 +1254,18 @@ export function AdminFeePlansManager() {
                                   alignItems="center"
                                   gap={1.5}
                                   borderRadius="999px"
-                                  bg="gray.100"
                                   border="1px solid"
                                   borderColor="gray.200"
+                                  bg="gray.100"
                                   color="gray.700"
                                   px={3}
-                                  py={1}
+                                  py={1.5}
+                                  minH="30px"
+                                  h="30px"
                                   fontSize="10px"
                                   fontWeight="800"
                                   textTransform="uppercase"
                                   letterSpacing="0.08em"
-                                  w="fit-content"
                                 >
                                   <Text as="span">{organizer.name}</Text>
                                   {organizer.uniqueId ? (
@@ -1260,6 +1279,7 @@ export function AdminFeePlansManager() {
                                       aria-label={`Remove organizer ${organizer.name}`}
                                       title={`Remove organizer ${organizer.name}`}
                                       cursor="pointer"
+                                      minW="11px"
                                       onClick={(event) => {
                                         event.stopPropagation()
                                         if (!plan.uniqueId) {
@@ -1291,7 +1311,7 @@ export function AdminFeePlansManager() {
                                   variant="outline"
                                   colorPalette="gray"
                                   borderRadius="999px"
-                                  h="28px"
+                                  h="30px"
                                   px={3}
                                   fontSize="10px"
                                   fontWeight="800"
@@ -1614,61 +1634,6 @@ export function AdminFeePlansManager() {
 
                 {!isModuleDialog ? (
                   <>
-                    <Field.Root w="full">
-                      <RequiredFieldLabel>Organizers</RequiredFieldLabel>
-                      <ReactSelect
-                        isMulti
-                        options={organizerOptions}
-                        value={selectedOrganizerOptions}
-                        onChange={handleOrganizerChange}
-                        placeholder={organizersQuery.isLoading ? "Loading organizers..." : "Select organizers"}
-                        inputValue={organizerSearchValue}
-                        onInputChange={handleOrganizerInputChange}
-                        closeMenuOnSelect={false}
-                        hideSelectedOptions={false}
-                        isClearable={false}
-                        isDisabled={organizersQuery.isLoading}
-                        controlShouldRenderValue={false}
-                        blurInputOnSelect={false}
-                        menuShouldScrollIntoView={false}
-                        components={{ Option: OrganizerOption }}
-                        styles={organizerMultiSelectStyles}
-                      />
-                      {selectedOrganizerOptions.length > 0 ? (
-                        <Flex wrap="wrap" gap={2} mt={3}>
-                          {selectedOrganizerOptions.map((option) => (
-                            <Box
-                              key={option.value}
-                              as="button"
-                              type="button"
-                              onClick={() => handleRemoveOrganizer(option.value)}
-                              display="inline-flex"
-                              alignItems="center"
-                              gap={2}
-                              borderRadius="999px"
-                              border="1px solid"
-                              borderColor="rgba(117, 81, 255, 0.18)"
-                              bg="rgba(117, 81, 255, 0.12)"
-                              color="brand.500"
-                              px={3}
-                              py={1.5}
-                              fontSize="sm"
-                              fontWeight="700"
-                              cursor="pointer"
-                              _hover={{ bg: "rgba(117, 81, 255, 0.18)" }}
-                            >
-                              <Text as="span" lineHeight={1.1}>
-                                {option.label}
-                              </Text>
-                              <Text as="span" fontSize="xs" lineHeight={1} aria-hidden="true">
-                                ×
-                              </Text>
-                            </Box>
-                          ))}
-                        </Flex>
-                      ) : null}
-                    </Field.Root>
-
                     <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                       <Field.Root w="full">
                         <Box
@@ -1726,6 +1691,68 @@ export function AdminFeePlansManager() {
                         </Box>
                       </Field.Root>
                     </SimpleGrid>
+
+                    <Field.Root w="full" opacity={isDefault ? 0.55 : 1}>
+                      <RequiredFieldLabel>Organizers</RequiredFieldLabel>
+                      <ReactSelect
+                        isMulti
+                        options={organizerOptions}
+                        value={selectedOrganizerOptions}
+                        onChange={handleOrganizerChange}
+                        placeholder={organizersQuery.isLoading ? "Loading organizers..." : "Select organizers"}
+                        inputValue={organizerSearchValue}
+                        onInputChange={handleOrganizerInputChange}
+                        closeMenuOnSelect={false}
+                        hideSelectedOptions={false}
+                        isClearable={false}
+                        isDisabled={organizersQuery.isLoading || isDefault}
+                        styles={{
+                          ...organizerMultiSelectStyles,
+                          control: (base, state) => ({
+                            ...organizerMultiSelectStyles.control(base, state),
+                            backgroundColor: isDefault ? "#F8FAFC" : organizerMultiSelectStyles.control(base, state).backgroundColor,
+                          }),
+                        }}
+                        controlShouldRenderValue={false}
+                        blurInputOnSelect={false}
+                        menuShouldScrollIntoView={false}
+                        components={{ Option: OrganizerOption }}
+                      />
+                      {selectedOrganizerOptions.length > 0 ? (
+                        <Flex wrap="wrap" gap={2} mt={3}>
+                          {selectedOrganizerOptions.map((option) => (
+                            <Box
+                              key={option.value}
+                              as="button"
+                              type="button"
+                              onClick={() => handleRemoveOrganizer(option.value)}
+                              display="inline-flex"
+                              alignItems="center"
+                              gap={2}
+                              borderRadius="999px"
+                              border="1px solid"
+                              borderColor={isDefault ? "gray.200" : "rgba(117, 81, 255, 0.18)"}
+                              bg={isDefault ? "gray.100" : "rgba(117, 81, 255, 0.12)"}
+                              color={isDefault ? "gray.500" : "brand.500"}
+                              px={3}
+                              py={1.5}
+                              fontSize="sm"
+                              fontWeight="700"
+                              cursor={isDefault ? "not-allowed" : "pointer"}
+                              _hover={isDefault ? undefined : { bg: "rgba(117, 81, 255, 0.18)" }}
+                              disabled={isDefault}
+                            >
+                              <Text as="span" lineHeight={1.1}>
+                                {option.label}
+                              </Text>
+                              <Text as="span" fontSize="xs" lineHeight={1} aria-hidden="true">
+                                ×
+                              </Text>
+                            </Box>
+                          ))}
+                        </Flex>
+                      ) : null}
+                    </Field.Root>
                   </>
                 ) : null}
 
@@ -1778,76 +1805,6 @@ export function AdminFeePlansManager() {
                         </Table.Row>
                       </Table.Header>
                       <Table.Body>
-                        <Table.Row>
-                          <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} fontWeight="700" color="text.primary">
-                            Organizer
-                          </Table.Cell>
-                          <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
-                            <Switch.Root
-                              checked={organizerRuleIsActive}
-                              colorPalette="brand"
-                              onCheckedChange={(details) => setValue("organizerRule.isActive", details.checked, { shouldDirty: true })}
-                            >
-                              <Switch.HiddenInput />
-                              <Switch.Control />
-                            </Switch.Root>
-                          </Table.Cell>
-                          <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
-                            <StyledSelect
-                              options={[
-                                { label: "Fixed Amount", value: "Fixed" },
-                                { label: "Percentage", value: "Percent" },
-                              ]}
-                              value={organizerRuleValueType}
-                              onChange={
-                                organizerRuleIsActive
-                                  ? (value) => {
-                                      const nextValueType = value as "Fixed" | "Percent"
-                                      setValue("organizerRule.valueType", nextValueType, { shouldDirty: true, shouldValidate: true })
-
-                                      const currentValue = parseNumericInput(organizerRuleValueInput)
-                                      if (nextValueType === "Percent" && currentValue !== null && currentValue > 100) {
-                                        setOrganizerRuleValueInput(formatNumericBlurValue(100))
-                                        setValue("organizerRule.value", 100, { shouldDirty: true, shouldValidate: true })
-                                      }
-                                    }
-                                  : undefined
-                              }
-                              disabled={!organizerRuleIsActive}
-                              placeholder="Select"
-                            />
-                          </Table.Cell>
-                          <Table.Cell borderColor="border.subtle" px={4} py={4}>
-                            <Input
-                              value={organizerRuleValueInput}
-                              onChange={(event) =>
-                                handleRuleValueChange(
-                                  event.target.value,
-                                  organizerRuleValueType,
-                                  setOrganizerRuleValueInput,
-                                  "organizerRule.value",
-                                )
-                              }
-                              onBlur={() =>
-                                handleRuleValueBlur(
-                                  organizerRuleValueInput,
-                                  organizerRuleValueType,
-                                  setOrganizerRuleValueInput,
-                                  "organizerRule.value",
-                                )
-                              }
-                              type="text"
-                              inputMode="decimal"
-                              disabled={!organizerRuleIsActive}
-                              cursor={!organizerRuleIsActive ? "not-allowed" : "text"}
-                              minH="11"
-                              borderRadius="14px"
-                              px={4}
-                              placeholder={organizerRuleValueType === "Percent" ? "2.00" : "5.00"}
-                            />
-                          </Table.Cell>
-                        </Table.Row>
-
                         <Table.Row>
                           <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} fontWeight="700" color="text.primary">
                             Buyer
@@ -1914,6 +1871,76 @@ export function AdminFeePlansManager() {
                               borderRadius="14px"
                               px={4}
                               placeholder={buyerRuleValueType === "Percent" ? "2.00" : "5.00"}
+                            />
+                          </Table.Cell>
+                        </Table.Row>
+
+                        <Table.Row>
+                          <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} fontWeight="700" color="text.primary">
+                            Organizer
+                          </Table.Cell>
+                          <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
+                            <Switch.Root
+                              checked={organizerRuleIsActive}
+                              colorPalette="brand"
+                              onCheckedChange={(details) => setValue("organizerRule.isActive", details.checked, { shouldDirty: true })}
+                            >
+                              <Switch.HiddenInput />
+                              <Switch.Control />
+                            </Switch.Root>
+                          </Table.Cell>
+                          <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
+                            <StyledSelect
+                              options={[
+                                { label: "Fixed Amount", value: "Fixed" },
+                                { label: "Percentage", value: "Percent" },
+                              ]}
+                              value={organizerRuleValueType}
+                              onChange={
+                                organizerRuleIsActive
+                                  ? (value) => {
+                                      const nextValueType = value as "Fixed" | "Percent"
+                                      setValue("organizerRule.valueType", nextValueType, { shouldDirty: true, shouldValidate: true })
+
+                                      const currentValue = parseNumericInput(organizerRuleValueInput)
+                                      if (nextValueType === "Percent" && currentValue !== null && currentValue > 100) {
+                                        setOrganizerRuleValueInput(formatNumericBlurValue(100))
+                                        setValue("organizerRule.value", 100, { shouldDirty: true, shouldValidate: true })
+                                      }
+                                    }
+                                  : undefined
+                              }
+                              disabled={!organizerRuleIsActive}
+                              placeholder="Select"
+                            />
+                          </Table.Cell>
+                          <Table.Cell borderColor="border.subtle" px={4} py={4}>
+                            <Input
+                              value={organizerRuleValueInput}
+                              onChange={(event) =>
+                                handleRuleValueChange(
+                                  event.target.value,
+                                  organizerRuleValueType,
+                                  setOrganizerRuleValueInput,
+                                  "organizerRule.value",
+                                )
+                              }
+                              onBlur={() =>
+                                handleRuleValueBlur(
+                                  organizerRuleValueInput,
+                                  organizerRuleValueType,
+                                  setOrganizerRuleValueInput,
+                                  "organizerRule.value",
+                                )
+                              }
+                              type="text"
+                              inputMode="decimal"
+                              disabled={!organizerRuleIsActive}
+                              cursor={!organizerRuleIsActive ? "not-allowed" : "text"}
+                              minH="11"
+                              borderRadius="14px"
+                              px={4}
+                              placeholder={organizerRuleValueType === "Percent" ? "2.00" : "5.00"}
                             />
                           </Table.Cell>
                         </Table.Row>
