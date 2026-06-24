@@ -24,7 +24,7 @@ import {
   Table,
   Text,
 } from "@chakra-ui/react"
-import { Check, CheckCircle2, Layers3, MoreHorizontal, PencilLine, Plus, RotateCcw, UserRound } from "lucide-react"
+import { Check, CheckCircle2, Layers3, MoreHorizontal, Plus, RotateCcw, UserRound } from "lucide-react"
 import ReactSelect, {
   components,
   type InputActionMeta,
@@ -304,7 +304,6 @@ export function AdminFeePlansManager() {
   const buyerRuleValueType = useWatch({ control, name: "buyerRule.valueType" })
   const organizerRuleIsActive = useWatch({ control, name: "organizerRule.isActive" })
   const buyerRuleIsActive = useWatch({ control, name: "buyerRule.isActive" })
-  const isEditingExistingModule = Boolean(editingPlan?.uniqueId && isModuleLocked)
 
   const moduleOptions = useMemo(
     () =>
@@ -483,7 +482,7 @@ export function AdminFeePlansManager() {
         rules: [values.organizerRule, values.buyerRule],
       }
 
-      if (isEditingExistingModule && editingPlan?.uniqueId) {
+      if (editingPlan?.uniqueId) {
         await updateAdminRevenuePlan(editingPlan.uniqueId, payload)
         return
       }
@@ -493,7 +492,7 @@ export function AdminFeePlansManager() {
     onSuccess: () => {
       setBanner({
         type: "success",
-        message: isEditingExistingModule ? "Admin revenue plan updated." : "Admin revenue plan saved.",
+        message: editingPlan ? "Admin revenue plan updated." : "Admin revenue plan saved.",
       })
       setEditingPlan(null)
       setIsDialogOpen(false)
@@ -603,11 +602,11 @@ export function AdminFeePlansManager() {
     setIsDialogOpen(true)
   }
 
-  async function handleEditPlan(plan: AdminRevenuePlan) {
+  async function handleEditPlan(plan: AdminRevenuePlan, moduleId?: number) {
     resetDialogState()
 
     try {
-      const detail = await fetchAdminRevenuePlan(plan.uniqueId, plan.moduleId)
+      const detail = await fetchAdminRevenuePlan(plan.uniqueId, moduleId ?? plan.moduleId)
       openEditDialog(detail)
     } catch (error) {
       setBanner({ type: "error", message: extractApiError(error) })
@@ -726,7 +725,7 @@ export function AdminFeePlansManager() {
                 Available plans
               </Text>
               <Text fontSize="sm" color="text.secondary">
-                {totalPlans} module{totalPlans === 1 ? "" : "s"} configured
+                {totalPlans} plan{totalPlans === 1 ? "" : "s"} total
               </Text>
             </Box>
             <Flex direction="column" align={{ base: "stretch", md: "end" }} gap={2}>
@@ -804,7 +803,8 @@ export function AdminFeePlansManager() {
                   </Table.Row>
                 ) : (
                   plans.map((plan) => {
-                    const moduleName = plan.moduleName || plan.moduleNames[0] || "-"
+                    const modules = plan.moduleNames.length > 0 ? plan.moduleNames : plan.moduleName ? [plan.moduleName] : []
+                    const moduleIds = plan.moduleIds.length > 0 ? plan.moduleIds : plan.moduleId > 0 ? [plan.moduleId] : []
                     const organizerCount = plan.organizerCount ?? plan.assignedOrganizerCount
                     const organizerNames = plan.topOrganizerNames.slice(0, 3)
                     const remainingOrganizerCount = Math.max(organizerCount - organizerNames.length, 0)
@@ -843,20 +843,6 @@ export function AdminFeePlansManager() {
                                 boxShadow="0 16px 40px rgba(15, 23, 42, 0.12)"
                                 p={1}
                               >
-                                <Menu.Item
-                                  value={`edit-${plan.uniqueId}`}
-                                  onClick={() => void handleEditPlan(plan)}
-                                  borderRadius="10px"
-                                  fontSize="sm"
-                                  fontWeight="600"
-                                  color="gray.700"
-                                  px={3}
-                                  py={2}
-                                  cursor="pointer"
-                                  >
-                                  <PencilLine size={14} />
-                                  Edit module
-                                </Menu.Item>
                                 <Menu.Item
                                   value={`add-module-${plan.uniqueId}`}
                                   onClick={() => openAddModuleDialog(plan)}
@@ -903,20 +889,51 @@ export function AdminFeePlansManager() {
                       </Table.Cell>
                       <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
                         <Box minW={0}>
-                          <Badge
-                            colorPalette="gray"
-                            variant="subtle"
-                            borderRadius="999px"
-                            px={3}
-                            py={1}
-                            fontSize="10px"
-                            fontWeight="800"
-                            textTransform="uppercase"
-                            letterSpacing="0.08em"
-                            w="fit-content"
-                          >
-                            {moduleName}
-                          </Badge>
+                          {modules.length > 0 ? (
+                            <Flex wrap="wrap" gap={2}>
+                              {modules.map((moduleName, index) => {
+                                const moduleId = moduleIds[index]
+
+                                return (
+                                  <Box
+                                    key={`${plan.uniqueId}-${moduleId ?? moduleName}-${index}`}
+                                    as="button"
+                                    type="button"
+                                    onClick={() => {
+                                      if (moduleId) {
+                                        void handleEditPlan(plan, moduleId)
+                                      }
+                                    }}
+                                    display="inline-flex"
+                                    alignItems="center"
+                                    justifyContent="center"
+                                    borderRadius="999px"
+                                    border="1px solid"
+                                    borderColor="gray.200"
+                                    bg="gray.100"
+                                    color="gray.700"
+                                    px={3}
+                                    py={1.5}
+                                    fontSize="10px"
+                                    fontWeight="800"
+                                    textTransform="uppercase"
+                                    letterSpacing="0.08em"
+                                    cursor={moduleId ? "pointer" : "not-allowed"}
+                                    _hover={moduleId ? { bg: "gray.200", borderColor: "gray.300" } : undefined}
+                                    disabled={!moduleId}
+                                    aria-label={moduleId ? `Edit ${moduleName} module` : moduleName}
+                                    title={moduleName}
+                                  >
+                                    {moduleName}
+                                  </Box>
+                                )
+                              })}
+                            </Flex>
+                          ) : (
+                            <Text fontSize="sm" color="text.secondary">
+                              -
+                            </Text>
+                          )}
                         </Box>
                       </Table.Cell>
                       <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
