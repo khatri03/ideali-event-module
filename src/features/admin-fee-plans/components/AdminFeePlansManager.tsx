@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
-import { useEffect, useMemo, useState } from "react"
-import { useForm, useWatch } from "react-hook-form"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { useForm, useWatch, type FieldErrors } from "react-hook-form"
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -34,6 +34,7 @@ import ReactSelect, {
 } from "react-select"
 import { StyledSelect } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
+import { toaster } from "@/lib/toaster"
 import {
   createAdminRevenuePlan,
   fetchAdminRevenuePlanModules,
@@ -224,6 +225,30 @@ function RequiredFieldLabel({ children }: { children: ReactNode }) {
   )
 }
 
+function useBackendErrorToast(error: unknown, source: string) {
+  const lastToastKeyRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!error) {
+      lastToastKeyRef.current = null
+      return
+    }
+
+    const message = extractApiError(error)
+    const toastKey = `${source}:${message}`
+
+    if (lastToastKeyRef.current === toastKey) {
+      return
+    }
+
+    lastToastKeyRef.current = toastKey
+    toaster.create({
+      description: message,
+      type: "error",
+    })
+  }, [error, source])
+}
+
 function OrganizerOption(props: OptionProps<OrganizerSelectOption, true>) {
   return (
     <components.Option {...props}>
@@ -313,6 +338,11 @@ export function AdminFeePlansManager() {
     },
     enabled: Boolean(organizerNamesPlan?.uniqueId),
   })
+
+  useBackendErrorToast(plansQuery.error, "admin-revenue-plans")
+  useBackendErrorToast(modulesQuery.error, "admin-revenue-plan-modules")
+  useBackendErrorToast(organizersQuery.error, "admin-revenue-plan-organizers")
+  useBackendErrorToast(organizerNamesQuery.error, "admin-revenue-plan-organizer-names")
 
   const {
     register,
@@ -483,6 +513,27 @@ export function AdminFeePlansManager() {
     })
   }
 
+  function getValidationMessage(formErrors: FieldErrors<AdminRevenuePlanFormValues>) {
+    return (
+      formErrors.name?.message?.toString() ||
+      formErrors.label?.message?.toString() ||
+      formErrors.moduleId?.message?.toString() ||
+      formErrors.buyerRule?.value?.message?.toString() ||
+      formErrors.organizerRule?.value?.message?.toString() ||
+      "Please fix the highlighted fields and try again."
+    )
+  }
+
+  function handleSaveInvalid(formErrors: FieldErrors<AdminRevenuePlanFormValues>) {
+    setBanner({
+      type: "error",
+      message: getValidationMessage(formErrors),
+    })
+  }
+
+  const buyerRuleValueError = errors.buyerRule?.value?.message?.toString() ?? ""
+  const organizerRuleValueError = errors.organizerRule?.value?.message?.toString() ?? ""
+
   function handleOrganizerInputChange(nextValue: string, actionMeta: InputActionMeta) {
     if (actionMeta.action === "input-change") {
       setOrganizerSearchValue(nextValue)
@@ -590,7 +641,11 @@ export function AdminFeePlansManager() {
       setIsDialogOpen(false)
       reset(EMPTY_FORM_VALUES)
     },
-    onError: () => {
+    onError: (error) => {
+      toaster.create({
+        description: extractApiError(error),
+        type: "error",
+      })
       setBanner(null)
     },
     onSettled: () => {
@@ -618,7 +673,11 @@ export function AdminFeePlansManager() {
       setIsDialogOpen(false)
       reset(EMPTY_FORM_VALUES)
     },
-    onError: () => {
+    onError: (error) => {
+      toaster.create({
+        description: extractApiError(error),
+        type: "error",
+      })
       setBanner(null)
     },
     onSettled: () => {
@@ -647,7 +706,11 @@ export function AdminFeePlansManager() {
       setIsPlanDialogOpen(false)
       resetMetadata(EMPTY_METADATA_FORM_VALUES)
     },
-    onError: () => {
+    onError: (error) => {
+      toaster.create({
+        description: extractApiError(error),
+        type: "error",
+      })
       setBanner(null)
     },
     onSettled: () => {
@@ -664,7 +727,11 @@ export function AdminFeePlansManager() {
       setIsMapDialogOpen(false)
       setSelectedMappingOrganizerUniqueIds([])
     },
-    onError: () => {
+    onError: (error) => {
+      toaster.create({
+        description: extractApiError(error),
+        type: "error",
+      })
       setBanner(null)
     },
     onSettled: () => {
@@ -678,7 +745,11 @@ export function AdminFeePlansManager() {
     onSuccess: () => {
       setBanner({ type: "success", message: "Organizer removed from revenue plan." })
     },
-    onError: () => {
+    onError: (error) => {
+      toaster.create({
+        description: extractApiError(error),
+        type: "error",
+      })
       setBanner(null)
     },
     onSettled: () => {
@@ -693,7 +764,11 @@ export function AdminFeePlansManager() {
     onSuccess: () => {
       setBanner({ type: "success", message: "Module removed from revenue plan." })
     },
-    onError: () => {
+    onError: (error) => {
+      toaster.create({
+        description: extractApiError(error),
+        type: "error",
+      })
       setBanner(null)
     },
     onSettled: () => {
@@ -811,16 +886,28 @@ export function AdminFeePlansManager() {
       const detail = await fetchAdminRevenuePlan(plan.uniqueId, moduleId ?? plan.moduleId)
       openModuleDialog(detail)
     } catch (error) {
+      toaster.create({
+        description: extractApiError(error),
+        type: "error",
+      })
       setBanner({ type: "error", message: extractApiError(error) })
     }
   }
 
   async function handleSaveMetadata(values: AdminRevenuePlanMetadataFormValues) {
-    await metadataMutation.mutateAsync(values)
+    try {
+      await metadataMutation.mutateAsync(values)
+    } catch {
+      // Toast already handled in the mutation callback.
+    }
   }
 
   function openMapDialog(plan: AdminRevenuePlan) {
     if (plan.isDefault) {
+      toaster.create({
+        description: "Default plans cannot have organizer assignments.",
+        type: "error",
+      })
       return
     }
 
@@ -834,12 +921,16 @@ export function AdminFeePlansManager() {
   const isModuleDialog = Boolean(editingPlan)
 
   async function handleSave(values: AdminRevenuePlanFormValues) {
-    if (isModuleDialog) {
-      await moduleMutation.mutateAsync(values)
-      return
-    }
+    try {
+      if (isModuleDialog) {
+        await moduleMutation.mutateAsync(values)
+        return
+      }
 
-    await saveMutation.mutateAsync(values)
+      await saveMutation.mutateAsync(values)
+    } catch {
+      // Toast already handled in the mutation callback.
+    }
   }
 
   const isBusy =
@@ -870,15 +961,23 @@ export function AdminFeePlansManager() {
     }
 
     if (pendingRemoval.kind === "module") {
-      await unmapModuleMutation.mutateAsync({
-        uniqueId: pendingRemoval.planUniqueId,
-        moduleId: pendingRemoval.moduleId,
-      })
+      try {
+        await unmapModuleMutation.mutateAsync({
+          uniqueId: pendingRemoval.planUniqueId,
+          moduleId: pendingRemoval.moduleId,
+        })
+      } catch {
+        // Toast already handled in the mutation callback.
+      }
     } else {
-      await unmapOrganizerMutation.mutateAsync({
-        uniqueId: pendingRemoval.planUniqueId,
-        organizerUniqueId: pendingRemoval.organizerUniqueId,
-      })
+      try {
+        await unmapOrganizerMutation.mutateAsync({
+          uniqueId: pendingRemoval.planUniqueId,
+          organizerUniqueId: pendingRemoval.organizerUniqueId,
+        })
+      } catch {
+        // Toast already handled in the mutation callback.
+      }
     }
 
     setPendingRemoval(null)
@@ -1124,21 +1223,22 @@ export function AdminFeePlansManager() {
                                   <Plus size={14} />
                                   Add module
                                 </Menu.Item>
-                                <Menu.Item
-                                  value={`assign-${plan.uniqueId}`}
-                                  disabled={plan.isDefault}
-                                  onClick={() => openMapDialog(plan)}
-                                  borderRadius="10px"
-                                  fontSize="sm"
-                                  fontWeight="600"
-                                  color="gray.700"
-                                  px={3}
-                                  py={2}
-                                  cursor={plan.isDefault ? "not-allowed" : "pointer"}
-                                >
-                                  <UserRound size={14} />
-                                  Add Organizers
-                                </Menu.Item>
+                                {!plan.isDefault ? (
+                                  <Menu.Item
+                                    value={`assign-${plan.uniqueId}`}
+                                    onClick={() => openMapDialog(plan)}
+                                    borderRadius="10px"
+                                    fontSize="sm"
+                                    fontWeight="600"
+                                    color="gray.700"
+                                    px={3}
+                                    py={2}
+                                    cursor="pointer"
+                                  >
+                                    <UserRound size={14} />
+                                    Add Organizers
+                                  </Menu.Item>
+                                ) : null}
                               </Menu.Content>
                             </Menu.Positioner>
                           </Portal>
@@ -1597,7 +1697,15 @@ export function AdminFeePlansManager() {
             </Box>
 
             <Dialog.Body px={6} py={6} overflowY="auto">
-              <form onSubmit={handleSubmit(handleSave)} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+              <form onSubmit={handleSubmit(handleSave, handleSaveInvalid)} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                {saveError ? (
+                  <Box p={4} borderRadius="16px" border="1px solid" borderColor="red.200" bg="red.50">
+                    <Text fontSize="sm" fontWeight="700" color="red.700">
+                      {extractApiError(saveError)}
+                    </Text>
+                  </Box>
+                ) : null}
+
                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                   <Field.Root w="full" invalid={Boolean(errors.name)}>
                     <RequiredFieldLabel>Name</RequiredFieldLabel>
@@ -1872,6 +1980,11 @@ export function AdminFeePlansManager() {
                               px={4}
                               placeholder={buyerRuleValueType === "Percent" ? "2.00" : "5.00"}
                             />
+                            {buyerRuleValueError ? (
+                              <Text fontSize="xs" fontWeight="700" color="red.600" mt={2}>
+                                {buyerRuleValueError}
+                              </Text>
+                            ) : null}
                           </Table.Cell>
                         </Table.Row>
 
@@ -1942,20 +2055,17 @@ export function AdminFeePlansManager() {
                               px={4}
                               placeholder={organizerRuleValueType === "Percent" ? "2.00" : "5.00"}
                             />
+                            {organizerRuleValueError ? (
+                              <Text fontSize="xs" fontWeight="700" color="red.600" mt={2}>
+                                {organizerRuleValueError}
+                              </Text>
+                            ) : null}
                           </Table.Cell>
                         </Table.Row>
                       </Table.Body>
                     </Table.Root>
                   </Box>
                 </Box>
-
-                {saveError ? (
-                  <Box p={4} borderRadius="16px" border="1px solid" borderColor="red.200" bg="red.50">
-                    <Text fontSize="sm" fontWeight="700" color="red.700">
-                      {extractApiError(saveError)}
-                    </Text>
-                  </Box>
-                ) : null}
 
                 <Flex
                   pt={5}
