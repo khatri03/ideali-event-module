@@ -44,8 +44,8 @@ const adminFeePlanSchema = z.object({
   id: z.number().int().positive().optional(),
   UniqueId: z.string().optional(),
   uniqueId: z.string().optional(),
-  ModuleId: z.number().int().positive().optional(),
-  moduleId: z.number().int().positive().optional(),
+  ModuleId: z.number().int().nonnegative().optional(),
+  moduleId: z.number().int().nonnegative().optional(),
   ModuleName: z.string().optional(),
   moduleName: z.string().optional(),
   Name: z.string().optional(),
@@ -120,8 +120,16 @@ const adminRevenuePlanInputSchema = z.object({
   rules: z.array(adminFeePlanRuleInputSchema).min(1),
 })
 
+const adminRevenuePlanMetadataInputSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  label: z.string().trim().min(1).max(120),
+  isDefault: z.boolean(),
+  isActive: z.boolean(),
+})
+
 export type AdminRevenuePlanRuleInput = z.infer<typeof adminFeePlanRuleInputSchema>
 export type AdminRevenuePlanInput = z.infer<typeof adminRevenuePlanInputSchema>
+export type AdminRevenuePlanMetadataInput = z.infer<typeof adminRevenuePlanMetadataInputSchema>
 
 export interface AdminRevenuePlanRule {
   target: "Organizer" | "Buyer"
@@ -148,6 +156,8 @@ export interface AdminRevenuePlan {
   assignedOrganizerUniqueIds: string[]
   rules: AdminRevenuePlanRule[]
 }
+
+const adminRevenuePlanTopOrganizerNamesSchema = z.array(z.string())
 
 const adminRevenuePlanOrganizerNamesSchema = z.array(
   z.object({
@@ -242,7 +252,7 @@ function normalizePlan(plan: z.infer<typeof adminFeePlanSchema>): AdminRevenuePl
       plan.MappedOrganizerCount ??
       plan.mappedOrganizerCount ??
       0,
-    topOrganizerNames: adminRevenuePlanOrganizerNamesSchema.parse(plan.TopOrganizerNames ?? plan.topOrganizerNames ?? []),
+    topOrganizerNames: adminRevenuePlanTopOrganizerNamesSchema.parse(plan.TopOrganizerNames ?? plan.topOrganizerNames ?? []),
     assignedOrganizerUniqueIds: plan.AssignedOrganizerUniqueIds ?? plan.assignedOrganizerUniqueIds ?? [],
     rules: (plan.Rules ?? plan.rules ?? []).map(normalizeRule),
   }
@@ -322,6 +332,12 @@ export async function createAdminRevenuePlan(input: AdminRevenuePlanInput): Prom
 export async function updateAdminRevenuePlan(uniqueId: string, input: AdminRevenuePlanInput): Promise<void> {
   const payload = adminRevenuePlanInputSchema.parse(input)
   const response = await client.post<unknown>(API_ROUTES.adminRevenuePlanUpdate(uniqueId), payload)
+  assertSuccess(response.data, "Failed to update admin revenue plan.")
+}
+
+export async function updateAdminRevenuePlanMetadata(uniqueId: string, input: AdminRevenuePlanMetadataInput): Promise<void> {
+  const payload = adminRevenuePlanMetadataInputSchema.parse(input)
+  const response = await client.post<unknown>(API_ROUTES.adminRevenuePlanMetadataUpdate(uniqueId), payload)
   assertSuccess(response.data, "Failed to update admin revenue plan.")
 }
 

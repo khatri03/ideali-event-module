@@ -24,7 +24,7 @@ import {
   Table,
   Text,
 } from "@chakra-ui/react"
-import { Check, CheckCircle2, Layers3, MoreHorizontal, PencilLine, Plus, RotateCcw, UserRound, X } from "lucide-react"
+import { Check, CheckCircle2, Layers3, MoreHorizontal, PencilLine, Plus, RotateCcw, Trash2, UserRound, XCircle } from "lucide-react"
 import ReactSelect, {
   components,
   type InputActionMeta,
@@ -44,9 +44,11 @@ import {
   assignAdminRevenuePlanOrganizer,
   unmapAdminRevenuePlanModule,
   unmapAdminRevenuePlanOrganizer,
+  updateAdminRevenuePlanMetadata,
   type AdminRevenuePlan,
   type AdminRevenuePlanInput,
   type AdminRevenuePlanModuleOption,
+  type AdminRevenuePlanMetadataInput,
   type AdminRevenuePlanOrganizer,
   type AdminOrganizerOption,
   updateAdminRevenuePlan,
@@ -92,7 +94,15 @@ const adminRevenuePlanSchema = z.object({
   buyerRule: ruleSchema,
 })
 
+const adminRevenuePlanMetadataSchema = z.object({
+  name: z.string().trim().min(1, "Name is required.").max(80, "Maximum 80 characters allowed."),
+  label: z.string().trim().min(1, "Display text is required.").max(120, "Maximum 120 characters allowed."),
+  isDefault: z.boolean(),
+  isActive: z.boolean(),
+})
+
 type AdminRevenuePlanFormValues = z.infer<typeof adminRevenuePlanSchema>
+type AdminRevenuePlanMetadataFormValues = z.infer<typeof adminRevenuePlanMetadataSchema>
 
 interface OrganizerSelectOption {
   label: string
@@ -118,6 +128,13 @@ const EMPTY_FORM_VALUES: AdminRevenuePlanFormValues = {
     value: 0,
     isActive: false,
   },
+}
+
+const EMPTY_METADATA_FORM_VALUES: AdminRevenuePlanMetadataFormValues = {
+  name: "",
+  label: "",
+  isDefault: true,
+  isActive: true,
 }
 
 const ADMIN_REVENUE_PLAN_PAGE_SIZE = 6
@@ -250,10 +267,18 @@ export function AdminFeePlansManager() {
   const [planPage, setPlanPage] = useState(1)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingPlan, setEditingPlan] = useState<AdminRevenuePlan | null>(null)
+  const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false)
+  const [editingMetadataPlan, setEditingMetadataPlan] = useState<AdminRevenuePlan | null>(null)
   const [isModuleLocked, setIsModuleLocked] = useState(false)
   const [isMapDialogOpen, setIsMapDialogOpen] = useState(false)
   const [mappingPlan, setMappingPlan] = useState<AdminRevenuePlan | null>(null)
+  const [selectedMappingOrganizerUniqueId, setSelectedMappingOrganizerUniqueId] = useState("")
   const [organizerNamesPlan, setOrganizerNamesPlan] = useState<AdminRevenuePlan | null>(null)
+  const [pendingRemoval, setPendingRemoval] = useState<
+    | { kind: "module"; planUniqueId: string; moduleId: number; label: string }
+    | { kind: "organizer"; planUniqueId: string; organizerUniqueId: string; label: string }
+    | null
+  >(null)
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [organizerSearchValue, setOrganizerSearchValue] = useState("")
   const [organizerRuleValueInput, setOrganizerRuleValueInput] = useState("")
@@ -299,6 +324,18 @@ export function AdminFeePlansManager() {
     defaultValues: EMPTY_FORM_VALUES,
   })
 
+  const {
+    register: registerMetadata,
+    handleSubmit: handleMetadataSubmit,
+    reset: resetMetadata,
+    setValue: setMetadataValue,
+    control: metadataControl,
+    formState: { errors: metadataErrors },
+  } = useForm<AdminRevenuePlanMetadataFormValues>({
+    resolver: zodResolver(adminRevenuePlanMetadataSchema),
+    defaultValues: EMPTY_METADATA_FORM_VALUES,
+  })
+
   const isActive = useWatch({ control, name: "isActive" })
   const isDefault = useWatch({ control, name: "isDefault" })
   const moduleId = useWatch({ control, name: "moduleId" })
@@ -307,6 +344,8 @@ export function AdminFeePlansManager() {
   const buyerRuleValueType = useWatch({ control, name: "buyerRule.valueType" })
   const organizerRuleIsActive = useWatch({ control, name: "organizerRule.isActive" })
   const buyerRuleIsActive = useWatch({ control, name: "buyerRule.isActive" })
+  const metadataIsActive = useWatch({ control: metadataControl, name: "isActive" })
+  const metadataIsDefault = useWatch({ control: metadataControl, name: "isDefault" })
 
   const moduleOptions = useMemo(
     () =>
@@ -358,6 +397,20 @@ export function AdminFeePlansManager() {
         shouldValidate: true,
       },
     )
+  }
+
+  function trackTrashClick(payload: {
+    kind: "module" | "organizer"
+    planUniqueId: string
+    label: string
+    moduleId?: number
+    organizerUniqueId?: string
+  }) {
+    if (typeof window === "undefined") {
+      return
+    }
+
+    window.dispatchEvent(new CustomEvent("admin-revenue-plans:trash-click", { detail: payload }))
   }
 
   function handleRuleValueChange(
@@ -509,6 +562,35 @@ export function AdminFeePlansManager() {
     },
   })
 
+  const metadataMutation = useMutation({
+    mutationFn: async (values: AdminRevenuePlanMetadataFormValues) => {
+      if (!editingMetadataPlan?.uniqueId) {
+        return
+      }
+
+      const payload: AdminRevenuePlanMetadataInput = {
+        name: values.name.trim(),
+        label: values.label.trim(),
+        isDefault: values.isDefault,
+        isActive: values.isActive,
+      }
+
+      await updateAdminRevenuePlanMetadata(editingMetadataPlan.uniqueId, payload)
+    },
+    onSuccess: () => {
+      setBanner({ type: "success", message: "Admin revenue plan updated." })
+      setEditingMetadataPlan(null)
+      setIsPlanDialogOpen(false)
+      resetMetadata(EMPTY_METADATA_FORM_VALUES)
+    },
+    onError: () => {
+      setBanner(null)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-revenue-plans"] })
+    },
+  })
+
   const mapMutation = useMutation({
     mutationFn: ({ uniqueId, organizerUniqueId }: { uniqueId: string; organizerUniqueId: string }) =>
       assignAdminRevenuePlanOrganizer(uniqueId, organizerUniqueId),
@@ -516,6 +598,7 @@ export function AdminFeePlansManager() {
       setBanner({ type: "success", message: "Revenue plan assigned to organizer." })
       setMappingPlan(null)
       setIsMapDialogOpen(false)
+      setSelectedMappingOrganizerUniqueId("")
     },
     onError: () => {
       setBanner(null)
@@ -560,10 +643,17 @@ export function AdminFeePlansManager() {
     mapMutation.reset()
     unmapOrganizerMutation.reset()
     unmapModuleMutation.reset()
+    setPendingRemoval(null)
     setOrganizerSearchValue("")
+    setSelectedMappingOrganizerUniqueId("")
     setOrganizerRuleValueInput("")
     setBuyerRuleValueInput("")
     setIsModuleLocked(false)
+  }
+
+  function resetPlanDialogState() {
+    setBanner(null)
+    metadataMutation.reset()
   }
 
   function openCreateDialog() {
@@ -575,7 +665,19 @@ export function AdminFeePlansManager() {
     setIsDialogOpen(true)
   }
 
-  function openEditDialog(plan: AdminRevenuePlan) {
+  function openPlanEditDialog(plan: AdminRevenuePlan) {
+    resetPlanDialogState()
+    setEditingMetadataPlan(plan)
+    resetMetadata({
+      name: plan.name,
+      label: plan.label,
+      isDefault: plan.isDefault,
+      isActive: plan.isActive,
+    })
+    setIsPlanDialogOpen(true)
+  }
+
+  function openModuleDialog(plan: AdminRevenuePlan) {
     resetDialogState()
     setEditingPlan(plan)
     setIsModuleLocked(true)
@@ -636,20 +738,25 @@ export function AdminFeePlansManager() {
     setIsDialogOpen(true)
   }
 
-  async function handleEditPlan(plan: AdminRevenuePlan, moduleId?: number) {
+  async function handleEditModule(plan: AdminRevenuePlan, moduleId?: number) {
     resetDialogState()
 
     try {
       const detail = await fetchAdminRevenuePlan(plan.uniqueId, moduleId ?? plan.moduleId)
-      openEditDialog(detail)
+      openModuleDialog(detail)
     } catch (error) {
       setBanner({ type: "error", message: extractApiError(error) })
     }
   }
 
+  async function handleSaveMetadata(values: AdminRevenuePlanMetadataFormValues) {
+    await metadataMutation.mutateAsync(values)
+  }
+
   function openMapDialog(plan: AdminRevenuePlan) {
     resetDialogState()
     setMappingPlan(plan)
+    setSelectedMappingOrganizerUniqueId("")
     setIsMapDialogOpen(true)
   }
 
@@ -659,6 +766,7 @@ export function AdminFeePlansManager() {
 
   const isBusy = saveMutation.isPending || mapMutation.isPending || unmapOrganizerMutation.isPending || unmapModuleMutation.isPending
   const saveError = saveMutation.error
+  const metadataSaveError = metadataMutation.error
   const mapError = mapMutation.error
   const plans = plansQuery.data?.items ?? []
   const totalPlans = plansQuery.data?.total ?? 0
@@ -669,6 +777,27 @@ export function AdminFeePlansManager() {
     [planPage, totalPlanPages],
   )
   const organizerNames: AdminRevenuePlanOrganizer[] = organizerNamesQuery.data ?? []
+  const isModuleDialog = Boolean(editingPlan)
+
+  async function confirmPendingRemoval() {
+    if (!pendingRemoval) {
+      return
+    }
+
+    if (pendingRemoval.kind === "module") {
+      await unmapModuleMutation.mutateAsync({
+        uniqueId: pendingRemoval.planUniqueId,
+        moduleId: pendingRemoval.moduleId,
+      })
+    } else {
+      await unmapOrganizerMutation.mutateAsync({
+        uniqueId: pendingRemoval.planUniqueId,
+        organizerUniqueId: pendingRemoval.organizerUniqueId,
+      })
+    }
+
+    setPendingRemoval(null)
+  }
 
   function openOrganizerNamesDialog(plan: AdminRevenuePlan) {
     setOrganizerNamesPlan(plan)
@@ -878,6 +1007,20 @@ export function AdminFeePlansManager() {
                                 p={1}
                               >
                                 <Menu.Item
+                                  value={`edit-${plan.uniqueId}`}
+                                  onClick={() => openPlanEditDialog(plan)}
+                                  borderRadius="10px"
+                                  fontSize="sm"
+                                  fontWeight="600"
+                                  color="gray.700"
+                                  px={3}
+                                  py={2}
+                                  cursor="pointer"
+                                >
+                                  <PencilLine size={14} />
+                                  Edit
+                                </Menu.Item>
+                                <Menu.Item
                                   value={`add-module-${plan.uniqueId}`}
                                   onClick={() => openAddModuleDialog(plan)}
                                   borderRadius="10px"
@@ -929,13 +1072,13 @@ export function AdminFeePlansManager() {
                                 const moduleId = moduleIds[index]
 
                                 return (
-                                  <Box key={`${plan.uniqueId}-${moduleId ?? moduleName}-${index}`} position="relative" display="inline-flex">
+                                  <Box key={`${plan.uniqueId}-${moduleId ?? moduleName}-${index}`} display="inline-flex">
                                     <Button
                                       type="button"
                                       variant="subtle"
                                       onClick={() => {
                                         if (moduleId) {
-                                          void handleEditPlan(plan, moduleId)
+                                          void handleEditModule(plan, moduleId)
                                         }
                                       }}
                                       display="inline-flex"
@@ -960,42 +1103,44 @@ export function AdminFeePlansManager() {
                                       disabled={!moduleId || unmapModuleMutation.isPending}
                                       aria-label={moduleId ? `Edit ${moduleName} module` : moduleName}
                                       title={moduleName}
-                                    >
+                                      >
                                       {moduleName}
                                       {moduleId ? <PencilLine size={11} aria-hidden="true" /> : null}
-                                    </Button>
-                                    {moduleId ? (
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        aria-label={`Remove ${moduleName} module`}
-                                        title={`Remove ${moduleName} module`}
-                                        onClick={() => {
-                                          if (!plan.uniqueId) {
-                                            return
-                                          }
+                                      {moduleId ? (
+                                        <Text
+                                          as="span"
+                                          display="inline-flex"
+                                          alignItems="center"
+                                          justifyContent="center"
+                                          ml={1}
+                                          color="red.500"
+                                          aria-label={`Remove ${moduleName} module`}
+                                          title={`Remove ${moduleName} module`}
+                                          cursor="pointer"
+                                          onClick={(event) => {
+                                            event.stopPropagation()
+                                            if (!plan.uniqueId) {
+                                              return
+                                            }
 
-                                          void unmapModuleMutation.mutateAsync({ uniqueId: plan.uniqueId, moduleId })
-                                        }}
-                                        position="absolute"
-                                        top="-6px"
-                                        right="-6px"
-                                        h="18px"
-                                        w="18px"
-                                        minW="18px"
-                                        p={0}
-                                        borderRadius="full"
-                                        bg="white"
-                                        border="1px solid"
-                                        borderColor="gray.200"
-                                        color="gray.500"
-                                        _hover={{ bg: "red.50", color: "red.500", borderColor: "red.200" }}
-                                        cursor="pointer"
-                                        loading={unmapModuleMutation.isPending}
-                                      >
-                                        <X size={10} />
-                                      </Button>
-                                    ) : null}
+                                            trackTrashClick({
+                                              kind: "module",
+                                              planUniqueId: plan.uniqueId,
+                                              moduleId,
+                                              label: moduleName,
+                                            })
+                                            setPendingRemoval({
+                                              kind: "module",
+                                              planUniqueId: plan.uniqueId,
+                                              moduleId,
+                                              label: moduleName,
+                                            })
+                                          }}
+                                        >
+                                          <Trash2 size={11} />
+                                        </Text>
+                                      ) : null}
+                                    </Button>
                                   </Box>
                                 )
                               })}
@@ -1072,19 +1217,21 @@ export function AdminFeePlansManager() {
                               <CheckCircle2 size={18} strokeWidth={2.4} />
                             </Box>
                           ) : (
-                            <Badge
-                              colorPalette="blue"
-                              variant="subtle"
+                            <Box
+                              display="inline-flex"
+                              alignItems="center"
+                              justifyContent="center"
+                              boxSize="32px"
                               borderRadius="999px"
-                              px={3}
-                              py={1}
-                              fontSize="10px"
-                              fontWeight="800"
-                              textTransform="uppercase"
-                              letterSpacing="0.08em"
+                              bg="gray.100"
+                              color="gray.400"
+                              border="1px solid"
+                              borderColor="gray.200"
+                              aria-label="Not default"
+                              title="Not default"
                             >
-                              {plan.sourceType}
-                            </Badge>
+                              <XCircle size={18} strokeWidth={2.4} />
+                            </Box>
                           )}
                         </Flex>
                       </Table.Cell>
@@ -1169,7 +1316,7 @@ export function AdminFeePlansManager() {
               ) : (
                 <Flex wrap="wrap" gap={2}>
                   {organizerNames.map((organizer) => (
-                    <Box key={organizer.uniqueId} position="relative" display="inline-flex">
+                    <Box key={organizer.uniqueId} display="inline-flex">
                       <Badge
                         colorPalette="gray"
                         variant="subtle"
@@ -1181,43 +1328,41 @@ export function AdminFeePlansManager() {
                         textTransform="uppercase"
                         letterSpacing="0.08em"
                         w="fit-content"
-                        pr={7}
                       >
                         {organizer.name}
-                      </Badge>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        aria-label={`Remove organizer ${organizer.name}`}
-                        title={`Remove organizer ${organizer.name}`}
-                        onClick={async () => {
-                          if (!organizerNamesPlan?.uniqueId) {
-                            return
-                          }
+                        <Text
+                          as="span"
+                          display="inline-flex"
+                          alignItems="center"
+                          justifyContent="center"
+                          ml={1}
+                          color="red.500"
+                          aria-label={`Remove organizer ${organizer.name}`}
+                          title={`Remove organizer ${organizer.name}`}
+                          cursor="pointer"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            if (!organizerNamesPlan?.uniqueId) {
+                              return
+                            }
 
-                          await unmapOrganizerMutation.mutateAsync({
-                            uniqueId: organizerNamesPlan.uniqueId,
-                            organizerUniqueId: organizer.uniqueId,
-                          })
-                        }}
-                        position="absolute"
-                        top="-6px"
-                        right="-6px"
-                        h="18px"
-                        w="18px"
-                        minW="18px"
-                        p={0}
-                        borderRadius="full"
-                        bg="white"
-                        border="1px solid"
-                        borderColor="gray.200"
-                        color="gray.500"
-                        _hover={{ bg: "red.50", color: "red.500", borderColor: "red.200" }}
-                        cursor="pointer"
-                        loading={unmapOrganizerMutation.isPending}
-                      >
-                        <X size={10} />
-                      </Button>
+                            trackTrashClick({
+                              kind: "organizer",
+                              planUniqueId: organizerNamesPlan.uniqueId,
+                              organizerUniqueId: organizer.uniqueId,
+                              label: organizer.name,
+                            })
+                            setPendingRemoval({
+                              kind: "organizer",
+                              planUniqueId: organizerNamesPlan.uniqueId,
+                              organizerUniqueId: organizer.uniqueId,
+                              label: organizer.name,
+                            })
+                          }}
+                        >
+                          <Trash2 size={11} />
+                        </Text>
+                      </Badge>
                     </Box>
                   ))}
                 </Flex>
@@ -1304,10 +1449,12 @@ export function AdminFeePlansManager() {
               <Flex align="flex-start" justify="space-between" gap={4}>
                 <Box>
                   <Text fontSize="lg" fontWeight="800" color="gray.900">
-                    {editingPlan ? "Edit revenue plan" : "Add revenue plan"}
+                    {isModuleDialog ? (isModuleLocked ? "Edit module" : "Add module") : "Add revenue plan"}
                   </Text>
                   <Text fontSize="sm" color="gray.600">
-                    Define the module charge structure, then map it to organizers when you want the plan to override the default fallback.
+                    {isModuleDialog
+                      ? "Keep the plan identity fixed, then choose the module and charge rules."
+                      : "Create a new plan shell before adding modules and organizer mappings."}
                   </Text>
                 </Box>
 
@@ -1322,13 +1469,33 @@ export function AdminFeePlansManager() {
                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                   <Field.Root w="full" invalid={Boolean(errors.name)}>
                     <RequiredFieldLabel>Name</RequiredFieldLabel>
-                    <Input w="full" {...register("name")} minH="11" borderRadius="14px" px={4} placeholder="Stripe checkout plan" />
+                    <Input
+                      w="full"
+                      {...register("name")}
+                      minH="11"
+                      borderRadius="14px"
+                      px={4}
+                      placeholder="Stripe checkout plan"
+                      readOnly={isModuleDialog}
+                      cursor={isModuleDialog ? "not-allowed" : "text"}
+                      bg={isModuleDialog ? "gray.50" : "white"}
+                    />
                     {errors.name ? <Field.ErrorText>{errors.name.message}</Field.ErrorText> : null}
                   </Field.Root>
 
                   <Field.Root w="full" invalid={Boolean(errors.label)}>
                     <RequiredFieldLabel>Display Text</RequiredFieldLabel>
-                    <Input w="full" {...register("label")} minH="11" borderRadius="14px" px={4} placeholder="Checkout processing" />
+                    <Input
+                      w="full"
+                      {...register("label")}
+                      minH="11"
+                      borderRadius="14px"
+                      px={4}
+                      placeholder="Checkout processing"
+                      readOnly={isModuleDialog}
+                      cursor={isModuleDialog ? "not-allowed" : "text"}
+                      bg={isModuleDialog ? "gray.50" : "white"}
+                    />
                     {errors.label ? <Field.ErrorText>{errors.label.message}</Field.ErrorText> : null}
                   </Field.Root>
                 </SimpleGrid>
@@ -1679,10 +1846,260 @@ export function AdminFeePlansManager() {
                     color="white"
                     style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
                   >
-                    {editingPlan ? "Update plan" : "Save plan"}
+                    {editingPlan ? (isModuleLocked ? "Update module" : "Add module") : "Save plan"}
                   </Button>
                 </Flex>
               </form>
+            </Dialog.Body>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+
+      <Dialog.Root
+        open={isPlanDialogOpen}
+        onOpenChange={(details) => {
+          setIsPlanDialogOpen(details.open)
+          if (!details.open) {
+            setEditingMetadataPlan(null)
+            resetMetadata(EMPTY_METADATA_FORM_VALUES)
+            resetPlanDialogState()
+          }
+        }}
+        size="md"
+      >
+        <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
+        <Dialog.Positioner>
+          <Dialog.Content
+            bg="white"
+            borderRadius={{ base: 0, md: "24px" }}
+            maxW={{ base: "100vw", md: "560px" }}
+            maxH={{ base: "100dvh", md: "90vh" }}
+            m={{ base: 0, md: "auto" }}
+            overflow="hidden"
+            display="flex"
+            flexDirection="column"
+          >
+            <Box px={6} pt={6} pb={4} borderBottom="1px solid" borderColor="gray.200">
+              <Flex align="flex-start" justify="space-between" gap={4}>
+                <Box>
+                  <Text fontSize="lg" fontWeight="800" color="gray.900">
+                    Edit revenue plan
+                  </Text>
+                  <Text fontSize="sm" color="gray.600">
+                    Update the plan identity and status without touching module-specific charge rules.
+                  </Text>
+                </Box>
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton aria-label="Close plan modal" onClick={() => setIsPlanDialogOpen(false)} />
+                </Dialog.CloseTrigger>
+              </Flex>
+            </Box>
+
+            <Dialog.Body px={6} py={6} overflowY="auto">
+              <form
+                onSubmit={handleMetadataSubmit(handleSaveMetadata)}
+                style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
+              >
+                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                  <Field.Root w="full" invalid={Boolean(metadataErrors.name)}>
+                    <RequiredFieldLabel>Name</RequiredFieldLabel>
+                    <Input
+                      w="full"
+                      {...registerMetadata("name")}
+                      minH="11"
+                      borderRadius="14px"
+                      px={4}
+                      placeholder="Stripe checkout plan"
+                    />
+                    {metadataErrors.name ? <Field.ErrorText>{metadataErrors.name.message}</Field.ErrorText> : null}
+                  </Field.Root>
+
+                  <Field.Root w="full" invalid={Boolean(metadataErrors.label)}>
+                    <RequiredFieldLabel>Display Text</RequiredFieldLabel>
+                    <Input
+                      w="full"
+                      {...registerMetadata("label")}
+                      minH="11"
+                      borderRadius="14px"
+                      px={4}
+                      placeholder="Checkout processing"
+                    />
+                    {metadataErrors.label ? <Field.ErrorText>{metadataErrors.label.message}</Field.ErrorText> : null}
+                  </Field.Root>
+                </SimpleGrid>
+
+                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                  <Field.Root w="full">
+                    <Box
+                      w="full"
+                      borderRadius="18px"
+                      border="1px solid"
+                      borderColor="border.subtle"
+                      bg="app.bg"
+                      px={4}
+                      py={4}
+                    >
+                      <Flex align="center" justify="space-between" gap={4}>
+                        <Box>
+                          <Text fontSize="sm" fontWeight="700" color="text.primary">
+                            Is Default
+                          </Text>
+                        </Box>
+                        <Switch.Root
+                          checked={metadataIsDefault}
+                          colorPalette="brand"
+                          onCheckedChange={(details) => setMetadataValue("isDefault", details.checked, { shouldDirty: true })}
+                        >
+                          <Switch.HiddenInput />
+                          <Switch.Control />
+                        </Switch.Root>
+                      </Flex>
+                    </Box>
+                  </Field.Root>
+
+                  <Field.Root w="full">
+                    <Box
+                      w="full"
+                      borderRadius="18px"
+                      border="1px solid"
+                      borderColor="border.subtle"
+                      bg="app.bg"
+                      px={4}
+                      py={4}
+                    >
+                      <Flex align="center" justify="space-between" gap={4}>
+                        <Box>
+                          <Text fontSize="sm" fontWeight="700" color="text.primary">
+                            Active
+                          </Text>
+                        </Box>
+                        <Switch.Root
+                          checked={metadataIsActive}
+                          colorPalette="brand"
+                          onCheckedChange={(details) => setMetadataValue("isActive", details.checked, { shouldDirty: true })}
+                        >
+                          <Switch.HiddenInput />
+                          <Switch.Control />
+                        </Switch.Root>
+                      </Flex>
+                    </Box>
+                  </Field.Root>
+                </SimpleGrid>
+
+                {metadataSaveError ? (
+                  <Box p={4} borderRadius="16px" border="1px solid" borderColor="red.200" bg="red.50">
+                    <Text fontSize="sm" fontWeight="700" color="red.700">
+                      {extractApiError(metadataSaveError)}
+                    </Text>
+                  </Box>
+                ) : null}
+
+                <Flex
+                  pt={5}
+                  borderTop="1px solid"
+                  borderColor="gray.200"
+                  align="center"
+                  justify="space-between"
+                  gap={3}
+                  flexWrap="wrap"
+                >
+                  <Button
+                    variant="outline"
+                    colorPalette="gray"
+                    borderRadius="14px"
+                    h="44px"
+                    px={6}
+                    minW={{ base: "full", md: "140px" }}
+                    onClick={() => setIsPlanDialogOpen(false)}
+                  >
+                    Close
+                  </Button>
+
+                  <Button
+                    borderRadius="14px"
+                    h="44px"
+                    px={6}
+                    minW={{ base: "full", md: "160px" }}
+                    loading={metadataMutation.isPending}
+                    loadingText="Saving..."
+                    type="submit"
+                    color="white"
+                    style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+                  >
+                    Update plan
+                  </Button>
+                </Flex>
+              </form>
+            </Dialog.Body>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+
+      <Dialog.Root
+        open={Boolean(pendingRemoval)}
+        onOpenChange={(details) => {
+          if (!details.open) {
+            setPendingRemoval(null)
+          }
+        }}
+        size="md"
+      >
+        <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
+        <Dialog.Positioner>
+          <Dialog.Content
+            bg="white"
+            borderRadius={{ base: 0, md: "24px" }}
+            maxW={{ base: "100vw", md: "520px" }}
+            maxH={{ base: "100dvh", md: "90vh" }}
+            m={{ base: 0, md: "auto" }}
+            overflow="hidden"
+            display="flex"
+            flexDirection="column"
+          >
+            <Box px={6} pt={6} pb={4} borderBottom="1px solid" borderColor="gray.200">
+              <Flex align="flex-start" justify="space-between" gap={4}>
+                <Box>
+                  <Text fontSize="lg" fontWeight="800" color="gray.900">
+                    Confirm removal
+                  </Text>
+                  <Text fontSize="sm" color="gray.600">
+                    This action will remove the selected item from the plan.
+                  </Text>
+                </Box>
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton aria-label="Close removal dialog" onClick={() => setPendingRemoval(null)} />
+                </Dialog.CloseTrigger>
+              </Flex>
+            </Box>
+
+            <Dialog.Body px={6} py={6}>
+              <Stack gap={4}>
+                <Box borderRadius="16px" border="1px solid" borderColor="border.subtle" bg="app.bg" p={4}>
+                  <Text fontSize="sm" fontWeight="700" color="text.primary">
+                    {pendingRemoval?.kind === "module" ? "Remove module" : "Remove organizer"}
+                  </Text>
+                  <Text fontSize="sm" color="text.secondary" mt={1}>
+                    {pendingRemoval?.label ?? ""}
+                  </Text>
+                </Box>
+
+                <Flex gap={3} justify="flex-end" wrap="wrap">
+                  <Button variant="outline" colorPalette="gray" borderRadius="14px" h="44px" px={6} onClick={() => setPendingRemoval(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    colorPalette="red"
+                    borderRadius="14px"
+                    h="44px"
+                    px={6}
+                    loading={unmapOrganizerMutation.isPending || unmapModuleMutation.isPending}
+                    loadingText="Removing..."
+                    onClick={() => void confirmPendingRemoval()}
+                  >
+                    Remove
+                  </Button>
+                </Flex>
+              </Stack>
             </Dialog.Body>
           </Dialog.Content>
         </Dialog.Positioner>
@@ -1742,13 +2159,8 @@ export function AdminFeePlansManager() {
                   <RequiredFieldLabel>Organizer</RequiredFieldLabel>
                   <StyledSelect
                     options={organizerOptions}
-                    value=""
-                    onChange={async (value) => {
-                      if (!mappingPlan?.uniqueId || !value) {
-                        return
-                      }
-                      await mapMutation.mutateAsync({ uniqueId: mappingPlan.uniqueId, organizerUniqueId: value })
-                    }}
+                    value={selectedMappingOrganizerUniqueId}
+                    onChange={(value) => setSelectedMappingOrganizerUniqueId(value)}
                     placeholder={organizersQuery.isLoading ? "Loading organizers..." : "Select organizer"}
                     disabled={organizersQuery.isLoading || mapMutation.isPending}
                   />
@@ -1759,17 +2171,42 @@ export function AdminFeePlansManager() {
                   ) : null}
                 </Field.Root>
 
-                <Button
-                  variant="outline"
-                  colorPalette="gray"
-                  borderRadius="14px"
-                  h="44px"
-                  px={6}
-                  minW={{ base: "full", md: "140px" }}
-                  onClick={() => setIsMapDialogOpen(false)}
-                >
-                  Close
-                </Button>
+                <Flex gap={3} justify="flex-end" wrap="wrap">
+                  <Button
+                    variant="outline"
+                    colorPalette="gray"
+                    borderRadius="14px"
+                    h="44px"
+                    px={6}
+                    minW={{ base: "full", md: "140px" }}
+                    onClick={() => setIsMapDialogOpen(false)}
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    borderRadius="14px"
+                    h="44px"
+                    px={6}
+                    minW={{ base: "full", md: "160px" }}
+                    loading={mapMutation.isPending}
+                    loadingText="Saving..."
+                    disabled={!mappingPlan?.uniqueId || !selectedMappingOrganizerUniqueId}
+                    color="white"
+                    style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+                    onClick={async () => {
+                      if (!mappingPlan?.uniqueId || !selectedMappingOrganizerUniqueId) {
+                        return
+                      }
+
+                      await mapMutation.mutateAsync({
+                        uniqueId: mappingPlan.uniqueId,
+                        organizerUniqueId: selectedMappingOrganizerUniqueId,
+                      })
+                    }}
+                  >
+                    Save organizer
+                  </Button>
+                </Flex>
               </Stack>
             </Dialog.Body>
           </Dialog.Content>

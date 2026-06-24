@@ -114,6 +114,7 @@ export const API_ROUTES = {
   adminRevenuePlanOrganizers: (uniqueId: string) => `/api/admin/revenue-plans/${uniqueId}/organizers`,
   adminRevenuePlanCreate: "/api/admin/revenue-plans/create",
   adminRevenuePlanUpdate: (uniqueId: string) => `/api/admin/revenue-plans/${uniqueId}/update`,
+  adminRevenuePlanMetadataUpdate: (uniqueId: string) => `/api/admin/revenue-plans/${uniqueId}/metadata`,
   adminRevenuePlanAssignOrganizer: (uniqueId: string, organizerUniqueId: string) =>
     `/api/admin/revenue-plans/${uniqueId}/map/${organizerUniqueId}`,
   adminRevenuePlanUnassignOrganizer: (uniqueId: string, organizerUniqueId: string) =>

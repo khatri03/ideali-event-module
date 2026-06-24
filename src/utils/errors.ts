@@ -1,4 +1,5 @@
 import { isAxiosError } from "axios"
+import { ZodError } from "zod"
 
 interface ProblemDetails {
   title: string
@@ -7,6 +8,14 @@ interface ProblemDetails {
 }
 
 export function extractApiError(err: unknown): string {
+  if (err instanceof ZodError) {
+    return err.issues.map((issue) => issue.message).join(" ")
+  }
+
+  if (err instanceof Error) {
+    return err.message || "An unexpected error occurred."
+  }
+
   if (!isAxiosError(err)) return "An unexpected error occurred."
 
   const responseData = err.response?.data as
