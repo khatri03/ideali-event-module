@@ -39,11 +39,17 @@ const adminFeePlanRuleSchema = z.object({
   isActive: z.boolean().optional(),
 })
 
+const adminRevenuePlanScopeSchema = z.enum(["OrganizerSpecific", "Reusable", "Default"])
+
 const adminFeePlanSchema = z.object({
   Id: z.number().int().positive().optional(),
   id: z.number().int().positive().optional(),
   UniqueId: z.string().optional(),
   uniqueId: z.string().optional(),
+  OrganizerUniqueId: z.string().nullable().optional(),
+  organizerUniqueId: z.string().nullable().optional(),
+  OrganizerName: z.string().nullable().optional(),
+  organizerName: z.string().nullable().optional(),
   ModuleId: z.number().int().nonnegative().optional(),
   moduleId: z.number().int().nonnegative().optional(),
   ModuleName: z.string().optional(),
@@ -52,6 +58,8 @@ const adminFeePlanSchema = z.object({
   name: z.string().optional(),
   Label: z.string().optional(),
   label: z.string().optional(),
+  Scope: adminRevenuePlanScopeSchema.optional(),
+  scope: adminRevenuePlanScopeSchema.optional(),
   IsDefault: z.boolean().optional(),
   isDefault: z.boolean().optional(),
   IsActive: z.boolean().optional(),
@@ -136,16 +144,18 @@ const adminRevenuePlanInputSchema = z.object({
   name: z.string().trim().min(1).max(80),
   label: z.string().trim().min(1).max(120),
   moduleId: z.coerce.number().int().positive(),
-  isDefault: z.boolean(),
+  scope: adminRevenuePlanScopeSchema,
+  organizerUniqueId: z.string().uuid().optional().nullable(),
   isActive: z.boolean(),
-  organizerUniqueIds: z.array(z.string()),
+  organizerUniqueIds: z.array(z.string()).default([]),
   rules: z.array(adminFeePlanRuleInputSchema).min(1),
 })
 
 const adminRevenuePlanMetadataInputSchema = z.object({
   name: z.string().trim().min(1).max(80),
   label: z.string().trim().min(1).max(120),
-  isDefault: z.boolean(),
+  scope: adminRevenuePlanScopeSchema,
+  organizerUniqueId: z.string().uuid().optional().nullable(),
   isActive: z.boolean(),
 })
 
@@ -164,6 +174,7 @@ export type AdminRevenuePlanInput = z.infer<typeof adminRevenuePlanInputSchema>
 export type AdminRevenuePlanMetadataInput = z.infer<typeof adminRevenuePlanMetadataInputSchema>
 export type AdminRevenuePlanModuleInput = z.infer<typeof adminRevenuePlanModuleInputSchema>
 export type AdminRevenuePlanAssignOrganizersInput = z.infer<typeof adminRevenuePlanAssignOrganizersInputSchema>
+export type AdminRevenuePlanScope = z.infer<typeof adminRevenuePlanScopeSchema>
 
 export interface AdminRevenuePlanRule {
   target: "Organizer" | "Buyer"
@@ -175,12 +186,15 @@ export interface AdminRevenuePlanRule {
 export interface AdminRevenuePlan {
   id: number
   uniqueId: string
+  organizerUniqueId?: string | null
+  organizerName?: string | null
   moduleId: number
   moduleName: string
   moduleIds: number[]
   moduleNames: string[]
   name: string
   label: string
+  scope: "OrganizerSpecific" | "Reusable" | "Default"
   isDefault: boolean
   isActive: boolean
   sourceType: string
@@ -262,15 +276,18 @@ function normalizePlan(plan: z.infer<typeof adminFeePlanSchema>): AdminRevenuePl
   return {
     id: plan.Id ?? plan.id ?? 0,
     uniqueId: plan.UniqueId ?? plan.uniqueId ?? "",
+    organizerUniqueId: plan.OrganizerUniqueId ?? plan.organizerUniqueId ?? null,
+    organizerName: plan.OrganizerName ?? plan.organizerName ?? null,
     moduleId: moduleIds[0] ?? plan.ModuleId ?? plan.moduleId ?? 0,
     moduleName: moduleNames[0] ?? plan.ModuleName ?? plan.moduleName ?? "",
     moduleIds,
     moduleNames,
     name: plan.Name ?? plan.name ?? "",
     label: plan.Label ?? plan.label ?? "",
+    scope: plan.Scope ?? plan.scope ?? "Reusable",
     isDefault: plan.IsDefault ?? plan.isDefault ?? false,
     isActive: plan.IsActive ?? plan.isActive ?? false,
-    sourceType: plan.SourceType ?? plan.sourceType ?? "Global",
+    sourceType: plan.SourceType ?? plan.sourceType ?? (plan.Scope ?? plan.scope ?? "Reusable"),
     assignedOrganizerCount:
       plan.AssignedOrganizerCount ??
       plan.assignedOrganizerCount ??

@@ -24,7 +24,7 @@ import {
   Table,
   Text,
 } from "@chakra-ui/react"
-import { Check, CheckCircle2, Layers3, MoreHorizontal, PencilLine, Plus, RotateCcw, Trash2, UserRound, XCircle } from "lucide-react"
+import { Check, CheckCircle2, Layers3, MoreHorizontal, PencilLine, Plus, RotateCcw, Trash2, UserRound } from "lucide-react"
 import ReactSelect, {
   components,
   type InputActionMeta,
@@ -53,6 +53,7 @@ import {
   type AdminRevenuePlanModuleInput,
   type AdminRevenuePlanMetadataInput,
   type AdminOrganizerOption,
+  type AdminRevenuePlanScope,
   updateAdminRevenuePlan,
 } from "@/api/adminFeePlans"
 
@@ -89,18 +90,35 @@ const adminRevenuePlanSchema = z.object({
   name: z.string().trim().min(1, "Name is required.").max(80, "Maximum 80 characters allowed."),
   label: z.string().trim().min(1, "Display text is required.").max(120, "Maximum 120 characters allowed."),
   moduleId: z.number().int().positive("Module is required."),
-  isDefault: z.boolean(),
+  scope: z.enum(["OrganizerSpecific", "Reusable", "Default"]),
+  organizerUniqueId: z.string().uuid().nullable().optional(),
   isActive: z.boolean(),
-  organizerUniqueIds: z.array(z.string()),
   organizerRule: ruleSchema,
   buyerRule: ruleSchema,
+}).superRefine((values, ctx) => {
+  if (values.scope === "OrganizerSpecific" && !values.organizerUniqueId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["organizerUniqueId"],
+      message: "Organizer is required for organizer-specific plans.",
+    })
+  }
 })
 
 const adminRevenuePlanMetadataSchema = z.object({
   name: z.string().trim().min(1, "Name is required.").max(80, "Maximum 80 characters allowed."),
   label: z.string().trim().min(1, "Display text is required.").max(120, "Maximum 120 characters allowed."),
-  isDefault: z.boolean(),
+  scope: z.enum(["OrganizerSpecific", "Reusable", "Default"]),
+  organizerUniqueId: z.string().uuid().nullable().optional(),
   isActive: z.boolean(),
+}).superRefine((values, ctx) => {
+  if (values.scope === "OrganizerSpecific" && !values.organizerUniqueId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["organizerUniqueId"],
+      message: "Organizer is required for organizer-specific plans.",
+    })
+  }
 })
 
 type AdminRevenuePlanFormValues = z.infer<typeof adminRevenuePlanSchema>
@@ -115,9 +133,9 @@ const EMPTY_FORM_VALUES: AdminRevenuePlanFormValues = {
   name: "",
   label: "",
   moduleId: 0,
-  isDefault: false,
+  scope: "Reusable",
+  organizerUniqueId: null,
   isActive: true,
-  organizerUniqueIds: [],
   organizerRule: {
     target: "Organizer",
     valueType: "Percent",
@@ -135,7 +153,8 @@ const EMPTY_FORM_VALUES: AdminRevenuePlanFormValues = {
 const EMPTY_METADATA_FORM_VALUES: AdminRevenuePlanMetadataFormValues = {
   name: "",
   label: "",
-  isDefault: true,
+  scope: "Reusable",
+  organizerUniqueId: null,
   isActive: true,
 }
 
@@ -306,7 +325,6 @@ export function AdminFeePlansManager() {
     | null
   >(null)
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null)
-  const [organizerSearchValue, setOrganizerSearchValue] = useState("")
   const [mappingOrganizerSearchValue, setMappingOrganizerSearchValue] = useState("")
   const [organizerRuleValueInput, setOrganizerRuleValueInput] = useState("")
   const [buyerRuleValueInput, setBuyerRuleValueInput] = useState("")
@@ -369,15 +387,16 @@ export function AdminFeePlansManager() {
   })
 
   const isActive = useWatch({ control, name: "isActive" })
-  const isDefault = useWatch({ control, name: "isDefault" })
+  const scope = useWatch({ control, name: "scope" })
+  const organizerUniqueId = useWatch({ control, name: "organizerUniqueId" })
   const moduleId = useWatch({ control, name: "moduleId" })
-  const organizerUniqueIds = useWatch({ control, name: "organizerUniqueIds" })
   const organizerRuleValueType = useWatch({ control, name: "organizerRule.valueType" })
   const buyerRuleValueType = useWatch({ control, name: "buyerRule.valueType" })
   const organizerRuleIsActive = useWatch({ control, name: "organizerRule.isActive" })
   const buyerRuleIsActive = useWatch({ control, name: "buyerRule.isActive" })
   const metadataIsActive = useWatch({ control: metadataControl, name: "isActive" })
-  const metadataIsDefault = useWatch({ control: metadataControl, name: "isDefault" })
+  const metadataScope = useWatch({ control: metadataControl, name: "scope" })
+  const metadataOrganizerUniqueId = useWatch({ control: metadataControl, name: "organizerUniqueId" })
 
   const moduleOptions = useMemo(
     () =>
@@ -397,9 +416,13 @@ export function AdminFeePlansManager() {
     [organizersQuery.data]
   )
 
-  const selectedOrganizerOptions = useMemo(
-    () => organizerOptions.filter((option) => organizerUniqueIds.includes(option.value)),
-    [organizerOptions, organizerUniqueIds],
+  const scopeOptions = useMemo(
+    () => [
+      { label: "Organizer Specific", value: "OrganizerSpecific" },
+      { label: "Reusable", value: "Reusable" },
+      { label: "Default", value: "Default" },
+    ],
+    [],
   )
 
   const assignedOrganizerIds = useMemo(
@@ -413,15 +436,30 @@ export function AdminFeePlansManager() {
   )
 
   useEffect(() => {
-    if (!isDefault || organizerUniqueIds.length === 0) {
+    if (scope === "OrganizerSpecific" && organizerUniqueId) {
       return
     }
 
-    setValue("organizerUniqueIds", [], {
-      shouldDirty: true,
-      shouldValidate: true,
-    })
-  }, [isDefault, organizerUniqueIds.length, setValue])
+    if (scope !== "OrganizerSpecific" && organizerUniqueId) {
+      setValue("organizerUniqueId", null, {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
+    }
+  }, [organizerUniqueId, scope, setValue])
+
+  useEffect(() => {
+    if (metadataScope === "OrganizerSpecific" && metadataOrganizerUniqueId) {
+      return
+    }
+
+    if (metadataScope !== "OrganizerSpecific" && metadataOrganizerUniqueId) {
+      setMetadataValue("organizerUniqueId", null, {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
+    }
+  }, [metadataOrganizerUniqueId, metadataScope, setMetadataValue])
 
   function handleModuleChange(value: string) {
     setValue("moduleId", Number(value), {
@@ -430,30 +468,15 @@ export function AdminFeePlansManager() {
     })
   }
 
-  function handleOrganizerChange(values: MultiValue<OrganizerSelectOption>) {
-    setValue(
-      "organizerUniqueIds",
-      values.map((item) => item.value),
-      {
-        shouldDirty: true,
-        shouldValidate: true,
-      },
-    )
+  function handleOrganizerSelectChange(value: string) {
+    setValue("organizerUniqueId", value || null, {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
   }
 
   function handleMappingOrganizerChange(values: MultiValue<OrganizerSelectOption>) {
     setSelectedMappingOrganizerUniqueIds(values.map((item) => item.value))
-  }
-
-  function handleRemoveOrganizer(uniqueId: string) {
-    setValue(
-      "organizerUniqueIds",
-      organizerUniqueIds.filter((current) => current !== uniqueId),
-      {
-        shouldDirty: true,
-        shouldValidate: true,
-      },
-    )
   }
 
   function trackTrashClick(payload: {
@@ -518,6 +541,8 @@ export function AdminFeePlansManager() {
       formErrors.name?.message?.toString() ||
       formErrors.label?.message?.toString() ||
       formErrors.moduleId?.message?.toString() ||
+      formErrors.scope?.message?.toString() ||
+      formErrors.organizerUniqueId?.message?.toString() ||
       formErrors.buyerRule?.value?.message?.toString() ||
       formErrors.organizerRule?.value?.message?.toString() ||
       "Please fix the highlighted fields and try again."
@@ -533,15 +558,6 @@ export function AdminFeePlansManager() {
 
   const buyerRuleValueError = errors.buyerRule?.value?.message?.toString() ?? ""
   const organizerRuleValueError = errors.organizerRule?.value?.message?.toString() ?? ""
-
-  function handleOrganizerInputChange(nextValue: string, actionMeta: InputActionMeta) {
-    if (actionMeta.action === "input-change") {
-      setOrganizerSearchValue(nextValue)
-      return nextValue
-    }
-
-    return organizerSearchValue
-  }
 
   function handleMappingOrganizerInputChange(nextValue: string, actionMeta: InputActionMeta) {
     if (actionMeta.action === "input-change") {
@@ -619,9 +635,10 @@ export function AdminFeePlansManager() {
         name: values.name.trim(),
         label: values.label.trim(),
         moduleId: values.moduleId,
-        isDefault: values.isDefault,
+        scope: values.scope,
+        organizerUniqueId: values.organizerUniqueId ?? null,
         isActive: values.isActive,
-        organizerUniqueIds: values.organizerUniqueIds,
+        organizerUniqueIds: [],
         rules: [values.buyerRule, values.organizerRule],
       }
 
@@ -694,7 +711,8 @@ export function AdminFeePlansManager() {
       const payload: AdminRevenuePlanMetadataInput = {
         name: values.name.trim(),
         label: values.label.trim(),
-        isDefault: values.isDefault,
+        scope: values.scope,
+        organizerUniqueId: values.organizerUniqueId ?? null,
         isActive: values.isActive,
       }
 
@@ -784,7 +802,6 @@ export function AdminFeePlansManager() {
     unmapOrganizerMutation.reset()
     unmapModuleMutation.reset()
     setPendingRemoval(null)
-    setOrganizerSearchValue("")
     setMappingOrganizerSearchValue("")
     setSelectedMappingOrganizerUniqueIds([])
     setOrganizerRuleValueInput("")
@@ -812,7 +829,8 @@ export function AdminFeePlansManager() {
     resetMetadata({
       name: plan.name,
       label: plan.label,
-      isDefault: plan.isDefault,
+      scope: plan.scope,
+      organizerUniqueId: plan.organizerUniqueId ?? null,
       isActive: plan.isActive,
     })
     setIsPlanDialogOpen(true)
@@ -826,9 +844,9 @@ export function AdminFeePlansManager() {
       name: plan.name,
       label: plan.label,
       moduleId: plan.moduleId,
-      isDefault: plan.isDefault,
+      scope: plan.scope,
+      organizerUniqueId: plan.organizerUniqueId ?? null,
       isActive: plan.isActive,
-      organizerUniqueIds: plan.assignedOrganizerUniqueIds,
       buyerRule: getPlanRuleDefaults(plan, "Buyer", false),
       organizerRule: getPlanRuleDefaults(plan, "Organizer", true),
     })
@@ -858,9 +876,9 @@ export function AdminFeePlansManager() {
       name: plan.name,
       label: plan.label,
       moduleId: 0,
-      isDefault: plan.isDefault,
+      scope: plan.scope,
+      organizerUniqueId: plan.organizerUniqueId ?? null,
       isActive: plan.isActive,
-      organizerUniqueIds: [],
       buyerRule: {
         target: "Buyer",
         valueType: "Percent",
@@ -903,9 +921,9 @@ export function AdminFeePlansManager() {
   }
 
   function openMapDialog(plan: AdminRevenuePlan) {
-    if (plan.isDefault) {
+    if (plan.scope !== "Reusable") {
       toaster.create({
-        description: "Default plans cannot have organizer assignments.",
+        description: "Only reusable plans can have organizer assignments.",
         type: "error",
       })
       return
@@ -1112,7 +1130,7 @@ export function AdminFeePlansManager() {
                     Organizers
                   </Table.ColumnHeader>
                   <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
-                    Default
+                    Scope
                   </Table.ColumnHeader>
                   <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" px={4} py={3} textAlign="center">
                     Status
@@ -1152,14 +1170,28 @@ export function AdminFeePlansManager() {
                   plans.map((plan) => {
                     const modules = plan.moduleNames.length > 0 ? plan.moduleNames : plan.moduleName ? [plan.moduleName] : []
                     const moduleIds = plan.moduleIds.length > 0 ? plan.moduleIds : plan.moduleId > 0 ? [plan.moduleId] : []
-                    const organizerCount = plan.isDefault ? 0 : (plan.organizerCount ?? plan.assignedOrganizerCount)
-                    const organizerPills = plan.isDefault
+                    const isDefaultPlan = plan.scope === "Default"
+                    const isReusablePlan = plan.scope === "Reusable"
+                    const isOrganizerSpecificPlan = plan.scope === "OrganizerSpecific"
+                    const organizerCount = isDefaultPlan
+                      ? 0
+                      : isOrganizerSpecificPlan
+                        ? 1
+                        : (plan.organizerCount ?? plan.assignedOrganizerCount)
+                    const organizerPills = isDefaultPlan
                       ? []
-                      : plan.topOrganizerNames.slice(0, 3).map((organizerName, index) => ({
-                          name: organizerName,
-                          uniqueId: plan.topOrganizerUniqueIds[index] ?? "",
-                        }))
-                    const remainingOrganizerCount = plan.isDefault ? 0 : Math.max(organizerCount - organizerPills.length, 0)
+                      : isOrganizerSpecificPlan
+                        ? [
+                            {
+                              name: plan.organizerName ?? plan.topOrganizerNames[0] ?? "Organizer",
+                              uniqueId: plan.organizerUniqueId ?? plan.topOrganizerUniqueIds[0] ?? "",
+                            },
+                          ]
+                        : plan.topOrganizerNames.slice(0, 3).map((organizerName, index) => ({
+                            name: organizerName,
+                            uniqueId: plan.topOrganizerUniqueIds[index] ?? "",
+                          }))
+                    const remainingOrganizerCount = isReusablePlan ? Math.max(organizerCount - organizerPills.length, 0) : 0
 
                     return (
                       <Table.Row key={`${plan.uniqueId}-${plan.moduleId}`} _hover={{ bg: "app.bg" }} transition="background 0.15s">
@@ -1223,7 +1255,7 @@ export function AdminFeePlansManager() {
                                   <Plus size={14} />
                                   Add module
                                 </Menu.Item>
-                                {!plan.isDefault ? (
+                                {plan.scope === "Reusable" ? (
                                   <Menu.Item
                                     value={`assign-${plan.uniqueId}`}
                                     onClick={() => openMapDialog(plan)}
@@ -1368,10 +1400,9 @@ export function AdminFeePlansManager() {
                                   letterSpacing="0.08em"
                                 >
                                   <Text as="span">{organizer.name}</Text>
-                                  {organizer.uniqueId ? (
+                                  {isReusablePlan && organizer.uniqueId ? (
                                     <Box
                                       as="button"
-                                      type="button"
                                       display="inline-flex"
                                       alignItems="center"
                                       justifyContent="center"
@@ -1432,39 +1463,36 @@ export function AdminFeePlansManager() {
                       </Table.Cell>
                       <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} textAlign="center">
                         <Flex align="center" justify="center">
-                          {plan.isDefault ? (
-                            <Box
-                              display="inline-flex"
-                              alignItems="center"
-                              justifyContent="center"
-                              boxSize="32px"
-                              borderRadius="999px"
-                              bg="green.50"
-                              color="green.600"
-                              border="1px solid"
-                              borderColor="green.200"
-                              aria-label="Default plan"
-                              title="Default"
-                            >
-                              <CheckCircle2 size={18} strokeWidth={2.4} />
-                            </Box>
-                          ) : (
-                            <Box
-                              display="inline-flex"
-                              alignItems="center"
-                              justifyContent="center"
-                              boxSize="32px"
-                              borderRadius="999px"
-                              bg="gray.100"
-                              color="gray.400"
-                              border="1px solid"
-                              borderColor="gray.200"
-                              aria-label="Not default"
-                              title="Not default"
-                            >
-                              <XCircle size={18} strokeWidth={2.4} />
-                            </Box>
-                          )}
+                          <Badge
+                            colorPalette={
+                              plan.scope === "Default"
+                                ? "green"
+                                : plan.scope === "OrganizerSpecific"
+                                  ? "blue"
+                                  : "gray"
+                            }
+                            variant="subtle"
+                            borderRadius="999px"
+                            px={3}
+                            py={1}
+                            fontSize="10px"
+                            fontWeight="800"
+                            textTransform="uppercase"
+                            letterSpacing="0.08em"
+                          >
+                            <Flex align="center" gap={1.5}>
+                              {plan.scope === "Default" ? (
+                                <CheckCircle2 size={13} strokeWidth={2.4} />
+                              ) : plan.scope === "OrganizerSpecific" ? (
+                                <UserRound size={13} strokeWidth={2.4} />
+                              ) : (
+                                <Layers3 size={13} strokeWidth={2.4} />
+                              )}
+                              <Text as="span">
+                                {plan.scope === "OrganizerSpecific" ? "Organizer Specific" : plan.scope}
+                              </Text>
+                            </Flex>
+                          </Badge>
                         </Flex>
                       </Table.Cell>
                       <Table.Cell borderColor="border.subtle" px={4} py={4}>
@@ -1686,7 +1714,7 @@ export function AdminFeePlansManager() {
                   <Text fontSize="sm" color="gray.600">
                     {isModuleDialog
                       ? "Keep the plan identity fixed, then choose the module and charge rules."
-                      : "Create a new plan shell before adding modules and organizer mappings."}
+                      : "Create a new plan shell before adding modules and charge rules."}
                   </Text>
                 </Box>
 
@@ -1740,128 +1768,79 @@ export function AdminFeePlansManager() {
                   </Field.Root>
                 </SimpleGrid>
 
-                {!isModuleDialog ? (
-                  <>
-                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                      <Field.Root w="full">
-                        <Box
-                          w="full"
-                          borderRadius="18px"
-                          border="1px solid"
-                          borderColor="border.subtle"
-                          bg="app.bg"
-                          px={4}
-                          py={4}
-                        >
-                          <Flex align="center" justify="space-between" gap={4}>
-                            <Box>
-                              <Text fontSize="sm" fontWeight="700" color="text.primary">
-                                Is Default
-                              </Text>
-                            </Box>
-                            <Switch.Root
-                              checked={isDefault}
-                              colorPalette="brand"
-                              onCheckedChange={(details) => setValue("isDefault", details.checked, { shouldDirty: true })}
-                            >
-                              <Switch.HiddenInput />
-                              <Switch.Control />
-                            </Switch.Root>
-                          </Flex>
+                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                  <Field.Root w="full" invalid={Boolean(errors.scope)}>
+                    <Box
+                      w="full"
+                      borderRadius="18px"
+                      border="1px solid"
+                      borderColor="border.subtle"
+                      bg="app.bg"
+                      px={4}
+                      py={4}
+                    >
+                      <Flex align="center" justify="space-between" gap={4}>
+                        <Box>
+                          <Text fontSize="sm" fontWeight="700" color="text.primary">
+                            Scope
+                          </Text>
                         </Box>
-                      </Field.Root>
-
-                      <Field.Root w="full">
-                        <Box
-                          w="full"
-                          borderRadius="18px"
-                          border="1px solid"
-                          borderColor="border.subtle"
-                          bg="app.bg"
-                          px={4}
-                          py={4}
-                        >
-                          <Flex align="center" justify="space-between" gap={4}>
-                            <Box>
-                              <Text fontSize="sm" fontWeight="700" color="text.primary">
-                                Active
-                              </Text>
-                            </Box>
-                            <Switch.Root
-                              checked={isActive}
-                              colorPalette="brand"
-                              onCheckedChange={(details) => setValue("isActive", details.checked, { shouldDirty: true })}
-                            >
-                              <Switch.HiddenInput />
-                              <Switch.Control />
-                            </Switch.Root>
-                          </Flex>
+                        <Box minW="180px">
+                          <StyledSelect
+                            options={scopeOptions}
+                            value={scope}
+                            onChange={(value) => setValue("scope", value as AdminRevenuePlanScope, { shouldDirty: true, shouldValidate: true })}
+                            disabled={isModuleDialog}
+                            placeholder="Select scope"
+                          />
                         </Box>
-                      </Field.Root>
-                    </SimpleGrid>
+                      </Flex>
+                    </Box>
+                    {errors.scope ? <Field.ErrorText>{errors.scope.message?.toString()}</Field.ErrorText> : null}
+                  </Field.Root>
 
-                    <Field.Root w="full" opacity={isDefault ? 0.55 : 1}>
-                      <RequiredFieldLabel>Organizers</RequiredFieldLabel>
-                      <ReactSelect
-                        isMulti
-                        options={organizerOptions}
-                        value={selectedOrganizerOptions}
-                        onChange={handleOrganizerChange}
-                        placeholder={organizersQuery.isLoading ? "Loading organizers..." : "Select organizers"}
-                        inputValue={organizerSearchValue}
-                        onInputChange={handleOrganizerInputChange}
-                        closeMenuOnSelect={false}
-                        hideSelectedOptions={false}
-                        isClearable={false}
-                        isDisabled={organizersQuery.isLoading || isDefault}
-                        styles={{
-                          ...organizerMultiSelectStyles,
-                          control: (base, state) => ({
-                            ...organizerMultiSelectStyles.control(base, state),
-                            backgroundColor: isDefault ? "#F8FAFC" : organizerMultiSelectStyles.control(base, state).backgroundColor,
-                          }),
-                        }}
-                        controlShouldRenderValue={false}
-                        blurInputOnSelect={false}
-                        menuShouldScrollIntoView={false}
-                        components={{ Option: OrganizerOption }}
-                      />
-                      {selectedOrganizerOptions.length > 0 ? (
-                        <Flex wrap="wrap" gap={2} mt={3}>
-                          {selectedOrganizerOptions.map((option) => (
-                            <Box
-                              key={option.value}
-                              as="button"
-                              type="button"
-                              onClick={() => handleRemoveOrganizer(option.value)}
-                              display="inline-flex"
-                              alignItems="center"
-                              gap={2}
-                              borderRadius="999px"
-                              border="1px solid"
-                              borderColor={isDefault ? "gray.200" : "rgba(117, 81, 255, 0.18)"}
-                              bg={isDefault ? "gray.100" : "rgba(117, 81, 255, 0.12)"}
-                              color={isDefault ? "gray.500" : "brand.500"}
-                              px={3}
-                              py={1.5}
-                              fontSize="sm"
-                              fontWeight="700"
-                              cursor={isDefault ? "not-allowed" : "pointer"}
-                              _hover={isDefault ? undefined : { bg: "rgba(117, 81, 255, 0.18)" }}
-                              disabled={isDefault}
-                            >
-                              <Text as="span" lineHeight={1.1}>
-                                {option.label}
-                              </Text>
-                              <Text as="span" fontSize="xs" lineHeight={1} aria-hidden="true">
-                                ×
-                              </Text>
-                            </Box>
-                          ))}
-                        </Flex>
-                      ) : null}
-                    </Field.Root>
-                  </>
+                  <Field.Root w="full">
+                    <Box
+                      w="full"
+                      borderRadius="18px"
+                      border="1px solid"
+                      borderColor="border.subtle"
+                      bg="app.bg"
+                      px={4}
+                      py={4}
+                    >
+                      <Flex align="center" justify="space-between" gap={4}>
+                        <Box>
+                          <Text fontSize="sm" fontWeight="700" color="text.primary">
+                            Active
+                          </Text>
+                        </Box>
+                        <Switch.Root
+                          checked={isActive}
+                          colorPalette="brand"
+                          disabled={isModuleDialog}
+                          onCheckedChange={(details) => setValue("isActive", details.checked, { shouldDirty: true })}
+                        >
+                          <Switch.HiddenInput />
+                          <Switch.Control />
+                        </Switch.Root>
+                      </Flex>
+                    </Box>
+                  </Field.Root>
+                </SimpleGrid>
+
+                {!isModuleDialog && scope === "OrganizerSpecific" ? (
+                  <Field.Root w="full" invalid={Boolean(errors.organizerUniqueId)}>
+                    <RequiredFieldLabel>Organizer</RequiredFieldLabel>
+                    <StyledSelect
+                      options={organizerOptions}
+                      value={organizerUniqueId ?? ""}
+                      onChange={handleOrganizerSelectChange}
+                      placeholder={organizersQuery.isLoading ? "Loading organizers..." : "Select organizer"}
+                      disabled={organizersQuery.isLoading}
+                    />
+                    {errors.organizerUniqueId ? <Field.ErrorText>{errors.organizerUniqueId.message?.toString()}</Field.ErrorText> : null}
+                  </Field.Root>
                 ) : null}
 
                 <Field.Root invalid={Boolean(errors.moduleId)}>
@@ -1934,20 +1913,20 @@ export function AdminFeePlansManager() {
                                 { label: "Percentage", value: "Percent" },
                               ]}
                               value={buyerRuleValueType}
-                              onChange={
-                                buyerRuleIsActive
-                                  ? (value) => {
-                                      const nextValueType = value as "Fixed" | "Percent"
-                                      setValue("buyerRule.valueType", nextValueType, { shouldDirty: true, shouldValidate: true })
+                              onChange={(value) => {
+                                if (!buyerRuleIsActive) {
+                                  return
+                                }
 
-                                      const currentValue = parseNumericInput(buyerRuleValueInput)
-                                      if (nextValueType === "Percent" && currentValue !== null && currentValue > 100) {
-                                        setBuyerRuleValueInput(formatNumericBlurValue(100))
-                                        setValue("buyerRule.value", 100, { shouldDirty: true, shouldValidate: true })
-                                      }
-                                    }
-                                  : undefined
-                              }
+                                const nextValueType = value as "Fixed" | "Percent"
+                                setValue("buyerRule.valueType", nextValueType, { shouldDirty: true, shouldValidate: true })
+
+                                const currentValue = parseNumericInput(buyerRuleValueInput)
+                                if (nextValueType === "Percent" && currentValue !== null && currentValue > 100) {
+                                  setBuyerRuleValueInput(formatNumericBlurValue(100))
+                                  setValue("buyerRule.value", 100, { shouldDirty: true, shouldValidate: true })
+                                }
+                              }}
                               disabled={!buyerRuleIsActive}
                               placeholder="Select"
                             />
@@ -2009,20 +1988,20 @@ export function AdminFeePlansManager() {
                                 { label: "Percentage", value: "Percent" },
                               ]}
                               value={organizerRuleValueType}
-                              onChange={
-                                organizerRuleIsActive
-                                  ? (value) => {
-                                      const nextValueType = value as "Fixed" | "Percent"
-                                      setValue("organizerRule.valueType", nextValueType, { shouldDirty: true, shouldValidate: true })
+                              onChange={(value) => {
+                                if (!organizerRuleIsActive) {
+                                  return
+                                }
 
-                                      const currentValue = parseNumericInput(organizerRuleValueInput)
-                                      if (nextValueType === "Percent" && currentValue !== null && currentValue > 100) {
-                                        setOrganizerRuleValueInput(formatNumericBlurValue(100))
-                                        setValue("organizerRule.value", 100, { shouldDirty: true, shouldValidate: true })
-                                      }
-                                    }
-                                  : undefined
-                              }
+                                const nextValueType = value as "Fixed" | "Percent"
+                                setValue("organizerRule.valueType", nextValueType, { shouldDirty: true, shouldValidate: true })
+
+                                const currentValue = parseNumericInput(organizerRuleValueInput)
+                                if (nextValueType === "Percent" && currentValue !== null && currentValue > 100) {
+                                  setOrganizerRuleValueInput(formatNumericBlurValue(100))
+                                  setValue("organizerRule.value", 100, { shouldDirty: true, shouldValidate: true })
+                                }
+                              }}
                               disabled={!organizerRuleIsActive}
                               placeholder="Select"
                             />
@@ -2139,7 +2118,7 @@ export function AdminFeePlansManager() {
                     Edit revenue plan
                   </Text>
                   <Text fontSize="sm" color="gray.600">
-                    Update the plan identity and status without touching module-specific charge rules.
+                    Update the plan identity, scope and status without touching module-specific charge rules.
                   </Text>
                 </Box>
                 <Dialog.CloseTrigger asChild>
@@ -2181,63 +2160,88 @@ export function AdminFeePlansManager() {
                   </Field.Root>
                 </SimpleGrid>
 
-                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                  <Field.Root w="full">
-                    <Box
-                      w="full"
-                      borderRadius="18px"
-                      border="1px solid"
-                      borderColor="border.subtle"
-                      bg="app.bg"
-                      px={4}
-                      py={4}
-                    >
-                      <Flex align="center" justify="space-between" gap={4}>
-                        <Box>
-                          <Text fontSize="sm" fontWeight="700" color="text.primary">
-                            Is Default
-                          </Text>
-                        </Box>
-                        <Switch.Root
-                          checked={metadataIsDefault}
-                          colorPalette="brand"
-                          onCheckedChange={(details) => setMetadataValue("isDefault", details.checked, { shouldDirty: true })}
-                        >
-                          <Switch.HiddenInput />
-                          <Switch.Control />
-                        </Switch.Root>
-                      </Flex>
-                    </Box>
-                  </Field.Root>
+                <Field.Root w="full" invalid={Boolean(metadataErrors.scope)}>
+                  <Box
+                    w="full"
+                    borderRadius="18px"
+                    border="1px solid"
+                    borderColor="border.subtle"
+                    bg="app.bg"
+                    px={4}
+                    py={4}
+                  >
+                    <Flex align="center" justify="space-between" gap={4}>
+                      <Box>
+                        <Text fontSize="sm" fontWeight="700" color="text.primary">
+                          Scope
+                        </Text>
+                      </Box>
+                      <Box minW="180px">
+                        <StyledSelect
+                          options={scopeOptions}
+                          value={metadataScope}
+                          onChange={(value) =>
+                            setMetadataValue("scope", value as AdminRevenuePlanScope, {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            })
+                          }
+                          placeholder="Select scope"
+                        />
+                      </Box>
+                    </Flex>
+                  </Box>
+                  {metadataErrors.scope ? <Field.ErrorText>{metadataErrors.scope.message?.toString()}</Field.ErrorText> : null}
+                </Field.Root>
 
-                  <Field.Root w="full">
-                    <Box
-                      w="full"
-                      borderRadius="18px"
-                      border="1px solid"
-                      borderColor="border.subtle"
-                      bg="app.bg"
-                      px={4}
-                      py={4}
-                    >
-                      <Flex align="center" justify="space-between" gap={4}>
-                        <Box>
-                          <Text fontSize="sm" fontWeight="700" color="text.primary">
-                            Active
-                          </Text>
-                        </Box>
-                        <Switch.Root
-                          checked={metadataIsActive}
-                          colorPalette="brand"
-                          onCheckedChange={(details) => setMetadataValue("isActive", details.checked, { shouldDirty: true })}
-                        >
-                          <Switch.HiddenInput />
-                          <Switch.Control />
-                        </Switch.Root>
-                      </Flex>
-                    </Box>
+                <Field.Root w="full">
+                  <Box
+                    w="full"
+                    borderRadius="18px"
+                    border="1px solid"
+                    borderColor="border.subtle"
+                    bg="app.bg"
+                    px={4}
+                    py={4}
+                  >
+                    <Flex align="center" justify="space-between" gap={4}>
+                      <Box>
+                        <Text fontSize="sm" fontWeight="700" color="text.primary">
+                          Active
+                        </Text>
+                      </Box>
+                      <Switch.Root
+                        checked={metadataIsActive}
+                        colorPalette="brand"
+                        onCheckedChange={(details) => setMetadataValue("isActive", details.checked, { shouldDirty: true })}
+                      >
+                        <Switch.HiddenInput />
+                        <Switch.Control />
+                      </Switch.Root>
+                    </Flex>
+                  </Box>
+                </Field.Root>
+
+                {metadataScope === "OrganizerSpecific" ? (
+                  <Field.Root w="full" invalid={Boolean(metadataErrors.organizerUniqueId)}>
+                    <RequiredFieldLabel>Organizer</RequiredFieldLabel>
+                    <StyledSelect
+                      options={organizerOptions}
+                      value={metadataOrganizerUniqueId ?? ""}
+                      onChange={(value) =>
+                        setMetadataValue("organizerUniqueId", value || null, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        })
+                      }
+                      placeholder={organizersQuery.isLoading ? "Loading organizers..." : "Select organizer"}
+                      disabled={organizersQuery.isLoading}
+                    />
+                    {metadataErrors.organizerUniqueId ? (
+                      <Field.ErrorText>{metadataErrors.organizerUniqueId.message?.toString()}</Field.ErrorText>
+                    ) : null}
                   </Field.Root>
-                </SimpleGrid>
+                ) : null}
 
                 {metadataSaveError ? (
                   <Box p={4} borderRadius="16px" border="1px solid" borderColor="red.200" bg="red.50">
@@ -2435,7 +2439,6 @@ export function AdminFeePlansManager() {
                         <Box
                           key={option.value}
                           as="button"
-                          type="button"
                           onClick={() =>
                             setSelectedMappingOrganizerUniqueIds((current) => current.filter((uniqueId) => uniqueId !== option.value))
                           }
