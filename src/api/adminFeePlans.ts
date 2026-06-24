@@ -40,6 +40,7 @@ const adminFeePlanRuleSchema = z.object({
 })
 
 const adminRevenuePlanScopeSchema = z.enum(["OrganizerSpecific", "Reusable", "Default"])
+export type AdminRevenuePlanStatusFilter = "All" | "Active" | "Inactive"
 
 const adminFeePlanSchema = z.object({
   Id: z.number().int().positive().optional(),
@@ -234,6 +235,24 @@ export interface AdminRevenuePlanScopeOption {
   text: string
 }
 
+export interface AdminRevenuePlanListFilters {
+  searchTerm?: string
+  moduleIds?: number[]
+  organizerUniqueIds?: string[]
+  scopes?: AdminRevenuePlanScope[]
+  status?: AdminRevenuePlanStatusFilter
+}
+
+export interface AdminRevenuePlanListRequest {
+  pageNo?: number
+  pageSize?: number
+  searchTerm?: string
+  moduleIds?: number[]
+  organizerUniqueIds?: string[]
+  scopes?: AdminRevenuePlanScope[]
+  status?: AdminRevenuePlanStatusFilter
+}
+
 export interface AdminOrganizerOption {
   value: string
   text: string
@@ -323,9 +342,40 @@ function normalizePlan(plan: z.infer<typeof adminFeePlanSchema>): AdminRevenuePl
   }
 }
 
-export async function fetchAdminRevenuePlans(pageNo = 1, pageSize = 6): Promise<PaginatedResponse<AdminRevenuePlan>> {
+export async function fetchAdminRevenuePlans(
+  request: AdminRevenuePlanListRequest = {},
+): Promise<PaginatedResponse<AdminRevenuePlan>> {
+  const params = new URLSearchParams()
+  params.set("pageNo", String(request.pageNo ?? 1))
+  params.set("pageSize", String(request.pageSize ?? 6))
+
+  const trimmedSearchTerm = request.searchTerm?.trim()
+  if (trimmedSearchTerm) {
+    params.set("searchTerm", trimmedSearchTerm)
+  }
+
+  request.moduleIds?.forEach((moduleId) => {
+    if (Number.isFinite(moduleId) && moduleId > 0) {
+      params.append("moduleIds", String(moduleId))
+    }
+  })
+
+  request.organizerUniqueIds?.forEach((organizerUniqueId) => {
+    if (organizerUniqueId) {
+      params.append("organizerUniqueIds", organizerUniqueId)
+    }
+  })
+
+  request.scopes?.forEach((scope) => {
+    params.append("scopes", scope)
+  })
+
+  if (request.status && request.status !== "All") {
+    params.set("status", request.status)
+  }
+
   const response = await client.get<unknown>(API_ROUTES.adminRevenuePlans, {
-    params: { pageNo, pageSize },
+    params,
   })
   const data = parseServicePayload(response.data)
   const parsed = adminFeePlanPageSchema.parse(data)
@@ -334,8 +384,8 @@ export async function fetchAdminRevenuePlans(pageNo = 1, pageSize = 6): Promise<
   return {
     items,
     total: parsed.TotalRecordsCount ?? parsed.totalRecordsCount ?? items.length,
-    page: parsed.PageNo ?? parsed.pageNo ?? pageNo,
-    pageSize: parsed.PageSize ?? parsed.pageSize ?? pageSize,
+    page: parsed.PageNo ?? parsed.pageNo ?? (request.pageNo ?? 1),
+    pageSize: parsed.PageSize ?? parsed.pageSize ?? (request.pageSize ?? 6),
     totalPages: parsed.PageCount ?? parsed.pageCount ?? 0,
   }
 }

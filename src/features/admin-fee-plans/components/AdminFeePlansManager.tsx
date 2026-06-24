@@ -24,7 +24,7 @@ import {
   Table,
   Text,
 } from "@chakra-ui/react"
-import { Check, CheckCircle2, Layers3, MoreHorizontal, PencilLine, Plus, RotateCcw, Trash2, UserRound } from "lucide-react"
+import { Check, CheckCircle2, Layers3, MoreHorizontal, PencilLine, Plus, Trash2, UserRound } from "lucide-react"
 import ReactSelect, {
   components,
   type InputActionMeta,
@@ -54,8 +54,10 @@ import {
   type AdminRevenuePlanModuleInput,
   type AdminRevenuePlanMetadataInput,
   type AdminOrganizerOption,
+  type AdminRevenuePlanListRequest,
   type AdminRevenuePlanScopeOption,
   type AdminRevenuePlanScope,
+  type AdminRevenuePlanStatusFilter,
   updateAdminRevenuePlan,
 } from "@/api/adminFeePlans"
 
@@ -161,6 +163,50 @@ const EMPTY_METADATA_FORM_VALUES: AdminRevenuePlanMetadataFormValues = {
 }
 
 const ADMIN_REVENUE_PLAN_PAGE_SIZE = 6
+
+interface AdminRevenuePlanFilterState {
+  searchTerm: string
+  moduleIds: string[]
+  organizerUniqueIds: string[]
+  scopes: AdminRevenuePlanScope[]
+  status: AdminRevenuePlanStatusFilter
+}
+
+const EMPTY_FILTER_STATE: AdminRevenuePlanFilterState = {
+  searchTerm: "",
+  moduleIds: [],
+  organizerUniqueIds: [],
+  scopes: [],
+  status: "All",
+}
+
+const revenuePlanChipStyles = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 1.5,
+  borderRadius: "999px",
+  border: "1px solid",
+  borderColor: "gray.200",
+  bg: "gray.100",
+  color: "gray.700",
+  px: 3,
+  py: 1.5,
+  minH: "30px",
+  h: "30px",
+  fontSize: "10px",
+  fontWeight: "800",
+  textTransform: "uppercase",
+  letterSpacing: "0.08em",
+} as const
+
+const revenuePlanChipActionStyles = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  minW: "11px",
+} as const
 
 function getPlanRuleDefaults(
   plan: AdminRevenuePlan,
@@ -298,6 +344,34 @@ function OrganizerOption(props: OptionProps<OrganizerSelectOption, true>) {
   )
 }
 
+function CheckboxOption(props: OptionProps<OrganizerSelectOption, true>) {
+  return (
+    <components.Option {...props}>
+      <Flex align="center" gap={3}>
+        <Box
+          flexShrink={0}
+          boxSize="18px"
+          borderRadius="5px"
+          border="1px solid"
+          borderColor={props.isSelected ? "brand.500" : "gray.300"}
+          bg={props.isSelected ? "brand.500" : "white"}
+          color="white"
+          display="inline-flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          {props.isSelected ? <Check size={12} /> : null}
+        </Box>
+        <Box minW={0}>
+          <Text fontSize="sm" fontWeight="600" color="gray.800" lineClamp={1}>
+            {props.label}
+          </Text>
+        </Box>
+      </Flex>
+    </components.Option>
+  )
+}
+
 function AdminFeePlansSkeleton() {
   return (
     <Box borderRadius="20px" border="1px solid" borderColor="border.subtle" bg="card.bg" p={5}>
@@ -326,14 +400,28 @@ export function AdminFeePlansManager() {
     | { kind: "organizer"; planUniqueId: string; organizerUniqueId: string; label: string }
     | null
   >(null)
+  const [draftFilters, setDraftFilters] = useState<AdminRevenuePlanFilterState>(EMPTY_FILTER_STATE)
+  const [appliedFilters, setAppliedFilters] = useState<AdminRevenuePlanFilterState>(EMPTY_FILTER_STATE)
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [mappingOrganizerSearchValue, setMappingOrganizerSearchValue] = useState("")
   const [organizerRuleValueInput, setOrganizerRuleValueInput] = useState("")
   const [buyerRuleValueInput, setBuyerRuleValueInput] = useState("")
 
   const plansQuery = useQuery({
-    queryKey: ["admin-revenue-plans", { pageNo: planPage, pageSize: ADMIN_REVENUE_PLAN_PAGE_SIZE }],
-    queryFn: () => fetchAdminRevenuePlans(planPage, ADMIN_REVENUE_PLAN_PAGE_SIZE),
+    queryKey: ["admin-revenue-plans", { pageNo: planPage, pageSize: ADMIN_REVENUE_PLAN_PAGE_SIZE, filters: appliedFilters }],
+    queryFn: () => {
+      const filters: AdminRevenuePlanListRequest = {
+        pageNo: planPage,
+        pageSize: ADMIN_REVENUE_PLAN_PAGE_SIZE,
+        searchTerm: appliedFilters.searchTerm,
+        moduleIds: appliedFilters.moduleIds.map((value) => Number(value)).filter((value) => Number.isFinite(value) && value > 0),
+        organizerUniqueIds: appliedFilters.organizerUniqueIds,
+        scopes: appliedFilters.scopes,
+        status: appliedFilters.status,
+      }
+
+      return fetchAdminRevenuePlans(filters)
+    },
     placeholderData: keepPreviousData,
   })
 
@@ -429,6 +517,43 @@ export function AdminFeePlansManager() {
     [scopesQuery.data],
   )
 
+  const statusOptions = useMemo(
+    () =>
+      [
+        { label: "All", value: "All" },
+        { label: "Active", value: "Active" },
+        { label: "Inactive", value: "Inactive" },
+      ] satisfies { label: string; value: AdminRevenuePlanStatusFilter }[],
+    [],
+  )
+
+  const draftModuleOptions = useMemo(
+    () => moduleOptions.filter((option) => draftFilters.moduleIds.includes(option.value)),
+    [draftFilters.moduleIds, moduleOptions],
+  )
+
+  const draftOrganizerOptions = useMemo(
+    () => organizerOptions.filter((option) => draftFilters.organizerUniqueIds.includes(option.value)),
+    [draftFilters.organizerUniqueIds, organizerOptions],
+  )
+
+  const draftScopeOptions = useMemo(
+    () => scopeOptions.filter((option) => draftFilters.scopes.includes(option.value as AdminRevenuePlanScope)),
+    [draftFilters.scopes, scopeOptions],
+  )
+
+  const hasAppliedFilters = useMemo(
+    () =>
+      Boolean(
+        appliedFilters.searchTerm.trim() ||
+          appliedFilters.moduleIds.length > 0 ||
+          appliedFilters.organizerUniqueIds.length > 0 ||
+          appliedFilters.scopes.length > 0 ||
+          appliedFilters.status !== "All",
+      ),
+    [appliedFilters],
+  )
+
   const assignedOrganizerIds = useMemo(
     () => new Set(mappingPlan?.assignedOrganizerUniqueIds ?? []),
     [mappingPlan?.assignedOrganizerUniqueIds],
@@ -481,6 +606,38 @@ export function AdminFeePlansManager() {
 
   function handleMappingOrganizerChange(values: MultiValue<OrganizerSelectOption>) {
     setSelectedMappingOrganizerUniqueIds(values.map((item) => item.value))
+  }
+
+  function handleFilterModuleChange(values: MultiValue<OrganizerSelectOption>) {
+    setDraftFilters((current) => ({
+      ...current,
+      moduleIds: values.map((item) => item.value),
+    }))
+  }
+
+  function handleFilterOrganizerChange(values: MultiValue<OrganizerSelectOption>) {
+    setDraftFilters((current) => ({
+      ...current,
+      organizerUniqueIds: values.map((item) => item.value),
+    }))
+  }
+
+  function handleFilterScopeChange(values: MultiValue<OrganizerSelectOption>) {
+    setDraftFilters((current) => ({
+      ...current,
+      scopes: values.map((item) => item.value as AdminRevenuePlanScope),
+    }))
+  }
+
+  function applyFilters() {
+    setAppliedFilters(draftFilters)
+    setPlanPage(1)
+  }
+
+  function clearFilters() {
+    setDraftFilters(EMPTY_FILTER_STATE)
+    setAppliedFilters(EMPTY_FILTER_STATE)
+    setPlanPage(1)
   }
 
   function trackTrashClick(payload: {
@@ -1078,7 +1235,132 @@ export function AdminFeePlansManager() {
       {plansQuery.isLoading && !plansQuery.data ? (
         <AdminFeePlansSkeleton />
       ) : (
-        <Box borderRadius="20px" border="1px solid" borderColor="border.subtle" bg="card.bg" boxShadow="card" overflow="hidden">
+        <Stack gap={4}>
+          <Box borderRadius="20px" border="1px solid" borderColor="border.subtle" bg="card.bg" boxShadow="card" p={{ base: 4, md: 5 }}>
+            <Flex
+              direction={{ base: "column", lg: "row" }}
+              align={{ base: "stretch", lg: "center" }}
+              justify="space-between"
+              gap={4}
+            >
+              <Box>
+                <Text fontSize="md" fontWeight="800" color="text.primary">
+                  Filters
+                </Text>
+                <Text fontSize="sm" color="text.secondary">
+                  Narrow the available plans list before loading the page data.
+                </Text>
+              </Box>
+
+            </Flex>
+
+            <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap={4} mt={5}>
+              <Field.Root w="full">
+                <Field.Label fontSize="sm" fontWeight="700" color="text.primary">
+                  Name
+                </Field.Label>
+                <Input
+                  value={draftFilters.searchTerm}
+                  onChange={(event) =>
+                    setDraftFilters((current) => ({
+                      ...current,
+                      searchTerm: event.target.value,
+                    }))
+                  }
+                  placeholder="Search by name"
+                  h="44px"
+                  borderRadius="16px"
+                  px={3}
+                  bg="app.bg"
+                />
+              </Field.Root>
+
+              <Field.Root w="full">
+                <Field.Label fontSize="sm" fontWeight="700" color="text.primary">
+                  Scope
+                </Field.Label>
+                <ReactSelect
+                  isMulti
+                  options={scopeOptions}
+                  value={draftScopeOptions}
+                  onChange={handleFilterScopeChange}
+                  placeholder="Select scopes"
+                  closeMenuOnSelect={false}
+                  components={{ Option: CheckboxOption }}
+                  styles={organizerMultiSelectStyles}
+                />
+              </Field.Root>
+
+              <Field.Root w="full">
+                <Field.Label fontSize="sm" fontWeight="700" color="text.primary">
+                  Modules
+                </Field.Label>
+                <ReactSelect
+                  isMulti
+                  options={moduleOptions}
+                  value={draftModuleOptions}
+                  onChange={handleFilterModuleChange}
+                  placeholder="Select modules"
+                  closeMenuOnSelect={false}
+                  components={{ Option: CheckboxOption }}
+                  styles={organizerMultiSelectStyles}
+                />
+              </Field.Root>
+
+              <Field.Root w="full">
+                <Field.Label fontSize="sm" fontWeight="700" color="text.primary">
+                  Organizers
+                </Field.Label>
+                <ReactSelect
+                  isMulti
+                  options={organizerOptions}
+                  value={draftOrganizerOptions}
+                  onChange={handleFilterOrganizerChange}
+                  placeholder="Select organizers"
+                  closeMenuOnSelect={false}
+                  components={{ Option: CheckboxOption }}
+                  styles={organizerMultiSelectStyles}
+                />
+              </Field.Root>
+
+              <Field.Root w="full">
+                <Field.Label fontSize="sm" fontWeight="700" color="text.primary">
+                  Status
+                </Field.Label>
+                <StyledSelect
+                  options={statusOptions}
+                  value={draftFilters.status}
+                  onChange={(value) =>
+                    setDraftFilters((current) => ({
+                      ...current,
+                      status: (value as AdminRevenuePlanStatusFilter) || "All",
+                    }))
+                  }
+                  placeholder="Select status"
+                  size="sm"
+                />
+              </Field.Root>
+            </SimpleGrid>
+
+            <Flex gap={2} wrap="wrap" justify={{ base: "stretch", lg: "end" }} mt={5}>
+              <Button
+                type="button"
+                variant="solid"
+                bg="linear-gradient(135deg, #7551FF 0%, #422AFB 100%)"
+                color="white"
+                minH="11"
+                px={5}
+                onClick={applyFilters}
+              >
+                Apply Filter
+              </Button>
+              <Button type="button" variant="outline" minH="11" px={5} onClick={clearFilters} disabled={!hasAppliedFilters}>
+                Clear Filter
+              </Button>
+            </Flex>
+          </Box>
+
+          <Box borderRadius="20px" border="1px solid" borderColor="border.subtle" bg="card.bg" boxShadow="card" overflow="hidden">
           <Flex
             px={{ base: 4, md: 6 }}
             py={4}
@@ -1098,16 +1380,6 @@ export function AdminFeePlansManager() {
               </Text>
             </Box>
             <Flex direction="column" align={{ base: "stretch", md: "end" }} gap={2}>
-              <Button
-                variant="outline"
-                minH="11"
-                px={4}
-                onClick={() => plansQuery.refetch()}
-                loading={plansQuery.isFetching}
-              >
-                <RotateCcw size={16} />
-                Refresh
-              </Button>
               <Badge variant="subtle" colorPalette="purple" borderRadius="999px" px={3} py={1}>
                 Page {currentPlanPage} of {Math.max(totalPlanPages, 1)}
               </Badge>
@@ -1125,16 +1397,16 @@ export function AdminFeePlansManager() {
                     Name
                   </Table.ColumnHeader>
                   <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
+                    Scope
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
                     Display Text
                   </Table.ColumnHeader>
                   <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
-                    Module
+                    Modules
                   </Table.ColumnHeader>
                   <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
                     Organizers
-                  </Table.ColumnHeader>
-                  <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
-                    Scope
                   </Table.ColumnHeader>
                   <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" px={4} py={3} textAlign="center">
                     Status
@@ -1286,6 +1558,40 @@ export function AdminFeePlansManager() {
                           {plan.name}
                         </Text>
                       </Table.Cell>
+                      <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} textAlign="center">
+                        <Flex align="center" justify="center">
+                          <Badge
+                            colorPalette={
+                              plan.scope === "Default"
+                                ? "green"
+                                : plan.scope === "OrganizerSpecific"
+                                  ? "blue"
+                                  : "gray"
+                            }
+                            variant="subtle"
+                            borderRadius="999px"
+                            px={3}
+                            py={1}
+                            fontSize="10px"
+                            fontWeight="800"
+                            textTransform="uppercase"
+                            letterSpacing="0.08em"
+                          >
+                            <Flex align="center" gap={1.5}>
+                              {plan.scope === "Default" ? (
+                                <CheckCircle2 size={13} strokeWidth={2.4} />
+                              ) : plan.scope === "OrganizerSpecific" ? (
+                                <UserRound size={13} strokeWidth={2.4} />
+                              ) : (
+                                <Layers3 size={13} strokeWidth={2.4} />
+                              )}
+                              <Text as="span">
+                                {plan.scope === "OrganizerSpecific" ? "Organizer Specific" : plan.scope}
+                              </Text>
+                            </Flex>
+                          </Badge>
+                        </Flex>
+                      </Table.Cell>
                       <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
                         <Text fontSize="sm" fontWeight="700" color="text.primary">
                           {plan.label}
@@ -1299,75 +1605,55 @@ export function AdminFeePlansManager() {
                                 const moduleId = moduleIds[index]
 
                                 return (
-                                  <Box key={`${plan.uniqueId}-${moduleId ?? moduleName}-${index}`} display="inline-flex">
-                                    <Button
-                                      type="button"
-                                      variant="subtle"
-                                      onClick={() => {
-                                        if (moduleId) {
-                                          void handleEditModule(plan, moduleId)
-                                        }
-                                      }}
-                                      display="inline-flex"
-                                      alignItems="center"
-                                      justifyContent="center"
-                                      gap={1.5}
-                                      borderRadius="999px"
-                                      border="1px solid"
-                                      borderColor="gray.200"
-                                      bg="gray.100"
-                                      color="gray.700"
-                                      px={3}
-                                      py={1.5}
-                                      minH="30px"
-                                      h="30px"
-                                      fontSize="10px"
-                                      fontWeight="800"
-                                      textTransform="uppercase"
-                                      letterSpacing="0.08em"
-                                      cursor={moduleId ? "pointer" : "not-allowed"}
-                                      _hover={moduleId ? { bg: "gray.200", borderColor: "gray.300" } : undefined}
-                                      disabled={!moduleId || unmapModuleMutation.isPending}
-                                      aria-label={moduleId ? `Edit ${moduleName} module` : moduleName}
-                                      title={moduleName}
-                                      >
-                                      {moduleName}
-                                      {moduleId ? <PencilLine size={11} aria-hidden="true" /> : null}
-                                      {moduleId ? (
-                                        <Text
-                                          as="span"
-                                          display="inline-flex"
-                                          alignItems="center"
-                                          justifyContent="center"
-                                          ml={1}
-                                          color="red.500"
-                                          aria-label={`Remove ${moduleName} module`}
-                                          title={`Remove ${moduleName} module`}
-                                          cursor="pointer"
-                                          onClick={(event) => {
-                                            event.stopPropagation()
-                                            if (!plan.uniqueId) {
-                                              return
-                                            }
+                                  <Box
+                                    key={`${plan.uniqueId}-${moduleId ?? moduleName}-${index}`}
+                                    as="button"
+                                    type="button"
+                                    onClick={() => {
+                                      if (moduleId) {
+                                        void handleEditModule(plan, moduleId)
+                                      }
+                                    }}
+                                    cursor={moduleId ? "pointer" : "not-allowed"}
+                                    _hover={moduleId ? { bg: "gray.200", borderColor: "gray.300" } : undefined}
+                                    disabled={!moduleId || unmapModuleMutation.isPending}
+                                    aria-label={moduleId ? `Edit ${moduleName} module` : moduleName}
+                                    title={moduleName}
+                                    {...revenuePlanChipStyles}
+                                  >
+                                    {moduleName}
+                                    {moduleId ? <PencilLine size={11} aria-hidden="true" /> : null}
+                                    {moduleId ? (
+                                      <Box
+                                        as="span"
+                                        {...revenuePlanChipActionStyles}
+                                        ml={1}
+                                        color="red.500"
+                                        aria-label={`Remove ${moduleName} module`}
+                                        title={`Remove ${moduleName} module`}
+                                        onClick={(event) => {
+                                          event.stopPropagation()
+                                          if (!plan.uniqueId) {
+                                            return
+                                          }
 
-                                            trackTrashClick({
-                                              kind: "module",
-                                              planUniqueId: plan.uniqueId,
-                                              moduleId,
-                                              label: moduleName,
-                                            })
-                                            setPendingRemoval({
-                                              kind: "module",
-                                              planUniqueId: plan.uniqueId,
-                                              moduleId,
-                                              label: moduleName,
-                                            })
-                                          }}
-                                        >
-                                          <Trash2 size={11} />
-                                        </Text>
-                                      ) : null}
-                                    </Button>
+                                          trackTrashClick({
+                                            kind: "module",
+                                            planUniqueId: plan.uniqueId,
+                                            moduleId,
+                                            label: moduleName,
+                                          })
+                                          setPendingRemoval({
+                                            kind: "module",
+                                            planUniqueId: plan.uniqueId,
+                                            moduleId,
+                                            label: moduleName,
+                                          })
+                                        }}
+                                      >
+                                        <Trash2 size={11} />
+                                      </Box>
+                                    ) : null}
                                   </Box>
                                 )
                               })}
@@ -1386,35 +1672,16 @@ export function AdminFeePlansManager() {
                               {organizerPills.map((organizer) => (
                                 <Box
                                   key={`${plan.uniqueId}-${organizer.uniqueId || organizer.name}`}
-                                  display="inline-flex"
-                                  alignItems="center"
-                                  gap={1.5}
-                                  borderRadius="999px"
-                                  border="1px solid"
-                                  borderColor="gray.200"
-                                  bg="gray.100"
-                                  color="gray.700"
-                                  px={3}
-                                  py={1.5}
-                                  minH="30px"
-                                  h="30px"
-                                  fontSize="10px"
-                                  fontWeight="800"
-                                  textTransform="uppercase"
-                                  letterSpacing="0.08em"
+                                  {...revenuePlanChipStyles}
                                 >
                                   <Text as="span">{organizer.name}</Text>
                                   {isReusablePlan && organizer.uniqueId ? (
                                     <Box
-                                      as="button"
-                                      display="inline-flex"
-                                      alignItems="center"
-                                      justifyContent="center"
+                                      as="span"
+                                      {...revenuePlanChipActionStyles}
                                       color="red.500"
                                       aria-label={`Remove organizer ${organizer.name}`}
                                       title={`Remove organizer ${organizer.name}`}
-                                      cursor="pointer"
-                                      minW="11px"
                                       onClick={(event) => {
                                         event.stopPropagation()
                                         if (!plan.uniqueId) {
@@ -1465,40 +1732,6 @@ export function AdminFeePlansManager() {
                           )}
                         </Box>
                       </Table.Cell>
-                      <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} textAlign="center">
-                        <Flex align="center" justify="center">
-                          <Badge
-                            colorPalette={
-                              plan.scope === "Default"
-                                ? "green"
-                                : plan.scope === "OrganizerSpecific"
-                                  ? "blue"
-                                  : "gray"
-                            }
-                            variant="subtle"
-                            borderRadius="999px"
-                            px={3}
-                            py={1}
-                            fontSize="10px"
-                            fontWeight="800"
-                            textTransform="uppercase"
-                            letterSpacing="0.08em"
-                          >
-                            <Flex align="center" gap={1.5}>
-                              {plan.scope === "Default" ? (
-                                <CheckCircle2 size={13} strokeWidth={2.4} />
-                              ) : plan.scope === "OrganizerSpecific" ? (
-                                <UserRound size={13} strokeWidth={2.4} />
-                              ) : (
-                                <Layers3 size={13} strokeWidth={2.4} />
-                              )}
-                              <Text as="span">
-                                {plan.scope === "OrganizerSpecific" ? "Organizer Specific" : plan.scope}
-                              </Text>
-                            </Flex>
-                          </Badge>
-                        </Flex>
-                      </Table.Cell>
                       <Table.Cell borderColor="border.subtle" px={4} py={4}>
                         <Badge
                           colorPalette={plan.isActive ? "green" : "gray"}
@@ -1521,7 +1754,8 @@ export function AdminFeePlansManager() {
               </Table.Body>
             </Table.Root>
           </Box>
-        </Box>
+          </Box>
+        </Stack>
       )}
 
       <Dialog.Root
