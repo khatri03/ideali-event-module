@@ -113,7 +113,7 @@ const adminFeePlanRuleInputSchema = z.object({
 const adminRevenuePlanInputSchema = z.object({
   name: z.string().trim().min(1).max(80),
   label: z.string().trim().min(1).max(120),
-  moduleIds: z.array(z.coerce.number().int().positive()).min(1),
+  moduleId: z.coerce.number().int().positive(),
   isDefault: z.boolean(),
   isActive: z.boolean(),
   organizerUniqueIds: z.array(z.string()),
@@ -253,8 +253,10 @@ export async function fetchAdminRevenuePlans(pageNo = 1, pageSize = 6): Promise<
   }
 }
 
-export async function fetchAdminRevenuePlan(uniqueId: string): Promise<AdminRevenuePlan> {
-  const response = await client.get<unknown>(API_ROUTES.adminRevenuePlanDetail(uniqueId))
+export async function fetchAdminRevenuePlan(uniqueId: string, moduleId?: number): Promise<AdminRevenuePlan> {
+  const response = await client.get<unknown>(API_ROUTES.adminRevenuePlanDetail(uniqueId), {
+    params: moduleId ? { moduleId } : undefined,
+  })
   const data = parseServicePayload(response.data)
   return normalizePlan(adminFeePlanSchema.parse(data))
 }

@@ -81,7 +81,7 @@ const ruleSchema = z
 const adminRevenuePlanSchema = z.object({
   name: z.string().trim().min(1, "Name is required.").max(80, "Maximum 80 characters allowed."),
   label: z.string().trim().min(1, "Display text is required.").max(120, "Maximum 120 characters allowed."),
-  moduleIds: z.array(z.number().int().positive()).min(1, "At least one module is required."),
+  moduleId: z.number().int().positive("Module is required."),
   isDefault: z.boolean(),
   isActive: z.boolean(),
   organizerUniqueIds: z.array(z.string()),
@@ -96,15 +96,10 @@ interface OrganizerSelectOption {
   value: string
 }
 
-interface ModuleSelectOption {
-  label: string
-  value: string
-}
-
 const EMPTY_FORM_VALUES: AdminRevenuePlanFormValues = {
   name: "",
   label: "",
-  moduleIds: [],
+  moduleId: 0,
   isDefault: true,
   isActive: true,
   organizerUniqueIds: [],
@@ -124,15 +119,6 @@ const EMPTY_FORM_VALUES: AdminRevenuePlanFormValues = {
 
 const ADMIN_REVENUE_PLAN_PAGE_SIZE = 6
 
-function formatValue(valueType: AdminRevenuePlan["rules"][number]["valueType"], value: number) {
-  const formattedValue = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value)
-  return valueType === "Percent" ? `${formattedValue}%` : `$${formattedValue}`
-}
-
-function planRuleLabel(rule: AdminRevenuePlan["rules"][number]) {
-  return `${rule.target}: ${formatValue(rule.valueType, rule.value)}`
-}
-
 function getPlanRuleDefaults(
   plan: AdminRevenuePlan,
   target: "Organizer" | "Buyer",
@@ -147,16 +133,6 @@ function getPlanRuleDefaults(
     value: selectedRule?.value ?? 0,
     isActive: matchedRules.length > 0 ? matchedRules.every((rule) => rule.isActive) : fallbackIsActive,
   }
-}
-
-function getModuleRuleSummary(plan: AdminRevenuePlan, moduleIndex: number) {
-  const moduleRules = plan.rules.slice(moduleIndex * 2, moduleIndex * 2 + 2).filter((rule) => rule.isActive)
-
-  if (moduleRules.length === 0) {
-    return ""
-  }
-
-  return moduleRules.map(planRuleLabel).join("\n")
 }
 
 function buildPageNumbers(page: number, totalPages: number) {
@@ -255,34 +231,6 @@ function OrganizerOption(props: OptionProps<OrganizerSelectOption, true>) {
   )
 }
 
-function ModuleOption(props: OptionProps<ModuleSelectOption, true>) {
-  return (
-    <components.Option {...props}>
-      <Flex align="center" gap={3}>
-        <Box
-          flexShrink={0}
-          boxSize="18px"
-          borderRadius="6px"
-          border="1px solid"
-          borderColor={props.isSelected ? "brand.500" : "gray.300"}
-          bg={props.isSelected ? "brand.500" : "white"}
-          color="white"
-          display="inline-flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          {props.isSelected ? <Check size={12} /> : null}
-        </Box>
-        <Box minW={0}>
-          <Text fontSize="sm" fontWeight="600" color="gray.800" lineClamp={1}>
-            {props.label}
-          </Text>
-        </Box>
-      </Flex>
-    </components.Option>
-  )
-}
-
 function AdminFeePlansSkeleton() {
   return (
     <Box borderRadius="20px" border="1px solid" borderColor="border.subtle" bg="card.bg" p={5}>
@@ -299,12 +247,12 @@ export function AdminFeePlansManager() {
   const [planPage, setPlanPage] = useState(1)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingPlan, setEditingPlan] = useState<AdminRevenuePlan | null>(null)
+  const [isModuleLocked, setIsModuleLocked] = useState(false)
   const [isMapDialogOpen, setIsMapDialogOpen] = useState(false)
   const [mappingPlan, setMappingPlan] = useState<AdminRevenuePlan | null>(null)
   const [organizerNamesPlan, setOrganizerNamesPlan] = useState<AdminRevenuePlan | null>(null)
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [organizerSearchValue, setOrganizerSearchValue] = useState("")
-  const [moduleSearchValue, setModuleSearchValue] = useState("")
   const [organizerRuleValueInput, setOrganizerRuleValueInput] = useState("")
   const [buyerRuleValueInput, setBuyerRuleValueInput] = useState("")
 
@@ -350,12 +298,13 @@ export function AdminFeePlansManager() {
 
   const isActive = useWatch({ control, name: "isActive" })
   const isDefault = useWatch({ control, name: "isDefault" })
-  const moduleIds = useWatch({ control, name: "moduleIds" })
+  const moduleId = useWatch({ control, name: "moduleId" })
   const organizerUniqueIds = useWatch({ control, name: "organizerUniqueIds" })
   const organizerRuleValueType = useWatch({ control, name: "organizerRule.valueType" })
   const buyerRuleValueType = useWatch({ control, name: "buyerRule.valueType" })
   const organizerRuleIsActive = useWatch({ control, name: "organizerRule.isActive" })
   const buyerRuleIsActive = useWatch({ control, name: "buyerRule.isActive" })
+  const isEditingExistingModule = Boolean(editingPlan?.uniqueId && isModuleLocked)
 
   const moduleOptions = useMemo(
     () =>
@@ -365,10 +314,7 @@ export function AdminFeePlansManager() {
     [modulesQuery.data]
   )
 
-  const selectedModuleOptions = useMemo(
-    () => moduleOptions.filter((option) => moduleIds.includes(Number(option.value))),
-    [moduleIds, moduleOptions],
-  )
+  const selectedModuleValue = moduleId > 0 ? String(moduleId) : ""
 
   const organizerOptions = useMemo(
     () =>
@@ -383,26 +329,11 @@ export function AdminFeePlansManager() {
     [organizerOptions, organizerUniqueIds],
   )
 
-  function handleModuleChange(values: MultiValue<ModuleSelectOption>) {
-    setValue(
-      "moduleIds",
-      values.map((item) => Number(item.value)),
-      {
-        shouldDirty: true,
-        shouldValidate: true,
-      },
-    )
-  }
-
-  function handleRemoveModule(moduleId: number) {
-    setValue(
-      "moduleIds",
-      moduleIds.filter((current) => current !== moduleId),
-      {
-        shouldDirty: true,
-        shouldValidate: true,
-      },
-    )
+  function handleModuleChange(value: string) {
+    setValue("moduleId", Number(value), {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
   }
 
   function handleOrganizerChange(values: MultiValue<OrganizerSelectOption>) {
@@ -479,15 +410,6 @@ export function AdminFeePlansManager() {
     return organizerSearchValue
   }
 
-  function handleModuleInputChange(nextValue: string, actionMeta: InputActionMeta) {
-    if (actionMeta.action === "input-change") {
-      setModuleSearchValue(nextValue)
-      return nextValue
-    }
-
-    return moduleSearchValue
-  }
-
   const organizerMultiSelectStyles = useMemo(
     () =>
       ({
@@ -548,79 +470,20 @@ export function AdminFeePlansManager() {
     [],
   )
 
-  const moduleMultiSelectStyles = useMemo(
-    () =>
-      ({
-        control: (base, state) => ({
-          ...base,
-          width: "100%",
-          minHeight: 44,
-          borderRadius: 16,
-          borderColor: state.isFocused ? "#7551FF" : "#E2E8F0",
-          boxShadow: state.isFocused ? "0 0 0 3px rgba(117, 81, 255, 0.15)" : "none",
-          backgroundColor: "#fff",
-        }),
-        container: (base) => ({
-          ...base,
-          width: "100%",
-        }),
-        valueContainer: (base) => ({
-          ...base,
-          flex: 1,
-          minWidth: 0,
-        }),
-        input: (base) => ({
-          ...base,
-          width: "100%",
-        }),
-        menu: (base) => ({
-          ...base,
-          zIndex: 40,
-          borderRadius: 14,
-        }),
-        multiValue: (base) => ({
-          ...base,
-          borderRadius: 999,
-          backgroundColor: "rgba(117, 81, 255, 0.12)",
-          border: "1px solid rgba(117, 81, 255, 0.18)",
-          margin: "2px",
-        }),
-        multiValueLabel: (base) => ({
-          ...base,
-          fontSize: 12,
-          fontWeight: 700,
-          color: "#422AFB",
-          paddingLeft: "8px",
-          paddingRight: "4px",
-        }),
-        multiValueRemove: (base) => ({
-          ...base,
-          borderRadius: 999,
-          color: "#7551FF",
-          paddingLeft: "4px",
-          paddingRight: "8px",
-          ":hover": {
-            backgroundColor: "rgba(117, 81, 255, 0.18)",
-            color: "#422AFB",
-          },
-        }),
-      }) satisfies StylesConfig<ModuleSelectOption, true>,
-    [],
-  )
 
   const saveMutation = useMutation({
     mutationFn: async (values: AdminRevenuePlanFormValues) => {
       const payload: AdminRevenuePlanInput = {
         name: values.name.trim(),
         label: values.label.trim(),
-        moduleIds: values.moduleIds,
+        moduleId: values.moduleId,
         isDefault: values.isDefault,
         isActive: values.isActive,
         organizerUniqueIds: values.organizerUniqueIds,
         rules: [values.organizerRule, values.buyerRule],
       }
 
-      if (editingPlan?.uniqueId) {
+      if (isEditingExistingModule && editingPlan?.uniqueId) {
         await updateAdminRevenuePlan(editingPlan.uniqueId, payload)
         return
       }
@@ -628,7 +491,10 @@ export function AdminFeePlansManager() {
       await createAdminRevenuePlan(payload)
     },
     onSuccess: () => {
-      setBanner({ type: "success", message: editingPlan ? "Admin revenue plan updated." : "Admin revenue plan saved." })
+      setBanner({
+        type: "success",
+        message: isEditingExistingModule ? "Admin revenue plan updated." : "Admin revenue plan saved.",
+      })
       setEditingPlan(null)
       setIsDialogOpen(false)
       reset(EMPTY_FORM_VALUES)
@@ -662,9 +528,9 @@ export function AdminFeePlansManager() {
     saveMutation.reset()
     mapMutation.reset()
     setOrganizerSearchValue("")
-    setModuleSearchValue("")
     setOrganizerRuleValueInput("")
     setBuyerRuleValueInput("")
+    setIsModuleLocked(false)
   }
 
   function openCreateDialog() {
@@ -679,10 +545,11 @@ export function AdminFeePlansManager() {
   function openEditDialog(plan: AdminRevenuePlan) {
     resetDialogState()
     setEditingPlan(plan)
+    setIsModuleLocked(true)
     reset({
       name: plan.name,
       label: plan.label,
-      moduleIds: plan.moduleIds.length > 0 ? plan.moduleIds : plan.moduleId > 0 ? [plan.moduleId] : [],
+      moduleId: plan.moduleId,
       isDefault: plan.isDefault,
       isActive: plan.isActive,
       organizerUniqueIds: plan.assignedOrganizerUniqueIds,
@@ -708,12 +575,40 @@ export function AdminFeePlansManager() {
     setIsDialogOpen(true)
   }
 
-  async function handleEditPlan(uniqueId: string) {
+  function openAddModuleDialog(plan: AdminRevenuePlan) {
+    resetDialogState()
+    setEditingPlan(plan)
+    reset({
+      name: plan.name,
+      label: plan.label,
+      moduleId: 0,
+      isDefault: plan.isDefault,
+      isActive: plan.isActive,
+      organizerUniqueIds: plan.assignedOrganizerUniqueIds,
+      organizerRule: {
+        target: "Organizer",
+        valueType: "Percent",
+        value: 0,
+        isActive: true,
+      },
+      buyerRule: {
+        target: "Buyer",
+        valueType: "Percent",
+        value: 0,
+        isActive: false,
+      },
+    })
+    setOrganizerRuleValueInput("")
+    setBuyerRuleValueInput("")
+    setIsDialogOpen(true)
+  }
+
+  async function handleEditPlan(plan: AdminRevenuePlan) {
     resetDialogState()
 
     try {
-      const plan = await fetchAdminRevenuePlan(uniqueId)
-      openEditDialog(plan)
+      const detail = await fetchAdminRevenuePlan(plan.uniqueId, plan.moduleId)
+      openEditDialog(detail)
     } catch (error) {
       setBanner({ type: "error", message: extractApiError(error) })
     }
@@ -831,7 +726,7 @@ export function AdminFeePlansManager() {
                 Available plans
               </Text>
               <Text fontSize="sm" color="text.secondary">
-                {totalPlans} plan{totalPlans === 1 ? "" : "s"} total
+                {totalPlans} module{totalPlans === 1 ? "" : "s"} configured
               </Text>
             </Box>
             <Flex direction="column" align={{ base: "stretch", md: "end" }} gap={2}>
@@ -865,7 +760,7 @@ export function AdminFeePlansManager() {
                     Display Text
                   </Table.ColumnHeader>
                   <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
-                    Modules
+                    Module
                   </Table.ColumnHeader>
                   <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
                     Organizers
@@ -909,13 +804,13 @@ export function AdminFeePlansManager() {
                   </Table.Row>
                 ) : (
                   plans.map((plan) => {
-                    const modules = plan.moduleNames.length > 0 ? plan.moduleNames : plan.moduleName ? [plan.moduleName] : []
+                    const moduleName = plan.moduleName || plan.moduleNames[0] || "-"
                     const organizerCount = plan.organizerCount ?? plan.assignedOrganizerCount
                     const organizerNames = plan.topOrganizerNames.slice(0, 3)
                     const remainingOrganizerCount = Math.max(organizerCount - organizerNames.length, 0)
 
                     return (
-                      <Table.Row key={plan.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
+                      <Table.Row key={`${plan.uniqueId}-${plan.moduleId}`} _hover={{ bg: "app.bg" }} transition="background 0.15s">
                       <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} textAlign="center">
                         <Flex align="center" justify="center" w="full">
                           <Menu.Root>
@@ -950,7 +845,21 @@ export function AdminFeePlansManager() {
                               >
                                 <Menu.Item
                                   value={`edit-${plan.uniqueId}`}
-                                  onClick={() => void handleEditPlan(plan.uniqueId)}
+                                  onClick={() => void handleEditPlan(plan)}
+                                  borderRadius="10px"
+                                  fontSize="sm"
+                                  fontWeight="600"
+                                  color="gray.700"
+                                  px={3}
+                                  py={2}
+                                  cursor="pointer"
+                                  >
+                                  <PencilLine size={14} />
+                                  Edit module
+                                </Menu.Item>
+                                <Menu.Item
+                                  value={`add-module-${plan.uniqueId}`}
+                                  onClick={() => openAddModuleDialog(plan)}
                                   borderRadius="10px"
                                   fontSize="sm"
                                   fontWeight="600"
@@ -959,8 +868,8 @@ export function AdminFeePlansManager() {
                                   py={2}
                                   cursor="pointer"
                                 >
-                                  <PencilLine size={14} />
-                                  Edit
+                                  <Plus size={14} />
+                                  Add module
                                 </Menu.Item>
                                 <Menu.Item
                                   value={`assign-${plan.uniqueId}`}
@@ -994,32 +903,20 @@ export function AdminFeePlansManager() {
                       </Table.Cell>
                       <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
                         <Box minW={0}>
-                          <Flex wrap="wrap" gap={2}>
-                            {modules.map((module, moduleIndex) => {
-                              const moduleRuleSummary = getModuleRuleSummary(plan, moduleIndex)
-
-                              return (
-                                <Badge
-                                  key={`${plan.uniqueId}-${module}`}
-                                  colorPalette="gray"
-                                  variant="subtle"
-                                  borderRadius="999px"
-                                  px={3}
-                                  py={1}
-                                  fontSize="10px"
-                                  fontWeight="800"
-                                  textTransform="uppercase"
-                                  letterSpacing="0.08em"
-                                  w="fit-content"
-                                  cursor={moduleRuleSummary ? "help" : "default"}
-                                  title={moduleRuleSummary || undefined}
-                                  aria-label={moduleRuleSummary ? `${module}. ${moduleRuleSummary.replaceAll("\n", ". ")}` : module}
-                                >
-                                  {module}
-                                </Badge>
-                              )
-                            })}
-                          </Flex>
+                          <Badge
+                            colorPalette="gray"
+                            variant="subtle"
+                            borderRadius="999px"
+                            px={3}
+                            py={1}
+                            fontSize="10px"
+                            fontWeight="800"
+                            textTransform="uppercase"
+                            letterSpacing="0.08em"
+                            w="fit-content"
+                          >
+                            {moduleName}
+                          </Badge>
                         </Box>
                       </Table.Cell>
                       <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
@@ -1426,60 +1323,16 @@ export function AdminFeePlansManager() {
                   </Field.Root>
                 </SimpleGrid>
 
-                <Field.Root invalid={Boolean(errors.moduleIds)}>
+                <Field.Root invalid={Boolean(errors.moduleId)}>
                   <RequiredFieldLabel>Module</RequiredFieldLabel>
-                  <ReactSelect
-                    isMulti
+                  <StyledSelect
                     options={moduleOptions}
-                    value={selectedModuleOptions}
+                    value={selectedModuleValue}
                     onChange={handleModuleChange}
-                    placeholder={modulesQuery.isLoading ? "Loading modules..." : "Select modules"}
-                    inputValue={moduleSearchValue}
-                    onInputChange={handleModuleInputChange}
-                    closeMenuOnSelect={false}
-                    hideSelectedOptions={false}
-                    isClearable={false}
-                    isDisabled={modulesQuery.isLoading}
-                    controlShouldRenderValue={false}
-                    blurInputOnSelect={false}
-                    menuShouldScrollIntoView={false}
-                    components={{ Option: ModuleOption }}
-                    styles={moduleMultiSelectStyles}
+                    placeholder={modulesQuery.isLoading ? "Loading modules..." : "Select module"}
+                    disabled={modulesQuery.isLoading || isModuleLocked}
                   />
-                  {selectedModuleOptions.length > 0 ? (
-                    <Flex wrap="wrap" gap={2} mt={3}>
-                      {selectedModuleOptions.map((option) => (
-                        <Box
-                          key={option.value}
-                          as="button"
-                          type="button"
-                          onClick={() => handleRemoveModule(Number(option.value))}
-                          display="inline-flex"
-                          alignItems="center"
-                          gap={2}
-                          borderRadius="999px"
-                          border="1px solid"
-                          borderColor="rgba(117, 81, 255, 0.18)"
-                          bg="rgba(117, 81, 255, 0.12)"
-                          color="brand.500"
-                          px={3}
-                          py={1.5}
-                          fontSize="sm"
-                          fontWeight="700"
-                          cursor="pointer"
-                          _hover={{ bg: "rgba(117, 81, 255, 0.18)" }}
-                        >
-                          <Text as="span" lineHeight={1.1}>
-                            {option.label}
-                          </Text>
-                          <Text as="span" fontSize="xs" lineHeight={1} aria-hidden="true">
-                            ×
-                          </Text>
-                        </Box>
-                      ))}
-                    </Flex>
-                  ) : null}
-                  {errors.moduleIds ? <Field.ErrorText>{errors.moduleIds.message}</Field.ErrorText> : null}
+                  {errors.moduleId ? <Field.ErrorText>{errors.moduleId.message}</Field.ErrorText> : null}
                 </Field.Root>
 
                 <Box borderRadius="18px" border="1px solid" borderColor="border.subtle" bg="white" p={4}>
