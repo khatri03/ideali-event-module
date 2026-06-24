@@ -24,7 +24,7 @@ import {
   Table,
   Text,
 } from "@chakra-ui/react"
-import { Check, CheckCircle2, Layers3, MoreHorizontal, Plus, RotateCcw, UserRound } from "lucide-react"
+import { Check, CheckCircle2, Layers3, MoreHorizontal, PencilLine, Plus, RotateCcw, UserRound, X } from "lucide-react"
 import ReactSelect, {
   components,
   type InputActionMeta,
@@ -42,9 +42,12 @@ import {
   fetchAdminRevenuePlanOrganizers,
   fetchAdminRevenuePlans,
   assignAdminRevenuePlanOrganizer,
+  unmapAdminRevenuePlanModule,
+  unmapAdminRevenuePlanOrganizer,
   type AdminRevenuePlan,
   type AdminRevenuePlanInput,
   type AdminRevenuePlanModuleOption,
+  type AdminRevenuePlanOrganizer,
   type AdminOrganizerOption,
   updateAdminRevenuePlan,
 } from "@/api/adminFeePlans"
@@ -522,10 +525,41 @@ export function AdminFeePlansManager() {
     },
   })
 
+  const unmapOrganizerMutation = useMutation({
+    mutationFn: ({ uniqueId, organizerUniqueId }: { uniqueId: string; organizerUniqueId: string }) =>
+      unmapAdminRevenuePlanOrganizer(uniqueId, organizerUniqueId),
+    onSuccess: () => {
+      setBanner({ type: "success", message: "Organizer removed from revenue plan." })
+    },
+    onError: () => {
+      setBanner(null)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-revenue-plans"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-revenue-plan-organizer-names"] })
+    },
+  })
+
+  const unmapModuleMutation = useMutation({
+    mutationFn: ({ uniqueId, moduleId }: { uniqueId: string; moduleId: number }) =>
+      unmapAdminRevenuePlanModule(uniqueId, moduleId),
+    onSuccess: () => {
+      setBanner({ type: "success", message: "Module removed from revenue plan." })
+    },
+    onError: () => {
+      setBanner(null)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-revenue-plans"] })
+    },
+  })
+
   function resetDialogState() {
     setBanner(null)
     saveMutation.reset()
     mapMutation.reset()
+    unmapOrganizerMutation.reset()
+    unmapModuleMutation.reset()
     setOrganizerSearchValue("")
     setOrganizerRuleValueInput("")
     setBuyerRuleValueInput("")
@@ -623,7 +657,7 @@ export function AdminFeePlansManager() {
     await saveMutation.mutateAsync(values)
   }
 
-  const isBusy = saveMutation.isPending || mapMutation.isPending
+  const isBusy = saveMutation.isPending || mapMutation.isPending || unmapOrganizerMutation.isPending || unmapModuleMutation.isPending
   const saveError = saveMutation.error
   const mapError = mapMutation.error
   const plans = plansQuery.data?.items ?? []
@@ -634,7 +668,7 @@ export function AdminFeePlansManager() {
     () => buildPageNumbers(planPage, totalPlanPages),
     [planPage, totalPlanPages],
   )
-  const organizerNames = organizerNamesQuery.data ?? []
+  const organizerNames: AdminRevenuePlanOrganizer[] = organizerNamesQuery.data ?? []
 
   function openOrganizerNamesDialog(plan: AdminRevenuePlan) {
     setOrganizerNamesPlan(plan)
@@ -895,36 +929,73 @@ export function AdminFeePlansManager() {
                                 const moduleId = moduleIds[index]
 
                                 return (
-                                  <Box
-                                    key={`${plan.uniqueId}-${moduleId ?? moduleName}-${index}`}
-                                    as="button"
-                                    type="button"
-                                    onClick={() => {
-                                      if (moduleId) {
-                                        void handleEditPlan(plan, moduleId)
-                                      }
-                                    }}
-                                    display="inline-flex"
-                                    alignItems="center"
-                                    justifyContent="center"
-                                    borderRadius="999px"
-                                    border="1px solid"
-                                    borderColor="gray.200"
-                                    bg="gray.100"
-                                    color="gray.700"
-                                    px={3}
-                                    py={1.5}
-                                    fontSize="10px"
-                                    fontWeight="800"
-                                    textTransform="uppercase"
-                                    letterSpacing="0.08em"
-                                    cursor={moduleId ? "pointer" : "not-allowed"}
-                                    _hover={moduleId ? { bg: "gray.200", borderColor: "gray.300" } : undefined}
-                                    disabled={!moduleId}
-                                    aria-label={moduleId ? `Edit ${moduleName} module` : moduleName}
-                                    title={moduleName}
-                                  >
-                                    {moduleName}
+                                  <Box key={`${plan.uniqueId}-${moduleId ?? moduleName}-${index}`} position="relative" display="inline-flex">
+                                    <Button
+                                      type="button"
+                                      variant="subtle"
+                                      onClick={() => {
+                                        if (moduleId) {
+                                          void handleEditPlan(plan, moduleId)
+                                        }
+                                      }}
+                                      display="inline-flex"
+                                      alignItems="center"
+                                      justifyContent="center"
+                                      gap={1.5}
+                                      borderRadius="999px"
+                                      border="1px solid"
+                                      borderColor="gray.200"
+                                      bg="gray.100"
+                                      color="gray.700"
+                                      px={3}
+                                      py={1.5}
+                                      minH="30px"
+                                      h="30px"
+                                      fontSize="10px"
+                                      fontWeight="800"
+                                      textTransform="uppercase"
+                                      letterSpacing="0.08em"
+                                      cursor={moduleId ? "pointer" : "not-allowed"}
+                                      _hover={moduleId ? { bg: "gray.200", borderColor: "gray.300" } : undefined}
+                                      disabled={!moduleId || unmapModuleMutation.isPending}
+                                      aria-label={moduleId ? `Edit ${moduleName} module` : moduleName}
+                                      title={moduleName}
+                                    >
+                                      {moduleName}
+                                      {moduleId ? <PencilLine size={11} aria-hidden="true" /> : null}
+                                    </Button>
+                                    {moduleId ? (
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        aria-label={`Remove ${moduleName} module`}
+                                        title={`Remove ${moduleName} module`}
+                                        onClick={() => {
+                                          if (!plan.uniqueId) {
+                                            return
+                                          }
+
+                                          void unmapModuleMutation.mutateAsync({ uniqueId: plan.uniqueId, moduleId })
+                                        }}
+                                        position="absolute"
+                                        top="-6px"
+                                        right="-6px"
+                                        h="18px"
+                                        w="18px"
+                                        minW="18px"
+                                        p={0}
+                                        borderRadius="full"
+                                        bg="white"
+                                        border="1px solid"
+                                        borderColor="gray.200"
+                                        color="gray.500"
+                                        _hover={{ bg: "red.50", color: "red.500", borderColor: "red.200" }}
+                                        cursor="pointer"
+                                        loading={unmapModuleMutation.isPending}
+                                      >
+                                        <X size={10} />
+                                      </Button>
+                                    ) : null}
                                   </Box>
                                 )
                               })}
@@ -1097,22 +1168,57 @@ export function AdminFeePlansManager() {
                 </Text>
               ) : (
                 <Flex wrap="wrap" gap={2}>
-                  {organizerNames.map((organizerName) => (
-                    <Badge
-                      key={organizerName}
-                      colorPalette="gray"
-                      variant="subtle"
-                      borderRadius="999px"
-                      px={3}
-                      py={1}
-                      fontSize="10px"
-                      fontWeight="800"
-                      textTransform="uppercase"
-                      letterSpacing="0.08em"
-                      w="fit-content"
-                    >
-                      {organizerName}
-                    </Badge>
+                  {organizerNames.map((organizer) => (
+                    <Box key={organizer.uniqueId} position="relative" display="inline-flex">
+                      <Badge
+                        colorPalette="gray"
+                        variant="subtle"
+                        borderRadius="999px"
+                        px={3}
+                        py={1}
+                        fontSize="10px"
+                        fontWeight="800"
+                        textTransform="uppercase"
+                        letterSpacing="0.08em"
+                        w="fit-content"
+                        pr={7}
+                      >
+                        {organizer.name}
+                      </Badge>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        aria-label={`Remove organizer ${organizer.name}`}
+                        title={`Remove organizer ${organizer.name}`}
+                        onClick={async () => {
+                          if (!organizerNamesPlan?.uniqueId) {
+                            return
+                          }
+
+                          await unmapOrganizerMutation.mutateAsync({
+                            uniqueId: organizerNamesPlan.uniqueId,
+                            organizerUniqueId: organizer.uniqueId,
+                          })
+                        }}
+                        position="absolute"
+                        top="-6px"
+                        right="-6px"
+                        h="18px"
+                        w="18px"
+                        minW="18px"
+                        p={0}
+                        borderRadius="full"
+                        bg="white"
+                        border="1px solid"
+                        borderColor="gray.200"
+                        color="gray.500"
+                        _hover={{ bg: "red.50", color: "red.500", borderColor: "red.200" }}
+                        cursor="pointer"
+                        loading={unmapOrganizerMutation.isPending}
+                      >
+                        <X size={10} />
+                      </Button>
+                    </Box>
                   ))}
                 </Flex>
               )}

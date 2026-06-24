@@ -149,7 +149,14 @@ export interface AdminRevenuePlan {
   rules: AdminRevenuePlanRule[]
 }
 
-const adminRevenuePlanOrganizerNamesSchema = z.array(z.string())
+const adminRevenuePlanOrganizerNamesSchema = z.array(
+  z.object({
+    UniqueId: z.string().optional(),
+    uniqueId: z.string().optional(),
+    Name: z.string().optional(),
+    name: z.string().optional(),
+  }),
+)
 
 export interface AdminRevenuePlanModuleOption {
   value: number
@@ -159,6 +166,11 @@ export interface AdminRevenuePlanModuleOption {
 export interface AdminOrganizerOption {
   value: string
   text: string
+}
+
+export interface AdminRevenuePlanOrganizer {
+  uniqueId: string
+  name: string
 }
 
 function readResponseData(payload: unknown): unknown {
@@ -261,10 +273,13 @@ export async function fetchAdminRevenuePlan(uniqueId: string, moduleId?: number)
   return normalizePlan(adminFeePlanSchema.parse(data))
 }
 
-export async function fetchAdminRevenuePlanOrganizerNames(uniqueId: string): Promise<string[]> {
+export async function fetchAdminRevenuePlanOrganizerNames(uniqueId: string): Promise<AdminRevenuePlanOrganizer[]> {
   const response = await client.get<unknown>(API_ROUTES.adminRevenuePlanOrganizers(uniqueId))
   const data = parseServicePayload(response.data)
-  return adminRevenuePlanOrganizerNamesSchema.parse(data)
+  return adminRevenuePlanOrganizerNamesSchema.parse(data).map((item) => ({
+    uniqueId: item.UniqueId ?? item.uniqueId ?? "",
+    name: item.Name ?? item.name ?? "",
+  }))
 }
 
 export async function fetchAdminRevenuePlanModules(): Promise<AdminRevenuePlanModuleOption[]> {
@@ -313,4 +328,14 @@ export async function updateAdminRevenuePlan(uniqueId: string, input: AdminReven
 export async function assignAdminRevenuePlanOrganizer(uniqueId: string, organizerUniqueId: string): Promise<void> {
   const response = await client.post<unknown>(API_ROUTES.adminRevenuePlanAssignOrganizer(uniqueId, organizerUniqueId))
   assertSuccess(response.data, "Failed to assign admin revenue plan to organizer.")
+}
+
+export async function unmapAdminRevenuePlanOrganizer(uniqueId: string, organizerUniqueId: string): Promise<void> {
+  const response = await client.post<unknown>(API_ROUTES.adminRevenuePlanUnassignOrganizer(uniqueId, organizerUniqueId))
+  assertSuccess(response.data, "Failed to unassign admin revenue plan from organizer.")
+}
+
+export async function unmapAdminRevenuePlanModule(uniqueId: string, moduleId: number): Promise<void> {
+  const response = await client.delete<unknown>(API_ROUTES.adminRevenuePlanUnmapModule(uniqueId, moduleId))
+  assertSuccess(response.data, "Failed to remove module from admin revenue plan.")
 }
