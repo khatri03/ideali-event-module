@@ -1,13 +1,17 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Badge, Box, Button, Flex, Heading, Stack, Text } from "@chakra-ui/react"
-import { CalendarPlus, Sparkles } from "lucide-react"
+import { Badge, Box, Button, CloseButton, Dialog, Flex, Heading, Input, Portal, Stack, Text, Tooltip } from "@chakra-ui/react"
+import { CalendarPlus, Plus, Sparkles } from "lucide-react"
 import { APP_ROUTES } from "@/utils/routes"
 import { extractApiError } from "@/utils/errors"
 import { useSessionFilterOptions, useSessionList } from "../hooks"
 import { SessionFiltersCard } from "../components/SessionFiltersCard"
 import { SessionListTable, type SessionSortBy, type SessionSortOrder } from "../components/SessionListTable"
 import type { SessionListFilters } from "@/api/sessions"
+import { createEventWizardSession } from "@/api/events"
+import { fetchOrganizerEvents, type OrganizerEventOption } from "@/api/organizer"
+import { StyledSelect } from "@/components/common/StyledSelect"
+import { useMutation, useQuery } from "@tanstack/react-query"
 
 const PAGE_SIZE = 10
 
@@ -49,20 +53,66 @@ function countAppliedFilters(filters: SessionListFilters) {
   ].filter((value) => Boolean(value)).length
 }
 
+interface CreateSessionFormState {
+  eventUniqueId: string
+  name: string
+}
+
+function createEmptyCreateSessionForm(): CreateSessionFormState {
+  return {
+    eventUniqueId: "",
+    name: "",
+  }
+}
+
 export function SessionListPage() {
   const navigate = useNavigate()
+  const sessionNameInputRef = useRef<HTMLInputElement>(null)
   const [page, setPage] = useState(1)
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(true)
   const [draftFilters, setDraftFilters] = useState<SessionListFilters>(() => createEmptySessionFilters())
   const [appliedFilters, setAppliedFilters] = useState<SessionListFilters>(() => createEmptySessionFilters())
   const [sortBy, setSortBy] = useState<SessionSortBy | null>(null)
   const [sortOrder, setSortOrder] = useState<SessionSortOrder>("asc")
+  const [isCreateSessionOpen, setIsCreateSessionOpen] = useState(false)
+  const [createSessionForm, setCreateSessionForm] = useState<CreateSessionFormState>(() => createEmptyCreateSessionForm())
+  const [createSessionError, setCreateSessionError] = useState("")
 
   const filterOptionsQuery = useSessionFilterOptions()
+  const organizerEventsQuery = useQuery({
+    queryKey: ["sessions", "create-session", "events"],
+    queryFn: fetchOrganizerEvents,
+    staleTime: 1000 * 60 * 30,
+  })
   const sessionsQuery = useSessionList(page, PAGE_SIZE, {
     ...appliedFilters,
     sortBy: sortBy ?? undefined,
     sortOrder: sortBy ? sortOrder : undefined,
+  })
+  const createSessionMutation = useMutation({
+    mutationFn: async () => {
+      const eventUniqueId = createSessionForm.eventUniqueId.trim()
+      const name = createSessionForm.name.trim()
+
+      if (!eventUniqueId) {
+        throw new Error("Event is required.")
+      }
+
+      if (!name) {
+        throw new Error("Session name is required.")
+      }
+
+      return createEventWizardSession(eventUniqueId, { name })
+    },
+    onSuccess: (createdSession) => {
+      setIsCreateSessionOpen(false)
+      setCreateSessionForm(createEmptyCreateSessionForm())
+      setCreateSessionError("")
+      navigate(APP_ROUTES.sessionWizard.edit(createdSession.uniqueId))
+    },
+    onError: (error: unknown) => {
+      setCreateSessionError(extractApiError(error))
+    },
   })
 
   const sessions = sessionsQuery.data?.items ?? []
@@ -71,6 +121,28 @@ export function SessionListPage() {
   const pageNumbers = useMemo(() => buildPageNumbers(currentPage, totalPages), [currentPage, totalPages])
   const appliedFilterCount = countAppliedFilters(appliedFilters)
   const hasAppliedFilters = appliedFilterCount > 0
+  const createEventOptions = useMemo(
+    () =>
+      (organizerEventsQuery.data ?? [])
+        .map((event: OrganizerEventOption) => ({
+          label: event.name,
+          value: event.uniqueId,
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [organizerEventsQuery.data],
+  )
+
+  useEffect(() => {
+    if (!isCreateSessionOpen) {
+      return
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      sessionNameInputRef.current?.focus()
+    })
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [isCreateSessionOpen])
 
   function handleApplyFilters() {
     setAppliedFilters({
@@ -113,6 +185,17 @@ export function SessionListPage() {
     setPage(1)
   }
 
+  function handleOpenCreateSession() {
+    setCreateSessionError("")
+    setCreateSessionForm(createEmptyCreateSessionForm())
+    setIsCreateSessionOpen(true)
+  }
+
+  function handleCreateSession() {
+    setCreateSessionError("")
+    createSessionMutation.mutate()
+  }
+
   return (
     <Stack gap={6}>
       <Box
@@ -149,16 +232,38 @@ export function SessionListPage() {
             </Box>
           </Flex>
 
-          <Button
-            variant="ghost"
-            onClick={() => navigate(APP_ROUTES.events)}
-            alignSelf={{ base: "stretch", md: "auto" }}
-          >
-            <Flex align="center" gap={2}>
-              <CalendarPlus size={16} />
-              <Text>Back to events</Text>
-            </Flex>
-          </Button>
+          <Flex gap={3} direction={{ base: "column", sm: "row" }} align={{ base: "stretch", sm: "center" }} alignSelf={{ base: "stretch", md: "auto" }}>
+            <Button variant="ghost" onClick={() => navigate(APP_ROUTES.events)} alignSelf={{ base: "stretch", sm: "auto" }}>
+              <Flex align="center" gap={2}>
+                <CalendarPlus size={16} />
+                <Text>Back to events</Text>
+              </Flex>
+            </Button>
+
+            <Tooltip.Root openDelay={300} closeDelay={120}>
+              <Tooltip.Trigger asChild>
+                <Button
+                  onClick={handleOpenCreateSession}
+                  alignSelf={{ base: "stretch", sm: "auto" }}
+                  borderRadius="12px"
+                  minH="11"
+                  px={5}
+                  color="white"
+                  style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+                  _hover={{ opacity: 0.9, transform: "translateY(-1px)" }}
+                  transition="all 0.2s ease"
+                >
+                  <Plus size={16} />
+                  Create
+                </Button>
+              </Tooltip.Trigger>
+              <Portal>
+                <Tooltip.Positioner>
+                  <Tooltip.Content>Start the session wizard</Tooltip.Content>
+                </Tooltip.Positioner>
+              </Portal>
+            </Tooltip.Root>
+          </Flex>
         </Flex>
       </Box>
 
@@ -192,6 +297,124 @@ export function SessionListPage() {
         onClearSort={handleClearSort}
         onOpenSession={(sessionId) => navigate(APP_ROUTES.sessionWizard.edit(sessionId))}
       />
+
+      <Dialog.Root
+        open={isCreateSessionOpen}
+        onOpenChange={(details) => {
+          setIsCreateSessionOpen(details.open)
+          if (!details.open) {
+            setCreateSessionError("")
+            setCreateSessionForm(createEmptyCreateSessionForm())
+          }
+        }}
+        size="lg"
+      >
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content
+              bg="white"
+              borderRadius="24px"
+              border="1px solid"
+              borderColor="gray.200"
+              boxShadow="0 24px 60px rgba(15, 23, 42, 0.18)"
+              maxW="560px"
+              m="auto"
+            >
+              <Box px={6} pt={6} pb={4} borderBottom="1px solid" borderColor="gray.100">
+                <Dialog.Title fontSize="xl" fontWeight="800" color="gray.900">
+                  Start Session Wizard
+                </Dialog.Title>
+                <Dialog.Description color="gray.600" mt={1}>
+                  Select an event and enter the session name to create the session and open the wizard.
+                </Dialog.Description>
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton size="sm" />
+                </Dialog.CloseTrigger>
+              </Box>
+
+              <Dialog.Body py={5}>
+                <Stack gap={4}>
+                  <Box>
+                    <Text fontSize="sm" fontWeight="700" color="gray.800" mb={2}>
+                      Event <Text as="span" color="red.500">*</Text>
+                    </Text>
+                    <StyledSelect
+                      options={createEventOptions}
+                      value={createSessionForm.eventUniqueId}
+                      onChange={(value) =>
+                        setCreateSessionForm((current) => ({
+                          ...current,
+                          eventUniqueId: value,
+                        }))
+                      }
+                      placeholder={organizerEventsQuery.isLoading ? "Loading events..." : "Select event"}
+                      disabled={organizerEventsQuery.isLoading || organizerEventsQuery.isError || createSessionMutation.isPending}
+                    />
+                  </Box>
+
+                  <Box>
+                    <Text fontSize="sm" fontWeight="700" color="gray.800" mb={2}>
+                      Session Name <Text as="span" color="red.500">*</Text>
+                    </Text>
+                    <Input
+                      ref={sessionNameInputRef}
+                      value={createSessionForm.name}
+                      onChange={(event) =>
+                        setCreateSessionForm((current) => ({
+                          ...current,
+                          name: event.target.value,
+                        }))
+                      }
+                      placeholder="Enter session name"
+                      borderRadius="16px"
+                      borderColor="secondaryGray.100"
+                      bg="app.bg"
+                      fontSize="sm"
+                      h="44px"
+                      px={4}
+                      _focus={{ borderColor: "brand.400", boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)" }}
+                      _dark={{ borderColor: "navy.600" }}
+                      disabled={createSessionMutation.isPending}
+                    />
+                  </Box>
+
+                  {createSessionError ? (
+                    <Box p={3.5} borderRadius="14px" border="1px solid" borderColor="red.200" bg="red.50">
+                      <Text fontSize="sm" fontWeight="600" color="red.700">
+                        {createSessionError}
+                      </Text>
+                    </Box>
+                  ) : null}
+                </Stack>
+              </Dialog.Body>
+
+              <Box px={6} pb={6} pt={4} borderTop="1px solid" borderColor="gray.100">
+                <Flex justify="flex-end" gap={3} w="full" flexWrap="wrap">
+                  <Button variant="outline" borderRadius="12px" minH="11" px={4} onClick={() => setIsCreateSessionOpen(false)}>
+                    Cancel
+                  </Button>
+                    <Button
+                      borderRadius="12px"
+                      minH="11"
+                      px={5}
+                      color="white"
+                    style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+                    _hover={{ opacity: 0.9, transform: "translateY(-1px)" }}
+                      transition="all 0.2s ease"
+                      onClick={handleCreateSession}
+                      loading={createSessionMutation.isPending}
+                      loadingText="Starting..."
+                      disabled={createSessionMutation.isPending || organizerEventsQuery.isLoading}
+                    >
+                      Start Wizard
+                    </Button>
+                  </Flex>
+                </Box>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
     </Stack>
   )
 }
