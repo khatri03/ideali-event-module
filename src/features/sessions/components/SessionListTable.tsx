@@ -161,7 +161,7 @@ export function SessionListTable({
                 <SortHeaderButton label="Name" sortKey="name" currentSortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
               </Table.ColumnHeader>
               <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
-                <SortHeaderButton label="Event Name" sortKey="eventName" currentSortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
+                <SortHeaderButton label="Event" sortKey="eventName" currentSortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
               </Table.ColumnHeader>
               <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
                 <SortHeaderButton label="Venue" sortKey="venue" currentSortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
@@ -220,11 +220,11 @@ export function SessionListTable({
                       </Flex>
                     ) : null}
                   </Table.Cell>
-                  <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} verticalAlign="top" fontSize="sm" color="text.secondary">
+                  <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} verticalAlign="top" fontSize="sm" color="text.primary">
                     {session.eventName}
                   </Table.Cell>
                   <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} verticalAlign="top">
-                    <Flex align="center" gap={2} color="text.secondary" fontSize="sm">
+                    <Flex align="center" gap={2} color="text.primary" fontSize="sm">
                       <MapPin size={14} />
                       <Text>{session.venueName ?? "Not assigned"}</Text>
                     </Flex>

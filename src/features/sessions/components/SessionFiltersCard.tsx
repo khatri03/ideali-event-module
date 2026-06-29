@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { Box, Badge, Button, Flex, Input, SimpleGrid, Text } from "@chakra-ui/react"
+import { Box, Badge, Button, Flex, Grid, Input, Text } from "@chakra-ui/react"
 import ReactSelect, { components, type MultiValue, type OptionProps, type StylesConfig } from "react-select"
 import { ChevronDown, ChevronUp, Filter, Check } from "lucide-react"
 import type { SessionFilterOptionsResponse, SessionListFilters, SessionListOption } from "@/api/sessions"
@@ -192,7 +192,7 @@ export function SessionFiltersCard({
 
       {isExpanded ? (
         <Box px={4} pb={4}>
-          <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap={4} mb={4}>
+          <Grid templateColumns={{ base: "1fr", xl: "repeat(3, minmax(0, 1fr))" }} gap={4} mb={4}>
             <Box>
               <Text fontSize="sm" fontWeight="600" color="text.primary" mb={2}>
                 Name
@@ -219,29 +219,6 @@ export function SessionFiltersCard({
 
             <Box>
               <Text fontSize="sm" fontWeight="600" color="text.primary" mb={2}>
-                Genres
-              </Text>
-              <ReactSelect
-                isMulti
-                closeMenuOnSelect={false}
-                hideSelectedOptions={false}
-                options={genreOptions}
-                value={selectedGenreOptions}
-                onChange={(values: MultiValue<SelectOption>) =>
-                  onDraftFiltersChange((current) => ({
-                    ...current,
-                    genreUniqueIds: values.map((value) => value.value),
-                  }))
-                }
-                placeholder={isLoading ? "Loading genres..." : "Select genres"}
-                styles={filterMultiSelectStyles}
-                components={{ Option: CheckboxOption }}
-                isDisabled={isLoading || isError}
-              />
-            </Box>
-
-            <Box>
-              <Text fontSize="sm" fontWeight="600" color="text.primary" mb={2}>
                 Event
               </Text>
               <ReactSelect
@@ -261,35 +238,8 @@ export function SessionFiltersCard({
                 components={{ Option: CheckboxOption }}
                 isDisabled={isLoading || isError}
               />
-            </Box>
-          </SimpleGrid>
 
-          <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-            <Box>
-              <Text fontSize="sm" fontWeight="600" color="text.primary" mb={2}>
-                Venue
-              </Text>
-              <ReactSelect
-                isMulti
-                closeMenuOnSelect={false}
-                hideSelectedOptions={false}
-                options={venueOptions}
-                value={selectedVenueOptions}
-                onChange={(values: MultiValue<SelectOption>) =>
-                  onDraftFiltersChange((current) => ({
-                    ...current,
-                    venueUniqueIds: values.map((value) => value.value),
-                  }))
-                }
-                placeholder={isLoading ? "Loading venues..." : "Select venues"}
-                styles={filterMultiSelectStyles}
-                components={{ Option: CheckboxOption }}
-                isDisabled={isLoading || isError}
-              />
-            </Box>
-
-            <SimpleGrid columns={{ base: 1, sm: 2 }} gap={4}>
-              <Box>
+              <Box mt={4}>
                 <Text fontSize="sm" fontWeight="600" color="text.primary" mb={2}>
                   Session from
                 </Text>
@@ -312,8 +262,31 @@ export function SessionFiltersCard({
                   _dark={{ borderColor: "navy.600" }}
                 />
               </Box>
+            </Box>
 
-              <Box>
+            <Box>
+              <Text fontSize="sm" fontWeight="600" color="text.primary" mb={2}>
+                Venue
+              </Text>
+              <ReactSelect
+                isMulti
+                closeMenuOnSelect={false}
+                hideSelectedOptions={false}
+                options={venueOptions}
+                value={selectedVenueOptions}
+                onChange={(values: MultiValue<SelectOption>) =>
+                  onDraftFiltersChange((current) => ({
+                    ...current,
+                    venueUniqueIds: values.map((value) => value.value),
+                  }))
+                }
+                placeholder={isLoading ? "Loading venues..." : "Select venues"}
+                styles={filterMultiSelectStyles}
+                components={{ Option: CheckboxOption }}
+                isDisabled={isLoading || isError}
+              />
+
+              <Box mt={4}>
                 <Text fontSize="sm" fontWeight="600" color="text.primary" mb={2}>
                   Session to
                 </Text>
@@ -336,8 +309,31 @@ export function SessionFiltersCard({
                   _dark={{ borderColor: "navy.600" }}
                 />
               </Box>
-            </SimpleGrid>
-          </SimpleGrid>
+            </Box>
+
+            <Box>
+              <Text fontSize="sm" fontWeight="600" color="text.primary" mb={2}>
+                Genres
+              </Text>
+              <ReactSelect
+                isMulti
+                closeMenuOnSelect={false}
+                hideSelectedOptions={false}
+                options={genreOptions}
+                value={selectedGenreOptions}
+                onChange={(values: MultiValue<SelectOption>) =>
+                  onDraftFiltersChange((current) => ({
+                    ...current,
+                    genreUniqueIds: values.map((value) => value.value),
+                  }))
+                }
+                placeholder={isLoading ? "Loading genres..." : "Select genres"}
+                styles={filterMultiSelectStyles}
+                components={{ Option: CheckboxOption }}
+                isDisabled={isLoading || isError}
+              />
+            </Box>
+          </Grid>
 
           {isError ? (
             <Box mt={4} p={3.5} borderRadius="14px" border="1px solid" borderColor="red.200" bg="red.50">
