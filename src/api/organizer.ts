@@ -28,6 +28,19 @@ const organizerEventSchema = z.object({
   name: z.string().optional(),
 })
 
+const organizerEventListEnvelopeSchema = z.object({
+  PageNo: z.number().int().optional(),
+  pageNo: z.number().int().optional(),
+  PageSize: z.number().int().optional(),
+  pageSize: z.number().int().optional(),
+  PageCount: z.number().int().optional(),
+  pageCount: z.number().int().optional(),
+  TotalRecordsCount: z.number().int().optional(),
+  totalRecordsCount: z.number().int().optional(),
+  PageData: z.array(organizerEventSchema).optional(),
+  pageData: z.array(organizerEventSchema).optional(),
+})
+
 export interface OrganizerVenueOption {
   uniqueId: string
   name: string
@@ -63,6 +76,31 @@ function parseServicePayload(payload: unknown): unknown {
   return readResponseData(serviceResponse)
 }
 
+function normalizeOrganizerEvent(item: z.infer<typeof organizerEventSchema>): OrganizerEventOption {
+  return {
+    uniqueId: item.UniqueId ?? item.uniqueId ?? "",
+    name: item.Name ?? item.name ?? "",
+  }
+}
+
+async function fetchOrganizerEventsPage(pageNo: number, pageSize: number): Promise<{
+  pageData: OrganizerEventOption[]
+  totalPages: number
+}> {
+  const res = await client.get<unknown>(API_ROUTES.organizerEvents, {
+    params: { pageNo, pageSize },
+  })
+  const responseData = parseServicePayload(res.data)
+  const parsed = organizerEventListEnvelopeSchema.parse(responseData)
+  const pageData = parsed.PageData ?? parsed.pageData ?? []
+  const totalPages = parsed.PageCount ?? parsed.pageCount ?? 1
+
+  return {
+    pageData: pageData.map(normalizeOrganizerEvent),
+    totalPages,
+  }
+}
+
 export async function fetchOrganizerVenues(): Promise<OrganizerVenueOption[]> {
   const res = await client.get<unknown>(API_ROUTES.organizerVenues)
   const responseData = parseServicePayload(res.data)
@@ -85,11 +123,26 @@ export async function createOrganizerVenue(payload: OrganizerVenueCreateRequest)
 }
 
 export async function fetchOrganizerEvents(): Promise<OrganizerEventOption[]> {
-  const res = await client.get<unknown>(API_ROUTES.organizerEvents)
-  const responseData = Array.isArray(res.data) ? res.data : parseServicePayload(res.data)
+  const pageSize = 200
+  const { pageData: firstPage, totalPages } = await fetchOrganizerEventsPage(1, pageSize)
 
-  return z.array(organizerEventSchema).parse(responseData).map((item) => ({
-    uniqueId: item.UniqueId ?? item.uniqueId ?? "",
-    name: item.Name ?? item.name ?? "",
-  }))
+  if (totalPages <= 1) {
+    return firstPage
+  }
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, index) => fetchOrganizerEventsPage(index + 2, pageSize)),
+  )
+
+  const merged = [...firstPage, ...remainingPages.flatMap((page) => page.pageData)]
+  const deduped = new Map<string, OrganizerEventOption>()
+
+  merged.forEach((event) => {
+    if (!event.uniqueId) {
+      return
+    }
+    deduped.set(event.uniqueId, event)
+  })
+
+  return [...deduped.values()]
 }
