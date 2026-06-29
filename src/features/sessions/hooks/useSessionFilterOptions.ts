@@ -11,7 +11,7 @@ export function useSessionFilterOptions() {
   })
 
   return {
-    filterOptions: query.data ?? { genres: [], events: [], venues: [] },
+    filterOptions: query.data ?? { genres: [], events: [], venues: [], bookingStatuses: [], seatEnabledOptions: [] },
     isLoading: query.isLoading,
     isError: query.isError,
     error: query.isError ? extractApiError(query.error) : "",

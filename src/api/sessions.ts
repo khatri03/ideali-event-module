@@ -157,6 +157,8 @@ const sessionListItemSchema = z.object({
   venueName: z.string().nullable().optional(),
   OfferPickingSeats: z.boolean().optional(),
   offerPickingSeats: z.boolean().optional(),
+  BookingStatus: z.string().optional(),
+  bookingStatus: z.string().optional(),
   StartDate: z.string().nullable().optional(),
   startDate: z.string().nullable().optional(),
   EndDate: z.string().nullable().optional(),
@@ -189,6 +191,10 @@ const sessionFilterOptionsSchema = z.object({
   events: z.array(sessionListOptionSchema).optional(),
   Venues: z.array(sessionListOptionSchema).optional(),
   venues: z.array(sessionListOptionSchema).optional(),
+  BookingStatuses: z.array(sessionListOptionSchema).optional(),
+  bookingStatuses: z.array(sessionListOptionSchema).optional(),
+  SeatEnabledOptions: z.array(sessionListOptionSchema).optional(),
+  seatEnabledOptions: z.array(sessionListOptionSchema).optional(),
 })
 
 const sessionETicketingSchema = z.object({
@@ -575,6 +581,7 @@ export interface SessionListItem {
   eventName: string
   venueName: string | null
   offerPickingSeats: boolean
+  bookingStatus: string
   startDate: string | null
   endDate: string | null
   totalAvailableTickets: number
@@ -595,6 +602,8 @@ export interface SessionListFilters {
   genreUniqueIds?: string[]
   eventUniqueIds?: string[]
   venueUniqueIds?: string[]
+  bookingStatuses?: string[]
+  seatEnabled?: string[]
   startFrom?: string
   startTo?: string
   sortBy?: string
@@ -605,6 +614,8 @@ export interface SessionFilterOptionsResponse {
   genres: SessionListOption[]
   events: SessionListOption[]
   venues: SessionListOption[]
+  bookingStatuses: SessionListOption[]
+  seatEnabledOptions: SessionListOption[]
 }
 
 export interface SessionWizardSetupStateRequest {
@@ -1261,6 +1272,7 @@ function parseSessionListItem(item: z.infer<typeof sessionListItemSchema>): Sess
     eventName: item.EventName ?? item.eventName ?? "",
     venueName: item.VenueName ?? item.venueName ?? null,
     offerPickingSeats: item.OfferPickingSeats ?? item.offerPickingSeats ?? false,
+    bookingStatus: item.BookingStatus ?? item.bookingStatus ?? "",
     startDate: item.StartDate ?? item.startDate ?? null,
     endDate: item.EndDate ?? item.endDate ?? null,
     totalAvailableTickets: item.TotalAvailableTickets ?? item.totalAvailableTickets ?? 0,
@@ -1289,6 +1301,8 @@ function parseSessionFilterOptions(payload: unknown): SessionFilterOptionsRespon
     genres: (options.Genres ?? options.genres ?? []).map(parseSessionListOption),
     events: (options.Events ?? options.events ?? []).map(parseSessionListOption),
     venues: (options.Venues ?? options.venues ?? []).map(parseSessionListOption),
+    bookingStatuses: (options.BookingStatuses ?? options.bookingStatuses ?? []).map(parseSessionListOption),
+    seatEnabledOptions: (options.SeatEnabledOptions ?? options.seatEnabledOptions ?? []).map(parseSessionListOption),
   }
 }
 
@@ -1315,6 +1329,14 @@ export async function fetchSessionList(
 
   filters?.venueUniqueIds?.forEach((venueUniqueId) => {
     params.append("venueUniqueIds", venueUniqueId)
+  })
+
+  filters?.bookingStatuses?.forEach((bookingStatus) => {
+    params.append("bookingStatuses", bookingStatus)
+  })
+
+  filters?.seatEnabled?.forEach((seatEnabled) => {
+    params.append("seatEnabled", seatEnabled)
   })
 
   if (filters?.startFrom) {

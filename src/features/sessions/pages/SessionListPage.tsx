@@ -17,6 +17,8 @@ function createEmptySessionFilters(): SessionListFilters {
     genreUniqueIds: [],
     eventUniqueIds: [],
     venueUniqueIds: [],
+    bookingStatuses: [],
+    seatEnabled: [],
     startFrom: "",
     startTo: "",
   }
@@ -40,6 +42,8 @@ function countAppliedFilters(filters: SessionListFilters) {
     filters.genreUniqueIds?.length ?? 0,
     filters.eventUniqueIds?.length ?? 0,
     filters.venueUniqueIds?.length ?? 0,
+    filters.bookingStatuses?.length ?? 0,
+    filters.seatEnabled?.length ?? 0,
     filters.startFrom,
     filters.startTo,
   ].filter((value) => Boolean(value)).length
@@ -74,6 +78,8 @@ export function SessionListPage() {
       genreUniqueIds: [...(draftFilters.genreUniqueIds ?? [])],
       eventUniqueIds: [...(draftFilters.eventUniqueIds ?? [])],
       venueUniqueIds: [...(draftFilters.venueUniqueIds ?? [])],
+      bookingStatuses: [...(draftFilters.bookingStatuses ?? [])],
+      seatEnabled: [...(draftFilters.seatEnabled ?? [])],
       startFrom: draftFilters.startFrom ?? "",
       startTo: draftFilters.startTo ?? "",
     })

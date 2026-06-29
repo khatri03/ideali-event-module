@@ -3,7 +3,7 @@ import { Box, Badge, Button, Flex, HStack, Skeleton, SkeletonText, Table, Text }
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpDown, CalendarDays, Eye, MapPin } from "lucide-react"
 import { type SessionListItem } from "@/api/sessions"
 
-export type SessionSortBy = "name" | "eventName" | "venue" | "seatEnabled" | "startDate" | "endDate" | "ticketsSold"
+export type SessionSortBy = "name" | "eventName" | "venue" | "bookingStatus" | "seatEnabled" | "startDate" | "endDate" | "ticketsSold"
 export type SessionSortOrder = "asc" | "desc"
 
 interface SessionListTableProps {
@@ -28,6 +28,19 @@ function buildTotalTickets(session: SessionListItem) {
 
 function formatSessionDate(date: string | null) {
   return date ? format(new Date(date), "MMM d, yyyy") : "Not set"
+}
+
+function getBookingStatusPalette(status: string) {
+  switch (status.toLowerCase()) {
+    case "started":
+      return "green"
+    case "ended":
+      return "gray"
+    case "cancelled":
+      return "red"
+    default:
+      return "blue"
+  }
 }
 
 function SortHeaderButton({
@@ -154,7 +167,7 @@ export function SessionListTable({
       </Flex>
 
       <Box overflowX="auto" border="1px solid" borderColor="border.subtle" bg="app.bg" borderRadius="16px">
-        <Table.Root variant="line" size="sm" borderColor="border.subtle" minW={{ base: "960px", md: "auto" }}>
+        <Table.Root variant="line" size="sm" borderColor="border.subtle" minW={{ base: "1080px", md: "auto" }}>
           <Table.Header>
             <Table.Row bg="app.bg">
               <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
@@ -165,6 +178,15 @@ export function SessionListTable({
               </Table.ColumnHeader>
               <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
                 <SortHeaderButton label="Venue" sortKey="venue" currentSortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
+              </Table.ColumnHeader>
+              <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
+                <SortHeaderButton
+                  label="Booking Status"
+                  sortKey="bookingStatus"
+                  currentSortBy={sortBy}
+                  sortOrder={sortOrder}
+                  onSort={onSort}
+                />
               </Table.ColumnHeader>
               <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
                 <SortHeaderButton label="Seat Enabled" sortKey="seatEnabled" currentSortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
@@ -228,6 +250,21 @@ export function SessionListTable({
                       <MapPin size={14} />
                       <Text>{session.venueName ?? "Not assigned"}</Text>
                     </Flex>
+                  </Table.Cell>
+                  <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} verticalAlign="top">
+                    <Badge
+                      colorPalette={getBookingStatusPalette(session.bookingStatus)}
+                      variant="subtle"
+                      borderRadius="full"
+                      px={3}
+                      py={1}
+                      fontSize="10px"
+                      fontWeight="800"
+                      textTransform="uppercase"
+                      letterSpacing="0.08em"
+                    >
+                      {session.bookingStatus || "Unknown"}
+                    </Badge>
                   </Table.Cell>
                   <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} verticalAlign="top">
                     <Badge
