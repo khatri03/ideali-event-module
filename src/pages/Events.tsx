@@ -16,15 +16,19 @@ import {
   Text,
   Badge,
 } from "@chakra-ui/react"
+import ReactSelect, { components, type MultiValue, type OptionProps, type StylesConfig } from "react-select"
 import { useNavigate } from "react-router-dom"
-import { ArrowLeft, ArrowRight, Filter, LayoutGrid, List, Plus, Search, Table2 } from "lucide-react"
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Filter, LayoutGrid, List, Plus, Search, Table2 } from "lucide-react"
 import { EventCard } from "../components/events/EventCard"
 import { EventFormModal } from "../components/events/EventFormModal"
 import { StyledSelect } from "../components/common/StyledSelect"
 import { mockEvents } from "../data/mock"
 import type { AppEvent } from "../types"
+import { type OrganizerEventListFilters } from "@/api/events"
 import { APP_ROUTES } from "@/utils/routes"
 import { useOrganizerEvents } from "@/hooks/useOrganizerEvents"
+import { useOrganizerVenues } from "@/features/events/hooks/useOrganizerVenues"
+import { useOrganizerEventStatusOptions } from "@/features/events/hooks/useOrganizerEventStatusOptions"
 import { OrganizerEventCard } from "@/components/events/OrganizerEventCard"
 import { extractApiError } from "@/utils/errors"
 
@@ -42,7 +46,7 @@ const CATEGORIES: { value: string; label: string }[] = [
 ]
 
 const STATUSES: { value: string; label: string }[] = [
-  { value: "", label: "All Statuses" },
+  { value: "", label: "All Setup States" },
   { value: "draft", label: "Draft" },
   { value: "published", label: "Published" },
   { value: "ongoing", label: "Ongoing" },
@@ -51,6 +55,113 @@ const STATUSES: { value: string; label: string }[] = [
 ]
 
 const REAL_PAGE_SIZE = 6
+
+interface SelectOption {
+  label: string
+  value: string
+}
+
+function createEmptyOrganizerEventFilters(): OrganizerEventListFilters {
+  return {
+    name: "",
+    statuses: [],
+    eventFrom: "",
+    eventTo: "",
+    venueUniqueIds: [],
+  }
+}
+
+function getSelectedOptions(options: SelectOption[], values: string[]) {
+  return options.filter((option) => values.includes(option.value))
+}
+
+function CheckboxOption(props: OptionProps<SelectOption, true>) {
+  return (
+    <components.Option {...props}>
+      <Flex align="center" gap={3}>
+        <Box
+          boxSize="18px"
+          borderRadius="6px"
+          border="1px solid"
+          borderColor={props.isSelected ? "brand.500" : "gray.300"}
+          bg={props.isSelected ? "brand.500" : "white"}
+          color="white"
+          _dark={{
+            borderColor: props.isSelected ? "brand.400" : "whiteAlpha.300",
+            bg: props.isSelected ? "brand.500" : "navy.700",
+          }}
+          display="inline-flex"
+          alignItems="center"
+          justifyContent="center"
+          flexShrink={0}
+        >
+          {props.isSelected ? "✓" : null}
+        </Box>
+        <Box minW={0}>
+          <Text fontSize="sm" fontWeight="600" color="gray.800" lineClamp={1} _dark={{ color: "gray.100" }}>
+            {props.label}
+          </Text>
+        </Box>
+      </Flex>
+    </components.Option>
+  )
+}
+
+const filterMultiSelectStyles: StylesConfig<SelectOption, true> = {
+  control: (base, state) => ({
+    ...base,
+    minHeight: 44,
+    width: "100%",
+    borderRadius: 16,
+    borderColor: state.isFocused ? "#7551FF" : "#E2E8F0",
+    boxShadow: state.isFocused ? "0 0 0 3px rgba(117, 81, 255, 0.15)" : "none",
+    backgroundColor: "#fff",
+  }),
+  container: (base) => ({
+    ...base,
+    width: "100%",
+  }),
+  valueContainer: (base) => ({
+    ...base,
+    flex: 1,
+    minWidth: 0,
+  }),
+  input: (base) => ({
+    ...base,
+    width: "100%",
+  }),
+  menu: (base) => ({
+    ...base,
+    zIndex: 40,
+    borderRadius: 14,
+  }),
+  multiValue: (base) => ({
+    ...base,
+    borderRadius: 999,
+    backgroundColor: "rgba(117, 81, 255, 0.12)",
+    border: "1px solid rgba(117, 81, 255, 0.18)",
+    margin: "2px",
+  }),
+  multiValueLabel: (base) => ({
+    ...base,
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#422AFB",
+    paddingLeft: "8px",
+    paddingRight: "4px",
+  }),
+  multiValueRemove: (base) => ({
+    ...base,
+    borderRadius: 999,
+    color: "#7551FF",
+    paddingLeft: "4px",
+    paddingRight: "8px",
+    ":hover": {
+      backgroundColor: "rgba(117, 81, 255, 0.18)",
+      color: "#422AFB",
+    },
+  }),
+}
 
 function buildPageNumbers(page: number, totalPages: number) {
   const pages: number[] = []
@@ -90,6 +201,13 @@ function formatRealEventDate(date: string | null) {
 export function Events() {
   const navigate = useNavigate()
   const [realPage, setRealPage] = useState(1)
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(true)
+  const [draftEventFilters, setDraftEventFilters] = useState<OrganizerEventListFilters>(() =>
+    createEmptyOrganizerEventFilters()
+  )
+  const [appliedEventFilters, setAppliedEventFilters] = useState<OrganizerEventListFilters>(() =>
+    createEmptyOrganizerEventFilters()
+  )
   const [events, setEvents] = useState<AppEvent[]>(mockEvents)
   const [search, setSearch] = useState("")
   const [category, setCategory] = useState("")
@@ -98,7 +216,9 @@ export function Events() {
   const [editingEvent, setEditingEvent] = useState<AppEvent | null>(null)
   const [mockViewMode, setMockViewMode] = useState<"grid" | "list">("grid")
   const [realViewMode, setRealViewMode] = useState<"card" | "table">("card")
-  const realEventsQuery = useOrganizerEvents(realPage, REAL_PAGE_SIZE)
+  const organizerVenuesQuery = useOrganizerVenues()
+  const organizerEventStatusOptionsQuery = useOrganizerEventStatusOptions()
+  const realEventsQuery = useOrganizerEvents(realPage, REAL_PAGE_SIZE, appliedEventFilters)
 
   const filtered = useMemo(() => {
     return events.filter((e) => {
@@ -120,6 +240,53 @@ export function Events() {
     () => buildPageNumbers(realCurrentPage, realTotalPages),
     [realCurrentPage, realTotalPages]
   )
+
+  const venueOptions = useMemo(
+    () =>
+      organizerVenuesQuery.venues.map((venue) => ({
+        value: venue.uniqueId,
+        label: venue.name,
+      })),
+    [organizerVenuesQuery.venues]
+  )
+
+  const selectedStatusOptions = useMemo(
+    () => getSelectedOptions(organizerEventStatusOptionsQuery.statusOptions, draftEventFilters.statuses ?? []),
+    [draftEventFilters.statuses, organizerEventStatusOptionsQuery.statusOptions]
+  )
+
+  const selectedVenueOptions = useMemo(
+    () => getSelectedOptions(venueOptions, draftEventFilters.venueUniqueIds ?? []),
+    [draftEventFilters.venueUniqueIds, venueOptions]
+  )
+
+  const appliedFilterCount = [
+    appliedEventFilters.name?.trim(),
+    appliedEventFilters.statuses?.length ?? 0,
+    appliedEventFilters.eventFrom,
+    appliedEventFilters.eventTo,
+    appliedEventFilters.venueUniqueIds?.length ?? 0,
+  ].filter((item) => Boolean(item)).length
+
+  const hasAppliedFilters = appliedFilterCount > 0
+
+  function handleApplyEventFilters() {
+    setAppliedEventFilters({
+      name: draftEventFilters.name?.trim() ?? "",
+      statuses: [...(draftEventFilters.statuses ?? [])],
+      eventFrom: draftEventFilters.eventFrom ?? "",
+      eventTo: draftEventFilters.eventTo ?? "",
+      venueUniqueIds: [...(draftEventFilters.venueUniqueIds ?? [])],
+    })
+    setRealPage(1)
+    setIsFiltersExpanded(true)
+  }
+
+  function handleClearEventFilters() {
+    setDraftEventFilters(createEmptyOrganizerEventFilters())
+    setAppliedEventFilters(createEmptyOrganizerEventFilters())
+    setRealPage(1)
+  }
 
   function handleSave(data: Partial<AppEvent>) {
     if (editingEvent) {
@@ -205,44 +372,243 @@ export function Events() {
               Create Event
             </Button>
 
-            <Flex
-              w={{ base: "full", lg: "auto" }}
-              border="1px solid"
-              borderColor="border.subtle"
-              borderRadius="12px"
-              overflow="hidden"
-              bg="app.bg"
-            >
-              <Box
-                as="button"
-                p={2}
-                bg={realViewMode === "card" ? "brand.500" : "transparent"}
-                color={realViewMode === "card" ? "white" : "text.secondary"}
-                onClick={() => setRealViewMode("card")}
-                transition="all 0.15s"
-                _hover={realViewMode !== "card" ? { bg: "gray.100", _dark: { bg: "navy.700" } } : {}}
-                aria-label="Card view"
-              >
-                <LayoutGrid size={16} />
-              </Box>
-              <Box
-                as="button"
-                p={2}
-                bg={realViewMode === "table" ? "brand.500" : "transparent"}
-                color={realViewMode === "table" ? "white" : "text.secondary"}
-                onClick={() => setRealViewMode("table")}
-                transition="all 0.15s"
-                _hover={realViewMode !== "table" ? { bg: "gray.100", _dark: { bg: "navy.700" } } : {}}
-                aria-label="Table view"
-                flex="1"
-              >
-                <Table2 size={16} />
-              </Box>
-            </Flex>
-
             <Badge variant="subtle" colorPalette="purple" borderRadius="999px" px={3} py={1}>
               Page {realCurrentPage} of {Math.max(realTotalPages, 1)}
             </Badge>
+          </Flex>
+        </Flex>
+
+        <Box mb={5} borderRadius="16px" border="1px solid" borderColor="border.subtle" bg="app.bg" overflow="hidden">
+          <Box
+            as="button"
+            w="full"
+            px={4}
+            py={4}
+            cursor="pointer"
+            onClick={() => setIsFiltersExpanded((current) => !current)}
+            _hover={{ bg: "gray.50", _dark: { bg: "navy.800" } }}
+          >
+            <Flex direction={{ base: "column", md: "row" }} align={{ base: "flex-start", md: "center" }} justify="space-between" gap={3}>
+              <Flex align="center" gap={2}>
+                <Box color="text.secondary">
+                  <Filter size={15} />
+                </Box>
+                <Text fontSize="sm" fontWeight="700" color="text.primary">
+                  Filters
+                </Text>
+                {hasAppliedFilters ? (
+                  <Badge colorPalette="brand" variant="solid" borderRadius="full" fontSize="10px" px={1.5}>
+                    {appliedFilterCount}
+                  </Badge>
+                ) : null}
+              </Flex>
+
+              <Text fontSize="sm" color="text.secondary">
+                Search events by name, setup states, running dates, and venue.
+              </Text>
+
+              <Flex align="center" gap={2} borderRadius="999px" px={3} minH="9" color="text.primary" fontSize="sm" fontWeight="700" pointerEvents="none">
+                {isFiltersExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </Flex>
+            </Flex>
+          </Box>
+
+          {isFiltersExpanded ? (
+            <Box px={4} pb={4}>
+              <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap={4} mb={4}>
+                <Box>
+                  <Text fontSize="sm" fontWeight="600" color="text.primary" mb={2}>
+                    Name
+                  </Text>
+                  <Input
+                    value={draftEventFilters.name ?? ""}
+                    onChange={(event) =>
+                      setDraftEventFilters((current) => ({
+                        ...current,
+                        name: event.target.value,
+                      }))
+                    }
+                    placeholder="Search by event name"
+                    borderRadius="16px"
+                    borderColor="secondaryGray.100"
+                    bg="app.bg"
+                    fontSize="sm"
+                    h="44px"
+                    px={4}
+                    _focus={{ borderColor: "brand.400", boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)" }}
+                    _dark={{ borderColor: "navy.600" }}
+                  />
+                </Box>
+
+                <Box>
+                  <Text fontSize="sm" fontWeight="600" color="text.primary" mb={2}>
+                    Setup State
+                  </Text>
+                  <ReactSelect
+                    isMulti
+                    closeMenuOnSelect={false}
+                    hideSelectedOptions={false}
+                    options={organizerEventStatusOptionsQuery.statusOptions}
+                    value={selectedStatusOptions}
+                    onChange={(values: MultiValue<SelectOption>) =>
+                      setDraftEventFilters((current) => ({
+                        ...current,
+                        statuses: values.map((value) => value.value),
+                      }))
+                    }
+                    placeholder={organizerEventStatusOptionsQuery.isLoading ? "Loading setup states..." : "Select setup states"}
+                    styles={filterMultiSelectStyles}
+                    components={{ Option: CheckboxOption }}
+                    isDisabled={organizerEventStatusOptionsQuery.isLoading || organizerEventStatusOptionsQuery.isError}
+                  />
+                  {organizerEventStatusOptionsQuery.isError ? (
+                    <Text mt={2} fontSize="xs" color="red.500">
+                      {organizerEventStatusOptionsQuery.error}
+                    </Text>
+                  ) : null}
+                </Box>
+
+                <Box>
+                  <Text fontSize="sm" fontWeight="600" color="text.primary" mb={2}>
+                    Venue
+                  </Text>
+                  <ReactSelect
+                    isMulti
+                    closeMenuOnSelect={false}
+                    hideSelectedOptions={false}
+                    options={venueOptions}
+                    value={selectedVenueOptions}
+                    onChange={(values: MultiValue<SelectOption>) =>
+                      setDraftEventFilters((current) => ({
+                        ...current,
+                        venueUniqueIds: values.map((value) => value.value),
+                      }))
+                    }
+                    placeholder={organizerVenuesQuery.isLoading ? "Loading venues..." : "Select venues"}
+                    styles={filterMultiSelectStyles}
+                    components={{ Option: CheckboxOption }}
+                    isDisabled={organizerVenuesQuery.isLoading}
+                  />
+                  {organizerVenuesQuery.isError ? (
+                    <Text mt={2} fontSize="xs" color="red.500">
+                      {organizerVenuesQuery.error}
+                    </Text>
+                  ) : null}
+                </Box>
+              </SimpleGrid>
+
+              <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                <Box>
+                  <Text fontSize="sm" fontWeight="600" color="text.primary" mb={2}>
+                    Event from
+                  </Text>
+                  <Input
+                    type="date"
+                    value={draftEventFilters.eventFrom ?? ""}
+                    onChange={(event) =>
+                      setDraftEventFilters((current) => ({
+                        ...current,
+                        eventFrom: event.target.value,
+                      }))
+                    }
+                    borderRadius="16px"
+                    borderColor="secondaryGray.100"
+                    bg="app.bg"
+                    fontSize="sm"
+                    h="44px"
+                    px={4}
+                    _focus={{ borderColor: "brand.400", boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)" }}
+                    _dark={{ borderColor: "navy.600" }}
+                  />
+                </Box>
+
+                <Box>
+                  <Text fontSize="sm" fontWeight="600" color="text.primary" mb={2}>
+                    Event to
+                  </Text>
+                  <Input
+                    type="date"
+                    value={draftEventFilters.eventTo ?? ""}
+                    onChange={(event) =>
+                      setDraftEventFilters((current) => ({
+                        ...current,
+                        eventTo: event.target.value,
+                      }))
+                    }
+                    borderRadius="16px"
+                    borderColor="secondaryGray.100"
+                    bg="app.bg"
+                    fontSize="sm"
+                    h="44px"
+                    px={4}
+                    _focus={{ borderColor: "brand.400", boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)" }}
+                    _dark={{ borderColor: "navy.600" }}
+                  />
+                </Box>
+              </SimpleGrid>
+
+              <Flex justify="flex-end" gap={3} mt={5} flexWrap="wrap">
+                <Button
+                  variant="outline"
+                  borderRadius="12px"
+                  minH="11"
+                  px={4}
+                  disabled={!hasAppliedFilters}
+                  onClick={handleClearEventFilters}
+                >
+                  Clear Filter
+                </Button>
+                <Button
+                  borderRadius="12px"
+                  minH="11"
+                  px={5}
+                  color="white"
+                  style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+                  _hover={{ opacity: 0.9, transform: "translateY(-1px)" }}
+                  transition="all 0.2s ease"
+                  onClick={handleApplyEventFilters}
+                >
+                  Apply Filter
+                </Button>
+              </Flex>
+            </Box>
+          ) : null}
+        </Box>
+
+        <Flex justify="flex-end" mb={5}>
+          <Flex
+            w={{ base: "full", md: "auto" }}
+            border="1px solid"
+            borderColor="border.subtle"
+            borderRadius="12px"
+            overflow="hidden"
+            bg="app.bg"
+          >
+            <Box
+              as="button"
+              p={2}
+              bg={realViewMode === "card" ? "brand.500" : "transparent"}
+              color={realViewMode === "card" ? "white" : "text.secondary"}
+              onClick={() => setRealViewMode("card")}
+              transition="all 0.15s"
+              _hover={realViewMode !== "card" ? { bg: "gray.100", _dark: { bg: "navy.700" } } : {}}
+              aria-label="Card view"
+            >
+              <LayoutGrid size={16} />
+            </Box>
+            <Box
+              as="button"
+              p={2}
+              bg={realViewMode === "table" ? "brand.500" : "transparent"}
+              color={realViewMode === "table" ? "white" : "text.secondary"}
+              onClick={() => setRealViewMode("table")}
+              transition="all 0.15s"
+              _hover={realViewMode !== "table" ? { bg: "gray.100", _dark: { bg: "navy.700" } } : {}}
+              aria-label="Table view"
+              flex="1"
+            >
+              <Table2 size={16} />
+            </Box>
           </Flex>
         </Flex>
 
@@ -299,7 +665,7 @@ export function Events() {
                     Event
                   </Table.ColumnHeader>
                   <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
-                    Status
+                    Setup State
                   </Table.ColumnHeader>
                   <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
                     Date
@@ -478,23 +844,25 @@ export function Events() {
             )}
           </Flex>
 
-          <StyledSelect
-            options={CATEGORIES}
-            value={category}
-            onChange={setCategory}
-            placeholder="All Categories"
-            size="sm"
-            minW={{ base: "full", md: "160px" }}
-          />
+          <Box w={{ base: "full", md: "160px" }}>
+            <StyledSelect
+              options={CATEGORIES}
+              value={category}
+              onChange={setCategory}
+              placeholder="All Categories"
+              size="sm"
+            />
+          </Box>
 
-          <StyledSelect
-            options={STATUSES}
-            value={status}
-            onChange={setStatus}
-            placeholder="All Statuses"
-            size="sm"
-            minW={{ base: "full", md: "150px" }}
-          />
+          <Box w={{ base: "full", md: "150px" }}>
+            <StyledSelect
+              options={STATUSES}
+              value={status}
+              onChange={setStatus}
+              placeholder="All Setup States"
+              size="sm"
+            />
+          </Box>
 
           {/* View toggle */}
           <Flex

@@ -10,6 +10,14 @@ export interface EventFilters {
   category?: EventCategory
 }
 
+export interface OrganizerEventListFilters {
+  name?: string
+  statuses?: string[]
+  eventFrom?: string
+  eventTo?: string
+  venueUniqueIds?: string[]
+}
+
 export interface OrganizerEventListItem {
   uniqueId: string
   name: string
@@ -424,11 +432,34 @@ function normalizeOrganizerEventListItem(item: z.infer<typeof organizerEventList
 
 export async function fetchOrganizerEvents(
   pageNo = 1,
-  pageSize = 12
+  pageSize = 12,
+  filters?: OrganizerEventListFilters
 ): Promise<OrganizerEventsPage> {
-  const res = await client.get<unknown>(API_ROUTES.organizerEvents, {
-    params: { pageNo, pageSize },
+  const params = new URLSearchParams()
+  params.set("pageNo", String(pageNo))
+  params.set("pageSize", String(pageSize))
+
+  if (filters?.name) {
+    params.set("name", filters.name)
+  }
+
+  filters?.statuses?.forEach((status) => {
+    params.append("statuses", status)
   })
+
+  if (filters?.eventFrom) {
+    params.set("eventFrom", filters.eventFrom)
+  }
+
+  if (filters?.eventTo) {
+    params.set("eventTo", filters.eventTo)
+  }
+
+  filters?.venueUniqueIds?.forEach((venueUniqueId) => {
+    params.append("venueUniqueIds", venueUniqueId)
+  })
+
+  const res = await client.get<unknown>(API_ROUTES.organizerEvents, { params })
   const responseData = parseServiceResponseData(res.data)
   const parsed = organizerEventListPageSchema.parse(responseData)
   const items = (parsed.PageData ?? parsed.pageData ?? []).map(normalizeOrganizerEventListItem)
@@ -440,6 +471,35 @@ export async function fetchOrganizerEvents(
     pageSize: parsed.PageSize ?? parsed.pageSize ?? pageSize,
     totalPages: parsed.PageCount ?? parsed.pageCount ?? 0,
   }
+}
+
+const organizerEventStatusOptionSchema = z.object({
+  Text: z.string().optional(),
+  text: z.string().optional(),
+  Value: z.string().optional(),
+  value: z.string().optional(),
+})
+
+export interface OrganizerEventStatusOption {
+  value: string
+  label: string
+}
+
+function parseOrganizerEventStatusOptions(payload: unknown): OrganizerEventStatusOption[] {
+  const responseData = parseServiceResponseData(payload)
+  return z
+    .array(organizerEventStatusOptionSchema)
+    .parse(responseData)
+    .map((item) => ({
+      value: item.Value ?? item.value ?? "",
+      label: item.Text ?? item.text ?? "",
+    }))
+    .filter((item) => item.value.length > 0 && item.label.length > 0)
+}
+
+export async function fetchOrganizerEventStatusOptions(): Promise<OrganizerEventStatusOption[]> {
+  const res = await client.get<unknown>(API_ROUTES.organizerEventStatusOptions)
+  return parseOrganizerEventStatusOptions(res.data)
 }
 
 export async function fetchEvent(id: string): Promise<AppEvent> {

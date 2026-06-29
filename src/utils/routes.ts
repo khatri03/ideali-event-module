@@ -85,6 +85,7 @@ export const API_ROUTES = {
   eventWizardStep: (id: string, step: string) => `/api/organizer/events/${id}/${step}`,
   eventWizardName: (id: string) => `/api/organizer/events/${id}/name`,
   eventWizardSetupStateOptions: "/api/organizer/events/setup-state/options",
+  organizerEventStatusOptions: "/api/organizer/events/status-options",
   eventWizardReviewSummary: (id: string) => `/api/organizer/events/${id}/review-summary`,
   eventWizardSetupStateReview: (id: string) => `/api/organizer/events/${id}/setup-state/review`,
   eventWizardSetupState: (id: string) => `/api/organizer/events/${id}/setup-state`,
