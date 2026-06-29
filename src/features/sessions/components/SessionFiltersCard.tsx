@@ -112,6 +112,18 @@ function CheckboxOption(props: OptionProps<SelectOption, true>) {
   )
 }
 
+function SingleSelectOption(props: OptionProps<SelectOption, false>) {
+  return (
+    <components.Option {...props}>
+      <Box minW={0}>
+        <Text fontSize="sm" fontWeight="600" color="gray.800" lineClamp={1} _dark={{ color: "gray.100" }}>
+          {props.label}
+        </Text>
+      </Box>
+    </components.Option>
+  )
+}
+
 function toSelectOptions(options: SessionListOption[]): SelectOption[] {
   return options.map((option) => ({
     label: option.label,
@@ -176,8 +188,8 @@ export function SessionFiltersCard({
     () => getSelectedOptions(bookingStatusOptions, draftFilters.bookingStatuses),
     [bookingStatusOptions, draftFilters.bookingStatuses],
   )
-  const selectedSeatEnabledOptions = useMemo(
-    () => getSelectedOptions(seatEnabledOptions, draftFilters.seatEnabled),
+  const selectedSeatEnabledOption = useMemo(
+    () => getSelectedOptions(seatEnabledOptions, draftFilters.seatEnabled)[0] ?? null,
     [seatEnabledOptions, draftFilters.seatEnabled],
   )
 
@@ -363,20 +375,18 @@ export function SessionFiltersCard({
 
                 <FilterField label="Seat Enabled">
                   <ReactSelect
-                    isMulti
-                    closeMenuOnSelect={false}
-                    hideSelectedOptions={false}
+                    isClearable
                     options={seatEnabledOptions}
-                    value={selectedSeatEnabledOptions}
-                    onChange={(values: MultiValue<SelectOption>) =>
+                    value={selectedSeatEnabledOption}
+                    onChange={(value) =>
                       onDraftFiltersChange((current) => ({
                         ...current,
-                        seatEnabled: values.map((value) => value.value),
+                        seatEnabled: value ? [value.value] : [],
                       }))
                     }
                     placeholder={isLoading ? "Loading seat options..." : "Select seat options"}
                     styles={filterMultiSelectStyles}
-                    components={{ Option: CheckboxOption }}
+                    components={{ Option: SingleSelectOption }}
                     isDisabled={isLoading || isError}
                   />
                 </FilterField>
@@ -392,16 +402,6 @@ export function SessionFiltersCard({
 
               <Flex justify="flex-end" gap={3} flexWrap="wrap">
                 <Button
-                  variant="outline"
-                  borderRadius="12px"
-                  minH="11"
-                  px={4}
-                  disabled={!hasAppliedFilters}
-                  onClick={onClear}
-                >
-                  Clear Filter
-                </Button>
-                <Button
                   borderRadius="12px"
                   minH="11"
                   px={5}
@@ -412,6 +412,16 @@ export function SessionFiltersCard({
                   onClick={onApply}
                 >
                   Apply Filter
+                </Button>
+                <Button
+                  variant="outline"
+                  borderRadius="12px"
+                  minH="11"
+                  px={4}
+                  disabled={!hasAppliedFilters}
+                  onClick={onClear}
+                >
+                  Clear Filter
                 </Button>
               </Flex>
             </Stack>

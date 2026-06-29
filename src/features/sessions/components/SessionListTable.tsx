@@ -1,6 +1,6 @@
 import { format } from "date-fns"
-import { Box, Badge, Button, Flex, HStack, Skeleton, SkeletonText, Table, Text } from "@chakra-ui/react"
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpDown, CalendarDays, Eye, MapPin } from "lucide-react"
+import { Box, Badge, Button, Flex, HStack, Menu, Portal, Skeleton, SkeletonText, Table, Text } from "@chakra-ui/react"
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpDown, CalendarDays, Eye, MapPin, MoreHorizontal, PencilLine } from "lucide-react"
 import { type SessionListItem } from "@/api/sessions"
 
 export type SessionSortBy = "name" | "eventName" | "venue" | "bookingStatus" | "seatEnabled" | "startDate" | "endDate" | "ticketsSold"
@@ -20,6 +20,19 @@ interface SessionListTableProps {
   onSort: (sortBy: SessionSortBy) => void
   onClearSort: () => void
   onOpenSession: (sessionId: string) => void
+}
+
+const actionButtonStyles = {
+  w: "40px",
+  h: "40px",
+  minW: "40px",
+  borderRadius: "999px",
+  border: "1px solid",
+  borderColor: "border.subtle",
+  bg: "white",
+  color: "text.primary",
+  _hover: { bg: "gray.50", borderColor: "gray.200" },
+  _dark: { bg: "navy.800", borderColor: "whiteAlpha.200", _hover: { bg: "whiteAlpha.100" } },
 }
 
 function buildTotalTickets(session: SessionListItem) {
@@ -167,9 +180,12 @@ export function SessionListTable({
       </Flex>
 
       <Box overflowX="auto" border="1px solid" borderColor="border.subtle" bg="app.bg" borderRadius="16px">
-        <Table.Root variant="line" size="sm" borderColor="border.subtle" minW={{ base: "1080px", md: "auto" }}>
+        <Table.Root variant="line" size="sm" borderColor="border.subtle" minW={{ base: "1150px", md: "auto" }}>
           <Table.Header>
             <Table.Row bg="app.bg">
+              <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
+                Actions
+              </Table.ColumnHeader>
               <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
                 <SortHeaderButton label="Name" sortKey="name" currentSortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
               </Table.ColumnHeader>
@@ -206,6 +222,52 @@ export function SessionListTable({
 
               return (
                 <Table.Row key={session.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
+                  <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} verticalAlign="top">
+                    <Flex justify="center">
+                      <Menu.Root positioning={{ placement: "bottom-start" }}>
+                        <Menu.Trigger asChild>
+                          <Box as="button" type="button" aria-label={`Actions for ${session.name}`} cursor="pointer" {...actionButtonStyles}>
+                            <Flex align="center" justify="center" w="full" h="full">
+                              <MoreHorizontal size={18} aria-hidden="true" />
+                            </Flex>
+                          </Box>
+                        </Menu.Trigger>
+                        <Portal>
+                          <Menu.Positioner>
+                            <Menu.Content
+                              minW="12rem"
+                              borderRadius="16px"
+                              border="1px solid"
+                              borderColor="gray.200"
+                              boxShadow="0 16px 40px rgba(15, 23, 42, 0.12)"
+                              p={1.5}
+                              bg="white"
+                              _dark={{ bg: "navy.800", borderColor: "whiteAlpha.200" }}
+                            >
+                              <Menu.Item
+                                value="edit-session"
+                                borderRadius="10px"
+                                fontSize="sm"
+                                fontWeight="600"
+                                color="gray.700"
+                                _dark={{ color: "gray.200" }}
+                                _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
+                                px={3}
+                                py={2}
+                                gap={2.5}
+                                onClick={() => onOpenSession(session.uniqueId)}
+                              >
+                                <PencilLine size={14} />
+                                <Text as="span" flex="1" textAlign="left">
+                                  Edit
+                                </Text>
+                              </Menu.Item>
+                            </Menu.Content>
+                          </Menu.Positioner>
+                        </Portal>
+                      </Menu.Root>
+                    </Flex>
+                  </Table.Cell>
                   <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} verticalAlign="top">
                     <Button
                       variant="ghost"
