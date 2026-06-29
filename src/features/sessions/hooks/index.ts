@@ -3,4 +3,6 @@ export { useSessionWizardActions, SessionWizardActionsProvider } from "./useSess
 export { useSessionReviewSummary } from "./useSessionReviewSummary"
 export { useSessionWizardProgress } from "./useSessionWizardProgress"
 export { useSessionWizardSetupState } from "./useSessionWizardSetupState"
+export { useSessionFilterOptions } from "./useSessionFilterOptions"
+export { useSessionList } from "./useSessionList"
 export { useUnsplashSearch } from "./useUnsplashSearch"

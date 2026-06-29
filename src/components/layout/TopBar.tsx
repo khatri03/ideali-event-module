@@ -11,6 +11,7 @@ import { APP_ROUTES } from "@/utils/routes"
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   [APP_ROUTES.dashboard]: { title: "Dashboard", subtitle: "Welcome back!" },
   [APP_ROUTES.events]: { title: "Events", subtitle: "Manage and track all your events" },
+  [APP_ROUTES.sessionWizard.list]: { title: "Sessions", subtitle: "Browse and edit your session list" },
   [APP_ROUTES.calendar]: { title: "Calendar", subtitle: "Your event schedule at a glance" },
   [APP_ROUTES.settings]: { title: "Payment Processor Fees", subtitle: "Configure processor fee recovery" },
   [APP_ROUTES.adminRevenuePlans]: { title: "Revenue Plans", subtitle: "Control organizer and buyer charge rules" },

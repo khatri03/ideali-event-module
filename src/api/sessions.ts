@@ -139,6 +139,58 @@ const sessionSetupStateOptionSchema = z.object({
   isFinal: z.boolean().optional(),
 })
 
+const sessionListOptionSchema = z.object({
+  Text: z.string().optional(),
+  text: z.string().optional(),
+  Value: z.string().optional(),
+  value: z.string().optional(),
+})
+
+const sessionListItemSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  Name: z.string().optional(),
+  name: z.string().optional(),
+  EventName: z.string().optional(),
+  eventName: z.string().optional(),
+  VenueName: z.string().nullable().optional(),
+  venueName: z.string().nullable().optional(),
+  OfferPickingSeats: z.boolean().optional(),
+  offerPickingSeats: z.boolean().optional(),
+  StartDate: z.string().nullable().optional(),
+  startDate: z.string().nullable().optional(),
+  EndDate: z.string().nullable().optional(),
+  endDate: z.string().nullable().optional(),
+  TotalAvailableTickets: z.number().int().optional(),
+  totalAvailableTickets: z.number().int().optional(),
+  TicketsSold: z.number().int().optional(),
+  ticketsSold: z.number().int().optional(),
+  GenreNames: z.array(z.string()).optional(),
+  genreNames: z.array(z.string()).optional(),
+})
+
+const sessionListPageSchema = z.object({
+  PageNo: z.number().int().optional(),
+  pageNo: z.number().int().optional(),
+  PageSize: z.number().int().optional(),
+  pageSize: z.number().int().optional(),
+  PageCount: z.number().int().optional(),
+  pageCount: z.number().int().optional(),
+  TotalRecordsCount: z.number().int().optional(),
+  totalRecordsCount: z.number().int().optional(),
+  PageData: z.array(sessionListItemSchema).optional(),
+  pageData: z.array(sessionListItemSchema).optional(),
+})
+
+const sessionFilterOptionsSchema = z.object({
+  Genres: z.array(sessionListOptionSchema).optional(),
+  genres: z.array(sessionListOptionSchema).optional(),
+  Events: z.array(sessionListOptionSchema).optional(),
+  events: z.array(sessionListOptionSchema).optional(),
+  Venues: z.array(sessionListOptionSchema).optional(),
+  venues: z.array(sessionListOptionSchema).optional(),
+})
+
 const sessionETicketingSchema = z.object({
   EnableDigitalTicket: z.boolean().optional(),
   enableDigitalTicket: z.boolean().optional(),
@@ -510,6 +562,49 @@ export interface SessionWizardSetupStateOption {
   label: string
   isSelectable: boolean
   isFinal: boolean
+}
+
+export interface SessionListOption {
+  value: string
+  label: string
+}
+
+export interface SessionListItem {
+  uniqueId: string
+  name: string
+  eventName: string
+  venueName: string | null
+  offerPickingSeats: boolean
+  startDate: string | null
+  endDate: string | null
+  totalAvailableTickets: number
+  ticketsSold: number
+  genreNames: string[]
+}
+
+export interface SessionListPage {
+  items: SessionListItem[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
+export interface SessionListFilters {
+  name?: string
+  genreUniqueIds?: string[]
+  eventUniqueIds?: string[]
+  venueUniqueIds?: string[]
+  startFrom?: string
+  startTo?: string
+  sortBy?: string
+  sortOrder?: "asc" | "desc"
+}
+
+export interface SessionFilterOptionsResponse {
+  genres: SessionListOption[]
+  events: SessionListOption[]
+  venues: SessionListOption[]
 }
 
 export interface SessionWizardSetupStateRequest {
@@ -1150,6 +1245,105 @@ function parseSessionSetupStateOptions(
     isSelectable: option.IsSelectable ?? option.isSelectable ?? false,
     isFinal: option.IsFinal ?? option.isFinal ?? false,
   }))
+}
+
+function parseSessionListOption(option: z.infer<typeof sessionListOptionSchema>): SessionListOption {
+  return {
+    value: option.Value ?? option.value ?? "",
+    label: option.Text ?? option.text ?? "",
+  }
+}
+
+function parseSessionListItem(item: z.infer<typeof sessionListItemSchema>): SessionListItem {
+  return {
+    uniqueId: item.UniqueId ?? item.uniqueId ?? "",
+    name: item.Name ?? item.name ?? "",
+    eventName: item.EventName ?? item.eventName ?? "",
+    venueName: item.VenueName ?? item.venueName ?? null,
+    offerPickingSeats: item.OfferPickingSeats ?? item.offerPickingSeats ?? false,
+    startDate: item.StartDate ?? item.startDate ?? null,
+    endDate: item.EndDate ?? item.endDate ?? null,
+    totalAvailableTickets: item.TotalAvailableTickets ?? item.totalAvailableTickets ?? 0,
+    ticketsSold: item.TicketsSold ?? item.ticketsSold ?? 0,
+    genreNames: item.GenreNames ?? item.genreNames ?? [],
+  }
+}
+
+function parseSessionListPage(payload: unknown): SessionListPage {
+  const page = sessionListPageSchema.parse(payload)
+  const items = (page.PageData ?? page.pageData ?? []).map(parseSessionListItem)
+
+  return {
+    items,
+    total: page.TotalRecordsCount ?? page.totalRecordsCount ?? items.length,
+    page: page.PageNo ?? page.pageNo ?? 1,
+    pageSize: page.PageSize ?? page.pageSize ?? items.length,
+    totalPages: page.PageCount ?? page.pageCount ?? 0,
+  }
+}
+
+function parseSessionFilterOptions(payload: unknown): SessionFilterOptionsResponse {
+  const options = sessionFilterOptionsSchema.parse(payload)
+
+  return {
+    genres: (options.Genres ?? options.genres ?? []).map(parseSessionListOption),
+    events: (options.Events ?? options.events ?? []).map(parseSessionListOption),
+    venues: (options.Venues ?? options.venues ?? []).map(parseSessionListOption),
+  }
+}
+
+export async function fetchSessionList(
+  filters?: SessionListFilters,
+  pageNo = 1,
+  pageSize = 20,
+): Promise<SessionListPage> {
+  const params = new URLSearchParams()
+  params.set("pageNo", String(pageNo))
+  params.set("pageSize", String(pageSize))
+
+  if (filters?.name?.trim()) {
+    params.set("name", filters.name.trim())
+  }
+
+  filters?.genreUniqueIds?.forEach((genreUniqueId) => {
+    params.append("genreUniqueIds", genreUniqueId)
+  })
+
+  filters?.eventUniqueIds?.forEach((eventUniqueId) => {
+    params.append("eventUniqueIds", eventUniqueId)
+  })
+
+  filters?.venueUniqueIds?.forEach((venueUniqueId) => {
+    params.append("venueUniqueIds", venueUniqueId)
+  })
+
+  if (filters?.startFrom) {
+    params.set("startFrom", filters.startFrom)
+  }
+
+  if (filters?.startTo) {
+    params.set("startTo", filters.startTo)
+  }
+
+  if (filters?.sortBy) {
+    params.set("sortBy", filters.sortBy)
+  }
+
+  if (filters?.sortOrder) {
+    params.set("sortOrder", filters.sortOrder)
+  }
+
+  const res = await client.get<unknown>(API_ROUTES.sessionsList, { params })
+  const responseData = parseServicePayload(res.data)
+
+  return parseSessionListPage(responseData)
+}
+
+export async function fetchSessionFilterOptions(): Promise<SessionFilterOptionsResponse> {
+  const res = await client.get<unknown>(API_ROUTES.sessionsFilterOptions)
+  const responseData = parseServicePayload(res.data)
+
+  return parseSessionFilterOptions(responseData)
 }
 
 export async function fetchSessionWizardReviewSummary(uniqueId: string): Promise<SessionReviewSummary> {

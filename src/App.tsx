@@ -102,24 +102,24 @@ export default function App() {
           <Route path={APP_ROUTES.sessionWizard.slugs.questions} element={<SessionWizardStepPage />} />
           <Route path={APP_ROUTES.sessionWizard.slugs.review} element={<SessionWizardStepPage />} />
         </Route>
-        <Route path={APP_ROUTES.sessionWizard.list} element={<SessionListPage />} />
         <Route path={APP_ROUTES.eventRegisterRoute} element={<EventRegisterPage />} />
 
         {/* App */}
         <Route element={<AppLayout />}>
           <Route path={APP_ROUTES.dashboard} element={<Dashboard />} />
           <Route path={APP_ROUTES.events} element={<Events />} />
+          <Route path={APP_ROUTES.sessionWizard.list} element={<SessionListPage />} />
           <Route path={APP_ROUTES.calendar} element={<CalendarPage />} />
-        <Route path={APP_ROUTES.settings} element={<Settings />} />
-        <Route path={APP_ROUTES.adminRevenuePlans} element={<AdminFeePlansPage />} />
-        <Route path={APP_ROUTES.adminFeePlansLegacy} element={<Navigate to={APP_ROUTES.adminRevenuePlans} replace />} />
+          <Route path={APP_ROUTES.settings} element={<Settings />} />
+          <Route path={APP_ROUTES.adminRevenuePlans} element={<AdminFeePlansPage />} />
+          <Route path={APP_ROUTES.adminFeePlansLegacy} element={<Navigate to={APP_ROUTES.adminRevenuePlans} replace />} />
           <Route path={APP_ROUTES.team} element={<Settings />} />
           <Route path={APP_ROUTES.analytics} element={<Settings />} />
           <Route path={APP_ROUTES.help} element={<Settings />} />
           <Route path={APP_ROUTES.seatingLayouts.list} element={<SeatingLayoutsPage />} />
-        <Route path={APP_ROUTES.seatingLayouts.create} element={<SeatingLayoutDesignerPage />} />
-        <Route path={APP_ROUTES.seatingLayouts.edit(":chartUniqueId")} element={<SeatingLayoutDesignerPage />} />
-      </Route>
+          <Route path={APP_ROUTES.seatingLayouts.create} element={<SeatingLayoutDesignerPage />} />
+          <Route path={APP_ROUTES.seatingLayouts.edit(":chartUniqueId")} element={<SeatingLayoutDesignerPage />} />
+        </Route>
 
         {/* Redirect root */}
         <Route path={APP_ROUTES.root} element={<Navigate to={APP_ROUTES.dashboard} replace />} />

@@ -4,6 +4,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom"
 import {
   LayoutDashboard,
   CalendarDays,
+  CalendarRange,
   Settings,
   ChevronDown,
   ChevronRight,
@@ -39,6 +40,7 @@ interface SidebarProps {
 const mainNav: NavItem[] = [
   { label: "Dashboard", icon: <LayoutDashboard size={17} />, path: APP_ROUTES.dashboard },
   { label: "Events", icon: <Zap size={17} />, path: APP_ROUTES.events, badge: "12" },
+  { label: "Sessions", icon: <CalendarRange size={17} />, path: APP_ROUTES.sessionWizard.list },
   { label: "Calendar", icon: <CalendarDays size={17} />, path: APP_ROUTES.calendar },
 ]
 

@@ -166,6 +166,8 @@ export const API_ROUTES = {
   sessionWizardETicketing: (id: string) => `/api/organizer/sessions/${id}/e-ticketing`,
   sessionWizardProgress: (id: string) => `/api/organizer/sessions/${id}/wizard-progress`,
   sessionSeatsIoEvent: (id: string) => `/api/organizer/sessions/${id}/seatsio/event`,
+  sessionsList: "/api/organizer/sessions/list",
+  sessionsFilterOptions: "/api/organizer/sessions/filter-options",
   organizerVenues: "/api/organizer/venues/list",
   organizerVenueCreate: "/api/organizer/venues/create",
   organizerCustomFormControls: "/api/organizer/custom-form/controls",
