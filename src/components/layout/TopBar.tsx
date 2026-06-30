@@ -15,6 +15,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   [APP_ROUTES.calendar]: { title: "Calendar", subtitle: "Your event schedule at a glance" },
   [APP_ROUTES.settings]: { title: "Payment Processor Fees", subtitle: "Configure processor fee recovery" },
   [APP_ROUTES.adminRevenuePlans]: { title: "Revenue Plans", subtitle: "Control organizer and buyer charge rules" },
+  [APP_ROUTES.venues.list]: { title: "Venues", subtitle: "Manage organizer venues without affecting wizard flows" },
   [APP_ROUTES.team]: { title: "Team", subtitle: "Manage your team members" },
   [APP_ROUTES.analytics]: { title: "Analytics", subtitle: "Insights and performance metrics" },
   [APP_ROUTES.help]: { title: "Help Center", subtitle: "Documentation and support" },

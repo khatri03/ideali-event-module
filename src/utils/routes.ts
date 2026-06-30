@@ -74,6 +74,9 @@ export const APP_ROUTES = {
       review: "review",
     },
   },
+  venues: {
+    list: "/organizer/venues/manage/list",
+  },
 } as const
 
 export const API_ROUTES = {
@@ -170,6 +173,8 @@ export const API_ROUTES = {
   sessionsFilterOptions: "/api/organizer/sessions/filter-options",
   organizerVenues: "/api/organizer/venues/list",
   organizerVenueCreate: "/api/organizer/venues/create",
+  organizerVenueManagementList: "/api/organizer/venues/manage/list",
+  organizerVenueUpdate: (uniqueId: string) => `/api/organizer/venues/${uniqueId}/update`,
   organizerCustomFormControls: "/api/organizer/custom-form/controls",
   organizerCustomFormListItems: "/api/organizer/custom-form/list-items",
   organizerCustomFormPreview: (id: string) => `/api/organizer/custom-form/${id}/edit`,

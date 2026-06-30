@@ -14,6 +14,7 @@ import {
   BarChart3,
   HelpCircle,
   LayoutGrid,
+  MapPin,
   ShieldCheck,
 } from "lucide-react"
 import { mockUser } from "../../data/mock"
@@ -46,6 +47,7 @@ const mainNav: NavItem[] = [
 
 const managementNav: NavItem[] = [
   { label: "Seating Layouts", icon: <LayoutGrid size={17} />, path: APP_ROUTES.seatingLayouts.list },
+  { label: "Venues", icon: <MapPin size={17} />, path: APP_ROUTES.venues.list },
   { label: "Team", icon: <Users size={17} />, path: APP_ROUTES.team },
   { label: "Analytics", icon: <BarChart3 size={17} />, path: APP_ROUTES.analytics },
 ]
