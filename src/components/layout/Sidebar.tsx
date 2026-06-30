@@ -3,16 +3,12 @@ import { Box, Flex, Text, VStack } from "@chakra-ui/react"
 import { NavLink, useLocation, useNavigate } from "react-router-dom"
 import {
   LayoutDashboard,
-  CalendarDays,
   CalendarRange,
   Settings,
   ChevronDown,
   ChevronRight,
   LogOut,
   Zap,
-  Users,
-  BarChart3,
-  HelpCircle,
   LayoutGrid,
   MapPin,
   ShieldCheck,
@@ -42,98 +38,78 @@ const mainNav: NavItem[] = [
   { label: "Dashboard", icon: <LayoutDashboard size={17} />, path: APP_ROUTES.dashboard },
   { label: "Events", icon: <Zap size={17} />, path: APP_ROUTES.events, badge: "12" },
   { label: "Sessions", icon: <CalendarRange size={17} />, path: APP_ROUTES.sessionWizard.list },
-  { label: "Calendar", icon: <CalendarDays size={17} />, path: APP_ROUTES.calendar },
 ]
 
 const managementNav: NavItem[] = [
   { label: "Seating Layouts", icon: <LayoutGrid size={17} />, path: APP_ROUTES.seatingLayouts.list },
   { label: "Venues", icon: <MapPin size={17} />, path: APP_ROUTES.venues.list },
-  { label: "Team", icon: <Users size={17} />, path: APP_ROUTES.team },
-  { label: "Analytics", icon: <BarChart3 size={17} />, path: APP_ROUTES.analytics },
 ]
 
-const systemNav: NavItem[] = [
-  { label: "Help Center", icon: <HelpCircle size={17} />, path: APP_ROUTES.help },
-]
-
-function NavSection({ label, items, onNavigate }: { label: string; items: NavItem[]; onNavigate?: () => void }) {
+function NavSection({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => void }) {
   const { pathname } = useLocation()
 
   return (
-    <Box mb={6}>
-      <Text
-        fontSize="9px"
-        fontWeight="800"
-        color="rgba(255,255,255,0.38)"
-        textTransform="uppercase"
-        letterSpacing="0.12em"
-        mb={2}
-        px={4}
-      >
-        {label}
-      </Text>
-      <VStack gap={0.5} align="stretch">
-        {items.map((item) => {
-          const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`)
-          return (
-            <NavLink key={item.path} to={item.path} style={{ textDecoration: "none" }} onClick={onNavigate}>
-              <Flex
-                align="center"
-                gap={3}
-                px={3}
-                py={2.5}
-                borderRadius="12px"
-                mx={2}
-                transition="all 0.18s ease"
-                bg={isActive ? "rgba(255,255,255,0.92)" : "transparent"}
-                _hover={
-                  !isActive
-                    ? { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }
-                    : {}
-                }
-                boxShadow={isActive ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
+    <VStack gap={0.5} align="stretch" mb={6}>
+      {items.map((item) => {
+        const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`)
+        return (
+          <NavLink key={item.path} to={item.path} style={{ textDecoration: "none" }} onClick={onNavigate}>
+            <Flex
+              align="center"
+              gap={3}
+              px={3}
+              py={2.5}
+              borderRadius="12px"
+              mx={2}
+              transition="all 0.18s ease"
+              bg={isActive ? "rgba(255,255,255,0.92)" : "transparent"}
+              _hover={
+                !isActive
+                  ? { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }
+                  : {}
+              }
+              boxShadow={isActive ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
+            >
+              <Box
+                color={isActive ? "#7551FF" : "rgba(255,255,255,0.7)"}
+                transition="color 0.18s"
+                display="flex"
+                alignItems="center"
               >
-                <Box
-                  color={isActive ? "#7551FF" : "rgba(255,255,255,0.7)"}
-                  transition="color 0.18s"
-                  display="flex"
-                  alignItems="center"
+                {item.icon}
+              </Box>
+              <Text
+                fontSize="sm"
+                fontWeight={isActive ? "700" : "500"}
+                color={isActive ? "#422AFB" : "rgba(255,255,255,0.85)"}
+                transition="color 0.18s"
+                flex={1}
+                letterSpacing={isActive ? "-0.01em" : "0"}
+              >
+                {item.label}
+              </Text>
+              {item.badge && (
+                <Flex
+                  align="center"
+                  justify="center"
+                  borderRadius="full"
+                  px={1.5}
+                  h="18px"
+                  minW="18px"
+                  fontSize="10px"
+                  fontWeight="800"
+                  bg={isActive ? "#7551FF" : "rgba(255,255,255,0.2)"}
+                  color={isActive ? "white" : "rgba(255,255,255,0.9)"}
+                  transition="all 0.18s"
                 >
-                  {item.icon}
-                </Box>
-                <Text
-                  fontSize="sm"
-                  fontWeight={isActive ? "700" : "500"}
-                  color={isActive ? "#422AFB" : "rgba(255,255,255,0.85)"}
-                  transition="color 0.18s"
-                  flex={1}
-                  letterSpacing={isActive ? "-0.01em" : "0"}
-                >
-                  {item.label}
-                </Text>
-                {item.badge && (
-                  <Flex
-                    align="center"
-                    justify="center"
-                    borderRadius="full"
-                    px={1.5}
-                    h="18px"
-                    minW="18px"
-                    fontSize="10px"
-                    fontWeight="800"
-                    bg={isActive ? "#7551FF" : "rgba(255,255,255,0.2)"}
-                    color={isActive ? "white" : "rgba(255,255,255,0.9)"}
-                    transition="all 0.18s"
-                  >
-                    {item.badge}
-                  </Flex>
-                )}
-              </Flex>
-            </NavLink>
-          )
-        })}
-      </VStack>
-    </Box>
+                  {item.badge}
+                </Flex>
+              )}
+            </Flex>
+          </NavLink>
+        )
+      })}
+    </VStack>
   )
 }
 
@@ -150,17 +126,6 @@ function SettingsSection({
 }) {
   return (
     <Box mb={6}>
-      <Text
-        fontSize="9px"
-        fontWeight="800"
-        color="rgba(255,255,255,0.38)"
-        textTransform="uppercase"
-        letterSpacing="0.12em"
-        mb={2}
-        px={4}
-      >
-        Settings
-      </Text>
       <Flex
         as="button"
         align="center"
@@ -249,17 +214,6 @@ function AdminSection({
 }) {
   return (
     <Box mb={6}>
-      <Text
-        fontSize="9px"
-        fontWeight="800"
-        color="rgba(255,255,255,0.38)"
-        textTransform="uppercase"
-        letterSpacing="0.12em"
-        mb={2}
-        px={4}
-      >
-        Admin
-      </Text>
       <Flex
         as="button"
         align="center"
@@ -424,8 +378,8 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
 
       {/* Nav */}
       <Box flex={1} px={2} position="relative" zIndex={1}>
-        <NavSection label="Main" items={mainNav} onNavigate={onNavigate} />
-        <NavSection label="Management" items={managementNav} onNavigate={onNavigate} />
+        <NavSection items={mainNav} onNavigate={onNavigate} />
+        <NavSection items={managementNav} onNavigate={onNavigate} />
         <SettingsSection
           pathname={pathname}
           isOpen={isSettingsOpen}
@@ -440,7 +394,6 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
             onNavigate={onNavigate}
           />
         ) : null}
-        <NavSection label="System" items={systemNav} onNavigate={onNavigate} />
       </Box>
 
       {/* User Profile */}

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { CSSProperties } from "react"
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query"
-import { Badge, Box, Button, CloseButton, Dialog, Flex, Heading, Input, Menu, Portal, SimpleGrid, Stack, Text, Tooltip } from "@chakra-ui/react"
-import { ArrowDown, ArrowUp, ArrowUpDown, CalendarPlus, MapPin, MoreHorizontal, PencilLine, Plus, Sparkles } from "lucide-react"
+import { Badge, Box, Button, CloseButton, Dialog, Flex, Heading, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text, Tooltip } from "@chakra-ui/react"
+import { ArrowDown, ArrowUp, ArrowUpDown, CalendarPlus, MapPin, MoreHorizontal, PencilLine, Plus, Search, Sparkles } from "lucide-react"
 import { StyledSelect } from "@/components/common/StyledSelect"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
@@ -15,13 +15,11 @@ import {
 import { toaster } from "@/lib/toaster"
 import { useNavigate } from "react-router-dom"
 
-type VenueSortBy = "name" | "sessions" | "createdOnUtc"
+type VenueSortBy = "name"
 type VenueSortOrder = "asc" | "desc"
-type VenueHasSessionsFilter = "" | "true" | "false"
 
 interface VenueFiltersState {
   name: string
-  hasSessions: VenueHasSessionsFilter
 }
 
 interface VenueFormState {
@@ -35,7 +33,6 @@ const PAGE_SIZE = 10
 
 const EMPTY_FILTERS: VenueFiltersState = {
   name: "",
-  hasSessions: "",
 }
 
 const EMPTY_FORM: VenueFormState = {
@@ -71,15 +68,7 @@ function buildPageNumbers(page: number, totalPages: number) {
 }
 
 function countAppliedFilters(filters: VenueFiltersState) {
-  return [filters.name?.trim(), filters.hasSessions].filter((value) => Boolean(value)).length
-}
-
-function formatDate(date: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(date))
+  return [filters.name?.trim()].filter((value) => Boolean(value)).length
 }
 
 function SortHeaderButton({
@@ -152,15 +141,6 @@ function VenueFiltersCard({
   onClear: () => void
   onDraftFiltersChange: (updater: (current: VenueFiltersState) => VenueFiltersState) => void
 }) {
-  const sessionOptions = useMemo(
-    () => [
-      { label: "All venues", value: "" },
-      { label: "Has sessions", value: "true" },
-      { label: "Empty venues", value: "false" },
-    ],
-    [],
-  )
-
   return (
     <Box mb={5} borderRadius="16px" border="1px solid" borderColor="border.subtle" bg="app.bg" overflow="hidden">
       <Box
@@ -218,26 +198,8 @@ function VenueFiltersCard({
                     h="44px"
                     px={4}
                     _focus={{ borderColor: "brand.400", boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)" }}
-                    _dark={{ borderColor: "navy.600" }}
-                  />
-                </Box>
-
-                <Box minW={0}>
-                  <Text fontSize="sm" fontWeight="700" color="text.primary" mb={2}>
-                    Session mapping
-                  </Text>
-                  <StyledSelect
-                    options={sessionOptions}
-                    value={draftFilters.hasSessions}
-                    onChange={(value) =>
-                      onDraftFiltersChange((current) => ({
-                        ...current,
-                        hasSessions: value as VenueHasSessionsFilter,
-                      }))
-                    }
-                    placeholder="All venues"
-                    disabled={false}
-                  />
+                      _dark={{ borderColor: "navy.600" }}
+                    />
                 </Box>
               </SimpleGrid>
 
@@ -283,19 +245,13 @@ export function VenueManagementPage() {
 
   const venuesQuery = useQuery({
     queryKey: ["venues", { page, filters: appliedFilters, sortBy, sortOrder }],
-    queryFn: () =>
-      fetchOrganizerVenueManagementList(
-        {
-          name: appliedFilters.name?.trim() || undefined,
-          hasSessions:
-            appliedFilters.hasSessions === ""
-              ? null
-              : appliedFilters.hasSessions === "true"
-                ? true
-                : false,
-          sortBy: sortBy ?? undefined,
-          sortOrder: sortBy ? sortOrder : undefined,
-        },
+        queryFn: () =>
+          fetchOrganizerVenueManagementList(
+            {
+              name: appliedFilters.name?.trim() || undefined,
+              sortBy: sortBy ?? undefined,
+              sortOrder: sortBy ? sortOrder : undefined,
+            },
         page,
         PAGE_SIZE,
       ),
@@ -357,7 +313,6 @@ export function VenueManagementPage() {
   function handleApplyFilters() {
     setAppliedFilters({
       name: draftFilters.name?.trim() ?? "",
-      hasSessions: draftFilters.hasSessions,
     })
     setPage(1)
     setIsFiltersExpanded(true)
@@ -540,12 +495,6 @@ export function VenueManagementPage() {
                   <th style={thStyle}>
                     <SortHeaderButton label="Name" sortKey="name" currentSortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th style={thStyle}>
-                    <SortHeaderButton label="Sessions" sortKey="sessions" currentSortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-                  </th>
-                  <th style={thStyle}>
-                    <SortHeaderButton label="Created" sortKey="createdOnUtc" currentSortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
-                  </th>
                   <th style={thStyle}>Map URL</th>
                 </tr>
               </thead>
@@ -601,16 +550,6 @@ export function VenueManagementPage() {
                     <td style={tdStyle}>
                       <Text fontSize="sm" fontWeight="700" color="text.primary">
                         {venue.name}
-                      </Text>
-                    </td>
-                    <td style={tdStyle}>
-                      <Badge colorPalette="brand" variant="subtle" borderRadius="999px" px={3} py={1}>
-                        {venue.sessionCount}
-                      </Badge>
-                    </td>
-                    <td style={tdStyle}>
-                      <Text fontSize="sm" color="text.secondary">
-                        {formatDate(venue.createdOnUtc)}
                       </Text>
                     </td>
                     <td style={tdStyle}>
@@ -674,8 +613,9 @@ export function VenueManagementPage() {
               boxShadow="0 24px 60px rgba(15, 23, 42, 0.18)"
               maxW="640px"
               m="auto"
+              p={{ base: 3, md: 4 }}
             >
-              <Box px={6} pt={6} pb={4} borderBottom="1px solid" borderColor="gray.100">
+              <Box px={6} pt={6} pb={4} borderBottom="1px solid" borderColor="gray.100" borderRadius="20px 20px 0 0">
                 <Flex align="flex-start" justify="space-between" gap={4}>
                   <Box>
                     <Text fontSize="lg" fontWeight="800" color="gray.900">
@@ -692,7 +632,7 @@ export function VenueManagementPage() {
                 </Flex>
               </Box>
 
-              <Dialog.Body py={6}>
+              <Dialog.Body px={6} py={6}>
                 <Stack gap={4}>
                   <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                     <Box>
@@ -724,72 +664,58 @@ export function VenueManagementPage() {
                       <Text fontSize="sm" fontWeight="700" color="gray.800" mb={2}>
                         Map URL
                       </Text>
-                      <Input
-                        value={venueForm.mapUrl}
-                        onChange={(event) =>
-                          setVenueForm((current) => ({
-                            ...current,
-                            mapUrl: event.target.value,
-                          }))
+                      <InputGroup
+                        endElement={
+                          <Tooltip.Root openDelay={300} closeDelay={120}>
+                            <Tooltip.Trigger asChild>
+                              <Button
+                                variant="ghost"
+                                aria-label="Search map"
+                                cursor="pointer"
+                                color="gray.500"
+                                minW="8"
+                                h="8"
+                                px={0}
+                                _hover={{ color: "brand.500" }}
+                                onClick={() => {
+                                  const query = venueForm.name.trim()
+                                  window.open(buildGoogleMapsSearchUrl(query), "_blank", "noopener,noreferrer")
+                                }}
+                              >
+                                <Search size={16} />
+                              </Button>
+                            </Tooltip.Trigger>
+                            <Portal>
+                              <Tooltip.Positioner>
+                                <Tooltip.Content>Search map</Tooltip.Content>
+                              </Tooltip.Positioner>
+                            </Portal>
+                          </Tooltip.Root>
                         }
-                        placeholder="https://..."
-                        borderRadius="16px"
-                        borderColor="secondaryGray.100"
-                        bg="app.bg"
-                        fontSize="sm"
-                        h="44px"
-                        px={4}
-                        _focus={{ borderColor: "brand.400", boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)" }}
-                        _dark={{ borderColor: "navy.600" }}
-                      />
-                    </Box>
-
-                    <Box>
-                      <Text fontSize="sm" fontWeight="700" color="gray.800" mb={2}>
-                        Latitude
+                      >
+                        <Input
+                          value={venueForm.mapUrl}
+                          onChange={(event) =>
+                            setVenueForm((current) => ({
+                              ...current,
+                              mapUrl: event.target.value,
+                            }))
+                          }
+                          placeholder="Paste Google Maps share link"
+                          borderRadius="16px"
+                          borderColor="secondaryGray.100"
+                          bg="app.bg"
+                          fontSize="sm"
+                          h="44px"
+                          pl={4}
+                          pr={12}
+                          _focus={{ borderColor: "brand.400", boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)" }}
+                          _dark={{ borderColor: "navy.600" }}
+                        />
+                      </InputGroup>
+                      <Text mt={2} fontSize="xs" color="gray.500">
+                        Search in Maps, then paste the share URL here.
                       </Text>
-                      <Input
-                        value={venueForm.latitude}
-                        onChange={(event) =>
-                          setVenueForm((current) => ({
-                            ...current,
-                            latitude: event.target.value,
-                          }))
-                        }
-                        placeholder="e.g. 24.8607"
-                        borderRadius="16px"
-                        borderColor="secondaryGray.100"
-                        bg="app.bg"
-                        fontSize="sm"
-                        h="44px"
-                        px={4}
-                        _focus={{ borderColor: "brand.400", boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)" }}
-                        _dark={{ borderColor: "navy.600" }}
-                      />
-                    </Box>
-
-                    <Box>
-                      <Text fontSize="sm" fontWeight="700" color="gray.800" mb={2}>
-                        Longitude
-                      </Text>
-                      <Input
-                        value={venueForm.longitude}
-                        onChange={(event) =>
-                          setVenueForm((current) => ({
-                            ...current,
-                            longitude: event.target.value,
-                          }))
-                        }
-                        placeholder="e.g. 67.0011"
-                        borderRadius="16px"
-                        borderColor="secondaryGray.100"
-                        bg="app.bg"
-                        fontSize="sm"
-                        h="44px"
-                        px={4}
-                        _focus={{ borderColor: "brand.400", boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)" }}
-                        _dark={{ borderColor: "navy.600" }}
-                      />
                     </Box>
                   </SimpleGrid>
 
@@ -803,7 +729,7 @@ export function VenueManagementPage() {
                 </Stack>
               </Dialog.Body>
 
-              <Box px={6} pb={6} pt={4} borderTop="1px solid" borderColor="gray.100">
+              <Box px={6} pb={6} pt={4} borderTop="1px solid" borderColor="gray.100" borderRadius="0 0 20px 20px">
                 <Flex justify="flex-end" gap={3} w="full" flexWrap="wrap">
                   <Button variant="outline" borderRadius="12px" minH="11" px={4} onClick={() => setIsVenueDialogOpen(false)}>
                     Cancel
@@ -849,6 +775,12 @@ function parseNumericField(value: string) {
 
   const parsed = Number(trimmed)
   return Number.isFinite(parsed) ? parsed : null
+}
+
+function buildGoogleMapsSearchUrl(query: string) {
+  const normalizedQuery = query.trim()
+  const target = normalizedQuery ? encodeURIComponent(normalizedQuery) : "maps"
+  return `https://www.google.com/maps/search/?api=1&query=${target}`
 }
 
 const thStyle: CSSProperties = {
