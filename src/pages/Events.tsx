@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react"
-import { format } from "date-fns"
 import {
   Box,
   Button,
@@ -20,6 +19,7 @@ import ReactSelect, { components, type MultiValue, type OptionProps, type Styles
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Filter, LayoutGrid, List, Plus, Search, Table2 } from "lucide-react"
 import { EventCard } from "../components/events/EventCard"
+import { OrganizerEventTableRow } from "@/components/events/OrganizerEventTableRow"
 import { EventFormModal } from "../components/events/EventFormModal"
 import { StyledSelect } from "../components/common/StyledSelect"
 import { mockEvents } from "../data/mock"
@@ -192,11 +192,6 @@ function RealEventsSkeleton() {
     </Box>
   )
 }
-
-function formatRealEventDate(date: string | null) {
-  return date ? format(new Date(date), "MMM d, yyyy") : "Not set"
-}
-
 
 export function Events() {
   const navigate = useNavigate()
@@ -658,9 +653,12 @@ export function Events() {
           </SimpleGrid>
         ) : (
           <Box overflowX="auto" border="1px solid" borderColor="border.subtle" bg="app.bg">
-            <Table.Root variant="line" size="sm" borderColor="border.subtle" minW={{ base: "760px", md: "auto" }}>
+            <Table.Root variant="line" size="sm" borderColor="border.subtle" minW={{ base: "920px", md: "auto" }}>
               <Table.Header>
                 <Table.Row bg="app.bg">
+                  <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
+                    Actions
+                  </Table.ColumnHeader>
                   <Table.ColumnHeader borderColor="border.subtle" borderBottomWidth="1px" borderRightWidth="1px" px={4} py={3} textAlign="center">
                     Event
                   </Table.ColumnHeader>
@@ -679,53 +677,9 @@ export function Events() {
                 </Table.Row>
               </Table.Header>
               <Table.Body>
-                {realEvents.map((event) => {
-                  const totalTickets = event.totalAvailableTickets + event.ticketsSold
-                  const soldPct = totalTickets > 0 ? Math.round((event.ticketsSold / totalTickets) * 100) : 0
-
-                  return (
-                    <Table.Row key={event.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
-                      <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
-                        <Flex align="center" gap={3}>
-                          <Box minW={0}>
-                            <Text fontWeight="700" color="text.primary" lineClamp={1}>
-                              {event.name}
-                            </Text>
-                          </Box>
-                        </Flex>
-                      </Table.Cell>
-                      <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
-                        <Badge
-                          colorPalette={event.isCancelled ? "red" : "gray"}
-                          variant="subtle"
-                          borderRadius="full"
-                          px={3}
-                          py={1}
-                          fontSize="10px"
-                          fontWeight="800"
-                          textTransform="uppercase"
-                          letterSpacing="0.08em"
-                        >
-                          {event.isCancelled ? "Cancelled" : event.setupState.replace(/([a-z])([A-Z])/g, "$1 $2")}
-                        </Badge>
-                      </Table.Cell>
-                      <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} fontSize="sm" color="text.secondary" whiteSpace="nowrap">
-                        {formatRealEventDate(event.startDate)} to {formatRealEventDate(event.endDate)}
-                      </Table.Cell>
-                      <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} textAlign="left" fontSize="sm" color="text.secondary">
-                        {event.venueName ?? "Venue not mapped yet"}
-                      </Table.Cell>
-                      <Table.Cell borderColor="border.subtle" px={4} py={4} textAlign="left">
-                        <Text fontSize="sm" fontWeight="700" color="text.primary">
-                          {event.ticketsSold.toLocaleString()} / {totalTickets.toLocaleString()}
-                        </Text>
-                        <Text fontSize="xs" color="text.secondary">
-                          {soldPct}% sold
-                        </Text>
-                      </Table.Cell>
-                    </Table.Row>
-                  )
-                })}
+                {realEvents.map((event) => (
+                  <OrganizerEventTableRow key={event.uniqueId} event={event} />
+                ))}
               </Table.Body>
             </Table.Root>
           </Box>

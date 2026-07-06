@@ -88,6 +88,17 @@ const seatsIoSeatingLayoutDetailSchema = seatsIoSeatingLayoutSchema.extend({
   categories: z.array(seatsIoChartCategorySchema).optional(),
 })
 
+const seatsIoChartValidationSchema = z.object({
+  ChartKey: z.string().nullable().optional(),
+  chartKey: z.string().nullable().optional(),
+  IsValid: z.boolean().optional(),
+  isValid: z.boolean().optional(),
+  Summary: z.string().nullable().optional(),
+  summary: z.string().nullable().optional(),
+  Issues: z.array(z.string()).optional(),
+  issues: z.array(z.string()).optional(),
+})
+
 const seatsIoSeatingLayoutsPageSchema = z.object({
   PageNo: z.number().int().optional(),
   pageNo: z.number().int().optional(),
@@ -123,6 +134,13 @@ export interface SeatsIoSeatingLayout {
 
 export interface SeatsIoSeatingLayoutDetail extends SeatsIoSeatingLayout {
   categories: SeatsIoChartCategory[]
+}
+
+export interface SeatsIoChartValidation {
+  chartKey: string
+  isValid: boolean
+  summary: string
+  issues: string[]
 }
 
 export interface SeatsIoChartCategory {
@@ -219,6 +237,15 @@ function normalizeSeatingLayoutDetail(item: z.infer<typeof seatsIoSeatingLayoutD
   }
 }
 
+function normalizeChartValidation(item: z.infer<typeof seatsIoChartValidationSchema>): SeatsIoChartValidation {
+  return {
+    chartKey: item.ChartKey ?? item.chartKey ?? "",
+    isValid: item.IsValid ?? item.isValid ?? false,
+    summary: item.Summary ?? item.summary ?? "",
+    issues: item.Issues ?? item.issues ?? [],
+  }
+}
+
 function normalizeChartCategory(item: z.infer<typeof seatsIoChartCategorySchema>): SeatsIoChartCategory {
   return {
     id: item.Id ?? item.id ?? 0,
@@ -310,6 +337,12 @@ export async function fetchSeatsIoSeatingLayoutDetail(chartUniqueId: string): Pr
   const res = await client.get<unknown>(API_ROUTES.seatsIoSeatingLayout(chartUniqueId))
   const responseData = parseServiceResponseData(res.data)
   return normalizeSeatingLayoutDetail(seatsIoSeatingLayoutDetailSchema.parse(responseData))
+}
+
+export async function fetchSeatsIoChartValidation(chartKey: string): Promise<SeatsIoChartValidation> {
+  const res = await client.get<unknown>(API_ROUTES.seatsIoChartValidation(chartKey))
+  const responseData = parseServiceResponseData(res.data)
+  return normalizeChartValidation(seatsIoChartValidationSchema.parse(responseData))
 }
 
 export async function saveSeatsIoSeatingLayout(payload: SeatsIoSeatingLayoutRequest): Promise<SeatsIoSeatingLayout> {

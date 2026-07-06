@@ -1,10 +1,12 @@
 import { useMemo } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { Badge, Box, Button, Flex, Heading, HStack, Skeleton, SkeletonText, Table, Text } from "@chakra-ui/react"
-import { ArrowLeft, ArrowRight, Edit3, LayoutGrid, Plus } from "lucide-react"
+import { ArrowLeft, ArrowRight, LayoutGrid, Plus } from "lucide-react"
 import { APP_ROUTES } from "@/utils/routes"
-import { useSeatingLayouts } from "../hooks/useSeatingLayouts"
+import type { SeatsIoSeatingLayout } from "@/api/seatsio"
 import { extractApiError } from "@/utils/errors"
+import { useSeatingLayouts } from "../hooks/useSeatingLayouts"
+import { SeatingLayoutsTableRow } from "../components"
 
 const PAGE_SIZE = 10
 
@@ -50,8 +52,8 @@ export function SeatingLayoutsPage() {
     setSearchParams(params, { replace: true })
   }
 
-  function buildEditUrl(layout: (typeof layouts)[number]) {
-    return APP_ROUTES.seatingLayouts.edit(layout.uniqueId)
+  function handleEditLayout(layout: SeatsIoSeatingLayout) {
+    navigate(APP_ROUTES.seatingLayouts.edit(layout.uniqueId))
   }
 
   if (query.isLoading && !query.data) {
@@ -127,22 +129,23 @@ export function SeatingLayoutsPage() {
           </Flex>
         </Box>
 
-        <Box overflowX="auto">
-          <Table.Root variant="line" size="sm">
+        <Box overflowX="auto" borderTop="1px solid" borderColor="border.subtle">
+          <Table.Root variant="line" size="sm" borderColor="border.subtle" minW={{ base: "900px", md: "auto" }}>
             <Table.Header>
               <Table.Row bg="app.bg">
+                <Table.ColumnHeader px={4} py={3} textAlign="center">
+                  Actions
+                </Table.ColumnHeader>
                 <Table.ColumnHeader px={6} py={3}>Layout</Table.ColumnHeader>
                 <Table.ColumnHeader px={4} py={3}>Venue</Table.ColumnHeader>
                 <Table.ColumnHeader px={4} py={3}>Chart key</Table.ColumnHeader>
-                <Table.ColumnHeader px={4} py={3} textAlign="right">
-                  Actions
-                </Table.ColumnHeader>
+                <Table.ColumnHeader px={4} py={3}>Validation</Table.ColumnHeader>
               </Table.Row>
             </Table.Header>
             <Table.Body>
               {layouts.length === 0 ? (
                 <Table.Row>
-                  <Table.Cell colSpan={4} py={12}>
+                  <Table.Cell colSpan={5} py={12}>
                     <Box textAlign="center">
                       <Text fontSize="lg" fontWeight="700" color="gray.900">
                         No seating layouts yet
@@ -159,39 +162,7 @@ export function SeatingLayoutsPage() {
                 </Table.Row>
               ) : (
                 layouts.map((layout) => (
-                  <Table.Row key={layout.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
-                    <Table.Cell px={6} py={4}>
-                      <Box>
-                        <Text fontSize="sm" fontWeight="700" color="text.primary">
-                          {layout.name}
-                        </Text>
-                        <Text fontSize="xs" color="text.secondary">
-                          #{layout.uniqueId}
-                        </Text>
-                      </Box>
-                    </Table.Cell>
-                    <Table.Cell px={4} py={4}>
-                      <Text fontSize="sm" color="text.primary">
-                        {layout.venueName ?? "Not mapped yet"}
-                      </Text>
-                    </Table.Cell>
-                    <Table.Cell px={4} py={4}>
-                      <Text fontSize="sm" color="text.primary" wordBreak="break-all">
-                        {layout.seatsIoChartKey ?? "Not linked yet"}
-                      </Text>
-                    </Table.Cell>
-                    <Table.Cell px={4} py={4} textAlign="right">
-                      <Button
-                        variant="outline"
-                        minH="11"
-                        px={4}
-                        onClick={() => navigate(buildEditUrl(layout))}
-                      >
-                        <Edit3 size={16} />
-                        Edit
-                      </Button>
-                    </Table.Cell>
-                  </Table.Row>
+                  <SeatingLayoutsTableRow key={layout.uniqueId} layout={layout} onEdit={handleEditLayout} />
                 ))
               )}
             </Table.Body>
