@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { Box, Button, HStack, Menu, Portal, Skeleton, Stack, Table, Text, Tooltip } from "@chakra-ui/react"
+import { Box, Button, HStack, Menu, Portal, Skeleton, Stack, Table, Text } from "@chakra-ui/react"
 import { CheckCircle2, CircleAlert, Edit3, MoreHorizontal } from "lucide-react"
 import { type SeatsIoSeatingLayout } from "@/api/seatsio"
 import { extractApiError } from "@/utils/errors"
@@ -47,7 +47,7 @@ function SeatingLayoutsValidationCell({ layout }: { layout: SeatsIoSeatingLayout
     return null
   }
 
-  if (validation.isValid) {
+  if (validation.isValid || validation.issues.length === 0) {
     return (
       <HStack gap={2} align="center" color="green.600">
         <CheckCircle2 size={18} />
@@ -58,44 +58,37 @@ function SeatingLayoutsValidationCell({ layout }: { layout: SeatsIoSeatingLayout
     )
   }
 
-  const issueText = validation.issues.length > 0 ? validation.issues.join(" ") : validation.summary
-
   return (
-    <Tooltip.Root openDelay={250} closeDelay={100}>
-      <Tooltip.Trigger asChild>
-        <HStack gap={2} align="start" color="orange.600" cursor="help">
-          <CircleAlert size={18} />
-          <Box minW={0}>
-            <Text fontSize="sm" fontWeight="700">
-              {validation.summary || "Chart needs attention"}
-            </Text>
-            {issueText ? (
-              <Text fontSize="xs" color="gray.600" lineClamp={2}>
-                {issueText}
+    <Stack gap={2} align="start" color="orange.600">
+      <HStack gap={2} align="start">
+        <CircleAlert size={18} />
+        <Box minW={0}>
+          <Text fontSize="sm" fontWeight="700" color="orange.700">
+            {validation.summary || "Chart needs attention"}
+          </Text>
+        </Box>
+      </HStack>
+
+      {validation.issues.length > 0 ? (
+        <Stack as="ul" gap={1} pl={5}>
+          {validation.issues.map((issue) => (
+            <HStack as="li" key={issue} gap={2} align="start" color="gray.700">
+              <Box as="span" mt="6px" boxSize="5px" borderRadius="full" bg="orange.500" flexShrink={0} />
+              <Text fontSize="xs" lineHeight="1.45">
+                {issue}
               </Text>
-            ) : null}
-          </Box>
+            </HStack>
+          ))}
+        </Stack>
+      ) : (
+        <HStack gap={2} color="green.600">
+          <CheckCircle2 size={16} />
+          <Text fontSize="xs" fontWeight="600" color="green.700">
+            No issues found
+          </Text>
         </HStack>
-      </Tooltip.Trigger>
-      <Tooltip.Positioner>
-        <Tooltip.Content>
-          <Stack gap={1}>
-            <Text fontSize="sm" fontWeight="700">
-              Chart issues
-            </Text>
-            {validation.issues.length > 0 ? (
-              validation.issues.map((issue) => (
-                <Text key={issue} fontSize="xs">
-                  {issue}
-                </Text>
-              ))
-            ) : (
-              <Text fontSize="xs">{validation.summary}</Text>
-            )}
-          </Stack>
-        </Tooltip.Content>
-      </Tooltip.Positioner>
-    </Tooltip.Root>
+      )}
+    </Stack>
   )
 }
 

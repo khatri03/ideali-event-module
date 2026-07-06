@@ -524,8 +524,11 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
             setEventName("")
             setEventNameError("")
             createEventMutation.reset()
-          } else if (!eventName) {
-            setEventName(suggestedEventName)
+          } else {
+            createEventMutation.reset()
+            if (!eventName) {
+              setEventName(suggestedEventName)
+            }
           }
         }}
         size="lg"
@@ -561,6 +564,14 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
 
             <Dialog.Body px={6} py={6} overflowY="auto">
               <Stack gap={4}>
+                {createEventMutation.isError ? (
+                  <Box border="1px solid" borderColor="red.200" bg="red.50" borderRadius="16px" px={4} py={3}>
+                    <Text fontSize="sm" fontWeight="700" color="red.700">
+                      {extractApiError(createEventMutation.error)}
+                    </Text>
+                  </Box>
+                ) : null}
+
                 <Box>
                   <Text fontSize="sm" fontWeight="700" color="gray.700" mb={2}>
                     Name <Text as="span" color="red.500">*</Text>
@@ -623,12 +634,6 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
                     Create
                   </Button>
                 </Flex>
-
-                {createEventMutation.isError ? (
-                  <Text fontSize="sm" color="red.500">
-                    {extractApiError(createEventMutation.error)}
-                  </Text>
-                ) : null}
               </Stack>
             </Dialog.Body>
           </Dialog.Content>

@@ -484,6 +484,7 @@ export function SeatingLayoutDesignerPage() {
                     secretKey={workspace!.secretKey}
                     region={designerRegion as Region}
                     chartKey={layoutChartKey ?? undefined}
+                    openDraftDrawing
                     onDesignerRendered={() => setIsDesignerRendered(true)}
                     onDesignerRenderingFailed={() => {
                       setDesignerError("Seats.io designer failed to render. Please verify the workspace secret key and region.")

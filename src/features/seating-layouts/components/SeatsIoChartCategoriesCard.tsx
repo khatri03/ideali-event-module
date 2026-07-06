@@ -302,8 +302,6 @@ export function SeatsIoChartCategoriesCard({
                   </Table.Row>
                 ) : (
                   categories.map((category) => {
-                    const canDelete = categories.length > 1;
-
                     return (
                       <Table.Row key={category.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
                         <Table.Cell px={5} py={4}>
@@ -351,16 +349,13 @@ export function SeatsIoChartCategoriesCard({
                                   w="40px"
                                   minW="40px"
                                   p={0}
-                                  disabled={!canDelete}
                                   onClick={() => requestDeleteCategory(category)}
                                 >
                                   <Trash2 size={15} />
                                 </Button>
                               </Tooltip.Trigger>
                               <Tooltip.Positioner>
-                                <Tooltip.Content>
-                                  {canDelete ? "Delete category" : "A chart must have at least one category"}
-                                </Tooltip.Content>
+                                <Tooltip.Content>Delete category</Tooltip.Content>
                               </Tooltip.Positioner>
                             </Tooltip.Root>
                           </Flex>
