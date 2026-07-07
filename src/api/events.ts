@@ -113,6 +113,95 @@ const organizerEventListPageSchema = z.object({
   pageData: z.array(organizerEventListItemSchema).optional(),
 })
 
+const eventRegistrationTicketSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  Name: z.string().optional(),
+  name: z.string().optional(),
+  Description: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  ColorCode: z.string().nullable().optional(),
+  colorCode: z.string().nullable().optional(),
+  FullPrice: z.number().nullable().optional(),
+  fullPrice: z.number().nullable().optional(),
+  MinPurchase: z.number().int().nullable().optional(),
+  minPurchase: z.number().int().nullable().optional(),
+  MaxPurchase: z.number().int().nullable().optional(),
+  maxPurchase: z.number().int().nullable().optional(),
+  TotalQuantity: z.number().int().nullable().optional(),
+  totalQuantity: z.number().int().nullable().optional(),
+  AvailableForSale: z.number().int().nullable().optional(),
+  availableForSale: z.number().int().nullable().optional(),
+  TicketsSold: z.number().int().nullable().optional(),
+  ticketsSold: z.number().int().nullable().optional(),
+  IsActive: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  SalesStartDateUtc: z.string().nullable().optional(),
+  salesStartDateUtc: z.string().nullable().optional(),
+  SalesEndDateUtc: z.string().nullable().optional(),
+  salesEndDateUtc: z.string().nullable().optional(),
+})
+
+const eventRegistrationSessionSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  Name: z.string().optional(),
+  name: z.string().optional(),
+  Description: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  BannerUrl: z.string().nullable().optional(),
+  bannerUrl: z.string().nullable().optional(),
+  SetupState: z.string().optional(),
+  setupState: z.string().optional(),
+  BookingStatus: z.string().optional(),
+  bookingStatus: z.string().optional(),
+  StartDate: z.string().nullable().optional(),
+  startDate: z.string().nullable().optional(),
+  EndDate: z.string().nullable().optional(),
+  endDate: z.string().nullable().optional(),
+  BookingStartDate: z.string().nullable().optional(),
+  bookingStartDate: z.string().nullable().optional(),
+  BookingEndDate: z.string().nullable().optional(),
+  bookingEndDate: z.string().nullable().optional(),
+  TicketTypes: z.array(eventRegistrationTicketSchema).optional(),
+  ticketTypes: z.array(eventRegistrationTicketSchema).optional(),
+})
+
+const eventRegistrationResponseSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  Name: z.string().optional(),
+  name: z.string().optional(),
+  Description: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  Summary: z.string().nullable().optional(),
+  summary: z.string().nullable().optional(),
+  BannerUrl: z.string().nullable().optional(),
+  bannerUrl: z.string().nullable().optional(),
+  ThemeColor: z.string().nullable().optional(),
+  themeColor: z.string().nullable().optional(),
+  TermsConditions: z.string().nullable().optional(),
+  termsConditions: z.string().nullable().optional(),
+  TimeZone: z.string().nullable().optional(),
+  timeZone: z.string().nullable().optional(),
+  VenueName: z.string().nullable().optional(),
+  venueName: z.string().nullable().optional(),
+  StartDate: z.string().nullable().optional(),
+  startDate: z.string().nullable().optional(),
+  EndDate: z.string().nullable().optional(),
+  endDate: z.string().nullable().optional(),
+  BookingStartDate: z.string().nullable().optional(),
+  bookingStartDate: z.string().nullable().optional(),
+  BookingEndDate: z.string().nullable().optional(),
+  bookingEndDate: z.string().nullable().optional(),
+  RegistrationStatus: z.string().optional(),
+  registrationStatus: z.string().optional(),
+  CanRegister: z.boolean().optional(),
+  canRegister: z.boolean().optional(),
+  Sessions: z.array(eventRegistrationSessionSchema).optional(),
+  sessions: z.array(eventRegistrationSessionSchema).optional(),
+})
+
 const eventWizardCreateResponseSchema = z.object({
   uniqueId: z.string().min(1),
 })
@@ -505,6 +594,116 @@ export async function fetchOrganizerEventStatusOptions(): Promise<OrganizerEvent
 export async function fetchEvent(id: string): Promise<AppEvent> {
   const res = await client.get<AppEvent>(API_ROUTES.eventById(id))
   return appEventSchema.parse(res.data)
+}
+
+export interface EventRegistrationTicket {
+  uniqueId: string
+  name: string
+  description: string | null
+  colorCode: string | null
+  fullPrice: number
+  minPurchase: number
+  maxPurchase: number | null
+  totalQuantity: number | null
+  availableForSale: number | null
+  ticketsSold: number | null
+  isActive: boolean
+  salesStartDateUtc: string | null
+  salesEndDateUtc: string | null
+}
+
+export interface EventRegistrationSession {
+  uniqueId: string
+  name: string
+  description: string | null
+  bannerUrl: string | null
+  setupState: string
+  bookingStatus: string
+  startDate: string | null
+  endDate: string | null
+  bookingStartDate: string | null
+  bookingEndDate: string | null
+  ticketTypes: EventRegistrationTicket[]
+}
+
+export interface EventRegistrationResponse {
+  uniqueId: string
+  name: string
+  description: string | null
+  summary: string | null
+  bannerUrl: string | null
+  themeColor: string | null
+  termsConditions: string | null
+  timeZone: string | null
+  venueName: string | null
+  startDate: string | null
+  endDate: string | null
+  bookingStartDate: string | null
+  bookingEndDate: string | null
+  registrationStatus: string
+  canRegister: boolean
+  sessions: EventRegistrationSession[]
+}
+
+function parseEventRegistrationTicket(item: z.infer<typeof eventRegistrationTicketSchema>): EventRegistrationTicket {
+  return {
+    uniqueId: item.UniqueId ?? item.uniqueId ?? "",
+    name: item.Name ?? item.name ?? "",
+    description: item.Description ?? item.description ?? null,
+    colorCode: item.ColorCode ?? item.colorCode ?? null,
+    fullPrice: item.FullPrice ?? item.fullPrice ?? 0,
+    minPurchase: item.MinPurchase ?? item.minPurchase ?? 1,
+    maxPurchase: item.MaxPurchase ?? item.maxPurchase ?? null,
+    totalQuantity: item.TotalQuantity ?? item.totalQuantity ?? null,
+    availableForSale: item.AvailableForSale ?? item.availableForSale ?? null,
+    ticketsSold: item.TicketsSold ?? item.ticketsSold ?? null,
+    isActive: item.IsActive ?? item.isActive ?? false,
+    salesStartDateUtc: item.SalesStartDateUtc ?? item.salesStartDateUtc ?? null,
+    salesEndDateUtc: item.SalesEndDateUtc ?? item.salesEndDateUtc ?? null,
+  }
+}
+
+function parseEventRegistrationSession(item: z.infer<typeof eventRegistrationSessionSchema>): EventRegistrationSession {
+  return {
+    uniqueId: item.UniqueId ?? item.uniqueId ?? "",
+    name: item.Name ?? item.name ?? "",
+    description: item.Description ?? item.description ?? null,
+    bannerUrl: item.BannerUrl ?? item.bannerUrl ?? null,
+    setupState: item.SetupState ?? item.setupState ?? "",
+    bookingStatus: item.BookingStatus ?? item.bookingStatus ?? "",
+    startDate: item.StartDate ?? item.startDate ?? null,
+    endDate: item.EndDate ?? item.endDate ?? null,
+    bookingStartDate: item.BookingStartDate ?? item.bookingStartDate ?? null,
+    bookingEndDate: item.BookingEndDate ?? item.bookingEndDate ?? null,
+    ticketTypes: (item.TicketTypes ?? item.ticketTypes ?? []).map(parseEventRegistrationTicket),
+  }
+}
+
+function parseEventRegistrationResponse(payload: unknown): EventRegistrationResponse {
+  const response = eventRegistrationResponseSchema.parse(parseServiceResponseData(payload))
+  return {
+    uniqueId: response.UniqueId ?? response.uniqueId ?? "",
+    name: response.Name ?? response.name ?? "",
+    description: response.Description ?? response.description ?? null,
+    summary: response.Summary ?? response.summary ?? null,
+    bannerUrl: response.BannerUrl ?? response.bannerUrl ?? null,
+    themeColor: response.ThemeColor ?? response.themeColor ?? null,
+    termsConditions: response.TermsConditions ?? response.termsConditions ?? null,
+    timeZone: response.TimeZone ?? response.timeZone ?? null,
+    venueName: response.VenueName ?? response.venueName ?? null,
+    startDate: response.StartDate ?? response.startDate ?? null,
+    endDate: response.EndDate ?? response.endDate ?? null,
+    bookingStartDate: response.BookingStartDate ?? response.bookingStartDate ?? null,
+    bookingEndDate: response.BookingEndDate ?? response.bookingEndDate ?? null,
+    registrationStatus: response.RegistrationStatus ?? response.registrationStatus ?? "",
+    canRegister: response.CanRegister ?? response.canRegister ?? false,
+    sessions: (response.Sessions ?? response.sessions ?? []).map(parseEventRegistrationSession),
+  }
+}
+
+export async function fetchEventRegistration(eventUniqueId: string): Promise<EventRegistrationResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventRegister(eventUniqueId)}`)
+  return parseEventRegistrationResponse(res.data)
 }
 
 export async function createEvent(payload: Omit<AppEvent, "id">): Promise<AppEvent> {

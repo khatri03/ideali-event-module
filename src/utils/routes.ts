@@ -82,6 +82,7 @@ export const APP_ROUTES = {
 export const API_ROUTES = {
   events: "/events",
   eventById: (id: string) => `/events/${id}`,
+  eventRegister: (eventUniqueId: string) => `/api/events/${eventUniqueId}/register`,
   eventWizardProgress: (id: string) => `/api/organizer/events/${id}/wizard-progress`,
   eventWizardNameCreate: "/api/organizer/events/name",
   eventWizardSkip: (id: string) => `/api/organizer/events/${id}/skip`,
