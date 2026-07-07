@@ -45,8 +45,8 @@ export const APP_ROUTES = {
     edit: (eventId: string) => `/organizer/events/${eventId}`,
     editStep: (eventId: string, step: string) => `/organizer/events/${eventId}/${step}`,
   },
-  eventRegisterRoute: "/event/:eventUniqueId/register",
-  eventRegister: (eventUniqueId: string) => `/event/${eventUniqueId}/register`,
+  eventRegisterRoute: "/events/:eventUniqueId/register",
+  eventRegister: (eventUniqueId: string) => `/events/${eventUniqueId}/register`,
   sessionWizard: {
     list: "/organizer/sessions",
     edit: (sessionId: string) => `/organizer/sessions/${sessionId}`,

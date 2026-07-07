@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Badge, Box, Button, CloseButton, Dialog, Flex, Menu, Portal, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
-import { CalendarDays, Check, ChevronRight, Copy, Eye, MapPin, MoreHorizontal, PencilLine, Users } from "lucide-react"
+import { CalendarDays, Check, ChevronRight, Copy, MapPin, MoreHorizontal, PencilLine, UserPlus, Users } from "lucide-react"
 import { format } from "date-fns"
 import { Link } from "react-router-dom"
 import { updateEventWizardSetupState } from "@/api/events"
@@ -61,7 +61,7 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
   const [isStatusConfirmOpen, setIsStatusConfirmOpen] = useState(false)
   const [pendingStatusAction, setPendingStatusAction] = useState<StatusTransitionKey | null>(null)
   const [isCopyToastVisible, setIsCopyToastVisible] = useState(false)
-  const statusMenuPlacement = useBreakpointValue({ base: "bottom-start", sm: "right-start" }) ?? "right-start"
+  const statusMenuPlacement: "bottom-start" | "right-start" = useBreakpointValue({ base: "bottom-start", sm: "right-start" }) ?? "right-start"
   const totalTickets = event.totalAvailableTickets + event.ticketsSold
   const soldPct = totalTickets > 0 ? Math.round((event.ticketsSold / totalTickets) * 100) : 0
   const statusLabel = formatSetupState(event.setupState, event.isCancelled)
@@ -76,7 +76,6 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
     normalizedSetupState === "readytoreview"
   const isOnline = normalizedSetupState === "readyforsale"
   const isOffline = normalizedSetupState === "readyforreview" || normalizedSetupState === "readytoreview"
-  const canViewRegistration = isOnline
   const pendingTransition = pendingStatusAction ? STATUS_TRANSITIONS[pendingStatusAction] : null
   const registrationUrl = new URL(APP_ROUTES.eventRegister(event.uniqueId), window.location.origin).toString()
 
@@ -114,8 +113,16 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
   }, [isCopyToastVisible])
 
   async function handleCopyRegistrationUrl() {
-    await navigator.clipboard.writeText(registrationUrl)
-    setIsCopyToastVisible(true)
+    try {
+      await navigator.clipboard.writeText(registrationUrl)
+      setIsCopyToastVisible(true)
+    } catch {
+      setIsCopyToastVisible(false)
+    }
+  }
+
+  function handleOpenRegistration() {
+    window.open(registrationUrl, "_blank", "noreferrer")
   }
 
   async function confirmStatusChange() {
@@ -167,9 +174,7 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
             <Menu.Trigger asChild>
               <Box
                 as="button"
-                type="button"
                 aria-label="Event actions"
-                disabled={!canEdit && !canShowStatusActions}
                 w="9"
                 h="9"
                 minW="9"
@@ -202,54 +207,67 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
                   _dark={{ bg: "navy.800", borderColor: "whiteAlpha.200" }}
                 >
                   {canEdit ? (
-                    <Menu.Item value="edit" asChild>
-                      <Box
-                        as={Link}
+                    <Menu.Item
+                      value="edit"
+                      asChild
+                    >
+                      <Link
                         to={APP_ROUTES.eventWizard.edit(event.uniqueId)}
-                        borderRadius="10px"
-                        fontSize="sm"
-                        fontWeight="600"
-                        color="gray.700"
-                        cursor="pointer"
-                        _dark={{ color: "gray.200" }}
-                        _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
-                        px={3}
-                        py={2}
-                        gap={2.5}
-                        display="flex"
-                        alignItems="center"
+                        style={{
+                          borderRadius: "10px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                          padding: "8px 12px",
+                          fontSize: "0.875rem",
+                          fontWeight: 600,
+                          color: "var(--chakra-colors-gray-700)",
+                          textDecoration: "none",
+                        }}
                       >
                         <PencilLine size={14} />
                         Edit
-                      </Box>
+                      </Link>
                     </Menu.Item>
                   ) : null}
 
-                  {canViewRegistration ? (
-                    <Menu.Item value="view" asChild>
-                      <Box
-                        as={Link}
-                        to={APP_ROUTES.eventRegister(event.uniqueId)}
-                        target="_blank"
-                        rel="noreferrer"
-                        borderRadius="10px"
-                        fontSize="sm"
-                        fontWeight="600"
-                        color="gray.700"
-                        cursor="pointer"
-                        _dark={{ color: "gray.200" }}
-                        _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
-                        px={3}
-                        py={2}
-                        gap={2.5}
-                        display="flex"
-                        alignItems="center"
-                      >
-                        <Eye size={14} />
-                        View
-                      </Box>
-                    </Menu.Item>
-                  ) : null}
+                  <Menu.Item
+                    value="copy-registration-url"
+                    borderRadius="10px"
+                    fontSize="sm"
+                    fontWeight="600"
+                    color="gray.700"
+                    _dark={{ color: "gray.200" }}
+                    _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
+                    px={3}
+                    py={2}
+                    gap={2.5}
+                    onClick={() => void handleCopyRegistrationUrl()}
+                  >
+                    <Copy size={14} />
+                    <Text as="span" flex="1" textAlign="left">
+                      Copy URL
+                    </Text>
+                  </Menu.Item>
+
+                  <Menu.Item
+                    value="register-event"
+                    borderRadius="10px"
+                    fontSize="sm"
+                    fontWeight="600"
+                    color="gray.700"
+                    _dark={{ color: "gray.200" }}
+                    _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
+                    px={3}
+                    py={2}
+                    gap={2.5}
+                    onClick={handleOpenRegistration}
+                  >
+                    <UserPlus size={14} />
+                    <Text as="span" flex="1" textAlign="left">
+                      Register
+                    </Text>
+                  </Menu.Item>
 
                   {canEdit && canShowStatusActions ? <Menu.Separator borderColor="gray.100" _dark={{ borderColor: "whiteAlpha.100" }} mx={1} my={1} /> : null}
 
@@ -491,11 +509,10 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
               {event.name}
             </Text>
 
-            <Box
-              as="button"
-              type="button"
-              aria-label="Copy registration URL"
-              title="Copy registration URL"
+              <Box
+                as="button"
+                aria-label="Copy registration URL"
+                title="Copy registration URL"
               display="inline-flex"
               alignItems="center"
               justifyContent="center"
