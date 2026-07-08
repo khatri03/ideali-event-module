@@ -71,7 +71,6 @@ interface RegistrationState {
 
 interface EventRegistrationViewModel {
   title: string
-  descriptionHtml: string
   bannerUrl: string | null
   themeColor: string | null
   startDate: string | null
@@ -127,18 +126,6 @@ function formatCurrency(amount: number, currency: string) {
 
 function formatDateTime(value: string | null | undefined) {
   return value ? format(new Date(value), "EEE, MMM d, yyyy 'at' h:mm a") : "Date not set"
-}
-
-function formatDateRange(start: string | null | undefined, end: string | null | undefined) {
-  if (start && end) {
-    return `${format(new Date(start), "MMM d, yyyy")} - ${format(new Date(end), "MMM d, yyyy")}`
-  }
-
-  if (start) {
-    return format(new Date(start), "MMM d, yyyy")
-  }
-
-  return "Date not set"
 }
 
 function getCountdownUnits(target: Date, nowMs: number) {
@@ -207,70 +194,6 @@ function CountdownTile({ label, value, tone }: { label: string; value: string; t
         {label}
       </Text>
     </Stack>
-  )
-}
-
-function RichTextBlock({ html }: { html: string }) {
-  return (
-    <>
-      <style>{`
-        .event-rich-text > :first-child {
-          margin-top: 0;
-        }
-        .event-rich-text > :last-child {
-          margin-bottom: 0;
-        }
-        .event-rich-text p {
-          margin: 0 0 1rem;
-          color: var(--chakra-colors-gray-600);
-          line-height: 1.8;
-          font-size: 0.875rem;
-        }
-        .event-rich-text h1,
-        .event-rich-text h2,
-        .event-rich-text h3,
-        .event-rich-text h4 {
-          margin: 1.5rem 0 0.75rem;
-          color: var(--chakra-colors-gray-900);
-          font-weight: 800;
-          line-height: 1.2;
-        }
-        .event-rich-text h1 {
-          font-size: 1.5rem;
-        }
-        .event-rich-text h2 {
-          font-size: 1.25rem;
-        }
-        .event-rich-text h3 {
-          font-size: 1.125rem;
-        }
-        .event-rich-text h4 {
-          font-size: 1rem;
-        }
-        .event-rich-text ul,
-        .event-rich-text ol {
-          margin: 0 0 1rem;
-          padding-left: 1.25rem;
-          color: var(--chakra-colors-gray-600);
-        }
-        .event-rich-text li {
-          margin-bottom: 0.5rem;
-        }
-        .event-rich-text a {
-          color: inherit;
-          font-weight: 700;
-          text-decoration: underline;
-          text-underline-offset: 3px;
-        }
-        .event-rich-text blockquote {
-          margin: 1rem 0;
-          padding-left: 1rem;
-          border-left: 4px solid var(--chakra-colors-gray-200);
-          color: var(--chakra-colors-gray-700);
-        }
-      `}</style>
-      <Box className="event-rich-text" dangerouslySetInnerHTML={{ __html: html }} />
-    </>
   )
 }
 
@@ -526,7 +449,6 @@ function mapRegistrationToViewModel(registration: EventRegistrationResponse): Ev
 
   return {
     title: registration.name,
-    descriptionHtml: registration.description ?? registration.summary ?? "<p>Registration details will appear here.</p>",
     bannerUrl: resolveAssetUrl(registration.bannerUrl),
     themeColor: registration.themeColor,
     startDate: registration.startDate,
@@ -629,7 +551,7 @@ function EnterpriseRegistrationLayout({
                   display="flex"
                   alignItems="flex-start"
                 >
-                  <Stack gap={4} maxW="sm">
+                  <Stack gap={5} maxW="sm" w="full">
                     <Heading fontSize={{ base: "2xl", md: "4xl", lg: "3xl" }} fontWeight="900" lineHeight="1.05" letterSpacing="0.02em" color="gray.900">
                       {event.title}
                     </Heading>
@@ -641,45 +563,52 @@ function EnterpriseRegistrationLayout({
                         {event.organizer}
                       </Text>
                     </Text>
+                    <Stack gap={3} pt={1}>
+                      <HStack gap={3} align="start">
+                        <Box color="gray.500" mt={0.5}>
+                          <CalendarDays size={18} />
+                        </Box>
+                        <Box>
+                          <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.12em">
+                            Starts At
+                          </Text>
+                          <Text mt={1} fontSize="sm" fontWeight="700" color="gray.900">
+                            {formatDateTime(event.startDate)}
+                          </Text>
+                        </Box>
+                      </HStack>
+                      <HStack gap={3} align="start">
+                        <Box color="gray.500" mt={0.5}>
+                          <Clock3 size={18} />
+                        </Box>
+                        <Box>
+                          <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.12em">
+                            Ends At
+                          </Text>
+                          <Text mt={1} fontSize="sm" fontWeight="700" color="gray.900">
+                            {formatDateTime(event.endDate)}
+                          </Text>
+                        </Box>
+                      </HStack>
+                      <HStack gap={3} align="start">
+                        <Box color="gray.500" mt={0.5}>
+                          <MapPin size={18} />
+                        </Box>
+                        <Box>
+                          <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.12em">
+                            Venue
+                          </Text>
+                          <Text mt={1} fontSize="sm" fontWeight="700" color="gray.900">
+                            {event.location}
+                          </Text>
+                        </Box>
+                      </HStack>
+                    </Stack>
                   </Stack>
                 </Box>
               </Box>
 
-              <Box borderWidth="1px" borderColor={accentBorder} borderRadius="20px" bg="white" p={{ base: 5, md: 7 }}>
-                <RichTextBlock html={event.descriptionHtml} />
-              </Box>
-
-              <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} gap={3}>
-                <Box borderWidth="1px" borderColor={accentBorder} borderRadius="10px" p={4}>
-                  <HStack gap={3} align="start">
-                    <Box color="gray.500" mt={0.5}>
-                      <CalendarDays size={18} />
-                    </Box>
-                    <Box>
-                      <Text fontSize="xs" fontWeight="700" color="gray.500">
-                        Date
-                      </Text>
-                      <Text mt={1} fontSize="sm" fontWeight="700">
-                        {formatDateRange(event.startDate, event.endDate)}
-                      </Text>
-                    </Box>
-                  </HStack>
-                </Box>
-                <Box borderWidth="1px" borderColor={accentBorder} borderRadius="10px" p={4}>
-                  <HStack gap={3} align="start">
-                    <Box color="gray.500" mt={0.5}>
-                      <MapPin size={18} />
-                    </Box>
-                    <Box>
-                      <Text fontSize="xs" fontWeight="700" color="gray.500">
-                        Venue
-                      </Text>
-                      <Text mt={1} fontSize="sm" fontWeight="700">
-                        {event.location}
-                      </Text>
-                    </Box>
-                  </HStack>
-                </Box>
+              <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
                 <Box borderWidth="1px" borderColor={accentBorder} borderRadius="10px" p={4}>
                   <HStack gap={3} align="start">
                     <Box color="gray.500" mt={0.5}>
@@ -687,7 +616,7 @@ function EnterpriseRegistrationLayout({
                     </Box>
                     <Box>
                       <Text fontSize="xs" fontWeight="700" color="gray.500">
-                        Tickets
+                        Ticket types
                       </Text>
                       <Text mt={1} fontSize="sm" fontWeight="700">
                         {ticketTypeCount.toLocaleString()} available types
