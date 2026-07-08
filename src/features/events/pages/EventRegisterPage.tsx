@@ -564,45 +564,47 @@ function EnterpriseRegistrationLayout({
                       </Text>
                     </Text>
                     <Stack gap={3} pt={1}>
-                      <HStack gap={3} align="start">
-                        <Box color="gray.500" mt={0.5}>
-                          <CalendarDays size={18} />
-                        </Box>
-                        <Box>
-                          <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.12em">
-                            Starts At
-                          </Text>
-                          <Text mt={1} fontSize="sm" fontWeight="700" color="gray.900">
-                            {formatDateTime(event.startDate)}
-                          </Text>
-                        </Box>
-                      </HStack>
-                      <HStack gap={3} align="start">
-                        <Box color="gray.500" mt={0.5}>
-                          <Clock3 size={18} />
-                        </Box>
-                        <Box>
-                          <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.12em">
-                            Ends At
-                          </Text>
-                          <Text mt={1} fontSize="sm" fontWeight="700" color="gray.900">
-                            {formatDateTime(event.endDate)}
-                          </Text>
-                        </Box>
-                      </HStack>
-                      <HStack gap={3} align="start">
-                        <Box color="gray.500" mt={0.5}>
-                          <MapPin size={18} />
-                        </Box>
-                        <Box>
-                          <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.12em">
-                            Venue
-                          </Text>
-                          <Text mt={1} fontSize="sm" fontWeight="700" color="gray.900">
-                            {event.location}
-                          </Text>
-                        </Box>
-                      </HStack>
+                      <Box borderWidth="1px" borderColor="gray.200" borderRadius="18px" bg="gray.50" overflow="hidden">
+                        <HStack gap={3} align="start" px={4} py={3} borderBottomWidth="1px" borderBottomColor="gray.200">
+                          <Box color="gray.500" mt={0.5}>
+                            <CalendarDays size={18} />
+                          </Box>
+                          <Box>
+                            <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.12em">
+                              Starts At
+                            </Text>
+                            <Text mt={1} fontSize="sm" fontWeight="700" color="gray.900">
+                              {formatDateTime(event.startDate)}
+                            </Text>
+                          </Box>
+                        </HStack>
+                        <HStack gap={3} align="start" px={4} py={3} borderBottomWidth="1px" borderBottomColor="gray.200">
+                          <Box color="gray.500" mt={0.5}>
+                            <Clock3 size={18} />
+                          </Box>
+                          <Box>
+                            <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.12em">
+                              Ends At
+                            </Text>
+                            <Text mt={1} fontSize="sm" fontWeight="700" color="gray.900">
+                              {formatDateTime(event.endDate)}
+                            </Text>
+                          </Box>
+                        </HStack>
+                        <HStack gap={3} align="start" px={4} py={3}>
+                          <Box color="gray.500" mt={0.5}>
+                            <MapPin size={18} />
+                          </Box>
+                          <Box>
+                            <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.12em">
+                              Venue
+                            </Text>
+                            <Text mt={1} fontSize="sm" fontWeight="700" color="gray.900">
+                              {event.location}
+                            </Text>
+                          </Box>
+                        </HStack>
+                      </Box>
                     </Stack>
                   </Stack>
                 </Box>
