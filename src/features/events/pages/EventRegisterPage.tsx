@@ -212,53 +212,65 @@ function CountdownTile({ label, value, tone }: { label: string; value: string; t
 
 function RichTextBlock({ html }: { html: string }) {
   return (
-    <Box
-      sx={{
-        "& > :first-child": { mt: 0 },
-        "& > :last-child": { mb: 0 },
-        "& p": {
-          mt: 0,
-          mb: 4,
-          color: "gray.600",
-          lineHeight: "1.8",
-          fontSize: "sm",
-        },
-        "& h1, & h2, & h3, & h4": {
-          mt: 6,
-          mb: 3,
-          color: "gray.900",
-          fontWeight: "800",
-          lineHeight: "1.2",
-        },
-        "& h1": { fontSize: "2xl" },
-        "& h2": { fontSize: "xl" },
-        "& h3": { fontSize: "lg" },
-        "& h4": { fontSize: "md" },
-        "& ul, & ol": {
-          mt: 0,
-          mb: 4,
-          pl: 5,
-          color: "gray.600",
-        },
-        "& li": {
-          mb: 2,
-        },
-        "& a": {
-          color: "inherit",
-          fontWeight: "700",
-          textDecoration: "underline",
-          textUnderlineOffset: "3px",
-        },
-        "& blockquote": {
-          my: 4,
-          pl: 4,
-          borderLeft: "4px solid",
-          borderColor: "gray.200",
-          color: "gray.700",
-        },
-      }}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <>
+      <style>{`
+        .event-rich-text > :first-child {
+          margin-top: 0;
+        }
+        .event-rich-text > :last-child {
+          margin-bottom: 0;
+        }
+        .event-rich-text p {
+          margin: 0 0 1rem;
+          color: var(--chakra-colors-gray-600);
+          line-height: 1.8;
+          font-size: 0.875rem;
+        }
+        .event-rich-text h1,
+        .event-rich-text h2,
+        .event-rich-text h3,
+        .event-rich-text h4 {
+          margin: 1.5rem 0 0.75rem;
+          color: var(--chakra-colors-gray-900);
+          font-weight: 800;
+          line-height: 1.2;
+        }
+        .event-rich-text h1 {
+          font-size: 1.5rem;
+        }
+        .event-rich-text h2 {
+          font-size: 1.25rem;
+        }
+        .event-rich-text h3 {
+          font-size: 1.125rem;
+        }
+        .event-rich-text h4 {
+          font-size: 1rem;
+        }
+        .event-rich-text ul,
+        .event-rich-text ol {
+          margin: 0 0 1rem;
+          padding-left: 1.25rem;
+          color: var(--chakra-colors-gray-600);
+        }
+        .event-rich-text li {
+          margin-bottom: 0.5rem;
+        }
+        .event-rich-text a {
+          color: inherit;
+          font-weight: 700;
+          text-decoration: underline;
+          text-underline-offset: 3px;
+        }
+        .event-rich-text blockquote {
+          margin: 1rem 0;
+          padding-left: 1rem;
+          border-left: 4px solid var(--chakra-colors-gray-200);
+          color: var(--chakra-colors-gray-700);
+        }
+      `}</style>
+      <Box className="event-rich-text" dangerouslySetInnerHTML={{ __html: html }} />
+    </>
   )
 }
 
@@ -427,7 +439,6 @@ function deriveRegistrationState(event: EventRegistrationViewModel, nowMs: numbe
   const isSoldOut = seatsRemaining <= 0
   const isBeforeOpen = bookingStart ? nowMs < bookingStart.getTime() : false
   const isAfterClose = bookingEnd ? nowMs > bookingEnd.getTime() : false
-  const isOpen = event.canRegister || status === "open"
   const isUpcoming = status === "upcoming"
   const isClosed = status === "closed"
   const isUnavailable = status === "unavailable"
@@ -573,49 +584,76 @@ function EnterpriseRegistrationLayout({
   const accentButton = formAccent
 
   return (
-    <Box
-      minH="100dvh"
-      bg={accentBackground}
-      color="gray.900"
-    >
+    <Box minH="100dvh" bg={accentBackground} color="gray.900">
       <Flex minH="100dvh" align="center" justify="center" px={{ base: 4, md: 8, lg: 10 }} py={{ base: 6, md: 10 }}>
         <Stack gap={{ base: 5, md: 6 }} maxW="8xl" w="full" align="center">
           <Box bg="white" borderWidth="1px" borderColor={accentBorder} borderRadius="12px" overflow="hidden" w="full">
             <Box h="6px" bg={formAccent} />
             <Stack gap={5} p={{ base: 5, md: 7 }}>
-              <Box
-                position="relative"
-                borderWidth="1px"
-                borderColor={accentBorder}
-                borderRadius="24px"
-                overflow="hidden"
-                bg={event.bannerUrl ? "gray.900" : accentSurface}
-                minH={event.bannerUrl ? undefined : { base: "220px", md: "280px" }}
-              >
-                {event.bannerUrl ? (
-                  <AspectRatio ratio={4.2}>
-                    <Image src={event.bannerUrl} alt="" w="full" h="full" objectFit="cover" display="block" />
-                  </AspectRatio>
-                ) : null}
-                <Box position="absolute" inset={0} bg={event.bannerUrl ? "linear-gradient(180deg, rgba(2, 6, 23, 0.02) 0%, rgba(2, 6, 23, 0.22) 100%)" : "transparent"} />
-                <Flex position="absolute" inset={0} align="end" p={{ base: 5, md: 8 }}>
-                  <Stack gap={4} maxW="4xl" color="white">
+              <Box display="grid" gap={5} gridTemplateColumns={{ base: "1fr", lg: "6fr 4fr" }} alignItems="stretch">
+                <Box
+                  borderWidth="1px"
+                  borderColor={accentBorder}
+                  borderRadius="24px"
+                  overflow="hidden"
+                  bg={event.bannerUrl ? "gray.900" : accentSurface}
+                  minH={{ base: "220px", md: "280px" }}
+                >
+                  {event.bannerUrl ? (
+                    <AspectRatio ratio={16 / 9}>
+                      <Image
+                        src={event.bannerUrl}
+                        alt=""
+                        w="full"
+                        h="full"
+                        objectFit="cover"
+                        objectPosition="center"
+                        display="block"
+                      />
+                    </AspectRatio>
+                  ) : (
+                    <Flex minH={{ base: "220px", md: "280px" }} align="center" justify="center" px={6} textAlign="center">
+                      <Text fontSize="sm" fontWeight="700" color="gray.600">
+                        Banner not available
+                      </Text>
+                    </Flex>
+                  )}
+                </Box>
+
+                <Box
+                  borderWidth="1px"
+                  borderColor={accentBorder}
+                  borderRadius="24px"
+                  bg="white"
+                  p={{ base: 5, md: 7 }}
+                  display="flex"
+                  alignItems="center"
+                >
+                  <Stack gap={4} maxW="sm">
                     <Flex gap={3} wrap="wrap">
-                      <Badge borderRadius="full" px={3} py={1} bg="whiteAlpha.200" color="white" borderWidth="1px" borderColor="whiteAlpha.300">
+                      <Badge
+                        borderRadius="full"
+                        px={3}
+                        py={1}
+                        bg={`${registrationState.tone}.50`}
+                        color={`${registrationState.tone}.700`}
+                        borderWidth="1px"
+                        borderColor={`${registrationState.tone}.200`}
+                      >
                         Event registration
                       </Badge>
-                      <Badge borderRadius="full" px={3} py={1} bg="whiteAlpha.100" color="white" borderWidth="1px" borderColor="whiteAlpha.200">
+                      <Badge borderRadius="full" px={3} py={1} bg="gray.50" color="gray.700" borderWidth="1px" borderColor="gray.200">
                         {registrationState.badge}
                       </Badge>
                     </Flex>
-                    <Heading fontSize={{ base: "2xl", md: "4xl" }} fontWeight="900" lineHeight="1.05" letterSpacing="-0.04em">
+                    <Heading fontSize={{ base: "2xl", md: "4xl", lg: "3xl" }} fontWeight="900" lineHeight="1.05" letterSpacing="-0.04em" color="gray.900">
                       {event.title}
                     </Heading>
-                    <Text fontSize={{ base: "sm", md: "md" }} color="whiteAlpha.900" maxW="3xl" lineHeight="1.8">
-                      {event.location}
+                    <Text fontSize={{ base: "sm", md: "md" }} color="gray.600" lineHeight="1.7">
+                      By: {event.organizer}
                     </Text>
                   </Stack>
-                </Flex>
+                </Box>
               </Box>
 
               <Box borderWidth="1px" borderColor={accentBorder} borderRadius="20px" bg="white" p={{ base: 5, md: 7 }}>
@@ -625,36 +663,58 @@ function EnterpriseRegistrationLayout({
               <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} gap={3}>
                 <Box borderWidth="1px" borderColor={accentBorder} borderRadius="10px" p={4}>
                   <HStack gap={3} align="start">
-                    <Box color="gray.500" mt={0.5}><CalendarDays size={18} /></Box>
+                    <Box color="gray.500" mt={0.5}>
+                      <CalendarDays size={18} />
+                    </Box>
                     <Box>
-                      <Text fontSize="xs" fontWeight="700" color="gray.500">Date</Text>
-                      <Text mt={1} fontSize="sm" fontWeight="700">{formatDateRange(event.startDate, event.endDate)}</Text>
+                      <Text fontSize="xs" fontWeight="700" color="gray.500">
+                        Date
+                      </Text>
+                      <Text mt={1} fontSize="sm" fontWeight="700">
+                        {formatDateRange(event.startDate, event.endDate)}
+                      </Text>
                     </Box>
                   </HStack>
                 </Box>
                 <Box borderWidth="1px" borderColor={accentBorder} borderRadius="10px" p={4}>
                   <HStack gap={3} align="start">
-                    <Box color="gray.500" mt={0.5}><MapPin size={18} /></Box>
+                    <Box color="gray.500" mt={0.5}>
+                      <MapPin size={18} />
+                    </Box>
                     <Box>
-                      <Text fontSize="xs" fontWeight="700" color="gray.500">Venue</Text>
-                      <Text mt={1} fontSize="sm" fontWeight="700">{event.location}</Text>
+                      <Text fontSize="xs" fontWeight="700" color="gray.500">
+                        Venue
+                      </Text>
+                      <Text mt={1} fontSize="sm" fontWeight="700">
+                        {event.location}
+                      </Text>
                     </Box>
                   </HStack>
                 </Box>
                 <Box borderWidth="1px" borderColor={accentBorder} borderRadius="10px" p={4}>
                   <HStack gap={3} align="start">
-                    <Box color="gray.500" mt={0.5}><Ticket size={18} /></Box>
+                    <Box color="gray.500" mt={0.5}>
+                      <Ticket size={18} />
+                    </Box>
                     <Box>
-                      <Text fontSize="xs" fontWeight="700" color="gray.500">Tickets</Text>
-                      <Text mt={1} fontSize="sm" fontWeight="700">{ticketTypeCount.toLocaleString()} available types</Text>
+                      <Text fontSize="xs" fontWeight="700" color="gray.500">
+                        Tickets
+                      </Text>
+                      <Text mt={1} fontSize="sm" fontWeight="700">
+                        {ticketTypeCount.toLocaleString()} available types
+                      </Text>
                     </Box>
                   </HStack>
                 </Box>
                 <Box borderWidth="1px" borderColor={accentBorder} borderRadius="10px" p={4}>
                   <HStack gap={3} align="start">
-                    <Box color="gray.500" mt={0.5}><ShieldCheck size={18} /></Box>
+                    <Box color="gray.500" mt={0.5}>
+                      <ShieldCheck size={18} />
+                    </Box>
                     <Box>
-                      <Text fontSize="xs" fontWeight="700" color="gray.500">Capacity</Text>
+                      <Text fontSize="xs" fontWeight="700" color="gray.500">
+                        Capacity
+                      </Text>
                       <Text mt={1} fontSize="sm" fontWeight="700">
                         {availableSeats.toLocaleString()} seats remaining
                       </Text>
@@ -671,29 +731,65 @@ function EnterpriseRegistrationLayout({
                 <Box as="form" bg="white" borderWidth="1px" borderColor={accentBorder} borderRadius="12px" p={{ base: 5, md: 7 }}>
                   <Stack gap={7}>
                     <Stack gap={1}>
-                      <Heading fontSize="xl" fontWeight="800">Attendee details</Heading>
-                      <Text fontSize="sm" color="gray.600">Required fields are marked with an asterisk.</Text>
+                      <Heading fontSize="xl" fontWeight="800">
+                        Attendee details
+                      </Heading>
+                      <Text fontSize="sm" color="gray.600">
+                        Required fields are marked with an asterisk.
+                      </Text>
                     </Stack>
 
                     <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                       <Field.Root required>
-                        <Field.Label><RequiredLabel>First name</RequiredLabel></Field.Label>
-                        <Input h="12" borderRadius="8px" placeholder="Jordan" value={formValues.firstName} onChange={(event) => setFormValues((current) => ({ ...current, firstName: event.target.value }))} />
+                        <Field.Label>
+                          <RequiredLabel>First name</RequiredLabel>
+                        </Field.Label>
+                        <Input
+                          h="12"
+                          borderRadius="8px"
+                          placeholder="Jordan"
+                          value={formValues.firstName}
+                          onChange={(event) => setFormValues((current) => ({ ...current, firstName: event.target.value }))}
+                        />
                       </Field.Root>
                       <Field.Root required>
-                        <Field.Label><RequiredLabel>Last name</RequiredLabel></Field.Label>
-                        <Input h="12" borderRadius="8px" placeholder="Carter" value={formValues.lastName} onChange={(event) => setFormValues((current) => ({ ...current, lastName: event.target.value }))} />
+                        <Field.Label>
+                          <RequiredLabel>Last name</RequiredLabel>
+                        </Field.Label>
+                        <Input
+                          h="12"
+                          borderRadius="8px"
+                          placeholder="Carter"
+                          value={formValues.lastName}
+                          onChange={(event) => setFormValues((current) => ({ ...current, lastName: event.target.value }))}
+                        />
                       </Field.Root>
                       <Field.Root required>
-                        <Field.Label><RequiredLabel>Email address</RequiredLabel></Field.Label>
+                        <Field.Label>
+                          <RequiredLabel>Email address</RequiredLabel>
+                        </Field.Label>
                         <InputGroup startElement={<Mail size={16} color="#64748B" />}>
-                          <Input h="12" borderRadius="8px" placeholder="jordan@company.com" value={formValues.email} onChange={(event) => setFormValues((current) => ({ ...current, email: event.target.value }))} />
+                          <Input
+                            h="12"
+                            borderRadius="8px"
+                            placeholder="jordan@company.com"
+                            value={formValues.email}
+                            onChange={(event) => setFormValues((current) => ({ ...current, email: event.target.value }))}
+                          />
                         </InputGroup>
                       </Field.Root>
                       <Field.Root required>
-                        <Field.Label><RequiredLabel>Phone number</RequiredLabel></Field.Label>
+                        <Field.Label>
+                          <RequiredLabel>Phone number</RequiredLabel>
+                        </Field.Label>
                         <InputGroup startElement={<Phone size={16} color="#64748B" />}>
-                          <Input h="12" borderRadius="8px" placeholder="+1 (555) 000-0000" value={formValues.phone} onChange={(event) => setFormValues((current) => ({ ...current, phone: event.target.value }))} />
+                          <Input
+                            h="12"
+                            borderRadius="8px"
+                            placeholder="+1 (555) 000-0000"
+                            value={formValues.phone}
+                            onChange={(event) => setFormValues((current) => ({ ...current, phone: event.target.value }))}
+                          />
                         </InputGroup>
                       </Field.Root>
                     </SimpleGrid>
@@ -702,23 +798,41 @@ function EnterpriseRegistrationLayout({
 
                     <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                       <Field.Root>
-                        <Field.Label fontSize="sm" fontWeight="700">Company / organization</Field.Label>
+                        <Field.Label fontSize="sm" fontWeight="700">
+                          Company / organization
+                        </Field.Label>
                         <InputGroup startElement={<Building2 size={16} color="#64748B" />}>
-                          <Input h="12" borderRadius="8px" placeholder="Acme Corp" value={formValues.company} onChange={(event) => setFormValues((current) => ({ ...current, company: event.target.value }))} />
+                          <Input
+                            h="12"
+                            borderRadius="8px"
+                            placeholder="Acme Corp"
+                            value={formValues.company}
+                            onChange={(event) => setFormValues((current) => ({ ...current, company: event.target.value }))}
+                          />
                         </InputGroup>
                       </Field.Root>
                       <Field.Root>
-                        <Field.Label fontSize="sm" fontWeight="700">Ticket quantity</Field.Label>
-                        <StyledSelect options={quantityOptions} value={formValues.quantity} onChange={(value) => setFormValues((current) => ({ ...current, quantity: value || "1" }))} placeholder="Select quantity" />
+                        <Field.Label fontSize="sm" fontWeight="700">
+                          Ticket quantity
+                        </Field.Label>
+                        <StyledSelect
+                          options={quantityOptions}
+                          value={formValues.quantity}
+                          onChange={(value) => setFormValues((current) => ({ ...current, quantity: value || "1" }))}
+                          placeholder="Select quantity"
+                        />
                       </Field.Root>
                     </SimpleGrid>
 
                     <Field.Root>
-                      <Field.Label fontSize="sm" fontWeight="700">Communication preference</Field.Label>
+                      <Field.Label fontSize="sm" fontWeight="700">
+                        Communication preference
+                      </Field.Label>
                       <HStack gap={2} flexWrap="wrap">
                         {[{ label: "Email", icon: Mail }, { label: "SMS", icon: Phone }, { label: "Both", icon: Sparkles }].map((item) => {
                           const isSelected = formValues.communicationPreference === item.label
                           const Icon = item.icon
+
                           return (
                             <Button
                               key={item.label}
@@ -731,7 +845,10 @@ function EnterpriseRegistrationLayout({
                               h="10"
                               onClick={() => setFormValues((current) => ({ ...current, communicationPreference: item.label }))}
                             >
-                              <HStack gap={2}><Icon size={14} /><Text as="span">{item.label}</Text></HStack>
+                              <HStack gap={2}>
+                                <Icon size={14} />
+                                <Text as="span">{item.label}</Text>
+                              </HStack>
                             </Button>
                           )
                         })}
@@ -739,8 +856,16 @@ function EnterpriseRegistrationLayout({
                     </Field.Root>
 
                     <Field.Root>
-                      <Field.Label fontSize="sm" fontWeight="700">Special requirements</Field.Label>
-                      <Textarea borderRadius="8px" minH="120px" placeholder="Dietary restrictions, accessibility needs, or anything the team should know." value={formValues.notes} onChange={(event) => setFormValues((current) => ({ ...current, notes: event.target.value }))} />
+                      <Field.Label fontSize="sm" fontWeight="700">
+                        Special requirements
+                      </Field.Label>
+                      <Textarea
+                        borderRadius="8px"
+                        minH="120px"
+                        placeholder="Dietary restrictions, accessibility needs, or anything the team should know."
+                        value={formValues.notes}
+                        onChange={(event) => setFormValues((current) => ({ ...current, notes: event.target.value }))}
+                      />
                     </Field.Root>
                   </Stack>
                 </Box>
@@ -754,8 +879,12 @@ function EnterpriseRegistrationLayout({
                 <Box bg="white" borderWidth="1px" borderColor={accentBorder} borderRadius="12px" p={{ base: 5, md: 6 }}>
                   <Stack gap={5}>
                     <Stack gap={1} textAlign="center">
-                      <Heading fontSize="lg" fontWeight="800">Registration summary</Heading>
-                      <Text fontSize="sm" color="gray.600">Review the event and attendee count before continuing.</Text>
+                      <Heading fontSize="lg" fontWeight="800">
+                        Registration summary
+                      </Heading>
+                      <Text fontSize="sm" color="gray.600">
+                        Review the event and attendee count before continuing.
+                      </Text>
                     </Stack>
 
                     <Stack gap={3} bg={accentBackground} borderWidth="1px" borderColor={accentBorder} borderRadius="10px" p={4}>
@@ -786,9 +915,14 @@ function EnterpriseRegistrationLayout({
 
                     <Stack gap={3}>
                       <Button minH="12" borderRadius="8px" color="white" bg={accentButton} _hover={{ bg: "gray.800" }}>
-                        <HStack gap={2}><BadgeCheck size={16} /><Text as="span">Review registration</Text></HStack>
+                        <HStack gap={2}>
+                          <BadgeCheck size={16} />
+                          <Text as="span">Review registration</Text>
+                        </HStack>
                       </Button>
-                      <Button minH="12" variant="outline" borderRadius="8px" onClick={onBack}>Cancel</Button>
+                      <Button minH="12" variant="outline" borderRadius="8px" onClick={onBack}>
+                        Cancel
+                      </Button>
                     </Stack>
                   </Stack>
                 </Box>
@@ -797,7 +931,6 @@ function EnterpriseRegistrationLayout({
           </Stack>
         </Stack>
       </Flex>
-
     </Box>
   )
 }
