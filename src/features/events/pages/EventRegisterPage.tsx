@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react"
+import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react"
 import { useQuery } from "@tanstack/react-query"
 import {
   Badge,
@@ -28,12 +28,12 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock3,
+  ExternalLink,
   Mail,
   MapPin,
   Phone,
   ShieldCheck,
   Sparkles,
-  Ticket,
 } from "lucide-react"
 import { format } from "date-fns"
 import { useNavigate, useParams } from "react-router-dom"
@@ -73,12 +73,14 @@ interface EventRegistrationViewModel {
   title: string
   bannerUrl: string | null
   themeColor: string | null
+  timeZone: string | null
   startDate: string | null
   endDate: string | null
   bookingStartDate: string | null
   bookingEndDate: string | null
   visibility: string
   location: string
+  locationMapUrl: string | null
   organizer: string
   capacity: number
   attendees: number
@@ -91,15 +93,15 @@ interface EventRegistrationViewModel {
   sessions: EventRegistrationSession[]
 }
 
-function SummaryRow({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+function SummaryRow({ label, value, accent = false }: { label: string; value: ReactNode; accent?: boolean }) {
   return (
     <Flex justify="space-between" gap={4} fontSize="sm" align="start">
       <Text color={accent ? "gray.800" : "gray.500"} fontWeight={accent ? "700" : "500"}>
         {label}
       </Text>
-      <Text fontWeight="800" color="gray.900" textAlign="right">
+      <Box fontWeight="800" color="gray.900" textAlign="right">
         {value}
-      </Text>
+      </Box>
     </Flex>
   )
 }
@@ -124,8 +126,36 @@ function formatCurrency(amount: number, currency: string) {
   }
 }
 
-function formatDateTime(value: string | null | undefined) {
-  return value ? format(new Date(value), "EEE, MMM d, yyyy 'at' h:mm a") : "Date not set"
+function parseUtcDateTime(value: string | null | undefined) {
+  if (!value) {
+    return null
+  }
+
+  const hasTimeZone = /([zZ]|[+-]\d{2}:?\d{2})$/.test(value)
+  const normalizedValue = hasTimeZone ? value : `${value}Z`
+  const date = new Date(normalizedValue)
+
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function formatDateTimeForTimeZone(value: string | null | undefined, timeZone: string | null | undefined) {
+  const date = parseUtcDateTime(value)
+
+  if (!date) {
+    return "Date not set"
+  }
+
+  const resolvedTimeZone = timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: resolvedTimeZone,
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(date)
+  } catch {
+    return format(date, "EEE, MMM d, yyyy 'at' h:mm a")
+  }
 }
 
 function getCountdownUnits(target: Date, nowMs: number) {
@@ -356,8 +386,8 @@ function RegistrationStateCard({ state, nowMs }: { state: RegistrationState; now
 
 function deriveRegistrationState(event: EventRegistrationViewModel, nowMs: number): RegistrationState {
   const status = event.status.toLowerCase()
-  const bookingStart = event.bookingStartDate ? new Date(event.bookingStartDate) : null
-  const bookingEnd = event.bookingEndDate ? new Date(event.bookingEndDate) : null
+  const bookingStart = parseUtcDateTime(event.bookingStartDate)
+  const bookingEnd = parseUtcDateTime(event.bookingEndDate)
   const seatsRemaining = Math.max(event.capacity - event.attendees, 0)
   const isSoldOut = seatsRemaining <= 0
   const isBeforeOpen = bookingStart ? nowMs < bookingStart.getTime() : false
@@ -457,7 +487,9 @@ function mapRegistrationToViewModel(registration: EventRegistrationResponse): Ev
     bookingEndDate: registration.bookingEndDate,
     visibility: registration.registrationStatus,
     location: registration.venueName ?? "Venue not set",
+    locationMapUrl: registration.venueMapUrl,
     organizer: registration.organizerName ?? registration.timeZone ?? "Event registration",
+    timeZone: registration.timeZone,
     capacity: Math.max(availableQuantity, ticketsSold),
     attendees: ticketsSold,
     price: lowestTicketPrice,
@@ -499,7 +531,6 @@ function EnterpriseRegistrationLayout({
   setFormValues: Dispatch<SetStateAction<typeof DEFAULT_FORM_VALUES>>
   onBack: () => void
 }) {
-  const ticketTypeCount = event.sessions.reduce((sum, session) => sum + session.ticketTypes.length, 0)
   const accentBackground = hexToRgba(formAccent, 0.05)
   const accentSurface = hexToRgba(formAccent, 0.1)
   const accentBorder = hexToRgba(formAccent, 0.18)
@@ -574,7 +605,7 @@ function EnterpriseRegistrationLayout({
                               Starts At
                             </Text>
                             <Text mt={1} fontSize="sm" fontWeight="700" color="gray.900">
-                              {formatDateTime(event.startDate)}
+                              {formatDateTimeForTimeZone(event.startDate, event.timeZone)}
                             </Text>
                           </Box>
                         </HStack>
@@ -587,7 +618,7 @@ function EnterpriseRegistrationLayout({
                               Ends At
                             </Text>
                             <Text mt={1} fontSize="sm" fontWeight="700" color="gray.900">
-                              {formatDateTime(event.endDate)}
+                              {formatDateTimeForTimeZone(event.endDate, event.timeZone)}
                             </Text>
                           </Box>
                         </HStack>
@@ -599,9 +630,32 @@ function EnterpriseRegistrationLayout({
                             <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.12em">
                               Venue
                             </Text>
-                            <Text mt={1} fontSize="sm" fontWeight="700" color="gray.900">
-                              {event.location}
-                            </Text>
+                            {event.locationMapUrl ? (
+                              <Box
+                                as="a"
+                                href={event.locationMapUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Open venue map in a new tab"
+                                mt={1}
+                                display="inline-flex"
+                                alignItems="center"
+                                gap={1.5}
+                                fontSize="sm"
+                                fontWeight="700"
+                                color="blue.700"
+                                textDecoration="underline"
+                                textUnderlineOffset="3px"
+                                cursor="pointer"
+                              >
+                                {event.location}
+                                <ExternalLink size={14} />
+                              </Box>
+                            ) : (
+                              <Text mt={1} fontSize="sm" fontWeight="700" color="gray.900">
+                                {event.location}
+                              </Text>
+                            )}
                           </Box>
                         </HStack>
                       </Box>
@@ -610,38 +664,6 @@ function EnterpriseRegistrationLayout({
                 </Box>
               </Box>
 
-              <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
-                <Box borderWidth="1px" borderColor={accentBorder} borderRadius="10px" p={4}>
-                  <HStack gap={3} align="start">
-                    <Box color="gray.500" mt={0.5}>
-                      <Ticket size={18} />
-                    </Box>
-                    <Box>
-                      <Text fontSize="xs" fontWeight="700" color="gray.500">
-                        Ticket types
-                      </Text>
-                      <Text mt={1} fontSize="sm" fontWeight="700">
-                        {ticketTypeCount.toLocaleString()} available types
-                      </Text>
-                    </Box>
-                  </HStack>
-                </Box>
-                <Box borderWidth="1px" borderColor={accentBorder} borderRadius="10px" p={4}>
-                  <HStack gap={3} align="start">
-                    <Box color="gray.500" mt={0.5}>
-                      <ShieldCheck size={18} />
-                    </Box>
-                    <Box>
-                      <Text fontSize="xs" fontWeight="700" color="gray.500">
-                        Capacity
-                      </Text>
-                      <Text mt={1} fontSize="sm" fontWeight="700">
-                        {availableSeats.toLocaleString()} seats remaining
-                      </Text>
-                    </Box>
-                  </HStack>
-                </Box>
-              </SimpleGrid>
             </Stack>
           </Box>
 
@@ -809,8 +831,33 @@ function EnterpriseRegistrationLayout({
 
                     <Stack gap={3} bg={accentBackground} borderWidth="1px" borderColor={accentBorder} borderRadius="10px" p={4}>
                       <SummaryRow label="Event" value={event.title} />
-                      <SummaryRow label="Start" value={formatDateTime(event.startDate)} />
-                      <SummaryRow label="Venue" value={event.location} />
+                      <SummaryRow label="Start" value={formatDateTimeForTimeZone(event.startDate, event.timeZone)} />
+                      <SummaryRow
+                        label="Venue"
+                        value={
+                          event.locationMapUrl ? (
+                            <Box
+                              as="a"
+                              href={event.locationMapUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Open venue map in a new tab"
+                              display="inline-flex"
+                              alignItems="center"
+                              gap={1.5}
+                              color="blue.700"
+                              textDecoration="underline"
+                              textUnderlineOffset="3px"
+                              cursor="pointer"
+                            >
+                              {event.location}
+                              <ExternalLink size={14} />
+                            </Box>
+                          ) : (
+                            event.location
+                          )
+                        }
+                      />
                       <SummaryRow label="Ticket price" value={currencyLabel} accent />
                       <SummaryRow label="Quantity" value={selectedQuantity.toLocaleString()} accent />
                       <Box h="1px" bg={accentBorder} />
