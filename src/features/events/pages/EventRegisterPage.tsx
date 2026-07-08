@@ -56,12 +56,6 @@ const DEFAULT_FORM_VALUES = {
 const MAX_VISIBLE_QUANTITY = 6
 
 type RegistrationStateKind = "open" | "countdown" | "restricted" | "closed"
-type CheckStatus = "done" | "pending" | "blocked"
-
-interface RegistrationCheckpoint {
-  label: string
-  status: CheckStatus
-}
 
 interface RegistrationState {
   kind: RegistrationStateKind
@@ -71,7 +65,6 @@ interface RegistrationState {
   description: string
   countdownTarget?: Date
   countdownLabel?: string
-  checkpoints: RegistrationCheckpoint[]
 }
 
 interface EventRegistrationViewModel {
@@ -146,22 +139,19 @@ function formatDateRange(start: string | null | undefined, end: string | null | 
   return "Date not set"
 }
 
-function formatCountdown(target: Date, nowMs: number) {
+function getCountdownUnits(target: Date, nowMs: number) {
   const remainingSeconds = Math.max(0, Math.floor((target.getTime() - nowMs) / 1000))
   const days = Math.floor(remainingSeconds / 86400)
   const hours = Math.floor((remainingSeconds % 86400) / 3600)
   const minutes = Math.floor((remainingSeconds % 3600) / 60)
   const seconds = remainingSeconds % 60
 
-  if (days > 0) {
-    return `${days}d ${hours}h ${minutes}m`
-  }
-
-  if (hours > 0) {
-    return `${hours}h ${minutes}m ${seconds}s`
-  }
-
-  return `${minutes}m ${seconds}s`
+  return [
+    { label: "Days", value: String(days).padStart(2, "0") },
+    { label: "Hours", value: String(hours).padStart(2, "0") },
+    { label: "Mins", value: String(minutes).padStart(2, "0") },
+    { label: "Secs", value: String(seconds).padStart(2, "0") },
+  ]
 }
 
 function hexToRgba(hex: string, alpha: number) {
@@ -182,22 +172,27 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`
 }
 
-function ChecklistItem({ label, status }: RegistrationCheckpoint) {
-  const isDone = status === "done"
-  const isPending = status === "pending"
-  const iconColor = isDone ? "green.600" : isPending ? "orange.600" : "red.600"
-  const backgroundColor = isDone ? "green.50" : isPending ? "orange.50" : "red.50"
-  const borderColor = isDone ? "green.100" : isPending ? "orange.100" : "red.100"
-
+function CountdownTile({ label, value, tone }: { label: string; value: string; tone: string }) {
   return (
-    <Flex align="center" gap={3} p={3} borderWidth="1px" borderColor={borderColor} bg={backgroundColor} borderRadius="16px">
-      <Box color={iconColor} flexShrink={0}>
-        {isDone ? <CheckCircle2 size={16} /> : isPending ? <Clock3 size={16} /> : <AlertTriangle size={16} />}
-      </Box>
-      <Text fontSize="sm" fontWeight="700" color="gray.800">
+    <Stack
+      gap={1.5}
+      align="center"
+      justify="center"
+      px={3}
+      py={4}
+      borderRadius="20px"
+      borderWidth="1px"
+      borderColor={`${tone}.200`}
+      bg="white"
+      minH="92px"
+    >
+      <Text fontSize={{ base: "xl", md: "2xl" }} fontWeight="900" letterSpacing="-0.04em" color="gray.900" lineHeight="1">
+        {value}
+      </Text>
+      <Text fontSize="xs" fontWeight="800" textTransform="uppercase" letterSpacing="0.16em" color="gray.500">
         {label}
       </Text>
-    </Flex>
+    </Stack>
   )
 }
 
@@ -318,8 +313,10 @@ function EventRegisterUnavailableState({
 }
 
 function RegistrationStateCard({ state, nowMs }: { state: RegistrationState; nowMs: number }) {
+  const countdownUnits = state.countdownTarget ? getCountdownUnits(state.countdownTarget, nowMs) : []
+
   return (
-    <Box borderWidth="1px" borderColor={`${state.tone}.100`} bg={`${state.tone}.50`} borderRadius="28px" p={{ base: 5, md: 6 }}>
+    <Box borderWidth="1px" borderColor={`${state.tone}.100`} bg="white" borderRadius="28px" p={{ base: 5, md: 6 }} boxShadow="0 18px 50px rgba(15, 23, 42, 0.06)">
       <Stack gap={4}>
         <HStack gap={3} align="start">
           <Box color={`${state.tone}.600`} mt={0.5}>
@@ -339,21 +336,18 @@ function RegistrationStateCard({ state, nowMs }: { state: RegistrationState; now
         </HStack>
 
         {state.kind === "countdown" && state.countdownTarget ? (
-          <Box bg="white" borderWidth="1px" borderColor="gray.200" borderRadius="24px" px={4} py={3}>
-            <Text fontSize="xs" fontWeight="800" color="gray.500" textTransform="uppercase" letterSpacing="0.14em">
+          <Stack gap={3}>
+            <Text fontSize="xs" fontWeight="800" color={`${state.tone}.700`} textTransform="uppercase" letterSpacing="0.18em">
               {state.countdownLabel ?? "Opens in"}
             </Text>
-            <Text mt={1} fontSize="2xl" fontWeight="900" letterSpacing="-0.04em" color="gray.900">
-              {formatCountdown(state.countdownTarget, nowMs)}
-            </Text>
-          </Box>
+            <SimpleGrid columns={{ base: 2, md: 4 }} gap={3}>
+              {countdownUnits.map((item) => (
+                <CountdownTile key={item.label} label={item.label} value={item.value} tone={state.tone} />
+              ))}
+            </SimpleGrid>
+          </Stack>
         ) : null}
 
-        <Stack gap={3}>
-          {state.checkpoints.map((item) => (
-            <ChecklistItem key={item.label} label={item.label} status={item.status} />
-          ))}
-        </Stack>
       </Stack>
     </Box>
   )
@@ -372,16 +366,6 @@ function deriveRegistrationState(event: EventRegistrationViewModel, nowMs: numbe
   const isClosed = status === "closed"
   const isUnavailable = status === "unavailable"
 
-  const checkpoints: RegistrationCheckpoint[] = [
-    { label: "Registration endpoint reachable", status: isUnavailable ? "blocked" : "done" },
-    { label: isOpen ? "Registration is open" : isUpcoming ? "Registration opens later" : "Registration is closed", status: isOpen ? "done" : isUpcoming ? "pending" : "blocked" },
-    {
-      label: bookingStart ? "Registration window not yet open" : "Registration window configured",
-      status: bookingStart ? (isBeforeOpen ? "pending" : "done") : "done",
-    },
-    { label: isSoldOut ? "Sold out" : `${seatsRemaining.toLocaleString()} seats remaining`, status: isSoldOut ? "blocked" : "done" },
-  ]
-
   if (isUnavailable) {
     return {
       kind: "restricted",
@@ -389,7 +373,6 @@ function deriveRegistrationState(event: EventRegistrationViewModel, nowMs: numbe
       badge: "Unavailable",
       title: "Registration is not available",
       description: "The event does not currently meet the backend checks required to open registration.",
-      checkpoints,
     }
   }
 
@@ -400,7 +383,6 @@ function deriveRegistrationState(event: EventRegistrationViewModel, nowMs: numbe
       badge: "Sold out",
       title: "This event is sold out",
       description: "All available seats are currently reserved. We are no longer showing the registration form.",
-      checkpoints,
     }
   }
 
@@ -411,7 +393,6 @@ function deriveRegistrationState(event: EventRegistrationViewModel, nowMs: numbe
       badge: "Closed",
       title: "Registration has ended",
       description: "The booking window closed for this event, so new registrations cannot be accepted.",
-      checkpoints,
     }
   }
 
@@ -424,7 +405,6 @@ function deriveRegistrationState(event: EventRegistrationViewModel, nowMs: numbe
       description: "Everything is ready. We will unlock the form automatically when the booking window starts.",
       countdownTarget: bookingStart ?? undefined,
       countdownLabel: "Opens in",
-      checkpoints,
     }
   }
 
@@ -434,7 +414,6 @@ function deriveRegistrationState(event: EventRegistrationViewModel, nowMs: numbe
     badge: "Open now",
     title: "Registration is live",
     description: "The checks are clear. Use the form below to capture attendee details and finalize the registration.",
-    checkpoints,
   }
 }
 
@@ -715,28 +694,21 @@ function EnterpriseRegistrationLayout({
                     <Box h="1px" bg={accentBorder} />
                     <SummaryRow label="Estimated total" value={grandTotal} accent />
                   </Stack>
-
-                  {registrationState.kind === "countdown" && registrationState.countdownTarget ? (
-                    <Box borderWidth="1px" borderColor="purple.200" bg="purple.50" borderRadius="10px" p={4}>
-                      <HStack gap={3} align="start">
-                        <Box color="purple.700" mt={0.5}><Clock3 size={18} /></Box>
-                        <Box>
-                          <Text fontSize="sm" fontWeight="800" color="purple.900">Registration opens in</Text>
-                          <Text mt={1} fontSize="sm" color="purple.800">{formatCountdown(registrationState.countdownTarget, nowMs)}</Text>
-                        </Box>
-                      </HStack>
-                    </Box>
-                  ) : (
-                    <Box borderWidth="1px" borderColor={`${registrationState.tone}.200`} bg={`${registrationState.tone}.50`} borderRadius="10px" p={4}>
-                      <HStack gap={3} align="start">
-                        <Box color={`${registrationState.tone}.700`} mt={0.5}><CheckCircle2 size={18} /></Box>
-                        <Box>
-                          <Text fontSize="sm" fontWeight="800" color="gray.900">{registrationState.title}</Text>
-                          <Text mt={1} fontSize="sm" color="gray.700" lineHeight="1.6">{registrationState.description}</Text>
-                        </Box>
-                      </HStack>
-                    </Box>
-                  )}
+                  <Box borderWidth="1px" borderColor={`${registrationState.tone}.200`} bg={`${registrationState.tone}.50`} borderRadius="10px" p={4}>
+                    <HStack gap={3} align="start">
+                      <Box color={`${registrationState.tone}.700`} mt={0.5}>
+                        {registrationState.kind === "countdown" ? <Clock3 size={18} /> : <CheckCircle2 size={18} />}
+                      </Box>
+                      <Box>
+                        <Text fontSize="sm" fontWeight="800" color="gray.900">
+                          {registrationState.title}
+                        </Text>
+                        <Text mt={1} fontSize="sm" color="gray.700" lineHeight="1.6">
+                          {registrationState.description}
+                        </Text>
+                      </Box>
+                    </HStack>
+                  </Box>
 
                   <Stack gap={3}>
                     <Button minH="12" borderRadius="8px" color="white" bg={accentButton} _hover={{ bg: "gray.800" }} disabled={!shouldShowForm}>
@@ -747,14 +719,6 @@ function EnterpriseRegistrationLayout({
                 </Stack>
               </Box>
 
-              <Box bg="white" borderWidth="1px" borderColor={accentBorder} borderRadius="12px" p={{ base: 5, md: 6 }}>
-                <Stack gap={4} align="center" textAlign="center">
-                  <Text fontSize="sm" fontWeight="800" textTransform="uppercase" letterSpacing="0.12em" color="gray.500">Registration checks</Text>
-                  <Stack gap={2}>
-                    {registrationState.checkpoints.map((item) => <ChecklistItem key={item.label} label={item.label} status={item.status} />)}
-                  </Stack>
-                </Stack>
-              </Box>
             </Stack>
           </Stack>
         </Stack>
