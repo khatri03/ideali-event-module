@@ -7,10 +7,12 @@ import {
   Container,
   Field,
   Flex,
+  AspectRatio,
   Heading,
   HStack,
   Input,
   InputGroup,
+  Image,
   SimpleGrid,
   Skeleton,
   SkeletonText,
@@ -32,10 +34,10 @@ import {
   ShieldCheck,
   Sparkles,
   Ticket,
-  UserPlus,
 } from "lucide-react"
 import { format } from "date-fns"
 import { useNavigate, useParams } from "react-router-dom"
+import { client } from "@/api/client"
 import { fetchEventRegistration } from "@/api/events"
 import { StyledSelect } from "@/components/common/StyledSelect"
 import { extractApiError } from "@/utils/errors"
@@ -69,7 +71,7 @@ interface RegistrationState {
 
 interface EventRegistrationViewModel {
   title: string
-  description: string
+  descriptionHtml: string
   bannerUrl: string | null
   themeColor: string | null
   startDate: string | null
@@ -172,6 +174,18 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`
 }
 
+function resolveAssetUrl(value: string | null | undefined) {
+  if (!value) {
+    return null
+  }
+
+  try {
+    return new URL(value, client.defaults.baseURL).toString()
+  } catch {
+    return value
+  }
+}
+
 function CountdownTile({ label, value, tone }: { label: string; value: string; tone: string }) {
   return (
     <Stack
@@ -193,6 +207,58 @@ function CountdownTile({ label, value, tone }: { label: string; value: string; t
         {label}
       </Text>
     </Stack>
+  )
+}
+
+function RichTextBlock({ html }: { html: string }) {
+  return (
+    <Box
+      sx={{
+        "& > :first-child": { mt: 0 },
+        "& > :last-child": { mb: 0 },
+        "& p": {
+          mt: 0,
+          mb: 4,
+          color: "gray.600",
+          lineHeight: "1.8",
+          fontSize: "sm",
+        },
+        "& h1, & h2, & h3, & h4": {
+          mt: 6,
+          mb: 3,
+          color: "gray.900",
+          fontWeight: "800",
+          lineHeight: "1.2",
+        },
+        "& h1": { fontSize: "2xl" },
+        "& h2": { fontSize: "xl" },
+        "& h3": { fontSize: "lg" },
+        "& h4": { fontSize: "md" },
+        "& ul, & ol": {
+          mt: 0,
+          mb: 4,
+          pl: 5,
+          color: "gray.600",
+        },
+        "& li": {
+          mb: 2,
+        },
+        "& a": {
+          color: "inherit",
+          fontWeight: "700",
+          textDecoration: "underline",
+          textUnderlineOffset: "3px",
+        },
+        "& blockquote": {
+          my: 4,
+          pl: 4,
+          borderLeft: "4px solid",
+          borderColor: "gray.200",
+          color: "gray.700",
+        },
+      }}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   )
 }
 
@@ -449,8 +515,8 @@ function mapRegistrationToViewModel(registration: EventRegistrationResponse): Ev
 
   return {
     title: registration.name,
-    description: registration.summary ?? registration.description ?? "Registration details will appear here.",
-    bannerUrl: registration.bannerUrl,
+    descriptionHtml: registration.description ?? registration.summary ?? "<p>Registration details will appear here.</p>",
+    bannerUrl: resolveAssetUrl(registration.bannerUrl),
     themeColor: registration.themeColor,
     startDate: registration.startDate,
     endDate: registration.endDate,
@@ -517,38 +583,44 @@ function EnterpriseRegistrationLayout({
           <Box bg="white" borderWidth="1px" borderColor={accentBorder} borderRadius="12px" overflow="hidden" w="full">
             <Box h="6px" bg={formAccent} />
             <Stack gap={5} p={{ base: 5, md: 7 }}>
-              <Flex justify="center" gap={6} direction={{ base: "column", lg: "row" }} align={{ base: "center", lg: "center" }} textAlign="center">
-                <Stack gap={4} maxW="7xl" align="center">
-                  <HStack gap={3} align="center" justify="center">
-                    <Box
-                      w="48px"
-                      h="48px"
-                      borderRadius="10px"
-                      display="grid"
-                      placeItems="center"
-                      bg={accentSurface}
-                      color={formAccent}
-                      borderWidth="1px"
-                      borderColor={accentBorder}
-                      flexShrink={0}
-                    >
-                      <UserPlus size={22} />
-                    </Box>
-                    <Box minW={0}>
-                      <Text fontSize="xs" fontWeight="800" textTransform="uppercase" letterSpacing="0.12em" color="gray.500">
+              <Box
+                position="relative"
+                borderWidth="1px"
+                borderColor={accentBorder}
+                borderRadius="24px"
+                overflow="hidden"
+                bg={event.bannerUrl ? "gray.900" : accentSurface}
+                minH={event.bannerUrl ? undefined : { base: "220px", md: "280px" }}
+              >
+                {event.bannerUrl ? (
+                  <AspectRatio ratio={4.2}>
+                    <Image src={event.bannerUrl} alt="" w="full" h="full" objectFit="cover" display="block" />
+                  </AspectRatio>
+                ) : null}
+                <Box position="absolute" inset={0} bg={event.bannerUrl ? "linear-gradient(180deg, rgba(2, 6, 23, 0.02) 0%, rgba(2, 6, 23, 0.22) 100%)" : "transparent"} />
+                <Flex position="absolute" inset={0} align="end" p={{ base: 5, md: 8 }}>
+                  <Stack gap={4} maxW="4xl" color="white">
+                    <Flex gap={3} wrap="wrap">
+                      <Badge borderRadius="full" px={3} py={1} bg="whiteAlpha.200" color="white" borderWidth="1px" borderColor="whiteAlpha.300">
                         Event registration
-                      </Text>
-                      <Heading mt={1} fontSize={{ base: "2xl", md: "3xl" }} fontWeight="800" lineHeight="1.15">
-                        {event.title}
-                      </Heading>
-                    </Box>
-                  </HStack>
-                  <Text color="gray.600" lineHeight="1.7" maxW="3xl" mx="auto">
-                    {event.description}
-                  </Text>
-                </Stack>
+                      </Badge>
+                      <Badge borderRadius="full" px={3} py={1} bg="whiteAlpha.100" color="white" borderWidth="1px" borderColor="whiteAlpha.200">
+                        {registrationState.badge}
+                      </Badge>
+                    </Flex>
+                    <Heading fontSize={{ base: "2xl", md: "4xl" }} fontWeight="900" lineHeight="1.05" letterSpacing="-0.04em">
+                      {event.title}
+                    </Heading>
+                    <Text fontSize={{ base: "sm", md: "md" }} color="whiteAlpha.900" maxW="3xl" lineHeight="1.8">
+                      {event.location}
+                    </Text>
+                  </Stack>
+                </Flex>
+              </Box>
 
-              </Flex>
+              <Box borderWidth="1px" borderColor={accentBorder} borderRadius="20px" bg="white" p={{ base: 5, md: 7 }}>
+                <RichTextBlock html={event.descriptionHtml} />
+              </Box>
 
               <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} gap={3}>
                 <Box borderWidth="1px" borderColor={accentBorder} borderRadius="10px" p={4}>
