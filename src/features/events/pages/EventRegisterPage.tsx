@@ -278,7 +278,7 @@ function EnterpriseRegistrationLayout({
   event: EventRegistrationViewModel
   formAccent: string
 }) {
-  const accentBackground = hexToRgba(formAccent, 0.05)
+  const accentBackground = hexToRgba(formAccent, 0.22)
   const accentSurface = hexToRgba(formAccent, 0.1)
   const accentBorder = hexToRgba(formAccent, 0.18)
 
@@ -286,7 +286,7 @@ function EnterpriseRegistrationLayout({
     <Box minH="100dvh" bg={accentBackground} color="gray.900">
       <Flex minH="100dvh" align="center" justify="center" px={{ base: 4, md: 8, lg: 10 }} py={{ base: 6, md: 10 }}>
         <Stack gap={{ base: 5, md: 6 }} maxW="8xl" w="full" align="center">
-          <Box bg="white" borderWidth="1px" borderColor={accentBorder} borderRadius="12px" overflow="hidden" w="full">
+          <Box bg="rgba(255,255,255,0.98)" borderWidth="1px" borderColor={accentBorder} borderRadius="12px" overflow="hidden" w="full">
             <Box h="6px" bg={formAccent} />
             <Stack gap={5} p={{ base: 5, md: 7 }}>
               <Box display="grid" gap={5} gridTemplateColumns={{ base: "1fr", lg: "6fr 4fr" }} alignItems="stretch">
