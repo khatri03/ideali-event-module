@@ -46,6 +46,7 @@ interface EventRegistrationViewModel {
   status: string
   coverColor: string
   canRegister: boolean
+  registrationBlockedReason: string | null
   sessions: EventRegistrationSession[]
 }
 
@@ -267,6 +268,7 @@ function mapRegistrationToViewModel(registration: EventRegistrationResponse): Ev
     status: registration.registrationStatus,
     coverColor: registration.themeColor ?? "#7551FF",
     canRegister: registration.canRegister,
+    registrationBlockedReason: registration.registrationBlockedReason ?? null,
     sessions: registration.sessions,
   }
 }
@@ -465,6 +467,15 @@ export function EventRegisterPage() {
         message={loadErrorMessage || "The event could not be loaded."}
         onBack={handleBackToEvents}
         onRetry={eventQuery.refetch}
+      />
+    )
+  }
+
+  if (!event.canRegister) {
+    return (
+      <EventRegisterUnavailableState
+        message={event.registrationBlockedReason ?? "Registration is currently unavailable for this event."}
+        onBack={handleBackToEvents}
       />
     )
   }

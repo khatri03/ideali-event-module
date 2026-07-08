@@ -82,6 +82,10 @@ function toInputValue(value: number | null) {
   return value === null ? "" : String(value)
 }
 
+function normalizeMembershipTypeUniqueId(value: string) {
+  return value.trim().toLowerCase()
+}
+
 function parseMaybeNumber(value: string) {
   const trimmed = value.trim()
   if (!trimmed) {
@@ -133,7 +137,13 @@ export function SessionMembershipAccessStep({ sessionId }: SessionMembershipAcce
   )
 
   const membershipTypeOptionMap = useMemo(
-    () => new Map(membershipTypeOptions.map((option) => [option.value, option])),
+    () =>
+      new Map(
+        membershipTypeOptions.map((option) => [
+          normalizeMembershipTypeUniqueId(option.value),
+          option,
+        ]),
+      ),
     [membershipTypeOptions],
   )
 
@@ -143,7 +153,7 @@ export function SessionMembershipAccessStep({ sessionId }: SessionMembershipAcce
     }
 
     return (sessionAccessQuery.data?.memberships ?? [])
-      .filter((membership) => membershipTypeOptionMap.has(membership.membershipTypeUniqueId))
+      .filter((membership) => membershipTypeOptionMap.has(normalizeMembershipTypeUniqueId(membership.membershipTypeUniqueId)))
       .map((membership) => ({
         membershipTypeUniqueId: membership.membershipTypeUniqueId,
         discountType: membership.discountType,
@@ -220,11 +230,17 @@ export function SessionMembershipAccessStep({ sessionId }: SessionMembershipAcce
 
   function handleMembershipChange(values: MultiValue<MembershipSelectOption>) {
     const nextMembershipIds = values.map((item) => item.value)
-    const currentMap = new Map(activeDraftMemberships.map((item) => [item.membershipTypeUniqueId, item]))
+    const currentMap = new Map(
+      activeDraftMemberships.map((item) => [normalizeMembershipTypeUniqueId(item.membershipTypeUniqueId), item]),
+    )
 
     setMembershipError("")
     setIsDirty(true)
-    setDraftMemberships(nextMembershipIds.map((membershipTypeUniqueId) => currentMap.get(membershipTypeUniqueId) ?? createDraft(membershipTypeUniqueId)))
+    setDraftMemberships(
+      nextMembershipIds.map((membershipTypeUniqueId) =>
+        currentMap.get(normalizeMembershipTypeUniqueId(membershipTypeUniqueId)) ?? createDraft(membershipTypeUniqueId),
+      ),
+    )
   }
 
   function updateMembershipField(
@@ -250,7 +266,7 @@ export function SessionMembershipAccessStep({ sessionId }: SessionMembershipAcce
   const queryError = membershipTypesQuery.error ?? sessionAccessQuery.error
   const isEmpty = membershipTypesQuery.isSuccess && membershipTypeOptions.length === 0
   const selectedMembershipValues = activeDraftMemberships
-    .map((item) => membershipTypeOptionMap.get(item.membershipTypeUniqueId))
+    .map((item) => membershipTypeOptionMap.get(normalizeMembershipTypeUniqueId(item.membershipTypeUniqueId)))
     .filter((item): item is MembershipSelectOption => Boolean(item))
 
   if (isLoading) {

@@ -202,6 +202,8 @@ const eventRegistrationResponseSchema = z.object({
   registrationStatus: z.string().optional(),
   CanRegister: z.boolean().optional(),
   canRegister: z.boolean().optional(),
+  RegistrationBlockedReason: z.string().nullable().optional(),
+  registrationBlockedReason: z.string().nullable().optional(),
   Sessions: z.array(eventRegistrationSessionSchema).optional(),
   sessions: z.array(eventRegistrationSessionSchema).optional(),
 })
@@ -648,6 +650,7 @@ export interface EventRegistrationResponse {
   bookingEndDate: string | null
   registrationStatus: string
   canRegister: boolean
+  registrationBlockedReason: string | null
   sessions: EventRegistrationSession[]
 }
 
@@ -705,6 +708,8 @@ function parseEventRegistrationResponse(payload: unknown): EventRegistrationResp
     bookingEndDate: response.BookingEndDate ?? response.bookingEndDate ?? null,
     registrationStatus: response.RegistrationStatus ?? response.registrationStatus ?? "",
     canRegister: response.CanRegister ?? response.canRegister ?? false,
+    registrationBlockedReason:
+      response.RegistrationBlockedReason ?? response.registrationBlockedReason ?? null,
     sessions: (response.Sessions ?? response.sessions ?? []).map(parseEventRegistrationSession),
   }
 }
