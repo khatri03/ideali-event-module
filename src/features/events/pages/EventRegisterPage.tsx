@@ -677,49 +677,51 @@ function EnterpriseRegistrationLayout({
               )}
             </Stack>
 
-            <Stack gap={5} w="full">
-              <Box bg="white" borderWidth="1px" borderColor={accentBorder} borderRadius="12px" p={{ base: 5, md: 6 }}>
-                <Stack gap={5}>
-                  <Stack gap={1} textAlign="center">
-                    <Heading fontSize="lg" fontWeight="800">Registration summary</Heading>
-                    <Text fontSize="sm" color="gray.600">Review the event and attendee count before continuing.</Text>
-                  </Stack>
+            {shouldShowForm ? (
+              <Stack gap={5} w="full">
+                <Box bg="white" borderWidth="1px" borderColor={accentBorder} borderRadius="12px" p={{ base: 5, md: 6 }}>
+                  <Stack gap={5}>
+                    <Stack gap={1} textAlign="center">
+                      <Heading fontSize="lg" fontWeight="800">Registration summary</Heading>
+                      <Text fontSize="sm" color="gray.600">Review the event and attendee count before continuing.</Text>
+                    </Stack>
 
-                  <Stack gap={3} bg={accentBackground} borderWidth="1px" borderColor={accentBorder} borderRadius="10px" p={4}>
-                    <SummaryRow label="Event" value={event.title} />
-                    <SummaryRow label="Start" value={formatDateTime(event.startDate)} />
-                    <SummaryRow label="Venue" value={event.location} />
-                    <SummaryRow label="Ticket price" value={currencyLabel} accent />
-                    <SummaryRow label="Quantity" value={selectedQuantity.toLocaleString()} accent />
-                    <Box h="1px" bg={accentBorder} />
-                    <SummaryRow label="Estimated total" value={grandTotal} accent />
-                  </Stack>
-                  <Box borderWidth="1px" borderColor={`${registrationState.tone}.200`} bg={`${registrationState.tone}.50`} borderRadius="10px" p={4}>
-                    <HStack gap={3} align="start">
-                      <Box color={`${registrationState.tone}.700`} mt={0.5}>
-                        {registrationState.kind === "countdown" ? <Clock3 size={18} /> : <CheckCircle2 size={18} />}
-                      </Box>
-                      <Box>
-                        <Text fontSize="sm" fontWeight="800" color="gray.900">
-                          {registrationState.title}
-                        </Text>
-                        <Text mt={1} fontSize="sm" color="gray.700" lineHeight="1.6">
-                          {registrationState.description}
-                        </Text>
-                      </Box>
-                    </HStack>
-                  </Box>
+                    <Stack gap={3} bg={accentBackground} borderWidth="1px" borderColor={accentBorder} borderRadius="10px" p={4}>
+                      <SummaryRow label="Event" value={event.title} />
+                      <SummaryRow label="Start" value={formatDateTime(event.startDate)} />
+                      <SummaryRow label="Venue" value={event.location} />
+                      <SummaryRow label="Ticket price" value={currencyLabel} accent />
+                      <SummaryRow label="Quantity" value={selectedQuantity.toLocaleString()} accent />
+                      <Box h="1px" bg={accentBorder} />
+                      <SummaryRow label="Estimated total" value={grandTotal} accent />
+                    </Stack>
 
-                  <Stack gap={3}>
-                    <Button minH="12" borderRadius="8px" color="white" bg={accentButton} _hover={{ bg: "gray.800" }} disabled={!shouldShowForm}>
-                      <HStack gap={2}><BadgeCheck size={16} /><Text as="span">Review registration</Text></HStack>
-                    </Button>
-                    <Button minH="12" variant="outline" borderRadius="8px" onClick={onBack}>Cancel</Button>
-                  </Stack>
-                </Stack>
-              </Box>
+                    <Box borderWidth="1px" borderColor={`${registrationState.tone}.200`} bg={`${registrationState.tone}.50`} borderRadius="10px" p={4}>
+                      <HStack gap={3} align="start">
+                        <Box color={`${registrationState.tone}.700`} mt={0.5}>
+                          <CheckCircle2 size={18} />
+                        </Box>
+                        <Box>
+                          <Text fontSize="sm" fontWeight="800" color="gray.900">
+                            {registrationState.title}
+                          </Text>
+                          <Text mt={1} fontSize="sm" color="gray.700" lineHeight="1.6">
+                            {registrationState.description}
+                          </Text>
+                        </Box>
+                      </HStack>
+                    </Box>
 
-            </Stack>
+                    <Stack gap={3}>
+                      <Button minH="12" borderRadius="8px" color="white" bg={accentButton} _hover={{ bg: "gray.800" }}>
+                        <HStack gap={2}><BadgeCheck size={16} /><Text as="span">Review registration</Text></HStack>
+                      </Button>
+                      <Button minH="12" variant="outline" borderRadius="8px" onClick={onBack}>Cancel</Button>
+                    </Stack>
+                  </Stack>
+                </Box>
+              </Stack>
+            ) : null}
           </Stack>
         </Stack>
       </Flex>
