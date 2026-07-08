@@ -670,8 +670,8 @@ function EnterpriseRegistrationLayout({
           <Stack gap={5} w="full">
             <Stack gap={5} w="full">
               {shouldShowForm ? (
-                <Box as="form" bg="white" borderWidth="1px" borderColor={accentBorder} borderRadius="12px" p={{ base: 5, md: 7 }}>
-                  <Stack gap={7}>
+                <Box as="form" bg="white" borderWidth="1px" borderColor={accentBorder} borderRadius="12px">
+                  <Stack gap={7} px={{ base: 6, md: 8 }} py={{ base: 6, md: 7 }}>
                     <Stack gap={1}>
                       <Heading fontSize="xl" fontWeight="800">
                         Attendee details
