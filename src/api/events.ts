@@ -182,6 +182,8 @@ const eventRegistrationResponseSchema = z.object({
   themeColor: z.string().nullable().optional(),
   TermsConditions: z.string().nullable().optional(),
   termsConditions: z.string().nullable().optional(),
+  OrganizerName: z.string().nullable().optional(),
+  organizerName: z.string().nullable().optional(),
   TimeZone: z.string().nullable().optional(),
   timeZone: z.string().nullable().optional(),
   VenueName: z.string().nullable().optional(),
@@ -634,6 +636,7 @@ export interface EventRegistrationResponse {
   bannerUrl: string | null
   themeColor: string | null
   termsConditions: string | null
+  organizerName: string | null
   timeZone: string | null
   venueName: string | null
   startDate: string | null
@@ -689,6 +692,7 @@ function parseEventRegistrationResponse(payload: unknown): EventRegistrationResp
     bannerUrl: response.BannerUrl ?? response.bannerUrl ?? null,
     themeColor: response.ThemeColor ?? response.themeColor ?? null,
     termsConditions: response.TermsConditions ?? response.termsConditions ?? null,
+    organizerName: response.OrganizerName ?? response.organizerName ?? null,
     timeZone: response.TimeZone ?? response.timeZone ?? null,
     venueName: response.VenueName ?? response.venueName ?? null,
     startDate: response.StartDate ?? response.startDate ?? null,

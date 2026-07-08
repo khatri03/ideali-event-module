@@ -535,7 +535,7 @@ function mapRegistrationToViewModel(registration: EventRegistrationResponse): Ev
     bookingEndDate: registration.bookingEndDate,
     visibility: registration.registrationStatus,
     location: registration.venueName ?? "Venue not set",
-    organizer: registration.timeZone ?? "Event registration",
+    organizer: registration.organizerName ?? registration.timeZone ?? "Event registration",
     capacity: Math.max(availableQuantity, ticketsSold),
     attendees: ticketsSold,
     price: lowestTicketPrice,
@@ -627,30 +627,19 @@ function EnterpriseRegistrationLayout({
                   bg="white"
                   p={{ base: 5, md: 7 }}
                   display="flex"
-                  alignItems="center"
+                  alignItems="flex-start"
                 >
                   <Stack gap={4} maxW="sm">
-                    <Flex gap={3} wrap="wrap">
-                      <Badge
-                        borderRadius="full"
-                        px={3}
-                        py={1}
-                        bg={`${registrationState.tone}.50`}
-                        color={`${registrationState.tone}.700`}
-                        borderWidth="1px"
-                        borderColor={`${registrationState.tone}.200`}
-                      >
-                        Event registration
-                      </Badge>
-                      <Badge borderRadius="full" px={3} py={1} bg="gray.50" color="gray.700" borderWidth="1px" borderColor="gray.200">
-                        {registrationState.badge}
-                      </Badge>
-                    </Flex>
-                    <Heading fontSize={{ base: "2xl", md: "4xl", lg: "3xl" }} fontWeight="900" lineHeight="1.05" letterSpacing="-0.04em" color="gray.900">
+                    <Heading fontSize={{ base: "2xl", md: "4xl", lg: "3xl" }} fontWeight="900" lineHeight="1.05" letterSpacing="0.02em" color="gray.900">
                       {event.title}
                     </Heading>
-                    <Text fontSize={{ base: "sm", md: "md" }} color="gray.600" lineHeight="1.7">
-                      By: {event.organizer}
+                    <Text fontSize={{ base: "sm", md: "md" }} color="gray.700" lineHeight="1.7">
+                      <Text as="span" fontWeight="400">
+                        By:
+                      </Text>{" "}
+                      <Text as="span" fontWeight="700">
+                        {event.organizer}
+                      </Text>
                     </Text>
                   </Stack>
                 </Box>
