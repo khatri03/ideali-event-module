@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { ChangeEvent, ReactNode } from 'react'
 import {
   AspectRatio,
   Badge,
@@ -24,6 +24,7 @@ import {
 import {
   ArrowLeft,
   CalendarDays,
+  ChevronDown,
   ChevronRight,
   CreditCard,
   ExternalLink,
@@ -214,6 +215,31 @@ function getTicketSelectableMax(ticket: EventRegistrationTicket) {
   return null
 }
 
+function getTicketQuantityOptions(ticket: EventRegistrationTicket, quantity: number) {
+  const minimumPurchase = Math.max(ticket.minPurchase ?? 1, 1)
+  const maxAllowed = getTicketSelectableMax(ticket)
+
+  if (maxAllowed !== null) {
+    const upperBound = Math.max(maxAllowed, 0)
+    const values = upperBound < minimumPurchase
+      ? [0, upperBound]
+      : [0, ...Array.from({ length: upperBound - minimumPurchase + 1 }, (_, index) => minimumPurchase + index)]
+
+    return Array.from(new Set(values))
+      .filter((value) => value >= 0 && value <= upperBound)
+      .map((value) => ({
+        value: String(value),
+        label: String(value),
+      }))
+  }
+
+  const rollingUpperBound = Math.max(quantity + 10, minimumPurchase + 9)
+  return [0, ...Array.from({ length: rollingUpperBound - minimumPurchase + 1 }, (_, index) => minimumPurchase + index)].map((value) => ({
+    value: String(value),
+    label: String(value),
+  }))
+}
+
 function AutoImageCarousel({ slides, accentColor, height = { base: '220px', md: '320px' } }: { slides: BannerSlide[]; accentColor: string; height?: { base: string; md: string } }) {
   const [activeSlide, setActiveSlide] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
@@ -333,21 +359,22 @@ function TicketCard({
   quantity,
   onDecrease,
   onIncrease,
+  onSelectQuantity,
   currencyCode,
 }: {
   ticket: EventRegistrationTicket
   quantity: number
   onDecrease: () => void
   onIncrease: () => void
+  onSelectQuantity: (quantity: number) => void
   currencyCode?: string | null
 }) {
   const activePricePeriod = getTicketPricePeriod(ticket)
-  const remaining = getTicketRemaining(ticket)
   const displayPrice = getTicketDisplayPrice(ticket)
   const savings = getTicketSavings(ticket)
   const selectableMax = getTicketSelectableMax(ticket)
-  const subtotal = displayPrice * quantity
   const [pricingExpanded, setPricingExpanded] = useState(false)
+  const quantityOptions = useMemo(() => getTicketQuantityOptions(ticket, quantity), [ticket, quantity])
 
   return (
     <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' p={{ base: 4, md: 4.5 }}>
@@ -414,9 +441,44 @@ function TicketCard({
               >
                 <Text as='span' fontSize='lg' fontWeight='800' lineHeight='1' color='gray.700'>-</Text>
               </Button>
-              <Stack gap={0} align='center' flex='1'>
-                <Text fontSize='sm' fontWeight='800' color='gray.900'>{quantity}</Text>
-              </Stack>
+              <Box flex='1' minW='84px' position='relative'>
+                <Box
+                  as='select'
+                  value={String(quantity)}
+                  onChange={(event: ChangeEvent<HTMLSelectElement>) => onSelectQuantity(Number(event.target.value))}
+                  w='full'
+                  h='40px'
+                  pl={4}
+                  pr={9}
+                  border='none'
+                  outline='none'
+                  bg='transparent'
+                  color='gray.900'
+                  fontSize='sm'
+                  fontWeight='800'
+                  textAlign='center'
+                  textAlignLast='center'
+                  appearance='none'
+                  cursor='pointer'
+                  _focusVisible={{ outline: 'none' }}
+                >
+                  {quantityOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Box>
+                <Flex
+                  position='absolute'
+                  insetY='0'
+                  right={3}
+                  align='center'
+                  pointerEvents='none'
+                  color='gray.500'
+                >
+                  <ChevronDown size={14} strokeWidth={2.25} />
+                </Flex>
+              </Box>
               <Button
                 minW='0'
                 w='32px'
@@ -874,6 +936,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                   currencyCode={event.paymentAccountCurrency}
                                                   onDecrease={() => handleTicketQuantityChange(ticket, (selectedTicketQuantities[ticket.uniqueId] ?? 0) - 1)}
                                                   onIncrease={() => handleTicketQuantityChange(ticket, (selectedTicketQuantities[ticket.uniqueId] ?? 0) + 1)}
+                                                  onSelectQuantity={(value) => handleTicketQuantityChange(ticket, value)}
                                                 />
                                               ))}
                                             </SimpleGrid>
