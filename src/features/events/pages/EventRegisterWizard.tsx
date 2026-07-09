@@ -367,11 +367,6 @@ function TicketCard({
                 </>
               ) : null}
             </HStack>
-            {ticket.minPurchase > 1 ? (
-              <Text fontSize='xs' color='gray.500'>
-                Minimum purchase: <Text as='span' fontWeight='700' color='gray.700'>{ticket.minPurchase}</Text>
-              </Text>
-            ) : null}
             {ticket.description ? (
               <Text
                 fontSize='sm'
@@ -389,55 +384,59 @@ function TicketCard({
             <Box />
           </Stack>
 
-          <Flex
-            gridColumn={{ lg: 'span 4' }}
-            borderWidth='1px'
-            borderColor='gray.200'
-            borderRadius='full'
-            bg='gray.50'
-            px={2}
-            py={1}
-            align='center'
-            justify='space-between'
-            gap={2}
-            minW={{ base: 'full', sm: '220px', lg: '220px' }}
-            justifySelf={{ lg: 'end' }}
-          >
-            <Button
-              minW='0'
-              w='32px'
-              h='32px'
-              p='0'
-              borderRadius='full'
+          <Stack gridColumn={{ lg: 'span 4' }} gap={2} minW={{ base: 'full', sm: '220px', lg: '220px' }} justifySelf={{ lg: 'end' }}>
+            <Flex
               borderWidth='1px'
-              borderColor='gray.300'
-              bg='white'
-              onClick={onDecrease}
-              disabled={quantity <= 0}
+              borderColor='gray.200'
+              borderRadius='full'
+              bg='gray.50'
+              px={2}
+              py={1}
+              align='center'
+              justify='space-between'
+              gap={2}
             >
-              <Minus size={14} />
-            </Button>
-            <Stack gap={0} align='center' flex='1'>
-              <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.1em'>
-                Qty
+              <Button
+                minW='0'
+                w='32px'
+                h='32px'
+                p='0'
+                borderRadius='full'
+                borderWidth='1px'
+                borderColor='gray.300'
+                bg='white'
+                onClick={onDecrease}
+                disabled={quantity <= 0}
+              >
+                <Minus size={14} />
+              </Button>
+              <Stack gap={0} align='center' flex='1'>
+                <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.1em'>
+                  Qty
+                </Text>
+                <Text fontSize='sm' fontWeight='800' color='gray.900'>{quantity}</Text>
+              </Stack>
+              <Button
+                minW='0'
+                w='32px'
+                h='32px'
+                p='0'
+                borderRadius='full'
+                borderWidth='1px'
+                borderColor='gray.300'
+                bg='white'
+                onClick={onIncrease}
+                disabled={selectableMax !== null && quantity >= selectableMax}
+              >
+                <Plus size={14} />
+              </Button>
+            </Flex>
+            {ticket.minPurchase > 1 ? (
+              <Text fontSize='xs' color='gray.500' textAlign='center'>
+                Minimum purchase: <Text as='span' fontWeight='700' color='gray.700'>{ticket.minPurchase}</Text>
               </Text>
-              <Text fontSize='sm' fontWeight='800' color='gray.900'>{quantity}</Text>
-            </Stack>
-            <Button
-              minW='0'
-              w='32px'
-              h='32px'
-              p='0'
-              borderRadius='full'
-              borderWidth='1px'
-              borderColor='gray.300'
-              bg='white'
-              onClick={onIncrease}
-              disabled={selectableMax !== null && quantity >= selectableMax}
-            >
-              <Plus size={14} />
-            </Button>
-          </Flex>
+            ) : null}
+          </Stack>
         </SimpleGrid>
 
         {ticket.pricePeriods.length > 1 ? (
@@ -856,7 +855,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                             </Box>
                                           </Flex>
                                           {filteredTickets.length > 0 ? (
-                                            <Stack gap={4}>
+                                            <SimpleGrid columns={{ base: 1, xl: 3 }} gap={4}>
                                               {filteredTickets.map((ticket) => (
                                                 <TicketCard
                                                   key={ticket.uniqueId}
@@ -867,7 +866,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                   onIncrease={() => handleTicketQuantityChange(ticket, (selectedTicketQuantities[ticket.uniqueId] ?? 0) + 1)}
                                                 />
                                               ))}
-                                            </Stack>
+                                            </SimpleGrid>
                                           ) : (
                                             <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
                                               <Text fontSize='sm' color='gray.600'>No tickets matched your search for this session.</Text>
