@@ -268,38 +268,64 @@ function SupportCard({ title, subtitle, icon, children }: { title: string; subti
 
 function SessionTitleCard({
   title,
+  description,
   isExpanded,
   onToggle,
+  onOpenDescription,
 }: {
   title: string
+  description?: string | null
   isExpanded: boolean
   onToggle: () => void
+  onOpenDescription: () => void
 }) {
   return (
     <Box borderWidth='1px' borderColor={isExpanded ? 'gray.300' : 'gray.200'} borderRadius='24px' bg='white' p={{ base: 5, md: 6 }} boxShadow='0 16px 40px rgba(15, 23, 42, 0.06)'>
-      <Flex align='center' justify='space-between' gap={4}>
-        <Heading fontSize='lg' color='gray.900' letterSpacing='-0.02em'>{title}</Heading>
-        <Button
-          onClick={onToggle}
-          aria-label={isExpanded ? `Collapse ${title}` : `Expand ${title}`}
-          aria-expanded={isExpanded}
-          minW='0'
-          w='32px'
-          h='32px'
-          p='0'
-          borderRadius='full'
-          borderWidth='1px'
-          borderColor={isExpanded ? 'gray.400' : 'gray.300'}
-          bg={isExpanded ? 'gray.200' : 'gray.100'}
-          color='gray.800'
-          _hover={{ bg: 'gray.200', borderColor: 'gray.500' }}
-          _active={{ bg: 'gray.300', borderColor: 'gray.600' }}
-        >
-          <Box display='inline-flex' transform={isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'} transition='transform 0.2s ease'>
-            <ChevronRight size={14} />
-          </Box>
-        </Button>
-      </Flex>
+      <Stack gap={4}>
+        <Flex align='center' justify='space-between' gap={4}>
+          {description ? (
+            <Link
+              as='button'
+              type='button'
+              onClick={onOpenDescription}
+              fontSize='lg'
+              fontWeight='700'
+              color='gray.900'
+              letterSpacing='-0.02em'
+              textAlign='left'
+              textDecoration='underline'
+              textUnderlineOffset='4px'
+              title='Open session description in a dialog'
+              _hover={{ color: 'gray.700' }}
+            >
+              {title}
+            </Link>
+          ) : (
+            <Heading fontSize='lg' color='gray.900' letterSpacing='-0.02em'>{title}</Heading>
+          )}
+          <Button
+            onClick={onToggle}
+            aria-label={isExpanded ? `Collapse ${title}` : `Expand ${title}`}
+            aria-expanded={isExpanded}
+            minW='0'
+            w='32px'
+            h='32px'
+            p='0'
+            borderRadius='full'
+            borderWidth='1px'
+            borderColor={isExpanded ? 'gray.400' : 'gray.300'}
+            bg={isExpanded ? 'gray.200' : 'gray.100'}
+            color='gray.800'
+            _hover={{ bg: 'gray.200', borderColor: 'gray.500' }}
+            _active={{ bg: 'gray.300', borderColor: 'gray.600' }}
+          >
+            <Box display='inline-flex' transform={isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'} transition='transform 0.2s ease'>
+              <ChevronRight size={14} />
+            </Box>
+          </Button>
+        </Flex>
+        <Separator borderColor='gray.200' />
+      </Stack>
     </Box>
   )
 }
@@ -314,6 +340,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [termsOpen, setTermsOpen] = useState(false)
   const [expandedSessionIds, setExpandedSessionIds] = useState<string[]>([])
+  const [activeSessionDescription, setActiveSessionDescription] = useState<{ title: string; description: string } | null>(null)
 
   useEffect(() => {
     setActiveTab(firstTab)
@@ -487,12 +514,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                       >
                         <Stack gap={6}>
                           {tab.id === 'description' ? (
-                            <SupportCard title='Description' subtitle='Event overview and key details.' icon={<FileText size={18} />}>
-                              <Stack gap={4}>
-                                {event.summary ? <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}><Text fontSize='sm' fontWeight='700' color='gray.900' mb={2}>Summary</Text><Text color='gray.700' lineHeight='1.7'>{event.summary}</Text></Box> : null}
-                                {event.description ? <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='white' p={5}>{isHtmlContent(event.description) ? <RichTextBlock html={event.description} /> : <Text color='gray.700' lineHeight='1.7'>{event.description}</Text>}</Box> : null}
-                              </Stack>
-                            </SupportCard>
+                            <Stack gap={4}>
+                              {event.summary ? <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}><Text fontSize='sm' fontWeight='700' color='gray.900' mb={2}>Summary</Text><Text color='gray.700' lineHeight='1.7'>{event.summary}</Text></Box> : null}
+                              {event.description ? <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='white' p={5}>{isHtmlContent(event.description) ? <RichTextBlock html={event.description} /> : <Text color='gray.700' lineHeight='1.7'>{event.description}</Text>}</Box> : null}
+                            </Stack>
                           ) : null}
 
                           {tab.id === 'sessions' ? (
@@ -524,8 +549,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                 <SessionTitleCard
                                   key={session.uniqueId}
                                   title={session.name}
+                                  description={session.description}
                                   isExpanded={expandedSessionIds.includes(session.uniqueId)}
                                   onToggle={() => handleSessionToggle(session.uniqueId)}
+                                  onOpenDescription={() => setActiveSessionDescription({ title: session.name, description: session.description ?? '' })}
                                 />
                               ))}
                             </Stack>
@@ -552,7 +579,11 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                       </Box>
 
                       <Flex justify='space-between' gap={3} align={{ base: 'stretch', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
-                        <Button {...CONTROL_BUTTON_OUTLINE} onClick={handleBackStep} disabled={activeIndex <= 0}><HStack gap={2}><ArrowLeft size={16} /><Text as='span'>Back</Text></HStack></Button>
+                        {activeIndex > 0 ? (
+                          <Button {...CONTROL_BUTTON_OUTLINE} onClick={handleBackStep}><HStack gap={2}><ArrowLeft size={16} /><Text as='span'>Back</Text></HStack></Button>
+                        ) : (
+                          <Box />
+                        )}
                         <Button {...CONTROL_BUTTON_PRIMARY} bg={formAccent} _hover={{ bg: hexToRgba(formAccent, 0.88), transform: 'translateY(-1px)' }} onClick={handleContinue} disabled={isFinalStep && Boolean(event.termsConditions) && !termsAccepted}><HStack gap={2}><Text as='span'>Continue</Text><ChevronRight size={16} /></HStack></Button>
                       </Flex>
                     </Stack>
@@ -575,6 +606,34 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
           </Dialog.Positioner>
         </Dialog.Root>
       ) : null}
+
+      <Dialog.Root open={Boolean(activeSessionDescription)} onOpenChange={(details) => { if (!details.open) setActiveSessionDescription(null) }} size='lg'>
+        <Dialog.Backdrop backdropFilter='blur(8px)' bg='blackAlpha.600' />
+        <Dialog.Positioner>
+          <Dialog.Content borderRadius='28px' overflow='hidden' bg='white' boxShadow='0 30px 70px rgba(15, 23, 42, 0.25)'>
+            <Box px={{ base: 4, md: 6 }} py={4} borderBottomWidth='1px' borderBottomColor='gray.200'>
+              <Flex justify='space-between' align='start' gap={4}>
+                <Stack gap={1}>
+                  <Text fontSize='xs' textTransform='uppercase' letterSpacing='0.14em' color='gray.500' fontWeight='700'>Session Description</Text>
+                  <Heading fontSize={{ base: 'xl', md: '2xl' }} color='gray.900' letterSpacing='-0.03em'>
+                    {activeSessionDescription?.title}
+                  </Heading>
+                </Stack>
+                <CloseButton onClick={() => setActiveSessionDescription(null)} />
+              </Flex>
+            </Box>
+            <Box px={{ base: 4, md: 6 }} py={{ base: 5, md: 6 }} maxH='70vh' overflowY='auto'>
+              {activeSessionDescription ? (
+                isHtmlContent(activeSessionDescription.description) ? (
+                  <RichTextBlock html={activeSessionDescription.description} />
+                ) : (
+                  <Text color='gray.700' lineHeight='1.75'>{activeSessionDescription.description}</Text>
+                )
+              ) : null}
+            </Box>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </Box>
   )
 }
