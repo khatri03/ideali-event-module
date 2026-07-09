@@ -358,18 +358,20 @@ function TicketCard({
           <Stack gap={1.25} minW='0' gridColumn={{ lg: 'span 8' }} justify='center'>
             <Text fontSize='md' fontWeight='700' color='gray.900' lineHeight='1.4'>{ticket.name}</Text>
             <HStack gap={3} flexWrap='wrap' align='baseline'>
-              <Text fontSize='xl' fontWeight='800' color='gray.900'>{formatAmount(displayPrice ?? 0, currencyCode)}</Text>
+              <Text fontSize='xl' fontWeight='800' color={savings ? 'green.600' : 'gray.900'}>{formatAmount(displayPrice ?? 0, currencyCode)}</Text>
               {savings ? (
                 <>
-                  <Text fontSize='sm' color='gray.400' textDecoration='line-through'>
+                  <Text fontSize='sm' color='red.500' textDecoration='line-through'>
                     {formatAmount(savings.fullPrice, currencyCode)}
-                  </Text>
-                  <Text fontSize='xs' fontWeight='700' color='green.600'>
-                    Save {formatAmount(savings.amountSaved, currencyCode)}{savings.percentageSaved > 0 ? ` (${savings.percentageSaved}%)` : ''}
                   </Text>
                 </>
               ) : null}
             </HStack>
+            {ticket.minPurchase > 1 ? (
+              <Text fontSize='xs' color='gray.500'>
+                Minimum purchase: <Text as='span' fontWeight='700' color='gray.700'>{ticket.minPurchase}</Text>
+              </Text>
+            ) : null}
             {ticket.description ? (
               <Text
                 fontSize='sm'
