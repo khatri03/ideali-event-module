@@ -277,11 +277,8 @@ function getTicketQuantityOptions(ticket: EventRegistrationTicket, quantity: num
 
   if (maxAllowed !== null) {
     const upperBound = Math.max(maxAllowed, 0)
-    const values = upperBound < minimumPurchase
-      ? [0, upperBound]
-      : [0, ...Array.from({ length: upperBound - minimumPurchase + 1 }, (_, index) => minimumPurchase + index)]
 
-    return Array.from(new Set(values))
+    return Array.from({ length: upperBound + 1 }, (_, index) => index)
       .filter((value) => value >= 0 && value <= upperBound)
       .map((value) => ({
         value: String(value),
@@ -290,10 +287,20 @@ function getTicketQuantityOptions(ticket: EventRegistrationTicket, quantity: num
   }
 
   const rollingUpperBound = Math.max(quantity + 10, minimumPurchase + 9)
-  return [0, ...Array.from({ length: rollingUpperBound - minimumPurchase + 1 }, (_, index) => minimumPurchase + index)].map((value) => ({
+  return Array.from({ length: rollingUpperBound + 1 }, (_, index) => index).map((value) => ({
     value: String(value),
     label: String(value),
   }))
+}
+
+function getTicketQuantityAfterDecrement(ticket: EventRegistrationTicket, quantity: number) {
+  const minimumPurchase = Math.max(ticket.minPurchase ?? 1, 1)
+
+  if (quantity <= minimumPurchase) {
+    return 0
+  }
+
+  return quantity - 1
 }
 
 function AutoImageCarousel({ slides, accentColor, height = { base: '220px', md: '320px' } }: { slides: BannerSlide[]; accentColor: string; height?: { base: string; md: string } }) {
@@ -864,6 +871,12 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
           : nextQuantity
       const normalized = Math.max(0, maxAllowed === null ? requestedQuantity : Math.min(requestedQuantity, maxAllowed))
 
+      if (normalized <= 0) {
+        const next = { ...current }
+        delete next[ticket.uniqueId]
+        return next
+      }
+
       return {
         ...current,
         [ticket.uniqueId]: normalized,
@@ -885,7 +898,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setSelectedTicketQuantities((current) => {
       const next = { ...current }
       items.forEach((item) => {
-        next[item.ticketId] = 0
+        delete next[item.ticketId]
       })
       return next
     })
@@ -1211,23 +1224,23 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                         minW='116px'
                                         justify='space-between'
                                       >
-                                        <Button
-                                          minW='0'
-                                          w='24px'
-                                          h='24px'
-                                          p='0'
+                                          <Button
+                                            minW='0'
+                                            w='24px'
+                                            h='24px'
+                                            p='0'
                                           borderRadius='full'
                                           borderWidth='1px'
                                           borderColor='gray.300'
                                           bg='white'
-                                          color='gray.700'
-                                          fontSize='sm'
-                                          fontWeight='800'
-                                          onClick={() => handleTicketQuantityChange(item.ticket, item.quantity - 1)}
-                                          disabled={item.quantity <= 0}
-                                        >
-                                          -
-                                        </Button>
+                                            color='gray.700'
+                                            fontSize='sm'
+                                            fontWeight='800'
+                                            onClick={() => handleTicketQuantityChange(item.ticket, getTicketQuantityAfterDecrement(item.ticket, item.quantity))}
+                                            disabled={item.quantity <= 0}
+                                          >
+                                            -
+                                          </Button>
                                         <Text minW='20px' textAlign='center' fontSize='sm' fontWeight='800' color='gray.900'>
                                           {item.quantity}
                                         </Text>
@@ -1463,7 +1476,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                   ticket={ticket}
                                                   quantity={selectedTicketQuantities[ticket.uniqueId] ?? 0}
                                                   currencyCode={event.paymentAccountCurrency}
-                                                  onDecrease={() => handleTicketQuantityChange(ticket, (selectedTicketQuantities[ticket.uniqueId] ?? 0) - 1)}
+                                                  onDecrease={() => handleTicketQuantityChange(ticket, getTicketQuantityAfterDecrement(ticket, selectedTicketQuantities[ticket.uniqueId] ?? 0))}
                                                   onIncrease={() => handleTicketQuantityChange(ticket, (selectedTicketQuantities[ticket.uniqueId] ?? 0) + 1)}
                                                   onSelectQuantity={(value) => handleTicketQuantityChange(ticket, value)}
                                                 />
@@ -1600,6 +1613,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     </Box>
   )
 }
+
 
 
 
