@@ -386,14 +386,14 @@ function TicketCard({
                 {ticket.name}
               </Text>
               <HStack gap={3} flexWrap='wrap' align='baseline' justify='flex-end'>
-                <Text fontSize='xl' fontWeight='800' color={savings ? 'green.600' : 'gray.900'}>
-                  {formatAmount(displayPrice ?? 0, currencyCode)}
-                </Text>
                 {savings ? (
                   <Text fontSize='sm' color='red.500' textDecoration='line-through'>
                     {formatAmount(savings.fullPrice, currencyCode)}
                   </Text>
                 ) : null}
+                <Text fontSize='xl' fontWeight='800' color={savings ? 'green.600' : 'gray.900'}>
+                  {formatAmount(displayPrice ?? 0, currencyCode)}
+                </Text>
               </HStack>
             </Flex>
             {ticket.description ? (
