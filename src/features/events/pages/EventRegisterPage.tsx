@@ -19,6 +19,7 @@ interface EventRegistrationViewModel {
   endDate: string | null
   bookingStartDate: string | null
   bookingEndDate: string | null
+  purchaseTimeLimitMinutes: number
   location: string
   locationMapUrl: string | null
   organizer: string
@@ -117,6 +118,7 @@ function mapRegistrationToViewModel(registration: EventRegistrationResponse): Ev
     endDate: registration.endDate,
     bookingStartDate: registration.bookingStartDate,
     bookingEndDate: registration.bookingEndDate,
+    purchaseTimeLimitMinutes: registration.purchaseTimeLimitMinutes,
     location: registration.venueName ?? 'Venue not set',
     locationMapUrl: registration.venueMapUrl,
     organizer: registration.organizerName ?? 'Event registration',

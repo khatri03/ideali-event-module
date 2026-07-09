@@ -21,11 +21,13 @@ import {
   Tabs,
   Text,
 } from '@chakra-ui/react'
+import { keyframes } from '@emotion/react'
 import {
   ArrowLeft,
   CalendarDays,
   ChevronDown,
   ChevronRight,
+  Clock3,
   CreditCard,
   ExternalLink,
   FileText,
@@ -46,6 +48,16 @@ import {
 } from '@/components/common/controlStyles'
 
 const LOCAL_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
+const timerRevealAnimation = keyframes`
+  0% {
+    opacity: 0;
+    transform: translateY(-18px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+`
 
 type WizardTabId = 'description' | 'sessions' | 'attendee-info' | 'questionnaire' | 'payment'
 
@@ -61,6 +73,7 @@ export interface EventRegisterWizardEvent {
   endDate: string | null
   bookingStartDate: string | null
   bookingEndDate: string | null
+  purchaseTimeLimitMinutes: number
   description: string | null
   summary: string | null
   termsConditions: string | null
@@ -101,6 +114,20 @@ function formatDateTimeRange(startDate: string | null | undefined, endDate: stri
   if (start === 'Date not set' && end === 'Date not set') return 'Not set'
   if (start === end) return start
   return `${start} - ${end}`
+}
+
+function formatCountdown(milliseconds: number) {
+  const safeMilliseconds = Math.max(milliseconds, 0)
+  const totalSeconds = Math.floor(safeMilliseconds / 1000)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  if (hours > 0) {
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+  }
+
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
 function hexToRgba(hex: string, alpha: number) {
@@ -636,6 +663,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [activeSessionDescription, setActiveSessionDescription] = useState<{ title: string; description: string } | null>(null)
   const [sessionTicketSearch, setSessionTicketSearch] = useState<Record<string, string>>({})
   const [selectedTicketQuantities, setSelectedTicketQuantities] = useState<Record<string, number>>({})
+  const [purchaseTimerStartedAt, setPurchaseTimerStartedAt] = useState<number | null>(null)
+  const [purchaseTimerNow, setPurchaseTimerNow] = useState(() => Date.now())
 
   useEffect(() => {
     setActiveTab(firstTab)
@@ -646,9 +675,22 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setExpandedSessionIds(event.sessions.map((session) => session.uniqueId))
   }, [event.sessions])
 
+  useEffect(() => {
+    if (purchaseTimerStartedAt === null) return
+    const timer = window.setInterval(() => {
+      setPurchaseTimerNow(Date.now())
+    }, 1000)
+
+    return () => window.clearInterval(timer)
+  }, [purchaseTimerStartedAt])
+
   const activeIndex = getStepIndex(tabs, activeTab)
   const isFinalStep = activeIndex >= 0 && activeIndex === tabs.length - 1
   const visiblePaymentMethods = getVisiblePaymentMethods(event)
+  const purchaseTimerDurationMs = Math.max(event.purchaseTimeLimitMinutes, 1) * 60 * 1000
+  const purchaseTimerRemainingMs = purchaseTimerStartedAt === null ? null : purchaseTimerStartedAt + purchaseTimerDurationMs - purchaseTimerNow
+  const purchaseTimerVisible = purchaseTimerStartedAt !== null
+  const purchaseTimerExpired = purchaseTimerRemainingMs !== null && purchaseTimerRemainingMs <= 0
 
   function isStepEnabled(stepId: WizardTabId) {
     const index = getStepIndex(tabs, stepId)
@@ -660,6 +702,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   }
 
   function handleContinue() {
+    if (purchaseTimerExpired) return
     if (activeIndex < 0 || activeIndex >= tabs.length - 1) return
     const nextIndex = activeIndex + 1
     setHighestUnlockedIndex((current) => Math.max(current, nextIndex))
@@ -715,10 +758,45 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
         [ticket.uniqueId]: normalized,
       }
     })
+
+    if (purchaseTimerStartedAt === null && nextQuantity > 0) {
+      const now = Date.now()
+      setPurchaseTimerStartedAt(now)
+      setPurchaseTimerNow(now)
+    }
   }
 
   const areAllSessionsExpanded =
     event.sessions.length > 0 && expandedSessionIds.length === event.sessions.length
+
+  if (purchaseTimerVisible && purchaseTimerExpired) {
+    return (
+      <Box minH='100dvh' bg={accentBackground} color='gray.900'>
+        <Flex minH='100dvh' align='center' justify='center' px={{ base: 3, md: 6, xl: 8 }} py={{ base: 5, md: 8 }}>
+          <Container maxW='4xl' p={0}>
+            <Box bg='white' borderWidth='1px' borderColor='gray.200' borderRadius='28px' p={{ base: 5, md: 8 }} boxShadow='0 24px 60px rgba(15, 23, 42, 0.08)'>
+              <Stack gap={5} align='center' textAlign='center'>
+                <Box w='72px' h='72px' borderRadius='24px' display='grid' placeItems='center' bg='red.50' color='red.600'>
+                  <Clock3 size={30} />
+                </Box>
+                <Stack gap={2} maxW='2xl'>
+                  <Heading fontSize={{ base: '2xl', md: '3xl' }} letterSpacing='-0.04em'>
+                    Purchase time limit reached
+                  </Heading>
+                  <Text color='gray.600' lineHeight='1.7'>
+                    Your registration session expired. Please restart the registration flow to continue.
+                  </Text>
+                </Stack>
+                <Button minH='12' borderRadius='16px' color='white' bg='gray.900' onClick={onBack}>
+                  Restart registration
+                </Button>
+              </Stack>
+            </Box>
+          </Container>
+        </Flex>
+      </Box>
+    )
+  }
 
   return (
     <Box minH='100dvh' bg={accentBackground} color='gray.900'>
@@ -756,16 +834,47 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
               </Box>
             </Box>
 
-            {event.termsConditions ? (
-              <Box position='sticky' top={{ base: 2, md: 4 }} zIndex={20}>
+            <Stack position='sticky' top={{ base: 2, md: 4 }} zIndex={20} gap={3}>
+              {purchaseTimerVisible ? (
+                <Box
+                  borderWidth='1px'
+                  borderColor={purchaseTimerExpired ? 'red.200' : 'gray.200'}
+                  borderRadius='20px'
+                  bg={purchaseTimerExpired ? 'red.50' : 'white'}
+                  px={{ base: 4, md: 5 }}
+                  py={4}
+                  boxShadow='0 12px 30px rgba(15, 23, 42, 0.08)'
+                  animation={`${timerRevealAnimation} 280ms ease-out`}
+                  transformOrigin='top center'
+                >
+                  <Flex align={{ base: 'start', md: 'center' }} justify='space-between' gap={4} direction={{ base: 'column', md: 'row' }}>
+                    <HStack gap={3} align='start'>
+                      <Box w='10' h='10' borderRadius='12px' display='grid' placeItems='center' bg={purchaseTimerExpired ? 'red.100' : 'gray.100'} color={purchaseTimerExpired ? 'red.600' : 'gray.700'}>
+                        <Clock3 size={18} />
+                      </Box>
+                      <Stack gap={0.5}>
+                        <Text fontSize='xs' fontWeight='800' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>Purchase time left</Text>
+                        <Text fontSize='lg' fontWeight='800' color={purchaseTimerExpired ? 'red.600' : 'gray.900'}>{formatCountdown(purchaseTimerRemainingMs ?? 0)}</Text>
+                      </Stack>
+                    </HStack>
+                    <Text fontSize='sm' color='gray.600' lineHeight='1.6' maxW='2xl'>
+                      {purchaseTimerExpired
+                        ? 'Purchase time limit reached. Please restart registration.'
+                        : 'Complete your registration before the timer reaches zero.'}
+                    </Text>
+                  </Flex>
+                </Box>
+              ) : null}
+
+              {event.termsConditions ? (
                 <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' px={{ base: 4, md: 5 }} py={4} boxShadow='0 12px 30px rgba(15, 23, 42, 0.08)'>
                   <Flex justify='space-between' align={{ base: 'stretch', md: 'center' }} gap={4} direction={{ base: 'column', md: 'row' }}>
                     <Checkbox.Root checked={termsAccepted} onCheckedChange={(details) => setTermsAccepted(details.checked === true)}><Checkbox.HiddenInput /><Checkbox.Control borderColor='gray.300' borderRadius='8px' bg='white' _checked={{ bg: formAccent, borderColor: formAccent }} /><Checkbox.Label color='gray.700' fontSize='sm' fontWeight='600'>I accept the registration terms and conditions.</Checkbox.Label></Checkbox.Root>
                     <Button variant='ghost' color={formAccent} fontWeight='700' onClick={() => setTermsOpen(true)} alignSelf={{ base: 'flex-start', md: 'center' }}>View terms</Button>
                   </Flex>
                 </Box>
-              </Box>
-            ) : null}
+              ) : null}
+            </Stack>
 
             <Box bg='white' borderWidth='1px' borderColor='blackAlpha.100' borderRadius='28px' p={{ base: 4, md: 6 }} boxShadow='0 24px 60px rgba(15, 23, 42, 0.08)'>
               <Tabs.Root value={activeTab} onValueChange={(details) => handleStepChange(details.value)} activationMode='manual'>

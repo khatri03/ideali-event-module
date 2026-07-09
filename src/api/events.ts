@@ -289,6 +289,8 @@ const eventRegistrationResponseSchema = z.object({
   bookingStartDate: z.string().nullable().optional(),
   BookingEndDate: z.string().nullable().optional(),
   bookingEndDate: z.string().nullable().optional(),
+  PurchaseTimeLimitMinutes: z.number().int().positive().optional(),
+  purchaseTimeLimitMinutes: z.number().int().positive().optional(),
   RegistrationStatus: z.string().optional(),
   registrationStatus: z.string().optional(),
   CanRegister: z.boolean().optional(),
@@ -798,6 +800,7 @@ export interface EventRegistrationResponse {
   endDate: string | null
   bookingStartDate: string | null
   bookingEndDate: string | null
+  purchaseTimeLimitMinutes: number
   registrationStatus: string
   canRegister: boolean
   registrationBlockedReason: string | null
@@ -882,6 +885,12 @@ function parseEventRegistrationSession(item: z.infer<typeof eventRegistrationSes
 
 function parseEventRegistrationResponse(payload: unknown): EventRegistrationResponse {
   const response = eventRegistrationResponseSchema.parse(parseServiceResponseData(payload))
+  const purchaseTimeLimitMinutes = response.PurchaseTimeLimitMinutes ?? response.purchaseTimeLimitMinutes
+
+  if (purchaseTimeLimitMinutes == null) {
+    throw new Error('Purchase time limit minutes missing from event registration response.')
+  }
+
   return {
     uniqueId: response.UniqueId ?? response.uniqueId ?? "",
     name: response.Name ?? response.name ?? "",
@@ -898,6 +907,7 @@ function parseEventRegistrationResponse(payload: unknown): EventRegistrationResp
     endDate: response.EndDate ?? response.endDate ?? null,
     bookingStartDate: response.BookingStartDate ?? response.bookingStartDate ?? null,
     bookingEndDate: response.BookingEndDate ?? response.bookingEndDate ?? null,
+    purchaseTimeLimitMinutes,
     registrationStatus: response.RegistrationStatus ?? response.registrationStatus ?? "",
     canRegister: response.CanRegister ?? response.canRegister ?? false,
     registrationBlockedReason:
