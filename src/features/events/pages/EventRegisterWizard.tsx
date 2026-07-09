@@ -352,19 +352,23 @@ function TicketCard({
   return (
     <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' p={{ base: 4, md: 4.5 }}>
       <Stack gap={3}>
-        <SimpleGrid columns={{ base: 1, lg: 12 }} gap={{ base: 4, lg: 5 }} alignItems='center'>
-          <Stack gap={1.25} minW='0' gridColumn={{ lg: 'span 8' }} justify='center'>
-            <Text fontSize='md' fontWeight='700' color='gray.900' lineHeight='1.4'>{ticket.name}</Text>
-            <HStack gap={3} flexWrap='wrap' align='baseline'>
-              <Text fontSize='xl' fontWeight='800' color={savings ? 'green.600' : 'gray.900'}>{formatAmount(displayPrice ?? 0, currencyCode)}</Text>
-              {savings ? (
-                <>
+        <Stack gap={3}>
+          <Stack gap={1.5}>
+            <Flex justify='space-between' align='start' gap={4}>
+              <Text fontSize='md' fontWeight='700' color='gray.900' lineHeight='1.4' flex='1'>
+                {ticket.name}
+              </Text>
+              <HStack gap={3} flexWrap='wrap' align='baseline' justify='flex-end'>
+                <Text fontSize='xl' fontWeight='800' color={savings ? 'green.600' : 'gray.900'}>
+                  {formatAmount(displayPrice ?? 0, currencyCode)}
+                </Text>
+                {savings ? (
                   <Text fontSize='sm' color='red.500' textDecoration='line-through'>
                     {formatAmount(savings.fullPrice, currencyCode)}
                   </Text>
-                </>
-              ) : null}
-            </HStack>
+                ) : null}
+              </HStack>
+            </Flex>
             {ticket.description ? (
               <Text
                 fontSize='sm'
@@ -376,13 +380,14 @@ function TicketCard({
               >
                 {ticket.description}
               </Text>
-            ) : (
-              <Box />
-            )}
-            <Box />
+            ) : null}
           </Stack>
 
-          <Stack gridColumn={{ lg: 'span 4' }} gap={2} minW={{ base: 'full', sm: '220px', lg: '220px' }} justifySelf={{ lg: 'end' }}>
+          <Flex
+            direction='column'
+            gap={2}
+            w='full'
+          >
             <Flex
               borderWidth='1px'
               borderColor='gray.200'
@@ -393,6 +398,7 @@ function TicketCard({
               align='center'
               justify='space-between'
               gap={2}
+              w='full'
             >
               <Button
                 minW='0'
@@ -409,9 +415,6 @@ function TicketCard({
                 <Text as='span' fontSize='lg' fontWeight='800' lineHeight='1' color='gray.700'>-</Text>
               </Button>
               <Stack gap={0} align='center' flex='1'>
-                <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.1em'>
-                  Qty
-                </Text>
                 <Text fontSize='sm' fontWeight='800' color='gray.900'>{quantity}</Text>
               </Stack>
               <Button
@@ -434,8 +437,8 @@ function TicketCard({
                 Minimum purchase: <Text as='span' fontWeight='700' color='gray.700'>{ticket.minPurchase}</Text>
               </Text>
             ) : null}
-          </Stack>
-        </SimpleGrid>
+          </Flex>
+        </Stack>
 
         {ticket.pricePeriods.length > 1 ? (
           <>
