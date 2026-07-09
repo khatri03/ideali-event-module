@@ -13,6 +13,7 @@ import {
   Heading,
   HStack,
   Image,
+  Input,
   Link,
   Separator,
   SimpleGrid,
@@ -266,18 +267,88 @@ function SupportCard({ title, subtitle, icon, children }: { title: string; subti
   )
 }
 
+function TicketCard({ ticket }: { ticket: EventRegistrationTicket }) {
+  const activePricePeriod = getTicketPricePeriod(ticket)
+  const remaining = getTicketRemaining(ticket)
+  const displayPrice = activePricePeriod?.amount ?? ticket.fullPrice
+
+  return (
+    <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='gray.50' p={{ base: 4, md: 5 }}>
+      <Stack gap={4}>
+        <Flex justify='space-between' align='start' gap={4} wrap='wrap'>
+          <Stack gap={1} flex='1' minW='220px'>
+            <Text fontSize='lg' fontWeight='700' color='gray.900'>{ticket.name}</Text>
+            {ticket.description ? <Text fontSize='sm' color='gray.600' lineHeight='1.7'>{ticket.description}</Text> : null}
+          </Stack>
+          <Stack gap={1} align={{ base: 'start', md: 'end' }}>
+            <Text fontSize='2xl' fontWeight='800' color='gray.900'>{formatAmount(displayPrice ?? 0)}</Text>
+            <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>
+              {activePricePeriod?.name ?? 'Current price'}
+            </Text>
+          </Stack>
+        </Flex>
+
+        <Flex gap={2} wrap='wrap'>
+          <Badge colorPalette={ticket.isActive ? 'green' : 'gray'} variant='subtle' borderRadius='full' px={3} py={1}>
+            {ticket.isActive ? 'Active' : 'Inactive'}
+          </Badge>
+          <Badge colorPalette='gray' variant='subtle' borderRadius='full' px={3} py={1}>
+            {remaining === null ? 'Availability not set' : `${remaining} available`}
+          </Badge>
+          {ticket.minPurchase || ticket.maxPurchase ? (
+            <Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>
+              {`${ticket.minPurchase ?? 1}-${ticket.maxPurchase ?? 'Any'} per order`}
+            </Badge>
+          ) : null}
+        </Flex>
+
+        {ticket.pricePeriods.length > 1 ? (
+          <Stack gap={3}>
+            <Separator borderColor='gray.200' />
+            <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>
+              Pricing windows
+            </Text>
+            <Stack gap={3}>
+              {ticket.pricePeriods.map((period) => (
+                <Box key={period.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={3}>
+                  <Flex justify='space-between' align='start' gap={3} wrap='wrap'>
+                    <Stack gap={1}>
+                      <Text fontSize='sm' fontWeight='700' color='gray.900'>{period.name ?? 'Price window'}</Text>
+                      <Text fontSize='xs' color='gray.500'>{formatDateTimeRange(period.startDateTime, period.endDateTime)}</Text>
+                    </Stack>
+                    <Stack gap={1} align={{ base: 'start', md: 'end' }}>
+                      <Text fontSize='sm' fontWeight='700' color='gray.900'>{formatAmount(period.amount ?? 0)}</Text>
+                      <Badge colorPalette={period.uniqueId === activePricePeriod?.uniqueId ? 'green' : 'gray'} variant='subtle' borderRadius='full' px={2.5} py={0.5}>
+                        {period.currentStatus}
+                      </Badge>
+                    </Stack>
+                  </Flex>
+                </Box>
+              ))}
+            </Stack>
+          </Stack>
+        ) : null}
+      </Stack>
+    </Box>
+  )
+}
+
 function SessionTitleCard({
   title,
   description,
+  ticketCount,
   isExpanded,
   onToggle,
   onOpenDescription,
+  children,
 }: {
   title: string
   description?: string | null
+  ticketCount: number
   isExpanded: boolean
   onToggle: () => void
   onOpenDescription: () => void
+  children?: ReactNode
 }) {
   return (
     <Box borderWidth='1px' borderColor={isExpanded ? 'gray.300' : 'gray.200'} borderRadius='24px' bg='white' p={{ base: 5, md: 6 }} boxShadow='0 16px 40px rgba(15, 23, 42, 0.06)'>
@@ -303,28 +374,34 @@ function SessionTitleCard({
           ) : (
             <Heading fontSize='lg' color='gray.900' letterSpacing='-0.02em'>{title}</Heading>
           )}
-          <Button
-            onClick={onToggle}
-            aria-label={isExpanded ? `Collapse ${title}` : `Expand ${title}`}
-            aria-expanded={isExpanded}
-            minW='0'
-            w='32px'
-            h='32px'
-            p='0'
-            borderRadius='full'
-            borderWidth='1px'
-            borderColor={isExpanded ? 'gray.400' : 'gray.300'}
-            bg={isExpanded ? 'gray.200' : 'gray.100'}
-            color='gray.800'
-            _hover={{ bg: 'gray.200', borderColor: 'gray.500' }}
-            _active={{ bg: 'gray.300', borderColor: 'gray.600' }}
-          >
-            <Box display='inline-flex' transform={isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'} transition='transform 0.2s ease'>
-              <ChevronRight size={14} />
-            </Box>
-          </Button>
+          <HStack gap={3}>
+            <Badge colorPalette='gray' variant='subtle' borderRadius='full' px={3} py={1}>
+              {ticketCount} {ticketCount === 1 ? 'ticket' : 'tickets'}
+            </Badge>
+            <Button
+              onClick={onToggle}
+              aria-label={isExpanded ? `Collapse ${title}` : `Expand ${title}`}
+              aria-expanded={isExpanded}
+              minW='0'
+              w='32px'
+              h='32px'
+              p='0'
+              borderRadius='full'
+              borderWidth='1px'
+              borderColor={isExpanded ? 'gray.400' : 'gray.300'}
+              bg={isExpanded ? 'gray.200' : 'gray.100'}
+              color='gray.800'
+              _hover={{ bg: 'gray.200', borderColor: 'gray.500' }}
+              _active={{ bg: 'gray.300', borderColor: 'gray.600' }}
+            >
+              <Box display='inline-flex' transform={isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'} transition='transform 0.2s ease'>
+                <ChevronRight size={14} />
+              </Box>
+            </Button>
+          </HStack>
         </Flex>
         <Separator borderColor='gray.200' />
+        {isExpanded ? children : null}
       </Stack>
     </Box>
   )
@@ -341,11 +418,16 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [termsOpen, setTermsOpen] = useState(false)
   const [expandedSessionIds, setExpandedSessionIds] = useState<string[]>([])
   const [activeSessionDescription, setActiveSessionDescription] = useState<{ title: string; description: string } | null>(null)
+  const [sessionTicketSearch, setSessionTicketSearch] = useState<Record<string, string>>({})
 
   useEffect(() => {
     setActiveTab(firstTab)
     setHighestUnlockedIndex(0)
   }, [firstTab])
+
+  useEffect(() => {
+    setExpandedSessionIds(event.sessions.map((session) => session.uniqueId))
+  }, [event.sessions])
 
   const activeIndex = getStepIndex(tabs, activeTab)
   const isFinalStep = activeIndex >= 0 && activeIndex === tabs.length - 1
@@ -390,6 +472,13 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
   function handleCollapseAllSessions() {
     setExpandedSessionIds([])
+  }
+
+  function handleSessionTicketSearchChange(sessionUniqueId: string, value: string) {
+    setSessionTicketSearch((current) => ({
+      ...current,
+      [sessionUniqueId]: value,
+    }))
   }
 
   const areAllSessionsExpanded =
@@ -546,14 +635,84 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                 </Flex>
                               ) : null}
                               {event.sessions.map((session) => (
-                                <SessionTitleCard
-                                  key={session.uniqueId}
-                                  title={session.name}
-                                  description={session.description}
-                                  isExpanded={expandedSessionIds.includes(session.uniqueId)}
-                                  onToggle={() => handleSessionToggle(session.uniqueId)}
-                                  onOpenDescription={() => setActiveSessionDescription({ title: session.name, description: session.description ?? '' })}
-                                />
+                                (() => {
+                                  const searchValue = sessionTicketSearch[session.uniqueId] ?? ''
+                                  const filteredTickets = session.ticketTypes.filter((ticket) => {
+                                    const needle = searchValue.trim().toLowerCase()
+                                    if (!needle) return true
+                                    return (
+                                      ticket.name.toLowerCase().includes(needle) ||
+                                      (ticket.description?.toLowerCase().includes(needle) ?? false)
+                                    )
+                                  })
+
+                                  return (
+                                    <SessionTitleCard
+                                      key={session.uniqueId}
+                                      title={session.name}
+                                      description={session.description}
+                                      ticketCount={session.ticketTypes.length}
+                                      isExpanded={expandedSessionIds.includes(session.uniqueId)}
+                                      onToggle={() => handleSessionToggle(session.uniqueId)}
+                                      onOpenDescription={() => setActiveSessionDescription({ title: session.name, description: session.description ?? '' })}
+                                    >
+                                      {session.ticketTypes.length > 0 ? (
+                                        <Stack gap={4}>
+                                          <Flex justify='space-between' align={{ base: 'stretch', md: 'center' }} gap={3} direction={{ base: 'column', md: 'row' }}>
+                                            <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>
+                                              Available Tickets
+                                            </Text>
+                                            <Box position='relative' w='full' maxW={{ base: 'full', md: '280px' }}>
+                                              <Input
+                                                value={searchValue}
+                                                onChange={(event) => handleSessionTicketSearchChange(session.uniqueId, event.target.value)}
+                                                placeholder='Search tickets'
+                                                h='44px'
+                                                px={4}
+                                                pe={searchValue ? 11 : 4}
+                                                borderRadius='full'
+                                                borderColor='gray.300'
+                                                bg='white'
+                                                fontSize='sm'
+                                                _focusVisible={{ borderColor: 'gray.500', boxShadow: '0 0 0 1px var(--chakra-colors-gray-500)' }}
+                                              />
+                                              {searchValue ? (
+                                                <CloseButton
+                                                  aria-label='Clear ticket search'
+                                                  size='sm'
+                                                  position='absolute'
+                                                  top='50%'
+                                                  right='10px'
+                                                  transform='translateY(-50%)'
+                                                  borderRadius='full'
+                                                  color='gray.500'
+                                                  bg='gray.100'
+                                                  _hover={{ bg: 'gray.200', color: 'gray.700' }}
+                                                  onClick={() => handleSessionTicketSearchChange(session.uniqueId, '')}
+                                                />
+                                              ) : null}
+                                            </Box>
+                                          </Flex>
+                                          {filteredTickets.length > 0 ? (
+                                            <Stack gap={4}>
+                                              {filteredTickets.map((ticket) => (
+                                                <TicketCard key={ticket.uniqueId} ticket={ticket} />
+                                              ))}
+                                            </Stack>
+                                          ) : (
+                                            <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
+                                              <Text fontSize='sm' color='gray.600'>No tickets matched your search for this session.</Text>
+                                            </Box>
+                                          )}
+                                        </Stack>
+                                      ) : (
+                                        <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
+                                          <Text fontSize='sm' color='gray.600'>No tickets are currently mapped to this session.</Text>
+                                        </Box>
+                                      )}
+                                    </SessionTitleCard>
+                                  )
+                                })()
                               ))}
                             </Stack>
                           ) : null}
