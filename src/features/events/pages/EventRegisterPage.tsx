@@ -4,13 +4,14 @@ import { Box, Button, Container, Flex, Heading, HStack, Skeleton, SkeletonText, 
 import { AlertTriangle, ArrowLeft, ShieldCheck } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { client } from '@/api/client'
-import { fetchEventRegistration } from '@/api/events'
+import { fetchEventRegistrationBootstrap } from '@/api/events'
 import type { EventRegistrationPaymentMethod, EventRegistrationResponse, EventRegistrationSession } from '@/api/events'
 import { extractApiError } from '@/utils/errors'
 import { APP_ROUTES } from '@/utils/routes'
 import { EventRegisterWizard } from './EventRegisterWizard'
 
 interface EventRegistrationViewModel {
+  uniqueId: string
   title: string
   bannerUrl: string | null
   themeColor: string | null
@@ -33,6 +34,7 @@ interface EventRegistrationViewModel {
   paymentAccountCurrency: string | null
   paymentMethods: EventRegistrationPaymentMethod[]
   sessions: EventRegistrationSession[]
+  visibleTabs: string[]
   coverColor: string
 }
 
@@ -110,6 +112,7 @@ function EventRegisterUnavailableState({ message, onBack, onRetry }: { message: 
 
 function mapRegistrationToViewModel(registration: EventRegistrationResponse): EventRegistrationViewModel {
   return {
+    uniqueId: registration.uniqueId,
     title: registration.name,
     bannerUrl: resolveAssetUrl(registration.bannerUrl),
     themeColor: registration.themeColor,
@@ -132,6 +135,7 @@ function mapRegistrationToViewModel(registration: EventRegistrationResponse): Ev
     paymentAccountCurrency: registration.paymentAccountCurrency,
     paymentMethods: registration.paymentMethods,
     sessions: registration.sessions,
+    visibleTabs: registration.visibleTabs,
     coverColor: registration.themeColor ?? '#7551FF',
   }
 }
@@ -141,7 +145,7 @@ export function EventRegisterPage() {
   const { eventUniqueId = '' } = useParams<{ eventUniqueId?: string }>()
   const eventQuery = useQuery({
     queryKey: ['event-registration', eventUniqueId],
-    queryFn: () => fetchEventRegistration(eventUniqueId),
+    queryFn: () => fetchEventRegistrationBootstrap(eventUniqueId),
     enabled: Boolean(eventUniqueId),
     retry: 1,
   })

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { ChangeEvent, ReactNode } from 'react'
+import type { ReactNode } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
-  AspectRatio,
   Badge,
   Box,
   Button,
@@ -19,6 +19,8 @@ import {
   Portal,
   Separator,
   SimpleGrid,
+  Skeleton,
+  SkeletonText,
   Stack,
   Tabs,
   Text,
@@ -40,7 +42,15 @@ import {
   Users,
   X,
 } from 'lucide-react'
+import { chakra } from '@chakra-ui/react'
 import { format } from 'date-fns'
+import {
+  fetchEventRegistrationAttendeeInfo,
+  fetchEventRegistrationDescription,
+  fetchEventRegistrationPayment,
+  fetchEventRegistrationQuestionnaire,
+  fetchEventRegistrationSessions,
+} from '@/api/events'
 import { toaster } from '@/lib/toaster'
 import type {
   EventRegistrationPaymentMethod,
@@ -71,6 +81,7 @@ interface BannerSlide {
 }
 
 export interface EventRegisterWizardEvent {
+  uniqueId: string
   title: string
   bannerUrl: string | null
   themeColor: string | null
@@ -93,6 +104,7 @@ export interface EventRegisterWizardEvent {
   paymentAccountCurrency: string | null
   paymentMethods: EventRegistrationPaymentMethod[]
   sessions: EventRegistrationSession[]
+  visibleTabs?: string[]
 }
 
 function parseUtcDateTime(value: string | null | undefined) {
@@ -312,6 +324,17 @@ function getVisiblePaymentMethods(event: EventRegisterWizardEvent) {
 
 function getVisibleTabs(event: EventRegisterWizardEvent) {
   const tabs: Array<{ id: WizardTabId; label: string; icon: typeof FileText }> = []
+  const visibleTabs = event.visibleTabs ?? []
+
+  if (visibleTabs.length > 0) {
+    if (visibleTabs.includes('description')) tabs.push({ id: 'description', label: 'Description', icon: FileText })
+    if (visibleTabs.includes('sessions')) tabs.push({ id: 'sessions', label: 'Sessions', icon: CalendarDays })
+    if (visibleTabs.includes('attendee-info')) tabs.push({ id: 'attendee-info', label: 'Attendee Info', icon: Users })
+    if (visibleTabs.includes('questionnaire')) tabs.push({ id: 'questionnaire', label: 'Questionnaire', icon: MessageSquareText })
+    if (visibleTabs.includes('payment')) tabs.push({ id: 'payment', label: 'Payment', icon: CreditCard })
+    return tabs
+  }
+
   if (Boolean(event.description?.trim() || event.summary?.trim())) tabs.push({ id: 'description', label: 'Description', icon: FileText })
   tabs.push({ id: 'sessions', label: 'Sessions', icon: CalendarDays })
   if (event.sessions.some((session) => session.requiresAttendeeInfo)) tabs.push({ id: 'attendee-info', label: 'Attendee Info', icon: Users })
@@ -599,16 +622,14 @@ function TicketCard({
               </HStack>
             </Flex>
             {ticket.description ? (
-              <Text
-                fontSize='sm'
-                color='gray.600'
-                lineHeight='1.5'
-                display='-webkit-box'
-                overflow='hidden'
-                sx={{ WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}
-              >
-                {ticket.description}
-              </Text>
+            <Text
+              fontSize='sm'
+              color='gray.600'
+              lineHeight='1.5'
+              lineClamp={1}
+            >
+              {ticket.description}
+            </Text>
             ) : null}
           </Stack>
 
@@ -644,10 +665,9 @@ function TicketCard({
                 <Text as='span' fontSize='lg' fontWeight='800' lineHeight='1' color='gray.700'>-</Text>
               </Button>
               <Box flex='1' minW='84px' position='relative'>
-                <Box
-                  as='select'
+                <chakra.select
                   value={String(quantity)}
-                  onChange={(event: ChangeEvent<HTMLSelectElement>) => onSelectQuantity(Number(event.target.value))}
+                  onChange={(event) => onSelectQuantity(Number(event.target.value))}
                   w='full'
                   h='40px'
                   pl={4}
@@ -669,7 +689,7 @@ function TicketCard({
                       {option.label}
                     </option>
                   ))}
-                </Box>
+                </chakra.select>
                 <Flex
                   position='absolute'
                   insetY='0'
@@ -825,10 +845,44 @@ function SessionTitleCard({
   )
 }
 
+function SessionsTabSkeleton() {
+  return (
+    <Stack gap={4}>
+      <Flex justify='flex-end'>
+        <Skeleton h='38px' w='140px' borderRadius='full' />
+      </Flex>
+
+      <SimpleGrid columns={{ base: 1, xl: 3 }} gap={4}>
+        {[0, 1, 2].map((index) => (
+          <Box
+            key={index}
+            borderWidth='1px'
+            borderColor='gray.200'
+            borderRadius='20px'
+            bg='white'
+            overflow='hidden'
+            boxShadow='0 10px 24px rgba(15, 23, 42, 0.04)'
+          >
+            <Box px={4} py={4} borderBottomWidth='1px' borderBottomColor='gray.100' bg='gray.50'>
+              <Stack gap={3}>
+                <Skeleton h='18px' w='70%' borderRadius='full' />
+                <SkeletonText noOfLines={1} spacing='3' skeletonHeight='12px' />
+              </Stack>
+            </Box>
+            <Stack gap={4} px={4} py={4}>
+              <Skeleton h='44px' borderRadius='full' />
+              <Skeleton h='120px' borderRadius='18px' />
+            </Stack>
+          </Box>
+        ))}
+      </SimpleGrid>
+    </Stack>
+  )
+}
+
 export function EventRegisterWizard({ event, formAccent, onBack }: { event: EventRegisterWizardEvent; formAccent: string; onBack: () => void }) {
   const accentBackground = hexToRgba(formAccent, 0.18)
   const tabs = useMemo(() => getVisibleTabs(event), [event])
-  const bannerSlides = useMemo(() => getSessionBannerSlides(event), [event])
   const firstTab = tabs[0]?.id ?? 'sessions'
   const [activeTab, setActiveTab] = useState<WizardTabId>(firstTab)
   const [highestUnlockedIndex, setHighestUnlockedIndex] = useState(0)
@@ -843,6 +897,58 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
   const [pendingDeleteAction, setPendingDeleteAction] = useState<PendingDeleteAction | null>(null)
   const purchaseTimerWarningShownForRef = useRef<number | null>(null)
+  const descriptionQuery = useQuery({
+    queryKey: ['event-registration', event.uniqueId, 'description'],
+    queryFn: () => fetchEventRegistrationDescription(event.uniqueId),
+    enabled: tabs.some((tab) => tab.id === 'description') && activeTab === 'description',
+    retry: 1,
+  })
+  const sessionsQuery = useQuery({
+    queryKey: ['event-registration', event.uniqueId, 'sessions'],
+    queryFn: () => fetchEventRegistrationSessions(event.uniqueId),
+    enabled: tabs.some((tab) => tab.id === 'sessions') && activeTab === 'sessions',
+    retry: 1,
+  })
+  const attendeeInfoQuery = useQuery({
+    queryKey: ['event-registration', event.uniqueId, 'attendee-info'],
+    queryFn: () => fetchEventRegistrationAttendeeInfo(event.uniqueId),
+    enabled: tabs.some((tab) => tab.id === 'attendee-info') && activeTab === 'attendee-info',
+    retry: 1,
+  })
+  const questionnaireQuery = useQuery({
+    queryKey: ['event-registration', event.uniqueId, 'questionnaire'],
+    queryFn: () => fetchEventRegistrationQuestionnaire(event.uniqueId),
+    enabled: tabs.some((tab) => tab.id === 'questionnaire') && activeTab === 'questionnaire',
+    retry: 1,
+  })
+  const paymentQuery = useQuery({
+    queryKey: ['event-registration', event.uniqueId, 'payment'],
+    queryFn: () => fetchEventRegistrationPayment(event.uniqueId),
+    enabled: tabs.some((tab) => tab.id === 'payment') && activeTab === 'payment',
+    retry: 1,
+  })
+
+  const descriptionData = descriptionQuery.data ?? event
+  const sessionsData =
+    sessionsQuery.data?.sessions ??
+    attendeeInfoQuery.data?.sessions ??
+    questionnaireQuery.data?.sessions ??
+    event.sessions ??
+    []
+  const paymentMethodsData = paymentQuery.data?.paymentMethods ?? event.paymentMethods ?? []
+  const visiblePaymentMethods = paymentMethodsData.filter((method) => !method.isOrganizerOnly || event.isOrganizer)
+  const eventData = {
+    ...event,
+    description: descriptionData.description ?? event.description,
+    summary: descriptionData.summary ?? event.summary,
+    termsConditions: descriptionData.termsConditions ?? event.termsConditions,
+    sessions: sessionsData,
+    paymentMethods: paymentMethodsData,
+  }
+  const currentEvent = eventData
+  const sessions = currentEvent.sessions
+  const bannerSlides = useMemo(() => getSessionBannerSlides(currentEvent), [currentEvent])
+  const sessionsLoading = sessionsQuery.isLoading || (sessionsQuery.isFetching && sessions.length === 0)
 
   useEffect(() => {
     setActiveTab(firstTab)
@@ -850,8 +956,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   }, [firstTab])
 
   useEffect(() => {
-    setExpandedSessionIds(event.sessions.map((session) => session.uniqueId))
-  }, [event.sessions])
+    setExpandedSessionIds(sessions.map((session) => session.uniqueId))
+  }, [sessions])
 
   useEffect(() => {
     if (purchaseTimerStartedAt === null) return
@@ -864,8 +970,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
   const activeIndex = getStepIndex(tabs, activeTab)
   const isFinalStep = activeIndex >= 0 && activeIndex === tabs.length - 1
-  const visiblePaymentMethods = getVisiblePaymentMethods(event)
-  const purchaseTimerDurationMs = Math.max(event.purchaseTimeLimitMinutes, 1) * 60 * 1000
+  const purchaseTimerDurationMs = Math.max(currentEvent.purchaseTimeLimitMinutes, 1) * 60 * 1000
   const purchaseTimerRemainingMs = purchaseTimerStartedAt === null ? null : purchaseTimerStartedAt + purchaseTimerDurationMs - purchaseTimerNow
   const purchaseTimerVisible = purchaseTimerStartedAt !== null
   const purchaseTimerExpired = purchaseTimerRemainingMs !== null && purchaseTimerRemainingMs <= 0
@@ -876,7 +981,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       : getPurchaseTimerVisuals(Math.max(purchaseTimerRemainingMs, 0), purchaseTimerDurationMs)
   const selectedTicketSummary = useMemo<SelectedTicketSummaryItem[]>(
     () =>
-      event.sessions.flatMap((session) =>
+      sessions.flatMap((session) =>
         session.ticketTypes.flatMap((ticket) => {
           const quantity = selectedTicketQuantities[ticket.uniqueId] ?? 0
           if (quantity <= 0) return []
@@ -897,7 +1002,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
           ]
         }),
       ),
-    [event.sessions, selectedTicketQuantities],
+    [sessions, selectedTicketQuantities],
   )
   const selectedTicketSummaryBySession = useMemo(
     () =>
@@ -971,7 +1076,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   }
 
   function handleExpandAllSessions() {
-    setExpandedSessionIds(event.sessions.map((session) => session.uniqueId))
+    setExpandedSessionIds(sessions.map((session) => session.uniqueId))
   }
 
   function handleCollapseAllSessions() {
@@ -1061,7 +1166,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setHighestUnlockedIndex(0)
     setTermsAccepted(false)
     setTermsOpen(false)
-    setExpandedSessionIds(event.sessions.map((session) => session.uniqueId))
+    setExpandedSessionIds(sessions.map((session) => session.uniqueId))
     setActiveSessionDescription(null)
     setSessionTicketSearch({})
     setSelectedTicketQuantities({})
@@ -1108,7 +1213,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   }, [activeIndex, selectedTicketCount, sessionsStepIndex, tabs])
 
   const areAllSessionsExpanded =
-    event.sessions.length > 0 && expandedSessionIds.length === event.sessions.length
+    sessions.length > 0 && expandedSessionIds.length === sessions.length
 
   return (
     <Box minH='100dvh' bg={accentBackground} color='gray.900'>
@@ -1131,7 +1236,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                       <Stack gap={3}>
                         <Heading fontSize={{ base: '2xl', md: '3xl' }} lineHeight='1.08' letterSpacing='-0.04em' color='gray.900'>{event.title}</Heading>
                         <Text fontSize={{ base: 'sm', md: 'md' }} color='gray.700' lineHeight='1.7'><Text as='span' fontWeight='400'>By:</Text>{' '}<Text as='span' fontWeight='700' color='gray.900'>{event.organizer}</Text></Text>
-                        {event.summary ? <Text fontSize='sm' color='gray.600' lineHeight='1.7'>{event.summary}</Text> : null}
+                        {currentEvent.summary ? <Text fontSize='sm' color='gray.600' lineHeight='1.7'>{currentEvent.summary}</Text> : null}
                       </Stack>
                       <Stack gap={3}>
                         <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='gray.50' overflow='hidden'>
@@ -1471,7 +1576,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
               </Box>
             </Portal>
 
-            {event.termsConditions ? (
+            {currentEvent.termsConditions ? (
               <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' px={{ base: 4, md: 5 }} py={4} boxShadow='0 12px 30px rgba(15, 23, 42, 0.08)'>
                 <Flex justify='space-between' align={{ base: 'stretch', md: 'center' }} gap={4} direction={{ base: 'column', md: 'row' }}>
                   <Checkbox.Root checked={termsAccepted} onCheckedChange={(details) => setTermsAccepted(details.checked === true)}>
@@ -1557,14 +1662,16 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                         <Stack gap={6}>
                           {tab.id === 'description' ? (
                             <Stack gap={4}>
-                              {event.summary ? <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}><Text fontSize='sm' fontWeight='700' color='gray.900' mb={2}>Summary</Text><Text color='gray.700' lineHeight='1.7'>{event.summary}</Text></Box> : null}
-                              {event.description ? <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='white' p={5}>{isHtmlContent(event.description) ? <RichTextBlock html={event.description} /> : <Text color='gray.700' lineHeight='1.7'>{event.description}</Text>}</Box> : null}
+                              {currentEvent.summary ? <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}><Text fontSize='sm' fontWeight='700' color='gray.900' mb={2}>Summary</Text><Text color='gray.700' lineHeight='1.7'>{currentEvent.summary}</Text></Box> : null}
+                              {currentEvent.description ? <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='white' p={5}>{isHtmlContent(currentEvent.description) ? <RichTextBlock html={currentEvent.description} /> : <Text color='gray.700' lineHeight='1.7'>{currentEvent.description}</Text>}</Box> : null}
                             </Stack>
                           ) : null}
 
                           {tab.id === 'sessions' ? (
                             <Stack gap={4}>
-                              {event.sessions.length > 0 ? (
+                              {sessionsLoading ? (
+                                <SessionsTabSkeleton />
+                              ) : sessions.length > 0 ? (
                                 <Flex justify='flex-end' gap={2} wrap='wrap'>
                                   <Button
                                     h='38px'
@@ -1587,7 +1694,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                   </Button>
                                 </Flex>
                               ) : null}
-                              {event.sessions.map((session) => (
+                              {sessions.map((session) => (
                                 (() => {
                                   const searchValue = sessionTicketSearch[session.uniqueId] ?? ''
                                   const filteredTickets = session.ticketTypes.filter((ticket) => {
@@ -1677,19 +1784,19 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
                           {tab.id === 'attendee-info' ? (
                             <SupportCard title='Attendee Info' subtitle='These sessions require attendee details before registration can continue.' icon={<Users size={18} />}>
-                              <Stack gap={4}>{event.sessions.filter((session) => session.requiresAttendeeInfo).map((session) => <Box key={session.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}><HStack justify='space-between' gap={4} align='start' flexWrap='wrap'><Stack gap={1}><Text fontWeight='700' color='gray.900'>{session.name}</Text><Text fontSize='sm' color='gray.600'>Attendee information will be collected for this session.</Text></Stack><Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>Required</Badge></HStack></Box>)}</Stack>
+                              <Stack gap={4}>{sessions.filter((session) => session.requiresAttendeeInfo).map((session) => <Box key={session.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}><HStack justify='space-between' gap={4} align='start' flexWrap='wrap'><Stack gap={1}><Text fontWeight='700' color='gray.900'>{session.name}</Text><Text fontSize='sm' color='gray.600'>Attendee information will be collected for this session.</Text></Stack><Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>Required</Badge></HStack></Box>)}</Stack>
                             </SupportCard>
                           ) : null}
 
                           {tab.id === 'questionnaire' ? (
                             <SupportCard title='Questionnaire' subtitle='Custom forms and questions mapped to the sessions are rendered here.' icon={<MessageSquareText size={18} />}>
-                              <Stack gap={5}>{event.sessions.filter((session) => session.customForms.length > 0 || session.customQuestions.length > 0).map((session) => <Box key={session.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='20px' p={5} bg='gray.50'><Stack gap={4}><Box><Text fontSize='lg' fontWeight='700' color='gray.900'>{session.name}</Text><Text fontSize='sm' color='gray.600'>Questionnaire content mapped to this session.</Text></Box>{session.customForms.length > 0 ? <Stack gap={3}><Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>Custom Forms</Text><SimpleGrid columns={{ base: 1, lg: 2 }} gap={3}>{session.customForms.map((form) => <Box key={form.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={4}><Text fontWeight='700' color='gray.900'>{form.headerText ?? form.name}</Text>{form.description ? <Text mt={2} fontSize='sm' color='gray.600' lineHeight='1.7'>{form.description}</Text> : null}</Box>)}</SimpleGrid></Stack> : null}{session.customQuestions.length > 0 ? <Stack gap={3}><Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>Custom Questions</Text><Stack gap={3}>{session.customQuestions.map((question) => <Box key={question.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={4}><HStack justify='space-between' gap={4} align='start' flexWrap='wrap'><Stack gap={1}><Text fontWeight='700' color='gray.900'>{question.label}</Text><Text fontSize='sm' color='gray.600'>{question.controlType}</Text></Stack><Badge colorPalette={question.required ? 'red' : 'gray'} variant='subtle' borderRadius='full' px={3} py={1}>{question.required ? 'Required' : 'Optional'}</Badge></HStack></Box>)}</Stack></Stack> : null}</Stack></Box>)}</Stack>
+                              <Stack gap={5}>{sessions.filter((session) => session.customForms.length > 0 || session.customQuestions.length > 0).map((session) => <Box key={session.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='20px' p={5} bg='gray.50'><Stack gap={4}><Box><Text fontSize='lg' fontWeight='700' color='gray.900'>{session.name}</Text><Text fontSize='sm' color='gray.600'>Questionnaire content mapped to this session.</Text></Box>{session.customForms.length > 0 ? <Stack gap={3}><Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>Custom Forms</Text><SimpleGrid columns={{ base: 1, lg: 2 }} gap={3}>{session.customForms.map((form) => <Box key={form.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={4}><Text fontWeight='700' color='gray.900'>{form.headerText ?? form.name}</Text>{form.description ? <Text mt={2} fontSize='sm' color='gray.600' lineHeight='1.7'>{form.description}</Text> : null}</Box>)}</SimpleGrid></Stack> : null}{session.customQuestions.length > 0 ? <Stack gap={3}><Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>Custom Questions</Text><Stack gap={3}>{session.customQuestions.map((question) => <Box key={question.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={4}><HStack justify='space-between' gap={4} align='start' flexWrap='wrap'><Stack gap={1}><Text fontWeight='700' color='gray.900'>{question.label}</Text><Text fontSize='sm' color='gray.600'>{question.controlType}</Text></Stack><Badge colorPalette={question.required ? 'red' : 'gray'} variant='subtle' borderRadius='full' px={3} py={1}>{question.required ? 'Required' : 'Optional'}</Badge></HStack></Box>)}</Stack></Stack> : null}</Stack></Box>)}</Stack>
                             </SupportCard>
                           ) : null}
 
                           {tab.id === 'payment' ? (
                             <SupportCard title='Payment' subtitle='Show the mapped payment methods and protect organizer-only cheque payments.' icon={<CreditCard size={18} />}>
-                              <Stack gap={4}>{visiblePaymentMethods.length > 0 ? <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>{visiblePaymentMethods.map((method) => <Box key={method.paymentMethod} borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'><HStack justify='space-between' gap={4} align='start' flexWrap='wrap'><Stack gap={1}><Text fontWeight='700' color='gray.900'>{method.label}</Text><Text fontSize='sm' color='gray.600'>Available for this registration flow.</Text></Stack>{method.isOrganizerOnly ? <Badge colorPalette='purple' variant='subtle' borderRadius='full' px={3} py={1}>Organizer only</Badge> : null}</HStack></Box>)}</SimpleGrid> : <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'><Text color='gray.600' fontSize='sm'>No public payment methods are currently mapped for this event.</Text></Box>}</Stack>
+                              <Stack gap={4}>{paymentQuery.isFetching && visiblePaymentMethods.length === 0 ? <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}><Text fontSize='sm' color='gray.600'>Loading payment methods...</Text></Box> : visiblePaymentMethods.length > 0 ? <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>{visiblePaymentMethods.map((method) => <Box key={method.paymentMethod} borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'><HStack justify='space-between' gap={4} align='start' flexWrap='wrap'><Stack gap={1}><Text fontWeight='700' color='gray.900'>{method.label}</Text><Text fontSize='sm' color='gray.600'>Available for this registration flow.</Text></Stack>{method.isOrganizerOnly ? <Badge colorPalette='purple' variant='subtle' borderRadius='full' px={3} py={1}>Organizer only</Badge> : null}</HStack></Box>)}</SimpleGrid> : <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'><Text color='gray.600' fontSize='sm'>No public payment methods are currently mapped for this event.</Text></Box>}</Stack>
                             </SupportCard>
                           ) : null}
                         </Stack>
@@ -1706,7 +1813,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                           bg={formAccent}
                           _hover={{ bg: hexToRgba(formAccent, 0.88), transform: 'translateY(-1px)' }}
                           onClick={handleContinue}
-                          disabled={!canContinueForward || (isFinalStep && Boolean(event.termsConditions) && !termsAccepted)}
+                          disabled={!canContinueForward || (isFinalStep && Boolean(currentEvent.termsConditions) && !termsAccepted)}
                         >
                           <HStack gap={2}>
                             <Text as='span'>Continue</Text>
@@ -1723,13 +1830,13 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
         </Container>
       </Flex>
 
-      {event.termsConditions ? (
+      {currentEvent.termsConditions ? (
         <Dialog.Root open={termsOpen} onOpenChange={(details) => setTermsOpen(details.open)} size='xl'>
           <Dialog.Backdrop backdropFilter='blur(8px)' bg='blackAlpha.600' />
           <Dialog.Positioner alignItems='center' justifyContent='center' px={{ base: 4, md: 6 }} py={{ base: 6, md: 8 }}>
             <Dialog.Content borderRadius='28px' overflow='hidden' bg='white' boxShadow='0 30px 70px rgba(15, 23, 42, 0.25)' maxH='80vh' display='flex' flexDirection='column'>
               <Box px={{ base: 4, md: 6 }} py={4} borderBottomWidth='1px' borderBottomColor='gray.200'><Flex justify='space-between' align='start' gap={4}><Stack gap={1}><Text fontSize='xs' textTransform='uppercase' letterSpacing='0.14em' color='gray.500' fontWeight='700'>Terms & Conditions</Text><Heading fontSize={{ base: 'xl', md: '2xl' }} color='gray.900' letterSpacing='-0.03em'>Registration agreement</Heading></Stack><CloseButton onClick={() => setTermsOpen(false)} /></Flex></Box>
-              <Box px={{ base: 4, md: 6 }} py={{ base: 5, md: 6 }} flex='1' overflowY='auto'>{isHtmlContent(event.termsConditions) ? <RichTextBlock html={event.termsConditions} /> : <Text color='gray.700' lineHeight='1.75'>{event.termsConditions}</Text>}</Box>
+              <Box px={{ base: 4, md: 6 }} py={{ base: 5, md: 6 }} flex='1' overflowY='auto'>{isHtmlContent(currentEvent.termsConditions) ? <RichTextBlock html={currentEvent.termsConditions} /> : <Text color='gray.700' lineHeight='1.75'>{currentEvent.termsConditions}</Text>}</Box>
             </Dialog.Content>
           </Dialog.Positioner>
         </Dialog.Root>

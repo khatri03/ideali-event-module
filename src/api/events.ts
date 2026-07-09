@@ -301,6 +301,8 @@ const eventRegistrationResponseSchema = z.object({
   isOrganizer: z.boolean().optional(),
   PaymentAccountCurrency: z.string().nullable().optional(),
   paymentAccountCurrency: z.string().nullable().optional(),
+  VisibleTabs: z.array(z.string()).optional(),
+  visibleTabs: z.array(z.string()).optional(),
   PaymentMethods: z.array(eventRegistrationPaymentMethodSchema).optional(),
   paymentMethods: z.array(eventRegistrationPaymentMethodSchema).optional(),
   Sessions: z.array(eventRegistrationSessionSchema).optional(),
@@ -806,6 +808,7 @@ export interface EventRegistrationResponse {
   registrationBlockedReason: string | null
   isOrganizer: boolean
   paymentAccountCurrency: string | null
+  visibleTabs: string[]
   paymentMethods: EventRegistrationPaymentMethod[]
   sessions: EventRegistrationSession[]
 }
@@ -915,6 +918,7 @@ function parseEventRegistrationResponse(payload: unknown): EventRegistrationResp
     isOrganizer: response.IsOrganizer ?? response.isOrganizer ?? false,
     paymentAccountCurrency:
       response.PaymentAccountCurrency ?? response.paymentAccountCurrency ?? null,
+    visibleTabs: response.VisibleTabs ?? response.visibleTabs ?? [],
     paymentMethods: (response.PaymentMethods ?? response.paymentMethods ?? []).map((method) => ({
       paymentMethod: method.PaymentMethod ?? method.paymentMethod ?? "",
       label: method.Label ?? method.label ?? "",
@@ -926,6 +930,36 @@ function parseEventRegistrationResponse(payload: unknown): EventRegistrationResp
 
 export async function fetchEventRegistration(eventUniqueId: string): Promise<EventRegistrationResponse> {
   const res = await client.get<unknown>(`${API_ROUTES.eventRegister(eventUniqueId)}`)
+  return parseEventRegistrationResponse(res.data)
+}
+
+export async function fetchEventRegistrationBootstrap(eventUniqueId: string): Promise<EventRegistrationResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventRegisterBootstrap(eventUniqueId)}`)
+  return parseEventRegistrationResponse(res.data)
+}
+
+export async function fetchEventRegistrationDescription(eventUniqueId: string): Promise<EventRegistrationResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventRegisterDescription(eventUniqueId)}`)
+  return parseEventRegistrationResponse(res.data)
+}
+
+export async function fetchEventRegistrationSessions(eventUniqueId: string): Promise<EventRegistrationResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventRegisterSessions(eventUniqueId)}`)
+  return parseEventRegistrationResponse(res.data)
+}
+
+export async function fetchEventRegistrationAttendeeInfo(eventUniqueId: string): Promise<EventRegistrationResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventRegisterAttendeeInfo(eventUniqueId)}`)
+  return parseEventRegistrationResponse(res.data)
+}
+
+export async function fetchEventRegistrationQuestionnaire(eventUniqueId: string): Promise<EventRegistrationResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventRegisterQuestionnaire(eventUniqueId)}`)
+  return parseEventRegistrationResponse(res.data)
+}
+
+export async function fetchEventRegistrationPayment(eventUniqueId: string): Promise<EventRegistrationResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventRegisterPayment(eventUniqueId)}`)
   return parseEventRegistrationResponse(res.data)
 }
 
