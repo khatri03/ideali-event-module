@@ -49,9 +49,6 @@ type WizardTabId = 'description' | 'sessions' | 'attendee-info' | 'questionnaire
 
 interface BannerSlide {
   imageUrl: string
-  title: string
-  subtitle: string
-  badge?: string
 }
 
 export interface EventRegisterWizardEvent {
@@ -186,95 +183,45 @@ function AutoImageCarousel({ slides, accentColor, height = { base: '220px', md: 
       onMouseLeave={() => setIsPaused(false)}
       onFocusCapture={() => setIsPaused(true)}
       onBlurCapture={() => setIsPaused(false)}
-      bg='gray.900'
+      bg='gray.100'
     >
       {slides.map((slide, index) => (
         <Box
-          key={`${slide.imageUrl}-${slide.title}-${index}`}
+          key={`${slide.imageUrl}-${index}`}
           position='absolute'
           inset={0}
           opacity={index === activeSlide ? 1 : 0}
           transition='opacity 700ms ease'
           pointerEvents={index === activeSlide ? 'auto' : 'none'}
         >
-          <Image src={slide.imageUrl} alt={slide.title} w='full' h='full' objectFit='cover' objectPosition='center' />
-          <Box position='absolute' inset={0} bg='linear-gradient(90deg, rgba(10, 16, 31, 0.78) 0%, rgba(10, 16, 31, 0.32) 58%, rgba(10, 16, 31, 0.08) 100%)' />
-          <Stack position='absolute' left={{ base: 4, md: 6 }} right={{ base: 4, md: 6 }} bottom={{ base: 4, md: 6 }} top='auto' gap={2} color='white'>
-            {slide.badge ? (
-              <Badge alignSelf='start' colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1} bg='blackAlpha.400' color='white'>
-                {slide.badge}
-              </Badge>
-            ) : null}
-            <Heading fontSize={{ base: 'xl', md: '2xl' }} lineHeight='1.1' letterSpacing='-0.03em'>
-              {slide.title}
-            </Heading>
-            <Text fontSize={{ base: 'sm', md: 'md' }} color='whiteAlpha.900' lineHeight='1.6' maxW='3xl'>
-              {slide.subtitle}
-            </Text>
-          </Stack>
+          <Image src={slide.imageUrl} alt='' aria-hidden='true' w='full' h='full' objectFit='cover' objectPosition='center' />
         </Box>
       ))}
 
       {slides.length > 1 ? (
-        <Box position='absolute' left={4} right={4} top={4}>
-          <Flex justify='space-between' align='start' gap={3} wrap='wrap'>
-            <Badge borderRadius='full' px={3} py={1} bg='blackAlpha.500' color='white' borderWidth='1px' borderColor='whiteAlpha.300'>
-              {activeSlide + 1} / {slides.length}
-            </Badge>
-            <HStack gap={2} ml='auto'>
-              {slides.map((slide, index) => (
-                <Button
-                  key={`${slide.imageUrl}-dot-${index}`}
-                  aria-label={`Show slide ${index + 1}`}
-                  onClick={() => setActiveSlide(index)}
-                  w='10px'
-                  h='10px'
-                  minW='10px'
-                  p={0}
-                  borderRadius='full'
-                  borderWidth='1px'
-                  borderColor='whiteAlpha.500'
-                  bg={index === activeSlide ? accentColor : 'whiteAlpha.400'}
-                  boxShadow={index === activeSlide ? `0 0 0 3px ${hexToRgba(accentColor, 0.25)}` : 'none'}
-                  transition='all 0.2s ease'
-                />
-              ))}
-            </HStack>
-          </Flex>
-        </Box>
-      ) : null}
-
-      {slides.length > 1 ? (
-        <Box position='absolute' bottom={4} right={4}>
-          <HStack gap={2}>
-            <Button
-              size='sm'
-              variant='outline'
-              borderRadius='999px'
-              borderColor='whiteAlpha.300'
-              color='white'
-              bg='blackAlpha.400'
-              onClick={() => setActiveSlide((current) => (current - 1 + slides.length) % slides.length)}
-            >
-              Prev
-            </Button>
-            <Button
-              size='sm'
-              borderRadius='999px'
-              color='white'
-              bg={accentColor}
-              _hover={{ bg: hexToRgba(accentColor, 0.86) }}
-              onClick={() => setActiveSlide((current) => (current + 1) % slides.length)}
-            >
-              Next
-            </Button>
+        <Box position='absolute' left={0} right={0} bottom={4}>
+          <HStack gap={2} justify='center'>
+            {slides.map((slide, index) => (
+              <Button
+                key={`${slide.imageUrl}-dot-${index}`}
+                aria-label={`Show slide ${index + 1}`}
+                onClick={() => setActiveSlide(index)}
+                w='10px'
+                h='10px'
+                minW='10px'
+                p={0}
+                borderRadius='full'
+                borderWidth='1px'
+                borderColor='whiteAlpha.500'
+                bg={index === activeSlide ? accentColor : 'whiteAlpha.400'}
+                boxShadow={index === activeSlide ? `0 0 0 3px ${hexToRgba(accentColor, 0.25)}` : 'none'}
+                transition='all 0.2s ease'
+              />
+            ))}
           </HStack>
         </Box>
       ) : null}
 
-      {slides.length > 1 ? (
-        <Box position='absolute' insetInline={0} bottom={0} h='1px' bg={hexToRgba(accentColor, 0.5)} />
-      ) : null}
     </Box>
   )
 }
@@ -285,9 +232,6 @@ function getSessionBannerSlides(event: EventRegisterWizardEvent) {
   if (event.bannerUrl) {
     slides.push({
       imageUrl: event.bannerUrl,
-      title: event.title,
-      subtitle: event.summary ?? event.description ?? 'Event banner',
-      badge: 'Event banner',
     })
   }
 
@@ -295,9 +239,6 @@ function getSessionBannerSlides(event: EventRegisterWizardEvent) {
     if (!session.bannerUrl) return
     slides.push({
       imageUrl: session.bannerUrl,
-      title: session.name,
-      subtitle: session.description ?? 'Session banner',
-      badge: 'Session banner',
     })
   })
 
@@ -378,7 +319,7 @@ function SessionSection({ session }: { session: EventRegistrationSession }) {
     <Box borderWidth='1px' borderColor='gray.200' borderRadius='24px' bg='white' p={{ base: 4, md: 6 }}>
       <Stack gap={5}>
         {session.bannerUrl ? (
-          <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' overflow='hidden' bg='gray.900'>
+          <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' overflow='hidden' bg='gray.100'>
             <AspectRatio ratio={16 / 6}>
               <Image src={session.bannerUrl} alt={session.name} w='full' h='full' objectFit='cover' objectPosition='center' />
             </AspectRatio>
@@ -477,7 +418,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
               <Box h='6px' bg={formAccent} />
               <Box p={{ base: 4, md: 6 }}>
                 <SimpleGrid columns={{ base: 1, lg: 12 }} gap={6} alignItems='stretch'>
-                  <Box gridColumn={{ lg: 'span 8' }} borderWidth='1px' borderColor='gray.200' borderRadius='24px' overflow='hidden' bg={event.bannerUrl ? 'gray.900' : 'gray.100'}>
+                  <Box gridColumn={{ lg: 'span 8' }} borderWidth='1px' borderColor='gray.200' borderRadius='24px' overflow='hidden' bg='gray.100'>
                     {bannerSlides.length > 0 ? (
                       <AutoImageCarousel slides={bannerSlides} accentColor={formAccent} />
                     ) : (
@@ -497,7 +438,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                           <HStack gap={3} align='start' px={4} py={3} borderBottomWidth='1px' borderBottomColor='gray.200'><Box color='gray.500' mt={0.5}><ChevronRight size={18} /></Box><Box><Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>Ends At</Text><Text mt={1} fontSize='sm' fontWeight='700' color='gray.900'>{formatDateTime(event.endDate)}</Text></Box></HStack>
                           <HStack gap={3} align='start' px={4} py={3}><Box color='gray.500' mt={0.5}><MapPin size={18} /></Box><Box><Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>Venue</Text>{event.locationMapUrl ? <Link href={event.locationMapUrl} target='_blank' rel='noopener noreferrer' mt={1} display='inline-flex' alignItems='center' gap={1.5} fontSize='sm' fontWeight='700' color={formAccent} textDecoration='underline' textUnderlineOffset='3px' title='Open venue location in a new tab'>{event.location}<ExternalLink size={14} /></Link> : <Text mt={1} fontSize='sm' fontWeight='700' color='gray.900'>{event.location}</Text>}</Box></HStack>
                         </Box>
-                        <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' p={4} bg='white'><Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>Registration status</Text><Text mt={2} fontSize='sm' fontWeight='700' color='gray.900'>{event.registrationStatus}</Text><Text mt={1} fontSize='sm' color='gray.600'>Times shown in your local time zone.</Text></Box>
                       </Stack>
                     </Stack>
                   </Box>
@@ -597,9 +537,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                               <AutoImageCarousel
                                 slides={event.sessions.filter((session) => session.bannerUrl).map((session) => ({
                                   imageUrl: session.bannerUrl as string,
-                                  title: session.name,
-                                  subtitle: session.description ?? 'Session banner',
-                                  badge: 'Session banner',
                                 }))}
                                 accentColor={formAccent}
                                 height={{ base: '200px', md: '260px' }}
