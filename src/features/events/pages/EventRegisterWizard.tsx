@@ -266,95 +266,40 @@ function SupportCard({ title, subtitle, icon, children }: { title: string; subti
   )
 }
 
-function SessionTicketCard({ ticket }: { ticket: EventRegistrationTicket }) {
-  const activePricePeriod = getTicketPricePeriod(ticket)
-  const remaining = getTicketRemaining(ticket)
-  const price = activePricePeriod?.amount ?? ticket.fullPrice
-
+function SessionTitleCard({
+  title,
+  isExpanded,
+  onToggle,
+}: {
+  title: string
+  isExpanded: boolean
+  onToggle: () => void
+}) {
   return (
-    <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' p={4} bg='gray.50'>
-      <Flex justify='space-between' gap={4} align='start' wrap='wrap'>
-        <Stack gap={1} flex='1' minW='220px'>
-          <Text fontWeight='700' color='gray.900'>{ticket.name}</Text>
-          {ticket.description ? <Text fontSize='sm' color='gray.600' lineHeight='1.6'>{ticket.description}</Text> : null}
-        </Stack>
-        <Stack gap={1} align='end'>
-          <Text fontSize='xl' fontWeight='800' color='gray.900'>{formatAmount(price)}</Text>
-          <Text fontSize='xs' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>per ticket</Text>
-        </Stack>
+    <Box borderWidth='1px' borderColor={isExpanded ? 'gray.300' : 'gray.200'} borderRadius='24px' bg='white' p={{ base: 5, md: 6 }} boxShadow='0 16px 40px rgba(15, 23, 42, 0.06)'>
+      <Flex align='center' justify='space-between' gap={4}>
+        <Heading fontSize='lg' color='gray.900' letterSpacing='-0.02em'>{title}</Heading>
+        <Button
+          onClick={onToggle}
+          aria-label={isExpanded ? `Collapse ${title}` : `Expand ${title}`}
+          aria-expanded={isExpanded}
+          minW='0'
+          w='32px'
+          h='32px'
+          p='0'
+          borderRadius='full'
+          borderWidth='1px'
+          borderColor={isExpanded ? 'gray.400' : 'gray.300'}
+          bg={isExpanded ? 'gray.200' : 'gray.100'}
+          color='gray.800'
+          _hover={{ bg: 'gray.200', borderColor: 'gray.500' }}
+          _active={{ bg: 'gray.300', borderColor: 'gray.600' }}
+        >
+          <Box display='inline-flex' transform={isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'} transition='transform 0.2s ease'>
+            <ChevronRight size={14} />
+          </Box>
+        </Button>
       </Flex>
-      <HStack gap={2} mt={4} flexWrap='wrap'>
-        <Badge colorPalette={ticket.isActive ? 'green' : 'gray'} variant='subtle' borderRadius='full' px={3} py={1}>{ticket.isActive ? 'Active' : 'Inactive'}</Badge>
-        <Badge colorPalette='gray' variant='subtle' borderRadius='full' px={3} py={1}>{remaining === null ? 'Availability not set' : `${remaining} available`}</Badge>
-        <Badge colorPalette={activePricePeriod ? 'blue' : 'gray'} variant='subtle' borderRadius='full' px={3} py={1}>{activePricePeriod?.name ?? 'Standard price'}</Badge>
-      </HStack>
-      {ticket.pricePeriods.length > 0 ? (
-        <Stack gap={3} mt={4}>
-          <Separator borderColor='gray.200' />
-          <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>Pricing windows</Text>
-          <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
-            {ticket.pricePeriods.map((period) => (
-              <Box key={period.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={3}>
-                <Flex justify='space-between' gap={3} align='start' wrap='wrap'>
-                  <Stack gap={1}>
-                    <Text fontSize='sm' fontWeight='700' color='gray.900'>{period.name ?? 'Price window'}</Text>
-                    <Text fontSize='xs' color='gray.500'>{formatDateTimeRange(period.startDateTime, period.endDateTime)}</Text>
-                  </Stack>
-                  <Stack gap={1} align='end'>
-                    <Text fontSize='sm' fontWeight='700' color='gray.900'>{formatAmount(period.amount)}</Text>
-                    <Badge colorPalette={period.uniqueId === activePricePeriod?.uniqueId ? 'green' : 'gray'} variant='subtle' borderRadius='full' px={2} py={0.5}>{period.currentStatus}</Badge>
-                  </Stack>
-                </Flex>
-              </Box>
-            ))}
-          </SimpleGrid>
-        </Stack>
-      ) : null}
-    </Box>
-  )
-}
-
-function SessionSection({ session }: { session: EventRegistrationSession }) {
-  return (
-    <Box borderWidth='1px' borderColor='gray.200' borderRadius='24px' bg='white' p={{ base: 4, md: 6 }}>
-      <Stack gap={5}>
-        <Flex justify='space-between' align='start' gap={4} wrap='wrap'>
-          <Stack gap={2} flex='1' minW='240px'>
-            <Heading fontSize='xl' color='gray.900' letterSpacing='-0.02em'>{session.name}</Heading>
-            {session.description ? <Text color='gray.600' fontSize='sm' lineHeight='1.7'>{session.description}</Text> : null}
-          </Stack>
-          <Stack gap={2} align='end'>
-            <Badge colorPalette='gray' variant='subtle' borderRadius='full' px={3} py={1}>{session.setupState}</Badge>
-            <Badge colorPalette='gray' variant='outline' borderRadius='full' px={3} py={1}>{session.bookingStatus}</Badge>
-          </Stack>
-        </Flex>
-
-        <SimpleGrid columns={{ base: 1, md: 3 }} gap={3}>
-          <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
-            <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>Starts At</Text>
-            <Text mt={2} fontSize='sm' fontWeight='700' color='gray.900'>{formatDateTime(session.startDate)}</Text>
-          </Box>
-          <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
-            <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>Ends At</Text>
-            <Text mt={2} fontSize='sm' fontWeight='700' color='gray.900'>{formatDateTime(session.endDate)}</Text>
-          </Box>
-          <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
-            <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>Booking Window</Text>
-            <Text mt={2} fontSize='sm' fontWeight='700' color='gray.900'>{formatDateTimeRange(session.bookingStartDate, session.bookingEndDate)}</Text>
-          </Box>
-        </SimpleGrid>
-
-        {session.ticketTypes.length > 0 ? (
-          <Stack gap={3}>
-            <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>Available Tickets</Text>
-            <Stack gap={3}>{session.ticketTypes.map((ticket) => <SessionTicketCard key={ticket.uniqueId} ticket={ticket} />)}</Stack>
-          </Stack>
-        ) : (
-          <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'>
-            <Text color='gray.600' fontSize='sm'>No tickets are currently mapped to this session.</Text>
-          </Box>
-        )}
-      </Stack>
     </Box>
   )
 }
@@ -368,6 +313,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [highestUnlockedIndex, setHighestUnlockedIndex] = useState(0)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [termsOpen, setTermsOpen] = useState(false)
+  const [expandedSessionIds, setExpandedSessionIds] = useState<string[]>([])
 
   useEffect(() => {
     setActiveTab(firstTab)
@@ -400,6 +346,14 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     }
 
     setActiveTab(tabs[activeIndex - 1].id)
+  }
+
+  function handleSessionToggle(sessionUniqueId: string) {
+    setExpandedSessionIds((current) =>
+      current.includes(sessionUniqueId)
+        ? current.filter((id) => id !== sessionUniqueId)
+        : [...current, sessionUniqueId],
+    )
   }
 
   return (
@@ -530,11 +484,16 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                           ) : null}
 
                           {tab.id === 'sessions' ? (
-                            <SupportCard title='Sessions' subtitle='Choose from the configured sessions and review available ticket windows.' icon={<CalendarDays size={18} />}>
-                              <Stack gap={4}>
-                                {event.sessions.map((session) => <SessionSection key={session.uniqueId} session={session} />)}
-                              </Stack>
-                            </SupportCard>
+                            <Stack gap={4}>
+                              {event.sessions.map((session) => (
+                                <SessionTitleCard
+                                  key={session.uniqueId}
+                                  title={session.name}
+                                  isExpanded={expandedSessionIds.includes(session.uniqueId)}
+                                  onToggle={() => handleSessionToggle(session.uniqueId)}
+                                />
+                              ))}
+                            </Stack>
                           ) : null}
 
                           {tab.id === 'attendee-info' ? (
