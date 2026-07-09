@@ -1072,20 +1072,19 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                         ) : null}
                       </Stack>
                     </HStack>
-                    {isSummaryOpen ? (
+                    <HStack gap={2.5} flexShrink={0}>
+                      <Text fontSize='sm' fontWeight='800' lineHeight='1.1' color='white'>
+                        {formatAmount(selectedTicketTotal, event.paymentAccountCurrency)}
+                      </Text>
                       <Box
                         color='whiteAlpha.900'
-                        transform='rotate(0deg)'
+                        transform={isSummaryOpen ? 'rotate(0deg)' : 'rotate(-90deg)'}
                         transition='transform 220ms ease'
                         flexShrink={0}
                       >
                         <ChevronDown size={18} />
                       </Box>
-                    ) : (
-                      <Text fontSize='sm' fontWeight='800' lineHeight='1.1' color='white' flexShrink={0}>
-                        {formatAmount(selectedTicketTotal, event.paymentAccountCurrency)}
-                      </Text>
-                    )}
+                    </HStack>
                   </Flex>
 
                   <Box
