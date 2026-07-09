@@ -916,10 +916,15 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const selectedTicketCount = selectedTicketSummary.reduce((total, item) => total + item.quantity, 0)
   const selectedTicketTotal = selectedTicketSummary.reduce((total, item) => total + item.lineTotal, 0)
   const shouldHighlightSummaryLauncher = selectedTicketCount > 0 || purchaseTimerVisible
+  const isDescriptionStep = activeTab === 'description'
+  const sessionsStepIndex = getStepIndex(tabs, 'sessions')
+  const effectiveHighestUnlockedIndex =
+    selectedTicketCount > 0 ? highestUnlockedIndex : Math.min(highestUnlockedIndex, sessionsStepIndex)
+  const canContinueForward = !purchaseTimerExpired && (isDescriptionStep || selectedTicketCount > 0)
 
   function isStepEnabled(stepId: WizardTabId) {
     const index = getStepIndex(tabs, stepId)
-    return index >= 0 && index <= highestUnlockedIndex
+    return index >= 0 && index <= effectiveHighestUnlockedIndex
   }
 
   function handleStepChange(stepId: string) {
@@ -928,6 +933,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
   function handleContinue() {
     if (purchaseTimerExpired) return
+    if (!isDescriptionStep && selectedTicketCount <= 0) return
     if (activeIndex < 0 || activeIndex >= tabs.length - 1) return
     const nextIndex = activeIndex + 1
     setHighestUnlockedIndex((current) => Math.max(current, nextIndex))
@@ -1083,6 +1089,15 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     })
   }, [purchaseTimerExpired, purchaseTimerRemainingMs, purchaseTimerStartedAt, purchaseTimerWarningThresholdMs])
 
+  useEffect(() => {
+    if (selectedTicketCount > 0) return
+    if (activeIndex <= sessionsStepIndex) return
+    if (sessionsStepIndex < 0) return
+
+    setHighestUnlockedIndex((current) => Math.min(current, sessionsStepIndex))
+    setActiveTab(tabs[sessionsStepIndex].id)
+  }, [activeIndex, selectedTicketCount, sessionsStepIndex, tabs])
+
   const areAllSessionsExpanded =
     event.sessions.length > 0 && expandedSessionIds.length === event.sessions.length
 
@@ -1186,7 +1201,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
             ) : null}
 
             <Portal>
-              <Box position='fixed' right={{ base: 1.5, md: 2.5 }} bottom={{ base: 1.5, md: 2.5 }} zIndex={999} pointerEvents='none'>
+              <Box position='fixed' right={{ base: 1.5, md: 2.5 }} bottom={{ base: '6.5rem', sm: '4.5rem', md: 2.5 }} zIndex={999} pointerEvents='none'>
                 <Box
                   pointerEvents='auto'
                   w={{ base: 'min(calc(100vw - 0.75rem), 360px)', md: '380px' }}
@@ -1474,7 +1489,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                   gridTemplateColumns={{ base: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: `repeat(${tabs.length}, minmax(0, 1fr))` }}
                 >
                   {tabs.map((tab, index) => {
-                    const enabled = index <= highestUnlockedIndex
+                    const enabled = index <= effectiveHighestUnlockedIndex
                     const complete = index < activeIndex
                     const isActive = activeTab === tab.id
                     const IconComponent = tab.icon
@@ -1677,7 +1692,18 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                         ) : (
                           <Box />
                         )}
-                        <Button {...CONTROL_BUTTON_PRIMARY} bg={formAccent} _hover={{ bg: hexToRgba(formAccent, 0.88), transform: 'translateY(-1px)' }} onClick={handleContinue} disabled={isFinalStep && Boolean(event.termsConditions) && !termsAccepted}><HStack gap={2}><Text as='span'>Continue</Text><ChevronRight size={16} /></HStack></Button>
+                        <Button
+                          {...CONTROL_BUTTON_PRIMARY}
+                          bg={formAccent}
+                          _hover={{ bg: hexToRgba(formAccent, 0.88), transform: 'translateY(-1px)' }}
+                          onClick={handleContinue}
+                          disabled={!canContinueForward || (isFinalStep && Boolean(event.termsConditions) && !termsAccepted)}
+                        >
+                          <HStack gap={2}>
+                            <Text as='span'>Continue</Text>
+                            <ChevronRight size={16} />
+                          </HStack>
+                        </Button>
                       </Flex>
                     </Stack>
                   </Tabs.Content>
