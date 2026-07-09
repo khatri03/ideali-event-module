@@ -10,6 +10,7 @@ import {
   Container,
   Dialog,
   Flex,
+  Grid,
   Heading,
   HStack,
   Image,
@@ -35,7 +36,9 @@ import {
   MapPin,
   MessageSquareText,
   Check,
+  Trash2,
   Users,
+  X,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import type {
@@ -412,10 +415,25 @@ interface SelectedTicketSummaryItem {
   sessionName: string
   ticketId: string
   ticketName: string
+  ticket: EventRegistrationTicket
   quantity: number
   unitPrice: number
   lineTotal: number
 }
+
+type PendingDeleteAction =
+  | {
+      kind: 'ticket'
+      ticket: EventRegistrationTicket
+      title: string
+      description: string
+    }
+  | {
+      kind: 'session'
+      items: SelectedTicketSummaryItem[]
+      title: string
+      description: string
+    }
 
 function TicketCard({
   ticket,
@@ -702,6 +720,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [purchaseTimerStartedAt, setPurchaseTimerStartedAt] = useState<number | null>(null)
   const [purchaseTimerNow, setPurchaseTimerNow] = useState(() => Date.now())
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
+  const [pendingDeleteAction, setPendingDeleteAction] = useState<PendingDeleteAction | null>(null)
 
   useEffect(() => {
     setActiveTab(firstTab)
@@ -743,6 +762,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
               sessionName: session.name,
               ticketId: ticket.uniqueId,
               ticketName: ticket.name,
+              ticket,
               quantity,
               unitPrice,
               lineTotal: unitPrice * quantity,
@@ -751,6 +771,33 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
         }),
       ),
     [event.sessions, selectedTicketQuantities],
+  )
+  const selectedTicketSummaryBySession = useMemo(
+    () =>
+      selectedTicketSummary.reduce<Array<{
+        sessionId: string
+        sessionName: string
+        items: SelectedTicketSummaryItem[]
+        total: number
+      }>>((groups, item) => {
+        const existingGroup = groups.find((group) => group.sessionId === item.sessionId)
+
+        if (existingGroup) {
+          existingGroup.items.push(item)
+          existingGroup.total += item.lineTotal
+          return groups
+        }
+
+        groups.push({
+          sessionId: item.sessionId,
+          sessionName: item.sessionName,
+          items: [item],
+          total: item.lineTotal,
+        })
+
+        return groups
+      }, []),
+    [selectedTicketSummary],
   )
   const selectedTicketCount = selectedTicketSummary.reduce((total, item) => total + item.quantity, 0)
   const selectedTicketTotal = selectedTicketSummary.reduce((total, item) => total + item.lineTotal, 0)
@@ -830,6 +877,50 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     }
   }
 
+  function handleRemoveTicket(ticket: EventRegistrationTicket) {
+    handleTicketQuantityChange(ticket, 0)
+  }
+
+  function handleRemoveSession(items: SelectedTicketSummaryItem[]) {
+    setSelectedTicketQuantities((current) => {
+      const next = { ...current }
+      items.forEach((item) => {
+        next[item.ticketId] = 0
+      })
+      return next
+    })
+  }
+
+  function requestRemoveTicket(ticket: EventRegistrationTicket, ticketName: string) {
+    setPendingDeleteAction({
+      kind: 'ticket',
+      ticket,
+      title: 'Remove ticket',
+      description: `Remove ${ticketName} from your summary?`,
+    })
+  }
+
+  function requestRemoveSession(items: SelectedTicketSummaryItem[], sessionName: string) {
+    setPendingDeleteAction({
+      kind: 'session',
+      items,
+      title: 'Remove session',
+      description: `Remove all selected tickets from ${sessionName}?`,
+    })
+  }
+
+  function confirmDeleteAction() {
+    if (!pendingDeleteAction) return
+
+    if (pendingDeleteAction.kind === 'ticket') {
+      handleRemoveTicket(pendingDeleteAction.ticket)
+    } else {
+      handleRemoveSession(pendingDeleteAction.items)
+    }
+
+    setPendingDeleteAction(null)
+  }
+
   const areAllSessionsExpanded =
     event.sessions.length > 0 && expandedSessionIds.length === event.sessions.length
 
@@ -898,17 +989,51 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
               </Box>
             </Box>
 
+            {purchaseTimerVisible ? (
+              <Box
+                borderWidth='1px'
+                borderColor={purchaseTimerExpired ? 'red.200' : 'gray.200'}
+                borderRadius='20px'
+                bg={purchaseTimerExpired ? 'red.50' : 'white'}
+                px={{ base: 4, md: 5 }}
+                py={4}
+                boxShadow='0 12px 30px rgba(15, 23, 42, 0.08)'
+                animation={`${timerRevealAnimation} 280ms ease-out`}
+                transformOrigin='top center'
+              >
+                <Flex align={{ base: 'start', md: 'center' }} justify='space-between' gap={4} direction={{ base: 'column', md: 'row' }}>
+                  <HStack gap={3} align='start'>
+                    <Box w='10' h='10' borderRadius='12px' display='grid' placeItems='center' bg={purchaseTimerExpired ? 'red.100' : 'gray.100'} color={purchaseTimerExpired ? 'red.600' : 'gray.700'}>
+                      <Clock3 size={18} />
+                    </Box>
+                    <Stack gap={0.5}>
+                      <Text fontSize='xs' fontWeight='800' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>Purchase time left</Text>
+                      <Text fontSize='lg' fontWeight='800' color={purchaseTimerExpired ? 'red.600' : 'gray.900'}>{formatCountdown(purchaseTimerRemainingMs ?? 0)}</Text>
+                    </Stack>
+                  </HStack>
+                  <Text fontSize='sm' color='gray.600' lineHeight='1.6' maxW='2xl'>
+                    {purchaseTimerExpired
+                      ? 'Purchase time limit reached. Please restart registration.'
+                      : 'Complete your registration before the timer reaches zero.'}
+                  </Text>
+                </Flex>
+              </Box>
+            ) : null}
+
             <Portal>
               <Box position='fixed' right={{ base: 1.5, md: 2.5 }} bottom={{ base: 1.5, md: 2.5 }} zIndex={999} pointerEvents='none'>
                 <Box
                   pointerEvents='auto'
                   w={{ base: 'min(calc(100vw - 0.75rem), 360px)', md: '380px' }}
+                  maxH={{ base: 'calc(100dvh - 0.75rem)', md: 'calc(100dvh - 1.5rem)' }}
                   borderWidth='1px'
                   borderColor='gray.200'
                   borderRadius='26px'
                   bg='white'
                   boxShadow='0 28px 80px rgba(15, 23, 42, 0.22)'
                   overflow='hidden'
+                  display='flex'
+                  flexDirection='column'
                 >
                   <Flex
                     px={4}
@@ -951,66 +1076,183 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                   </Flex>
 
                   <Box
+                    flex='1'
+                    minH={0}
                     maxH={isSummaryOpen ? { base: 'min(72vh, 560px)', md: 'min(74vh, 620px)' } : '0px'}
                     opacity={isSummaryOpen ? 1 : 0}
                     transform={isSummaryOpen ? 'translateY(0)' : 'translateY(10px)'}
                     transition='max-height 280ms ease, opacity 220ms ease, transform 220ms ease'
                     overflow='hidden'
                   >
-                    <Stack gap={3} px={4} py={4} overflowY='auto' maxH={{ base: 'min(72vh, 560px)', md: 'min(74vh, 620px)' }}>
-                      {purchaseTimerVisible ? (
-                        <Box
-                          borderWidth='1px'
-                          borderColor={purchaseTimerExpired ? 'red.200' : 'gray.200'}
-                          borderRadius='18px'
-                          bg={purchaseTimerExpired ? 'red.50' : 'gray.50'}
-                          px={4}
-                          py={3.5}
-                          boxShadow='0 10px 24px rgba(15, 23, 42, 0.06)'
-                          animation={isSummaryOpen ? `${timerRevealAnimation} 280ms ease-out` : undefined}
-                          transformOrigin='top center'
-                        >
-                          <HStack gap={3} align='center'>
-                            <Box w='10' h='10' borderRadius='12px' display='grid' placeItems='center' bg={purchaseTimerExpired ? 'red.100' : 'gray.100'} color={purchaseTimerExpired ? 'red.600' : 'gray.700'} flexShrink={0}>
-                              <Clock3 size={18} />
-                            </Box>
-                            <Stack gap={0.25}>
-                              <Text fontSize='xs' fontWeight='800' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>
-                                Purchase time left
-                              </Text>
-                              <Text fontSize='lg' fontWeight='800' color={purchaseTimerExpired ? 'red.600' : 'gray.900'}>
-                                {formatCountdown(purchaseTimerRemainingMs ?? 0)}
-                              </Text>
-                            </Stack>
-                          </HStack>
-                        </Box>
-                      ) : null}
+                    <Stack gap={3} px={4} py={4} overflowY='auto' maxH='inherit'>
+                      {selectedTicketSummaryBySession.length > 0 ? (
+                        <Stack gap={3.5}>
+                          {selectedTicketSummaryBySession.map((sessionGroup) => (
+                            <Box
+                              key={sessionGroup.sessionId}
+                              borderWidth='1px'
+                              borderColor='gray.200'
+                              borderRadius='20px'
+                              bg='white'
+                              overflow='hidden'
+                              boxShadow='0 12px 28px rgba(15, 23, 42, 0.05)'
+                            >
+                              <Box
+                                px={4}
+                                py={3.5}
+                                bg='gray.50'
+                                borderBottomWidth='1px'
+                                borderBottomColor='gray.200'
+                              >
+                                <Grid templateColumns='minmax(0, 1fr) auto' columnGap={3} rowGap={2.5} alignItems='center'>
+                                  <Text
+                                    fontSize='sm'
+                                    fontWeight='800'
+                                    color='gray.900'
+                                    lineHeight='1.4'
+                                    whiteSpace='normal'
+                                    wordBreak='break-word'
+                                    minW={0}
+                                  >
+                                    {sessionGroup.sessionName}
+                                  </Text>
+                                  <Button
+                                    minW='0'
+                                    h='18px'
+                                    p='0'
+                                    justifySelf='end'
+                                    variant='ghost'
+                                    color='red.500'
+                                    _hover={{ bg: 'transparent', color: 'red.600' }}
+                                    _active={{ bg: 'transparent', color: 'red.700' }}
+                                    aria-label={`Remove ${sessionGroup.sessionName}`}
+                                    title={`Remove ${sessionGroup.sessionName}`}
+                                    onClick={() => requestRemoveSession(sessionGroup.items, sessionGroup.sessionName)}
+                                  >
+                                    <X size={13} strokeWidth={2.3} />
+                                  </Button>
 
-                      {selectedTicketSummary.length > 0 ? (
-                        <Stack gap={2.5}>
-                          {selectedTicketSummary.map((item) => (
-                            <Box key={item.ticketId} borderWidth='1px' borderColor='gray.200' borderRadius='14px' bg='gray.50' px={3} py={2.75}>
-                              <Flex justify='space-between' gap={3} align='start'>
-                                <Stack gap={0.25} minW={0}>
-                                  <Text fontSize='sm' fontWeight='700' color='gray.900' lineHeight='1.35' noOfLines={1}>
-                                    {item.ticketName}
+                                  <Text fontSize='xs' color='gray.500' lineHeight='1.4'>
+                                    {sessionGroup.items.length} {sessionGroup.items.length === 1 ? 'ticket type selected' : 'ticket types selected'}
                                   </Text>
-                                  <Text fontSize='xs' color='gray.500' lineHeight='1.4' noOfLines={1}>
-                                    {item.sessionName}
-                                  </Text>
-                                </Stack>
-                                <Text fontSize='sm' fontWeight='800' color='gray.900' flexShrink={0}>
-                                  {formatAmount(item.lineTotal, event.paymentAccountCurrency)}
-                                </Text>
-                              </Flex>
-                              <Flex justify='space-between' align='center' gap={3} mt={1.5}>
-                                <Text fontSize='xs' color='gray.500'>
-                                  Qty {item.quantity} x {formatAmount(item.unitPrice, event.paymentAccountCurrency)}
-                                </Text>
-                                <Text fontSize='xs' fontWeight='700' color='gray.700'>
-                                  {formatAmount(item.unitPrice, event.paymentAccountCurrency)} each
-                                </Text>
-                              </Flex>
+                                  <Badge
+                                    justifySelf='end'
+                                    colorPalette='gray'
+                                    variant='subtle'
+                                    borderRadius='full'
+                                    px={3}
+                                    py={1.5}
+                                    fontSize='sm'
+                                    fontWeight='800'
+                                    color='gray.800'
+                                    bg='white'
+                                    borderWidth='1px'
+                                    borderColor='gray.200'
+                                  >
+                                    {formatAmount(sessionGroup.total, event.paymentAccountCurrency)}
+                                  </Badge>
+                                </Grid>
+                              </Box>
+
+                              <Stack gap={0} px={4} py={2.5}>
+                                {sessionGroup.items.map((item, itemIndex) => (
+                                  <Box
+                                    key={item.ticketId}
+                                    py={3}
+                                    borderBottomWidth={itemIndex < sessionGroup.items.length - 1 ? '1px' : '0'}
+                                    borderBottomColor='gray.100'
+                                  >
+                                    <Grid templateColumns='minmax(0, 1fr) auto' columnGap={3} rowGap={2.5} alignItems='center'>
+                                      <Text
+                                        fontSize='sm'
+                                        fontWeight='700'
+                                        color='gray.900'
+                                        lineHeight='1.4'
+                                        whiteSpace='normal'
+                                        wordBreak='break-word'
+                                        minW={0}
+                                      >
+                                        {item.ticketName}
+                                      </Text>
+                                      <Button
+                                        minW='0'
+                                        h='16px'
+                                        p='0'
+                                        justifySelf='end'
+                                        variant='ghost'
+                                        color='red.500'
+                                        _hover={{ bg: 'transparent', color: 'red.600' }}
+                                        _active={{ bg: 'transparent', color: 'red.700' }}
+                                        aria-label={`Remove ${item.ticketName}`}
+                                        title={`Remove ${item.ticketName}`}
+                                        onClick={() => requestRemoveTicket(item.ticket, item.ticketName)}
+                                      >
+                                        <Trash2 size={12} strokeWidth={2.2} />
+                                      </Button>
+
+                                      <HStack gap={2} wrap='wrap' minW={0} align='center'>
+                                        <Text fontSize='xs' color='gray.500'>
+                                          {formatAmount(item.unitPrice, event.paymentAccountCurrency)} each
+                                        </Text>
+                                        <Text fontSize='xs' color='gray.300'>|</Text>
+                                        <Text fontSize='xs' fontWeight='700' color='gray.700'>
+                                          {formatAmount(item.lineTotal, event.paymentAccountCurrency)}
+                                        </Text>
+                                      </HStack>
+                                      <HStack
+                                        gap={2}
+                                        justifySelf='end'
+                                        borderWidth='1px'
+                                        borderColor='gray.200'
+                                        borderRadius='full'
+                                        bg='gray.50'
+                                        px={1.5}
+                                        py={1}
+                                        minW='116px'
+                                        justify='space-between'
+                                      >
+                                        <Button
+                                          minW='0'
+                                          w='24px'
+                                          h='24px'
+                                          p='0'
+                                          borderRadius='full'
+                                          borderWidth='1px'
+                                          borderColor='gray.300'
+                                          bg='white'
+                                          color='gray.700'
+                                          fontSize='sm'
+                                          fontWeight='800'
+                                          onClick={() => handleTicketQuantityChange(item.ticket, item.quantity - 1)}
+                                          disabled={item.quantity <= 0}
+                                        >
+                                          -
+                                        </Button>
+                                        <Text minW='20px' textAlign='center' fontSize='sm' fontWeight='800' color='gray.900'>
+                                          {item.quantity}
+                                        </Text>
+                                        <Button
+                                          minW='0'
+                                          w='24px'
+                                          h='24px'
+                                          p='0'
+                                          borderRadius='full'
+                                          borderWidth='1px'
+                                          borderColor='gray.300'
+                                          bg='white'
+                                          color='gray.700'
+                                          fontSize='sm'
+                                          fontWeight='800'
+                                          onClick={() => handleTicketQuantityChange(item.ticket, item.quantity + 1)}
+                                          disabled={getTicketSelectableMax(item.ticket) !== null && item.quantity >= (getTicketSelectableMax(item.ticket) ?? 0)}
+                                        >
+                                          +
+                                        </Button>
+                                      </HStack>
+                                    </Grid>
+                                  </Box>
+                                ))}
+                              </Stack>
                             </Box>
                           ))}
                         </Stack>
@@ -1321,6 +1563,45 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
           </Dialog.Content>
         </Dialog.Positioner>
       </Dialog.Root>
+
+      <Dialog.Root open={Boolean(pendingDeleteAction)} onOpenChange={(details) => { if (!details.open) setPendingDeleteAction(null) }} size='sm'>
+        <Dialog.Backdrop backdropFilter='blur(8px)' bg='blackAlpha.600' />
+        <Dialog.Positioner alignItems='center' justifyContent='center' px={{ base: 4, md: 6 }} py={{ base: 6, md: 8 }}>
+          <Dialog.Content borderRadius='24px' overflow='hidden' bg='white' boxShadow='0 30px 70px rgba(15, 23, 42, 0.25)'>
+            <Box px={{ base: 4, md: 5 }} py={{ base: 4, md: 5 }}>
+              <Stack gap={5}>
+                <HStack gap={3} align='start'>
+                  <Flex w='12' h='12' borderRadius='16px' align='center' justify='center' bg='red.50' color='red.500' flexShrink={0}>
+                    <Trash2 size={18} />
+                  </Flex>
+                  <Stack gap={1}>
+                    <Heading fontSize={{ base: 'lg', md: 'xl' }} color='gray.900' letterSpacing='-0.03em'>
+                      {pendingDeleteAction?.title}
+                    </Heading>
+                    <Text fontSize='sm' color='gray.600' lineHeight='1.7'>
+                      {pendingDeleteAction?.description}
+                    </Text>
+                  </Stack>
+                </HStack>
+
+                <Flex justify='flex-end' gap={3} direction={{ base: 'column-reverse', sm: 'row' }}>
+                  <Button {...CONTROL_BUTTON_OUTLINE} onClick={() => setPendingDeleteAction(null)}>
+                    Cancel
+                  </Button>
+                  <Button bg='red.500' color='white' borderRadius='16px' minH='11' px={5} _hover={{ bg: 'red.600' }} _active={{ bg: 'red.700' }} onClick={confirmDeleteAction}>
+                    Remove
+                  </Button>
+                </Flex>
+              </Stack>
+            </Box>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </Box>
   )
 }
+
+
+
+
+
