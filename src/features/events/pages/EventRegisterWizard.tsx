@@ -29,6 +29,7 @@ import {
   FileText,
   MapPin,
   MessageSquareText,
+  Check,
   Users,
 } from 'lucide-react'
 import { format } from 'date-fns'
@@ -45,6 +46,13 @@ import {
 const LOCAL_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
 
 type WizardTabId = 'description' | 'sessions' | 'attendee-info' | 'questionnaire' | 'payment'
+
+interface BannerSlide {
+  imageUrl: string
+  title: string
+  subtitle: string
+  badge?: string
+}
 
 export interface EventRegisterWizardEvent {
   title: string
@@ -147,6 +155,155 @@ function getTicketRemaining(ticket: EventRegistrationTicket) {
   return null
 }
 
+function AutoImageCarousel({ slides, accentColor, height = { base: '220px', md: '320px' } }: { slides: BannerSlide[]; accentColor: string; height?: { base: string; md: string } }) {
+  const [activeSlide, setActiveSlide] = useState(0)
+  const [isPaused, setIsPaused] = useState(false)
+
+  useEffect(() => {
+    if (slides.length <= 1 || isPaused) return
+    const timer = window.setInterval(() => {
+      setActiveSlide((current) => (current + 1) % slides.length)
+    }, 5000)
+
+    return () => window.clearInterval(timer)
+  }, [slides.length, isPaused])
+
+  useEffect(() => {
+    setActiveSlide(0)
+  }, [slides])
+
+  if (slides.length === 0) {
+    return null
+  }
+
+  return (
+    <Box
+      position='relative'
+      h={height}
+      overflow='hidden'
+      borderRadius='24px'
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onFocusCapture={() => setIsPaused(true)}
+      onBlurCapture={() => setIsPaused(false)}
+      bg='gray.900'
+    >
+      {slides.map((slide, index) => (
+        <Box
+          key={`${slide.imageUrl}-${slide.title}-${index}`}
+          position='absolute'
+          inset={0}
+          opacity={index === activeSlide ? 1 : 0}
+          transition='opacity 700ms ease'
+          pointerEvents={index === activeSlide ? 'auto' : 'none'}
+        >
+          <Image src={slide.imageUrl} alt={slide.title} w='full' h='full' objectFit='cover' objectPosition='center' />
+          <Box position='absolute' inset={0} bg='linear-gradient(90deg, rgba(10, 16, 31, 0.78) 0%, rgba(10, 16, 31, 0.32) 58%, rgba(10, 16, 31, 0.08) 100%)' />
+          <Stack position='absolute' left={{ base: 4, md: 6 }} right={{ base: 4, md: 6 }} bottom={{ base: 4, md: 6 }} top='auto' gap={2} color='white'>
+            {slide.badge ? (
+              <Badge alignSelf='start' colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1} bg='blackAlpha.400' color='white'>
+                {slide.badge}
+              </Badge>
+            ) : null}
+            <Heading fontSize={{ base: 'xl', md: '2xl' }} lineHeight='1.1' letterSpacing='-0.03em'>
+              {slide.title}
+            </Heading>
+            <Text fontSize={{ base: 'sm', md: 'md' }} color='whiteAlpha.900' lineHeight='1.6' maxW='3xl'>
+              {slide.subtitle}
+            </Text>
+          </Stack>
+        </Box>
+      ))}
+
+      {slides.length > 1 ? (
+        <Box position='absolute' left={4} right={4} top={4}>
+          <Flex justify='space-between' align='start' gap={3} wrap='wrap'>
+            <Badge borderRadius='full' px={3} py={1} bg='blackAlpha.500' color='white' borderWidth='1px' borderColor='whiteAlpha.300'>
+              {activeSlide + 1} / {slides.length}
+            </Badge>
+            <HStack gap={2} ml='auto'>
+              {slides.map((slide, index) => (
+                <Button
+                  key={`${slide.imageUrl}-dot-${index}`}
+                  aria-label={`Show slide ${index + 1}`}
+                  onClick={() => setActiveSlide(index)}
+                  w='10px'
+                  h='10px'
+                  minW='10px'
+                  p={0}
+                  borderRadius='full'
+                  borderWidth='1px'
+                  borderColor='whiteAlpha.500'
+                  bg={index === activeSlide ? accentColor : 'whiteAlpha.400'}
+                  boxShadow={index === activeSlide ? `0 0 0 3px ${hexToRgba(accentColor, 0.25)}` : 'none'}
+                  transition='all 0.2s ease'
+                />
+              ))}
+            </HStack>
+          </Flex>
+        </Box>
+      ) : null}
+
+      {slides.length > 1 ? (
+        <Box position='absolute' bottom={4} right={4}>
+          <HStack gap={2}>
+            <Button
+              size='sm'
+              variant='outline'
+              borderRadius='999px'
+              borderColor='whiteAlpha.300'
+              color='white'
+              bg='blackAlpha.400'
+              onClick={() => setActiveSlide((current) => (current - 1 + slides.length) % slides.length)}
+            >
+              Prev
+            </Button>
+            <Button
+              size='sm'
+              borderRadius='999px'
+              color='white'
+              bg={accentColor}
+              _hover={{ bg: hexToRgba(accentColor, 0.86) }}
+              onClick={() => setActiveSlide((current) => (current + 1) % slides.length)}
+            >
+              Next
+            </Button>
+          </HStack>
+        </Box>
+      ) : null}
+
+      {slides.length > 1 ? (
+        <Box position='absolute' insetInline={0} bottom={0} h='1px' bg={hexToRgba(accentColor, 0.5)} />
+      ) : null}
+    </Box>
+  )
+}
+
+function getSessionBannerSlides(event: EventRegisterWizardEvent) {
+  const slides: BannerSlide[] = []
+
+  if (event.bannerUrl) {
+    slides.push({
+      imageUrl: event.bannerUrl,
+      title: event.title,
+      subtitle: event.summary ?? event.description ?? 'Event banner',
+      badge: 'Event banner',
+    })
+  }
+
+  event.sessions.forEach((session) => {
+    if (!session.bannerUrl) return
+    slides.push({
+      imageUrl: session.bannerUrl,
+      title: session.name,
+      subtitle: session.description ?? 'Session banner',
+      badge: 'Session banner',
+    })
+  })
+
+  return slides
+}
+
 function RichTextBlock({ html }: { html: string }) {
   return (
     <Box color='gray.700' lineHeight='1.75' dangerouslySetInnerHTML={{ __html: html }} />
@@ -220,6 +377,13 @@ function SessionSection({ session }: { session: EventRegistrationSession }) {
   return (
     <Box borderWidth='1px' borderColor='gray.200' borderRadius='24px' bg='white' p={{ base: 4, md: 6 }}>
       <Stack gap={5}>
+        {session.bannerUrl ? (
+          <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' overflow='hidden' bg='gray.900'>
+            <AspectRatio ratio={16 / 6}>
+              <Image src={session.bannerUrl} alt={session.name} w='full' h='full' objectFit='cover' objectPosition='center' />
+            </AspectRatio>
+          </Box>
+        ) : null}
         <Flex justify='space-between' align='start' gap={4} wrap='wrap'>
           <Stack gap={2} flex='1' minW='240px'>
             <Heading fontSize='xl' color='gray.900' letterSpacing='-0.02em'>{session.name}</Heading>
@@ -264,6 +428,7 @@ function SessionSection({ session }: { session: EventRegistrationSession }) {
 export function EventRegisterWizard({ event, formAccent, onBack }: { event: EventRegisterWizardEvent; formAccent: string; onBack: () => void }) {
   const accentBackground = hexToRgba(formAccent, 0.18)
   const tabs = useMemo(() => getVisibleTabs(event), [event])
+  const bannerSlides = useMemo(() => getSessionBannerSlides(event), [event])
   const firstTab = tabs[0]?.id ?? 'sessions'
   const [activeTab, setActiveTab] = useState<WizardTabId>(firstTab)
   const [highestUnlockedIndex, setHighestUnlockedIndex] = useState(0)
@@ -313,8 +478,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
               <Box p={{ base: 4, md: 6 }}>
                 <SimpleGrid columns={{ base: 1, lg: 12 }} gap={6} alignItems='stretch'>
                   <Box gridColumn={{ lg: 'span 8' }} borderWidth='1px' borderColor='gray.200' borderRadius='24px' overflow='hidden' bg={event.bannerUrl ? 'gray.900' : 'gray.100'}>
-                    {event.bannerUrl ? (
-                      <AspectRatio ratio={16 / 9}><Image src={event.bannerUrl ?? ''} alt={event.title} w='full' h='full' objectFit='cover' objectPosition='center' display='block' /></AspectRatio>
+                    {bannerSlides.length > 0 ? (
+                      <AutoImageCarousel slides={bannerSlides} accentColor={formAccent} />
                     ) : (
                       <Flex minH={{ base: '220px', md: '320px' }} align='center' justify='center' px={6} textAlign='center'><Text fontSize='sm' fontWeight='700' color='gray.500'>Banner not available</Text></Flex>
                     )}
@@ -362,11 +527,12 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                   bg='gray.50'
                   p={3}
                   mb={6}
-                  gridTemplateColumns={{ base: '1fr', md: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+                  gridTemplateColumns={{ base: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: `repeat(${tabs.length}, minmax(0, 1fr))` }}
                 >
                   {tabs.map((tab, index) => {
                     const enabled = index <= highestUnlockedIndex
                     const complete = index < activeIndex
+                    const isActive = activeTab === tab.id
                     const IconComponent = tab.icon
                     return (
                       <Tabs.Trigger
@@ -374,28 +540,39 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                         value={tab.id}
                         disabled={!enabled}
                         borderWidth='1px'
-                        borderColor={enabled ? (complete || activeTab === tab.id ? formAccent : 'gray.200') : 'gray.200'}
+                        borderColor={enabled ? (isActive ? formAccent : complete ? 'green.300' : 'gray.200') : 'gray.200'}
                         borderRadius='18px'
                         px={4}
-                        py={3}
-                        minH='14'
+                        py={9}
+                        minH='32'
                         w='full'
                         justifyContent='center'
-                        bg={activeTab === tab.id ? hexToRgba(formAccent, 0.12) : enabled ? 'white' : 'gray.50'}
+                        bg={isActive ? hexToRgba(formAccent, 0.12) : complete ? 'green.50' : enabled ? 'white' : 'gray.50'}
                         color={enabled ? 'gray.900' : 'gray.400'}
-                        _hover={{ bg: enabled ? hexToRgba(formAccent, 0.08) : 'gray.50' }}
+                        _hover={{ bg: enabled ? (isActive ? hexToRgba(formAccent, 0.16) : complete ? 'green.100' : hexToRgba(formAccent, 0.06)) : 'gray.50' }}
                         _disabled={{ opacity: 0.45, cursor: 'not-allowed' }}
+                        boxShadow={isActive ? `0 0 0 1px ${formAccent} inset` : 'none'}
                       >
-                        <HStack gap={3} align='center' justify='center' w='full'>
-                          <Flex w='8' h='8' borderRadius='full' align='center' justify='center' bg={activeTab === tab.id || complete ? formAccent : 'gray.100'} color={activeTab === tab.id || complete ? 'white' : 'gray.600'} fontSize='xs' fontWeight='800'>{String(index + 1).padStart(2, '0')}</Flex>
-                          <Stack gap={0} align='center' textAlign='center' minW={0}>
-                            <HStack gap={1.5} justify='center' flexWrap='wrap'>
-                              <IconComponent size={16} />
-                              <Text as='span' fontWeight='700' fontSize='sm'>{tab.label}</Text>
-                            </HStack>
-                            <Text fontSize='xs' color={enabled ? 'gray.500' : 'gray.400'}>Step {index + 1}</Text>
-                          </Stack>
-                        </HStack>
+                        <Stack gap={2} align='center' textAlign='center' w='full'>
+                          <Flex
+                            w='11'
+                            h='11'
+                            borderRadius='full'
+                            align='center'
+                            justify='center'
+                            bg={isActive ? formAccent : complete ? 'green.500' : 'gray.200'}
+                            color={isActive || complete ? 'white' : 'gray.600'}
+                            fontSize='sm'
+                            fontWeight='800'
+                            boxShadow={isActive ? `0 0 0 4px ${hexToRgba(formAccent, 0.12)}` : 'none'}
+                          >
+                            {complete && !isActive ? <Check size={13} /> : String(index + 1).padStart(2, '0')}
+                          </Flex>
+                          <HStack gap={1.5} justify='center' flexWrap='wrap'>
+                            <IconComponent size={16} />
+                            <Text as='span' fontWeight='700' fontSize='sm'>{tab.label}</Text>
+                          </HStack>
+                        </Stack>
                       </Tabs.Trigger>
                     )
                   })}
@@ -415,7 +592,21 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
                       {tab.id === 'sessions' ? (
                         <SupportCard title='Sessions' subtitle='Choose from the configured sessions and review available ticket windows.' icon={<CalendarDays size={18} />}>
-                          <Stack gap={4}>{event.sessions.map((session) => <SessionSection key={session.uniqueId} session={session} />)}</Stack>
+                          <Stack gap={4}>
+                            {event.sessions.some((session) => session.bannerUrl) ? (
+                              <AutoImageCarousel
+                                slides={event.sessions.filter((session) => session.bannerUrl).map((session) => ({
+                                  imageUrl: session.bannerUrl as string,
+                                  title: session.name,
+                                  subtitle: session.description ?? 'Session banner',
+                                  badge: 'Session banner',
+                                }))}
+                                accentColor={formAccent}
+                                height={{ base: '200px', md: '260px' }}
+                              />
+                            ) : null}
+                            {event.sessions.map((session) => <SessionSection key={session.uniqueId} session={session} />)}
+                          </Stack>
                         </SupportCard>
                       ) : null}
 
