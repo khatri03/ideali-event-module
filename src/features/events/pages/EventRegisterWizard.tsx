@@ -73,6 +73,7 @@ export interface EventRegisterWizardEvent {
   canRegister: boolean
   registrationBlockedReason: string | null
   isOrganizer: boolean
+  paymentAccountCurrency: string | null
   paymentMethods: EventRegistrationPaymentMethod[]
   sessions: EventRegistrationSession[]
 }
@@ -113,9 +114,36 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`
 }
 
-function formatAmount(value: number) {
+function formatAmount(value: number, currencyCode?: string | null) {
   if (!Number.isFinite(value) || value <= 0) return 'Free'
-  return value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+
+  const trimmedCurrency = currencyCode?.trim()
+
+  if (trimmedCurrency) {
+    const isIsoCurrencyCode = /^[A-Za-z]{3}$/.test(trimmedCurrency)
+
+    if (isIsoCurrencyCode) {
+      try {
+        return new Intl.NumberFormat(undefined, {
+          style: 'currency',
+          currency: trimmedCurrency.toUpperCase(),
+          currencyDisplay: 'narrowSymbol',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }).format(value)
+      } catch {
+        return `${trimmedCurrency.toUpperCase()} ${value.toFixed(2)}`
+      }
+    }
+
+    try {
+      return `${trimmedCurrency}${value.toFixed(2)}`
+    } catch {
+      return `${trimmedCurrency}${value.toFixed(2)}`
+    }
+  }
+
+  return value.toFixed(2)
 }
 
 function isHtmlContent(value: string | null | undefined) {
@@ -289,11 +317,13 @@ function TicketCard({
   quantity,
   onDecrease,
   onIncrease,
+  currencyCode,
 }: {
   ticket: EventRegistrationTicket
   quantity: number
   onDecrease: () => void
   onIncrease: () => void
+  currencyCode?: string | null
 }) {
   const activePricePeriod = getTicketPricePeriod(ticket)
   const remaining = getTicketRemaining(ticket)
@@ -347,9 +377,9 @@ function TicketCard({
           </Stack>
 
           <Stack gap={1} minW={{ base: 'full', lg: '140px' }} align={{ base: 'start', lg: 'end' }}>
-            <Text fontSize='xl' fontWeight='800' color='gray.900'>{formatAmount(displayPrice ?? 0)}</Text>
+            <Text fontSize='xl' fontWeight='800' color='gray.900'>{formatAmount(displayPrice ?? 0, currencyCode)}</Text>
             <Text fontSize='xs' color='gray.500'>
-              {quantity > 0 ? `Subtotal ${formatAmount(subtotal)}` : 'Per ticket'}
+              {quantity > 0 ? `Subtotal ${formatAmount(subtotal, currencyCode)}` : 'Per ticket'}
             </Text>
           </Stack>
 
@@ -414,7 +444,7 @@ function TicketCard({
                       <Text fontSize='xs' color='gray.500'>{formatDateTimeRange(period.startDateTime, period.endDateTime)}</Text>
                     </Stack>
                     <Stack gap={0.5} align={{ base: 'start', md: 'end' }}>
-                      <Text fontSize='sm' fontWeight='700' color='gray.900'>{formatAmount(period.amount ?? 0)}</Text>
+                      <Text fontSize='sm' fontWeight='700' color='gray.900'>{formatAmount(period.amount ?? 0, currencyCode)}</Text>
                       <Text fontSize='xs' color={period.uniqueId === activePricePeriod?.uniqueId ? 'green.600' : 'gray.500'}>
                         {period.currentStatus}
                       </Text>
@@ -805,6 +835,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                   key={ticket.uniqueId}
                                                   ticket={ticket}
                                                   quantity={selectedTicketQuantities[ticket.uniqueId] ?? 0}
+                                                  currencyCode={event.paymentAccountCurrency}
                                                   onDecrease={() => handleTicketQuantityChange(ticket, (selectedTicketQuantities[ticket.uniqueId] ?? 0) - 1)}
                                                   onIncrease={() => handleTicketQuantityChange(ticket, (selectedTicketQuantities[ticket.uniqueId] ?? 0) + 1)}
                                                 />

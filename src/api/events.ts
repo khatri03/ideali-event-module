@@ -297,6 +297,8 @@ const eventRegistrationResponseSchema = z.object({
   registrationBlockedReason: z.string().nullable().optional(),
   IsOrganizer: z.boolean().optional(),
   isOrganizer: z.boolean().optional(),
+  PaymentAccountCurrency: z.string().nullable().optional(),
+  paymentAccountCurrency: z.string().nullable().optional(),
   PaymentMethods: z.array(eventRegistrationPaymentMethodSchema).optional(),
   paymentMethods: z.array(eventRegistrationPaymentMethodSchema).optional(),
   Sessions: z.array(eventRegistrationSessionSchema).optional(),
@@ -800,6 +802,7 @@ export interface EventRegistrationResponse {
   canRegister: boolean
   registrationBlockedReason: string | null
   isOrganizer: boolean
+  paymentAccountCurrency: string | null
   paymentMethods: EventRegistrationPaymentMethod[]
   sessions: EventRegistrationSession[]
 }
@@ -900,6 +903,8 @@ function parseEventRegistrationResponse(payload: unknown): EventRegistrationResp
     registrationBlockedReason:
       response.RegistrationBlockedReason ?? response.registrationBlockedReason ?? null,
     isOrganizer: response.IsOrganizer ?? response.isOrganizer ?? false,
+    paymentAccountCurrency:
+      response.PaymentAccountCurrency ?? response.paymentAccountCurrency ?? null,
     paymentMethods: (response.PaymentMethods ?? response.paymentMethods ?? []).map((method) => ({
       paymentMethod: method.PaymentMethod ?? method.paymentMethod ?? "",
       label: method.Label ?? method.label ?? "",

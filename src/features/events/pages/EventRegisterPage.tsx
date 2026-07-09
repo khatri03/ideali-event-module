@@ -29,6 +29,7 @@ interface EventRegistrationViewModel {
   summary: string | null
   termsConditions: string | null
   isOrganizer: boolean
+  paymentAccountCurrency: string | null
   paymentMethods: EventRegistrationPaymentMethod[]
   sessions: EventRegistrationSession[]
   coverColor: string
@@ -126,6 +127,7 @@ function mapRegistrationToViewModel(registration: EventRegistrationResponse): Ev
     summary: registration.summary,
     termsConditions: registration.termsConditions,
     isOrganizer: registration.isOrganizer,
+    paymentAccountCurrency: registration.paymentAccountCurrency,
     paymentMethods: registration.paymentMethods,
     sessions: registration.sessions,
     coverColor: registration.themeColor ?? '#7551FF',
