@@ -14,6 +14,12 @@ import {
 } from "@chakra-ui/react"
 import { CalendarDays, MapPin, Tag, Users, DollarSign, User, Zap } from "lucide-react"
 import { StyledSelect } from "../common/StyledSelect"
+import {
+  CONTROL_BUTTON_OUTLINE,
+  CONTROL_BUTTON_PRIMARY,
+  CONTROL_INPUT_BASE,
+  CONTROL_TEXTAREA_BASE,
+} from "../common/controlStyles"
 import type { AppEvent, EventCategory, EventStatus } from "../../types"
 
 interface EventFormModalProps {
@@ -62,18 +68,6 @@ const defaultForm = {
   organizer: "",
   tags: "",
   coverColor: "#7551FF",
-}
-
-const FIELD_FOCUS = { borderColor: "brand.400", boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)" }
-const INPUT_BASE = {
-  borderRadius: "16px",
-  borderColor: "secondaryGray.100",
-  bg: "app.bg",
-  fontSize: "sm",
-  h: "44px",
-  px: 4,
-  _focus: FIELD_FOCUS,
-  _dark: { borderColor: "navy.600" },
 }
 
 function getFormFromEvent(event?: AppEvent | null) {
@@ -227,7 +221,7 @@ export function EventFormModal({ isOpen, onClose, event, onSave }: EventFormModa
                   value={form.title}
                   onChange={(e) => handleChange("title", e.target.value)}
                   placeholder="e.g. TechSummit 2026"
-                  {...INPUT_BASE}
+                  {...CONTROL_INPUT_BASE}
                 />
               </Field.Root>
               <Field.Root>
@@ -237,15 +231,7 @@ export function EventFormModal({ isOpen, onClose, event, onSave }: EventFormModa
                   onChange={(e) => handleChange("description", e.target.value)}
                   placeholder="Describe what attendees can expect..."
                   rows={3}
-                  borderRadius="16px"
-                  borderColor="secondaryGray.100"
-                  bg="app.bg"
-                  fontSize="sm"
-                  px={4}
-                  py={3}
-                  resize="vertical"
-                  _focus={FIELD_FOCUS}
-                  _dark={{ borderColor: "navy.600" }}
+                  {...CONTROL_TEXTAREA_BASE}
                 />
               </Field.Root>
             </Grid>
@@ -263,11 +249,11 @@ export function EventFormModal({ isOpen, onClose, event, onSave }: EventFormModa
             <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={4} mb={6}>
               <Field.Root>
                 <FieldLabel>Start Date & Time</FieldLabel>
-                <Input type="datetime-local" value={form.startDate} onChange={(e) => handleChange("startDate", e.target.value)} {...INPUT_BASE} />
+                <Input type="datetime-local" value={form.startDate} onChange={(e) => handleChange("startDate", e.target.value)} {...CONTROL_INPUT_BASE} />
               </Field.Root>
               <Field.Root>
                 <FieldLabel>End Date & Time</FieldLabel>
-                <Input type="datetime-local" value={form.endDate} onChange={(e) => handleChange("endDate", e.target.value)} {...INPUT_BASE} />
+                <Input type="datetime-local" value={form.endDate} onChange={(e) => handleChange("endDate", e.target.value)} {...CONTROL_INPUT_BASE} />
               </Field.Root>
               <Field.Root gridColumn={{ md: "1 / -1" }}>
                 <FieldLabel>
@@ -280,7 +266,7 @@ export function EventFormModal({ isOpen, onClose, event, onSave }: EventFormModa
                   value={form.location}
                   onChange={(e) => handleChange("location", e.target.value)}
                   placeholder="City, venue name or Online"
-                  {...INPUT_BASE}
+                  {...CONTROL_INPUT_BASE}
                 />
               </Field.Root>
             </Grid>
@@ -328,7 +314,7 @@ export function EventFormModal({ isOpen, onClose, event, onSave }: EventFormModa
                   value={form.capacity}
                   onChange={(e) => handleChange("capacity", parseInt(e.target.value) || 0)}
                   placeholder="Max attendees"
-                  {...INPUT_BASE}
+                  {...CONTROL_INPUT_BASE}
                 />
               </Field.Root>
 
@@ -344,7 +330,7 @@ export function EventFormModal({ isOpen, onClose, event, onSave }: EventFormModa
                   value={form.price}
                   onChange={(e) => handleChange("price", parseFloat(e.target.value) || 0)}
                   placeholder="0 for free"
-                  {...INPUT_BASE}
+                  {...CONTROL_INPUT_BASE}
                 />
               </Field.Root>
 
@@ -359,7 +345,7 @@ export function EventFormModal({ isOpen, onClose, event, onSave }: EventFormModa
                   value={form.organizer}
                   onChange={(e) => handleChange("organizer", e.target.value)}
                   placeholder="Organizer name or company"
-                  {...INPUT_BASE}
+                  {...CONTROL_INPUT_BASE}
                 />
               </Field.Root>
 
@@ -374,7 +360,7 @@ export function EventFormModal({ isOpen, onClose, event, onSave }: EventFormModa
                   value={form.tags}
                   onChange={(e) => handleChange("tags", e.target.value)}
                   placeholder="react, ai, 2026 (comma-separated)"
-                  {...INPUT_BASE}
+                  {...CONTROL_INPUT_BASE}
                 />
               </Field.Root>
             </Grid>
@@ -434,32 +420,16 @@ export function EventFormModal({ isOpen, onClose, event, onSave }: EventFormModa
             <Flex gap={3} justify="flex-end">
               <Button
                 variant="outline"
-                borderRadius="14px"
                 onClick={onClose}
-                fontWeight="600"
-                borderColor="secondaryGray.200"
-                color="navy.700"
-                _dark={{ borderColor: "navy.600", color: "secondaryGray.300" }}
-                _hover={{ bg: "secondaryGray.300", _dark: { bg: "navy.700" } }}
-                h="44px"
-                px={6}
+                {...CONTROL_BUTTON_OUTLINE}
               >
                 Cancel
               </Button>
               <Button
-                borderRadius="14px"
-                fontWeight="700"
                 onClick={handleSubmit}
                 disabled={!form.title.trim()}
-                h="44px"
-                px={7}
-                color="white"
+                {...CONTROL_BUTTON_PRIMARY}
                 style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
-                boxShadow="0 4px 15px rgba(66, 42, 251, 0.35)"
-                _hover={{ opacity: 0.92, transform: "translateY(-1px)", boxShadow: "0 6px 20px rgba(66, 42, 251, 0.4)" }}
-                _active={{ transform: "translateY(0)" }}
-                transition="all 0.2s ease"
-                _disabled={{ opacity: 0.5, cursor: "not-allowed", transform: "none" }}
               >
                 {isEditing ? "Save Changes" : "Create Event"}
               </Button>

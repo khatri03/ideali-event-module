@@ -37,6 +37,10 @@ import type {
   EventRegistrationSession,
   EventRegistrationTicket,
 } from '@/api/events'
+import {
+  CONTROL_BUTTON_OUTLINE,
+  CONTROL_BUTTON_PRIMARY,
+} from '@/components/common/controlStyles'
 
 const LOCAL_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
 
@@ -340,8 +344,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
               <Box position='sticky' top={{ base: 2, md: 4 }} zIndex={20}>
                 <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' px={{ base: 4, md: 5 }} py={4} boxShadow='0 12px 30px rgba(15, 23, 42, 0.08)'>
                   <Flex justify='space-between' align={{ base: 'stretch', md: 'center' }} gap={4} direction={{ base: 'column', md: 'row' }}>
-                    <Checkbox.Root checked={termsAccepted} onCheckedChange={(details) => setTermsAccepted(details.checked === true)}><Checkbox.HiddenInput /><Checkbox.Control borderColor='gray.300' /><Checkbox.Label color='gray.700' fontSize='sm' fontWeight='600'>I accept the registration terms and conditions.</Checkbox.Label></Checkbox.Root>
-                    <Button variant='ghost' color={formAccent} onClick={() => setTermsOpen(true)} alignSelf={{ base: 'flex-start', md: 'center' }}>View terms</Button>
+                    <Checkbox.Root checked={termsAccepted} onCheckedChange={(details) => setTermsAccepted(details.checked === true)}><Checkbox.HiddenInput /><Checkbox.Control borderColor='gray.300' borderRadius='8px' bg='white' _checked={{ bg: formAccent, borderColor: formAccent }} /><Checkbox.Label color='gray.700' fontSize='sm' fontWeight='600'>I accept the registration terms and conditions.</Checkbox.Label></Checkbox.Root>
+                    <Button variant='ghost' color={formAccent} fontWeight='700' onClick={() => setTermsOpen(true)} alignSelf={{ base: 'flex-start', md: 'center' }}>View terms</Button>
                   </Flex>
                 </Box>
               </Box>
@@ -349,16 +353,48 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
             <Box bg='white' borderWidth='1px' borderColor='blackAlpha.100' borderRadius='28px' p={{ base: 4, md: 6 }} boxShadow='0 24px 60px rgba(15, 23, 42, 0.08)'>
               <Tabs.Root value={activeTab} onValueChange={(details) => handleStepChange(details.value)} activationMode='manual'>
-                <Tabs.List display='flex' flexWrap='wrap' gap={3} border='0' p={0} mb={6}>
+                <Tabs.List
+                  display='grid'
+                  gap={3}
+                  borderWidth='1px'
+                  borderColor='gray.200'
+                  borderRadius='22px'
+                  bg='gray.50'
+                  p={3}
+                  mb={6}
+                  gridTemplateColumns={{ base: '1fr', md: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+                >
                   {tabs.map((tab, index) => {
                     const enabled = index <= highestUnlockedIndex
                     const complete = index < activeIndex
                     const IconComponent = tab.icon
                     return (
-                      <Tabs.Trigger key={tab.id} value={tab.id} disabled={!enabled} borderWidth='1px' borderColor={enabled ? (complete || activeTab === tab.id ? formAccent : 'gray.200') : 'gray.200'} borderRadius='18px' px={4} py={3} minH='14' bg={activeTab === tab.id ? hexToRgba(formAccent, 0.12) : enabled ? 'white' : 'gray.50'} color={enabled ? 'gray.900' : 'gray.400'} _hover={{ bg: enabled ? hexToRgba(formAccent, 0.08) : 'gray.50' }} _disabled={{ opacity: 0.45, cursor: 'not-allowed' }}>
-                        <HStack gap={3} align='center'>
+                      <Tabs.Trigger
+                        key={tab.id}
+                        value={tab.id}
+                        disabled={!enabled}
+                        borderWidth='1px'
+                        borderColor={enabled ? (complete || activeTab === tab.id ? formAccent : 'gray.200') : 'gray.200'}
+                        borderRadius='18px'
+                        px={4}
+                        py={3}
+                        minH='14'
+                        w='full'
+                        justifyContent='center'
+                        bg={activeTab === tab.id ? hexToRgba(formAccent, 0.12) : enabled ? 'white' : 'gray.50'}
+                        color={enabled ? 'gray.900' : 'gray.400'}
+                        _hover={{ bg: enabled ? hexToRgba(formAccent, 0.08) : 'gray.50' }}
+                        _disabled={{ opacity: 0.45, cursor: 'not-allowed' }}
+                      >
+                        <HStack gap={3} align='center' justify='center' w='full'>
                           <Flex w='8' h='8' borderRadius='full' align='center' justify='center' bg={activeTab === tab.id || complete ? formAccent : 'gray.100'} color={activeTab === tab.id || complete ? 'white' : 'gray.600'} fontSize='xs' fontWeight='800'>{String(index + 1).padStart(2, '0')}</Flex>
-                          <Stack gap={0} align='start' textAlign='left'><HStack gap={1.5}><IconComponent size={16} /><Text as='span' fontWeight='700' fontSize='sm'>{tab.label}</Text></HStack><Text fontSize='xs' color={enabled ? 'gray.500' : 'gray.400'}>Step {index + 1}</Text></Stack>
+                          <Stack gap={0} align='center' textAlign='center' minW={0}>
+                            <HStack gap={1.5} justify='center' flexWrap='wrap'>
+                              <IconComponent size={16} />
+                              <Text as='span' fontWeight='700' fontSize='sm'>{tab.label}</Text>
+                            </HStack>
+                            <Text fontSize='xs' color={enabled ? 'gray.500' : 'gray.400'}>Step {index + 1}</Text>
+                          </Stack>
                         </HStack>
                       </Tabs.Trigger>
                     )
@@ -402,8 +438,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                       ) : null}
 
                       <Flex justify='space-between' gap={3} align={{ base: 'stretch', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
-                        <Button variant='outline' borderRadius='16px' minH='12' onClick={handleBackStep} disabled={activeIndex <= 0}><HStack gap={2}><ArrowLeft size={16} /><Text as='span'>Back</Text></HStack></Button>
-                        <Button minH='12' borderRadius='16px' color='white' bg={formAccent} _hover={{ bg: hexToRgba(formAccent, 0.88) }} onClick={handleContinue} disabled={Boolean(event.termsConditions) && !termsAccepted}><HStack gap={2}><Text as='span'>Continue</Text><ChevronRight size={16} /></HStack></Button>
+                        <Button {...CONTROL_BUTTON_OUTLINE} onClick={handleBackStep} disabled={activeIndex <= 0}><HStack gap={2}><ArrowLeft size={16} /><Text as='span'>Back</Text></HStack></Button>
+                        <Button {...CONTROL_BUTTON_PRIMARY} bg={formAccent} _hover={{ bg: hexToRgba(formAccent, 0.88), transform: 'translateY(-1px)' }} onClick={handleContinue} disabled={Boolean(event.termsConditions) && !termsAccepted}><HStack gap={2}><Text as='span'>Continue</Text><ChevronRight size={16} /></HStack></Button>
                       </Flex>
                     </Stack>
                   </Tabs.Content>
