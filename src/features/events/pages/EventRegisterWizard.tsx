@@ -356,6 +356,17 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     )
   }
 
+  function handleExpandAllSessions() {
+    setExpandedSessionIds(event.sessions.map((session) => session.uniqueId))
+  }
+
+  function handleCollapseAllSessions() {
+    setExpandedSessionIds([])
+  }
+
+  const areAllSessionsExpanded =
+    event.sessions.length > 0 && expandedSessionIds.length === event.sessions.length
+
   return (
     <Box minH='100dvh' bg={accentBackground} color='gray.900'>
       <Flex minH='100dvh' align='center' justify='center' px={{ base: 3, md: 6, xl: 8 }} py={{ base: 5, md: 8 }}>
@@ -485,6 +496,29 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
                           {tab.id === 'sessions' ? (
                             <Stack gap={4}>
+                              {event.sessions.length > 0 ? (
+                                <Flex justify='flex-end' gap={2} wrap='wrap'>
+                                  <Button
+                                    h='38px'
+                                    px={4}
+                                    borderRadius='full'
+                                    borderWidth='1px'
+                                    borderColor='gray.900'
+                                    bg='gray.900'
+                                    color='white'
+                                    fontSize='sm'
+                                    fontWeight='700'
+                                    boxShadow='0 10px 24px rgba(15, 23, 42, 0.18)'
+                                    _hover={{ bg: 'gray.800', borderColor: 'gray.800' }}
+                                    _active={{ bg: 'gray.700', borderColor: 'gray.700' }}
+                                    transition='all 0.2s ease'
+                                    minW='140px'
+                                    onClick={areAllSessionsExpanded ? handleCollapseAllSessions : handleExpandAllSessions}
+                                  >
+                                    {areAllSessionsExpanded ? 'Collapse All' : 'Expand All'}
+                                  </Button>
+                                </Flex>
+                              ) : null}
                               {event.sessions.map((session) => (
                                 <SessionTitleCard
                                   key={session.uniqueId}
