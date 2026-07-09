@@ -15,6 +15,7 @@ import {
   Image,
   Input,
   Link,
+  Portal,
   Separator,
   SimpleGrid,
   Stack,
@@ -141,7 +142,32 @@ function hexToRgba(hex: string, alpha: number) {
 }
 
 function formatAmount(value: number, currencyCode?: string | null) {
-  if (!Number.isFinite(value) || value <= 0) return 'Free'
+  if (!Number.isFinite(value) || value < 0) return '$0'
+  if (value === 0) {
+    const trimmedCurrency = currencyCode?.trim()
+
+    if (trimmedCurrency) {
+      const isIsoCurrencyCode = /^[A-Za-z]{3}$/.test(trimmedCurrency)
+
+      if (isIsoCurrencyCode) {
+        try {
+          return new Intl.NumberFormat(undefined, {
+            style: 'currency',
+            currency: trimmedCurrency.toUpperCase(),
+            currencyDisplay: 'narrowSymbol',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          }).format(0)
+        } catch {
+          return `${trimmedCurrency.toUpperCase()} 0`
+        }
+      }
+
+      return `${trimmedCurrency}0`
+    }
+
+    return '$0'
+  }
 
   const trimmedCurrency = currencyCode?.trim()
 
@@ -379,6 +405,16 @@ function SupportCard({ title, subtitle, icon, children }: { title: string; subti
       {children}
     </Box>
   )
+}
+
+interface SelectedTicketSummaryItem {
+  sessionId: string
+  sessionName: string
+  ticketId: string
+  ticketName: string
+  quantity: number
+  unitPrice: number
+  lineTotal: number
 }
 
 function TicketCard({
@@ -665,6 +701,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [selectedTicketQuantities, setSelectedTicketQuantities] = useState<Record<string, number>>({})
   const [purchaseTimerStartedAt, setPurchaseTimerStartedAt] = useState<number | null>(null)
   const [purchaseTimerNow, setPurchaseTimerNow] = useState(() => Date.now())
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false)
 
   useEffect(() => {
     setActiveTab(firstTab)
@@ -691,6 +728,33 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const purchaseTimerRemainingMs = purchaseTimerStartedAt === null ? null : purchaseTimerStartedAt + purchaseTimerDurationMs - purchaseTimerNow
   const purchaseTimerVisible = purchaseTimerStartedAt !== null
   const purchaseTimerExpired = purchaseTimerRemainingMs !== null && purchaseTimerRemainingMs <= 0
+  const selectedTicketSummary = useMemo<SelectedTicketSummaryItem[]>(
+    () =>
+      event.sessions.flatMap((session) =>
+        session.ticketTypes.flatMap((ticket) => {
+          const quantity = selectedTicketQuantities[ticket.uniqueId] ?? 0
+          if (quantity <= 0) return []
+
+          const unitPrice = getTicketDisplayPrice(ticket)
+
+          return [
+            {
+              sessionId: session.uniqueId,
+              sessionName: session.name,
+              ticketId: ticket.uniqueId,
+              ticketName: ticket.name,
+              quantity,
+              unitPrice,
+              lineTotal: unitPrice * quantity,
+            },
+          ]
+        }),
+      ),
+    [event.sessions, selectedTicketQuantities],
+  )
+  const selectedTicketCount = selectedTicketSummary.reduce((total, item) => total + item.quantity, 0)
+  const selectedTicketTotal = selectedTicketSummary.reduce((total, item) => total + item.lineTotal, 0)
+  const shouldHighlightSummaryLauncher = selectedTicketCount > 0 || purchaseTimerVisible
 
   function isStepEnabled(stepId: WizardTabId) {
     const index = getStepIndex(tabs, stepId)
@@ -834,47 +898,161 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
               </Box>
             </Box>
 
-            <Stack position='sticky' top={{ base: 2, md: 4 }} zIndex={20} gap={3}>
-              {purchaseTimerVisible ? (
+            <Portal>
+              <Box position='fixed' right={{ base: 1.5, md: 2.5 }} bottom={{ base: 1.5, md: 2.5 }} zIndex={999} pointerEvents='none'>
                 <Box
+                  pointerEvents='auto'
+                  w={{ base: 'min(calc(100vw - 0.75rem), 360px)', md: '380px' }}
                   borderWidth='1px'
-                  borderColor={purchaseTimerExpired ? 'red.200' : 'gray.200'}
-                  borderRadius='20px'
-                  bg={purchaseTimerExpired ? 'red.50' : 'white'}
-                  px={{ base: 4, md: 5 }}
-                  py={4}
-                  boxShadow='0 12px 30px rgba(15, 23, 42, 0.08)'
-                  animation={`${timerRevealAnimation} 280ms ease-out`}
-                  transformOrigin='top center'
+                  borderColor='gray.200'
+                  borderRadius='26px'
+                  bg='white'
+                  boxShadow='0 28px 80px rgba(15, 23, 42, 0.22)'
+                  overflow='hidden'
                 >
-                  <Flex align={{ base: 'start', md: 'center' }} justify='space-between' gap={4} direction={{ base: 'column', md: 'row' }}>
-                    <HStack gap={3} align='start'>
-                      <Box w='10' h='10' borderRadius='12px' display='grid' placeItems='center' bg={purchaseTimerExpired ? 'red.100' : 'gray.100'} color={purchaseTimerExpired ? 'red.600' : 'gray.700'}>
-                        <Clock3 size={18} />
-                      </Box>
-                      <Stack gap={0.5}>
-                        <Text fontSize='xs' fontWeight='800' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>Purchase time left</Text>
-                        <Text fontSize='lg' fontWeight='800' color={purchaseTimerExpired ? 'red.600' : 'gray.900'}>{formatCountdown(purchaseTimerRemainingMs ?? 0)}</Text>
+                  <Flex
+                    px={4}
+                    py={3.5}
+                    align='center'
+                    justify='space-between'
+                    gap={3}
+                    borderBottomWidth={isSummaryOpen ? '1px' : '0'}
+                    borderBottomColor={hexToRgba(formAccent, 0.32)}
+                    bg={formAccent}
+                    color='white'
+                    cursor='pointer'
+                    onClick={() => setIsSummaryOpen((current) => !current)}
+                    transition='border-color 0.22s ease'
+                  >
+                    <HStack gap={3} minW={0}>
+                      <Stack gap={0} minW={0}>
+                        <Text fontSize='sm' fontWeight='800' lineHeight='1.2'>Summary</Text>
+                        {isSummaryOpen && selectedTicketCount > 0 ? (
+                          <Text fontSize='xs' color={shouldHighlightSummaryLauncher ? 'white' : 'whiteAlpha.900'} lineHeight='1.3'>
+                            {selectedTicketCount} selected
+                          </Text>
+                        ) : null}
                       </Stack>
                     </HStack>
-                    <Text fontSize='sm' color='gray.600' lineHeight='1.6' maxW='2xl'>
-                      {purchaseTimerExpired
-                        ? 'Purchase time limit reached. Please restart registration.'
-                        : 'Complete your registration before the timer reaches zero.'}
-                    </Text>
+                    {isSummaryOpen ? (
+                      <Box
+                        color='whiteAlpha.900'
+                        transform='rotate(0deg)'
+                        transition='transform 220ms ease'
+                        flexShrink={0}
+                      >
+                        <ChevronDown size={18} />
+                      </Box>
+                    ) : (
+                      <Text fontSize='sm' fontWeight='800' lineHeight='1.1' color='white' flexShrink={0}>
+                        {formatAmount(selectedTicketTotal, event.paymentAccountCurrency)}
+                      </Text>
+                    )}
                   </Flex>
-                </Box>
-              ) : null}
 
-              {event.termsConditions ? (
-                <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' px={{ base: 4, md: 5 }} py={4} boxShadow='0 12px 30px rgba(15, 23, 42, 0.08)'>
-                  <Flex justify='space-between' align={{ base: 'stretch', md: 'center' }} gap={4} direction={{ base: 'column', md: 'row' }}>
-                    <Checkbox.Root checked={termsAccepted} onCheckedChange={(details) => setTermsAccepted(details.checked === true)}><Checkbox.HiddenInput /><Checkbox.Control borderColor='gray.300' borderRadius='8px' bg='white' _checked={{ bg: formAccent, borderColor: formAccent }} /><Checkbox.Label color='gray.700' fontSize='sm' fontWeight='600'>I accept the registration terms and conditions.</Checkbox.Label></Checkbox.Root>
-                    <Button variant='ghost' color={formAccent} fontWeight='700' onClick={() => setTermsOpen(true)} alignSelf={{ base: 'flex-start', md: 'center' }}>View terms</Button>
-                  </Flex>
+                  <Box
+                    maxH={isSummaryOpen ? { base: 'min(72vh, 560px)', md: 'min(74vh, 620px)' } : '0px'}
+                    opacity={isSummaryOpen ? 1 : 0}
+                    transform={isSummaryOpen ? 'translateY(0)' : 'translateY(10px)'}
+                    transition='max-height 280ms ease, opacity 220ms ease, transform 220ms ease'
+                    overflow='hidden'
+                  >
+                    <Stack gap={3} px={4} py={4} overflowY='auto' maxH={{ base: 'min(72vh, 560px)', md: 'min(74vh, 620px)' }}>
+                      {purchaseTimerVisible ? (
+                        <Box
+                          borderWidth='1px'
+                          borderColor={purchaseTimerExpired ? 'red.200' : 'gray.200'}
+                          borderRadius='18px'
+                          bg={purchaseTimerExpired ? 'red.50' : 'gray.50'}
+                          px={4}
+                          py={3.5}
+                          boxShadow='0 10px 24px rgba(15, 23, 42, 0.06)'
+                          animation={isSummaryOpen ? `${timerRevealAnimation} 280ms ease-out` : undefined}
+                          transformOrigin='top center'
+                        >
+                          <HStack gap={3} align='center'>
+                            <Box w='10' h='10' borderRadius='12px' display='grid' placeItems='center' bg={purchaseTimerExpired ? 'red.100' : 'gray.100'} color={purchaseTimerExpired ? 'red.600' : 'gray.700'} flexShrink={0}>
+                              <Clock3 size={18} />
+                            </Box>
+                            <Stack gap={0.25}>
+                              <Text fontSize='xs' fontWeight='800' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>
+                                Purchase time left
+                              </Text>
+                              <Text fontSize='lg' fontWeight='800' color={purchaseTimerExpired ? 'red.600' : 'gray.900'}>
+                                {formatCountdown(purchaseTimerRemainingMs ?? 0)}
+                              </Text>
+                            </Stack>
+                          </HStack>
+                        </Box>
+                      ) : null}
+
+                      {selectedTicketSummary.length > 0 ? (
+                        <Stack gap={2.5}>
+                          {selectedTicketSummary.map((item) => (
+                            <Box key={item.ticketId} borderWidth='1px' borderColor='gray.200' borderRadius='14px' bg='gray.50' px={3} py={2.75}>
+                              <Flex justify='space-between' gap={3} align='start'>
+                                <Stack gap={0.25} minW={0}>
+                                  <Text fontSize='sm' fontWeight='700' color='gray.900' lineHeight='1.35' noOfLines={1}>
+                                    {item.ticketName}
+                                  </Text>
+                                  <Text fontSize='xs' color='gray.500' lineHeight='1.4' noOfLines={1}>
+                                    {item.sessionName}
+                                  </Text>
+                                </Stack>
+                                <Text fontSize='sm' fontWeight='800' color='gray.900' flexShrink={0}>
+                                  {formatAmount(item.lineTotal, event.paymentAccountCurrency)}
+                                </Text>
+                              </Flex>
+                              <Flex justify='space-between' align='center' gap={3} mt={1.5}>
+                                <Text fontSize='xs' color='gray.500'>
+                                  Qty {item.quantity} x {formatAmount(item.unitPrice, event.paymentAccountCurrency)}
+                                </Text>
+                                <Text fontSize='xs' fontWeight='700' color='gray.700'>
+                                  {formatAmount(item.unitPrice, event.paymentAccountCurrency)} each
+                                </Text>
+                              </Flex>
+                            </Box>
+                          ))}
+                        </Stack>
+                      ) : (
+                        <Box borderWidth='1px' borderColor='gray.200' borderRadius='14px' bg='gray.50' px={3.5} py={3}>
+                          <Text fontSize='sm' fontWeight='600' color='gray.700'>
+                            No tickets selected yet.
+                          </Text>
+                          <Text mt={1} fontSize='xs' color='gray.500' lineHeight='1.55'>
+                            Pick tickets in Sessions and the summary updates instantly.
+                          </Text>
+                        </Box>
+                      )}
+
+                      <Separator borderColor='gray.200' />
+
+                      <Flex justify='space-between' align='center' gap={3}>
+                        <Text fontSize='sm' color='gray.600'>
+                          Total
+                        </Text>
+                        <Text fontSize='lg' fontWeight='800' color='gray.900'>
+                          {formatAmount(selectedTicketTotal, event.paymentAccountCurrency)}
+                        </Text>
+                      </Flex>
+                    </Stack>
+                  </Box>
                 </Box>
-              ) : null}
-            </Stack>
+              </Box>
+            </Portal>
+
+            {event.termsConditions ? (
+              <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' px={{ base: 4, md: 5 }} py={4} boxShadow='0 12px 30px rgba(15, 23, 42, 0.08)'>
+                <Flex justify='space-between' align={{ base: 'stretch', md: 'center' }} gap={4} direction={{ base: 'column', md: 'row' }}>
+                  <Checkbox.Root checked={termsAccepted} onCheckedChange={(details) => setTermsAccepted(details.checked === true)}>
+                    <Checkbox.HiddenInput />
+                    <Checkbox.Control borderColor='gray.300' borderRadius='8px' bg='white' _checked={{ bg: formAccent, borderColor: formAccent }} />
+                    <Checkbox.Label color='gray.700' fontSize='sm' fontWeight='600'>I accept the registration terms and conditions.</Checkbox.Label>
+                  </Checkbox.Root>
+                  <Button variant='ghost' color={formAccent} fontWeight='700' onClick={() => setTermsOpen(true)} alignSelf={{ base: 'flex-start', md: 'center' }}>View terms</Button>
+                </Flex>
+              </Box>
+            ) : null}
 
             <Box bg='white' borderWidth='1px' borderColor='blackAlpha.100' borderRadius='28px' p={{ base: 4, md: 6 }} boxShadow='0 24px 60px rgba(15, 23, 42, 0.08)'>
               <Tabs.Root value={activeTab} onValueChange={(details) => handleStepChange(details.value)} activationMode='manual'>
