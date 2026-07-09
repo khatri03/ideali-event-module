@@ -30,6 +30,8 @@ import {
   FileText,
   MapPin,
   MessageSquareText,
+  Minus,
+  Plus,
   Check,
   Users,
 } from 'lucide-react'
@@ -153,6 +155,21 @@ function getTicketRemaining(ticket: EventRegistrationTicket) {
   return null
 }
 
+function getTicketDisplayPrice(ticket: EventRegistrationTicket) {
+  return getTicketPricePeriod(ticket)?.amount ?? ticket.fullPrice ?? 0
+}
+
+function getTicketSelectableMax(ticket: EventRegistrationTicket) {
+  const remaining = getTicketRemaining(ticket)
+  const purchaseMax = ticket.maxPurchase ?? null
+
+  if (remaining !== null && purchaseMax !== null) return Math.max(Math.min(remaining, purchaseMax), 0)
+  if (remaining !== null) return Math.max(remaining, 0)
+  if (purchaseMax !== null) return Math.max(purchaseMax, 0)
+
+  return null
+}
+
 function AutoImageCarousel({ slides, accentColor, height = { base: '220px', md: '320px' } }: { slides: BannerSlide[]; accentColor: string; height?: { base: string; md: string } }) {
   const [activeSlide, setActiveSlide] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
@@ -267,10 +284,22 @@ function SupportCard({ title, subtitle, icon, children }: { title: string; subti
   )
 }
 
-function TicketCard({ ticket }: { ticket: EventRegistrationTicket }) {
+function TicketCard({
+  ticket,
+  quantity,
+  onDecrease,
+  onIncrease,
+}: {
+  ticket: EventRegistrationTicket
+  quantity: number
+  onDecrease: () => void
+  onIncrease: () => void
+}) {
   const activePricePeriod = getTicketPricePeriod(ticket)
   const remaining = getTicketRemaining(ticket)
-  const displayPrice = activePricePeriod?.amount ?? ticket.fullPrice
+  const displayPrice = getTicketDisplayPrice(ticket)
+  const selectableMax = getTicketSelectableMax(ticket)
+  const subtotal = displayPrice * quantity
 
   return (
     <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='gray.50' p={{ base: 4, md: 5 }}>
@@ -288,19 +317,51 @@ function TicketCard({ ticket }: { ticket: EventRegistrationTicket }) {
           </Stack>
         </Flex>
 
-        <Flex gap={2} wrap='wrap'>
-          <Badge colorPalette={ticket.isActive ? 'green' : 'gray'} variant='subtle' borderRadius='full' px={3} py={1}>
-            {ticket.isActive ? 'Active' : 'Inactive'}
-          </Badge>
-          <Badge colorPalette='gray' variant='subtle' borderRadius='full' px={3} py={1}>
-            {remaining === null ? 'Availability not set' : `${remaining} available`}
-          </Badge>
-          {ticket.minPurchase || ticket.maxPurchase ? (
-            <Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>
-              {`${ticket.minPurchase ?? 1}-${ticket.maxPurchase ?? 'Any'} per order`}
-            </Badge>
-          ) : null}
-        </Flex>
+        <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='white' p={4}>
+          <Flex justify='space-between' align={{ base: 'stretch', md: 'center' }} gap={4} direction={{ base: 'column', md: 'row' }}>
+            <Stack gap={1}>
+              <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>Quantity</Text>
+              <HStack gap={2}>
+                <Button
+                  minW='0'
+                  w='34px'
+                  h='34px'
+                  p='0'
+                  borderRadius='full'
+                  borderWidth='1px'
+                  borderColor='gray.300'
+                  bg='white'
+                  onClick={onDecrease}
+                  disabled={quantity <= 0}
+                >
+                  <Minus size={14} />
+                </Button>
+                <Flex minW='52px' h='34px' px={3} borderWidth='1px' borderColor='gray.200' borderRadius='full' align='center' justify='center' bg='gray.50'>
+                  <Text fontSize='sm' fontWeight='700' color='gray.900'>{quantity}</Text>
+                </Flex>
+                <Button
+                  minW='0'
+                  w='34px'
+                  h='34px'
+                  p='0'
+                  borderRadius='full'
+                  borderWidth='1px'
+                  borderColor='gray.300'
+                  bg='white'
+                  onClick={onIncrease}
+                  disabled={selectableMax !== null && quantity >= selectableMax}
+                >
+                  <Plus size={14} />
+                </Button>
+              </HStack>
+            </Stack>
+
+            <Stack gap={1} align={{ base: 'start', md: 'end' }}>
+              <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>Subtotal</Text>
+              <Text fontSize='lg' fontWeight='800' color='gray.900'>{formatAmount(subtotal)}</Text>
+            </Stack>
+          </Flex>
+        </Box>
 
         {ticket.pricePeriods.length > 1 ? (
           <Stack gap={3}>
@@ -419,6 +480,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [expandedSessionIds, setExpandedSessionIds] = useState<string[]>([])
   const [activeSessionDescription, setActiveSessionDescription] = useState<{ title: string; description: string } | null>(null)
   const [sessionTicketSearch, setSessionTicketSearch] = useState<Record<string, string>>({})
+  const [selectedTicketQuantities, setSelectedTicketQuantities] = useState<Record<string, number>>({})
 
   useEffect(() => {
     setActiveTab(firstTab)
@@ -478,6 +540,16 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setSessionTicketSearch((current) => ({
       ...current,
       [sessionUniqueId]: value,
+    }))
+  }
+
+  function handleTicketQuantityChange(ticket: EventRegistrationTicket, nextQuantity: number) {
+    const maxAllowed = getTicketSelectableMax(ticket)
+    const normalized = Math.max(0, maxAllowed === null ? nextQuantity : Math.min(nextQuantity, maxAllowed))
+
+    setSelectedTicketQuantities((current) => ({
+      ...current,
+      [ticket.uniqueId]: normalized,
     }))
   }
 
@@ -696,7 +768,13 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                           {filteredTickets.length > 0 ? (
                                             <Stack gap={4}>
                                               {filteredTickets.map((ticket) => (
-                                                <TicketCard key={ticket.uniqueId} ticket={ticket} />
+                                                <TicketCard
+                                                  key={ticket.uniqueId}
+                                                  ticket={ticket}
+                                                  quantity={selectedTicketQuantities[ticket.uniqueId] ?? 0}
+                                                  onDecrease={() => handleTicketQuantityChange(ticket, (selectedTicketQuantities[ticket.uniqueId] ?? 0) - 1)}
+                                                  onIncrease={() => handleTicketQuantityChange(ticket, (selectedTicketQuantities[ticket.uniqueId] ?? 0) + 1)}
+                                                />
                                               ))}
                                             </Stack>
                                           ) : (
