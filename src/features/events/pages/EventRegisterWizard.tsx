@@ -30,8 +30,6 @@ import {
   FileText,
   MapPin,
   MessageSquareText,
-  Minus,
-  Plus,
   Check,
   Users,
 } from 'lucide-react'
@@ -408,7 +406,7 @@ function TicketCard({
                 onClick={onDecrease}
                 disabled={quantity <= 0}
               >
-                <Minus size={14} />
+                <Text as='span' fontSize='lg' fontWeight='800' lineHeight='1' color='gray.700'>-</Text>
               </Button>
               <Stack gap={0} align='center' flex='1'>
                 <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.1em'>
@@ -428,7 +426,7 @@ function TicketCard({
                 onClick={onIncrease}
                 disabled={selectableMax !== null && quantity >= selectableMax}
               >
-                <Plus size={14} />
+                <Text as='span' fontSize='lg' fontWeight='800' lineHeight='1' color='gray.700'>+</Text>
               </Button>
             </Flex>
             {ticket.minPurchase > 1 ? (
@@ -637,12 +635,21 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
   function handleTicketQuantityChange(ticket: EventRegistrationTicket, nextQuantity: number) {
     const maxAllowed = getTicketSelectableMax(ticket)
-    const normalized = Math.max(0, maxAllowed === null ? nextQuantity : Math.min(nextQuantity, maxAllowed))
+    const minimumPurchase = Math.max(ticket.minPurchase ?? 1, 1)
 
-    setSelectedTicketQuantities((current) => ({
-      ...current,
-      [ticket.uniqueId]: normalized,
-    }))
+    setSelectedTicketQuantities((current) => {
+      const currentQuantity = current[ticket.uniqueId] ?? 0
+      const requestedQuantity =
+        currentQuantity <= 0 && nextQuantity > 0
+          ? Math.max(nextQuantity, minimumPurchase)
+          : nextQuantity
+      const normalized = Math.max(0, maxAllowed === null ? requestedQuantity : Math.min(requestedQuantity, maxAllowed))
+
+      return {
+        ...current,
+        [ticket.uniqueId]: normalized,
+      }
+    })
   }
 
   const areAllSessionsExpanded =
