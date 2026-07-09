@@ -318,13 +318,6 @@ function SessionSection({ session }: { session: EventRegistrationSession }) {
   return (
     <Box borderWidth='1px' borderColor='gray.200' borderRadius='24px' bg='white' p={{ base: 4, md: 6 }}>
       <Stack gap={5}>
-        {session.bannerUrl ? (
-          <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' overflow='hidden' bg='gray.100'>
-            <AspectRatio ratio={16 / 6}>
-              <Image src={session.bannerUrl} alt={session.name} w='full' h='full' objectFit='cover' objectPosition='center' />
-            </AspectRatio>
-          </Box>
-        ) : null}
         <Flex justify='space-between' align='start' gap={4} wrap='wrap'>
           <Stack gap={2} flex='1' minW='240px'>
             <Heading fontSize='xl' color='gray.900' letterSpacing='-0.02em'>{session.name}</Heading>
@@ -521,49 +514,48 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                 {tabs.map((tab) => (
                   <Tabs.Content key={tab.id} value={tab.id}>
                     <Stack gap={6}>
-                      {tab.id === 'description' ? (
-                        <SupportCard title='Description' subtitle='Event overview and key details.' icon={<FileText size={18} />}>
-                          <Stack gap={4}>
-                            {event.summary ? <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}><Text fontSize='sm' fontWeight='700' color='gray.900' mb={2}>Summary</Text><Text color='gray.700' lineHeight='1.7'>{event.summary}</Text></Box> : null}
-                            {event.description ? <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='white' p={5}>{isHtmlContent(event.description) ? <RichTextBlock html={event.description} /> : <Text color='gray.700' lineHeight='1.7'>{event.description}</Text>}</Box> : null}
-                          </Stack>
-                        </SupportCard>
-                      ) : null}
+                      <Box
+                        maxH={{ base: '60vh', md: '62vh', xl: '64vh' }}
+                        overflowY='auto'
+                        pr={{ base: 1, md: 2 }}
+                      >
+                        <Stack gap={6}>
+                          {tab.id === 'description' ? (
+                            <SupportCard title='Description' subtitle='Event overview and key details.' icon={<FileText size={18} />}>
+                              <Stack gap={4}>
+                                {event.summary ? <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}><Text fontSize='sm' fontWeight='700' color='gray.900' mb={2}>Summary</Text><Text color='gray.700' lineHeight='1.7'>{event.summary}</Text></Box> : null}
+                                {event.description ? <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='white' p={5}>{isHtmlContent(event.description) ? <RichTextBlock html={event.description} /> : <Text color='gray.700' lineHeight='1.7'>{event.description}</Text>}</Box> : null}
+                              </Stack>
+                            </SupportCard>
+                          ) : null}
 
-                      {tab.id === 'sessions' ? (
-                        <SupportCard title='Sessions' subtitle='Choose from the configured sessions and review available ticket windows.' icon={<CalendarDays size={18} />}>
-                          <Stack gap={4}>
-                            {event.sessions.some((session) => session.bannerUrl) ? (
-                              <AutoImageCarousel
-                                slides={event.sessions.filter((session) => session.bannerUrl).map((session) => ({
-                                  imageUrl: session.bannerUrl as string,
-                                }))}
-                                accentColor={formAccent}
-                                height={{ base: '200px', md: '260px' }}
-                              />
-                            ) : null}
-                            {event.sessions.map((session) => <SessionSection key={session.uniqueId} session={session} />)}
-                          </Stack>
-                        </SupportCard>
-                      ) : null}
+                          {tab.id === 'sessions' ? (
+                            <SupportCard title='Sessions' subtitle='Choose from the configured sessions and review available ticket windows.' icon={<CalendarDays size={18} />}>
+                              <Stack gap={4}>
+                                {event.sessions.map((session) => <SessionSection key={session.uniqueId} session={session} />)}
+                              </Stack>
+                            </SupportCard>
+                          ) : null}
 
-                      {tab.id === 'attendee-info' ? (
-                        <SupportCard title='Attendee Info' subtitle='These sessions require attendee details before registration can continue.' icon={<Users size={18} />}>
-                          <Stack gap={4}>{event.sessions.filter((session) => session.requiresAttendeeInfo).map((session) => <Box key={session.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}><HStack justify='space-between' gap={4} align='start' flexWrap='wrap'><Stack gap={1}><Text fontWeight='700' color='gray.900'>{session.name}</Text><Text fontSize='sm' color='gray.600'>Attendee information will be collected for this session.</Text></Stack><Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>Required</Badge></HStack></Box>)}</Stack>
-                        </SupportCard>
-                      ) : null}
+                          {tab.id === 'attendee-info' ? (
+                            <SupportCard title='Attendee Info' subtitle='These sessions require attendee details before registration can continue.' icon={<Users size={18} />}>
+                              <Stack gap={4}>{event.sessions.filter((session) => session.requiresAttendeeInfo).map((session) => <Box key={session.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}><HStack justify='space-between' gap={4} align='start' flexWrap='wrap'><Stack gap={1}><Text fontWeight='700' color='gray.900'>{session.name}</Text><Text fontSize='sm' color='gray.600'>Attendee information will be collected for this session.</Text></Stack><Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>Required</Badge></HStack></Box>)}</Stack>
+                            </SupportCard>
+                          ) : null}
 
-                      {tab.id === 'questionnaire' ? (
-                        <SupportCard title='Questionnaire' subtitle='Custom forms and questions mapped to the sessions are rendered here.' icon={<MessageSquareText size={18} />}>
-                          <Stack gap={5}>{event.sessions.filter((session) => session.customForms.length > 0 || session.customQuestions.length > 0).map((session) => <Box key={session.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='20px' p={5} bg='gray.50'><Stack gap={4}><Box><Text fontSize='lg' fontWeight='700' color='gray.900'>{session.name}</Text><Text fontSize='sm' color='gray.600'>Questionnaire content mapped to this session.</Text></Box>{session.customForms.length > 0 ? <Stack gap={3}><Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>Custom Forms</Text><SimpleGrid columns={{ base: 1, lg: 2 }} gap={3}>{session.customForms.map((form) => <Box key={form.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={4}><Text fontWeight='700' color='gray.900'>{form.headerText ?? form.name}</Text>{form.description ? <Text mt={2} fontSize='sm' color='gray.600' lineHeight='1.7'>{form.description}</Text> : null}</Box>)}</SimpleGrid></Stack> : null}{session.customQuestions.length > 0 ? <Stack gap={3}><Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>Custom Questions</Text><Stack gap={3}>{session.customQuestions.map((question) => <Box key={question.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={4}><HStack justify='space-between' gap={4} align='start' flexWrap='wrap'><Stack gap={1}><Text fontWeight='700' color='gray.900'>{question.label}</Text><Text fontSize='sm' color='gray.600'>{question.controlType}</Text></Stack><Badge colorPalette={question.required ? 'red' : 'gray'} variant='subtle' borderRadius='full' px={3} py={1}>{question.required ? 'Required' : 'Optional'}</Badge></HStack></Box>)}</Stack></Stack> : null}</Stack></Box>)}</Stack>
-                        </SupportCard>
-                      ) : null}
+                          {tab.id === 'questionnaire' ? (
+                            <SupportCard title='Questionnaire' subtitle='Custom forms and questions mapped to the sessions are rendered here.' icon={<MessageSquareText size={18} />}>
+                              <Stack gap={5}>{event.sessions.filter((session) => session.customForms.length > 0 || session.customQuestions.length > 0).map((session) => <Box key={session.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='20px' p={5} bg='gray.50'><Stack gap={4}><Box><Text fontSize='lg' fontWeight='700' color='gray.900'>{session.name}</Text><Text fontSize='sm' color='gray.600'>Questionnaire content mapped to this session.</Text></Box>{session.customForms.length > 0 ? <Stack gap={3}><Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>Custom Forms</Text><SimpleGrid columns={{ base: 1, lg: 2 }} gap={3}>{session.customForms.map((form) => <Box key={form.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={4}><Text fontWeight='700' color='gray.900'>{form.headerText ?? form.name}</Text>{form.description ? <Text mt={2} fontSize='sm' color='gray.600' lineHeight='1.7'>{form.description}</Text> : null}</Box>)}</SimpleGrid></Stack> : null}{session.customQuestions.length > 0 ? <Stack gap={3}><Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>Custom Questions</Text><Stack gap={3}>{session.customQuestions.map((question) => <Box key={question.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={4}><HStack justify='space-between' gap={4} align='start' flexWrap='wrap'><Stack gap={1}><Text fontWeight='700' color='gray.900'>{question.label}</Text><Text fontSize='sm' color='gray.600'>{question.controlType}</Text></Stack><Badge colorPalette={question.required ? 'red' : 'gray'} variant='subtle' borderRadius='full' px={3} py={1}>{question.required ? 'Required' : 'Optional'}</Badge></HStack></Box>)}</Stack></Stack> : null}</Stack></Box>)}</Stack>
+                            </SupportCard>
+                          ) : null}
 
-                      {tab.id === 'payment' ? (
-                        <SupportCard title='Payment' subtitle='Show the mapped payment methods and protect organizer-only cheque payments.' icon={<CreditCard size={18} />}>
-                          <Stack gap={4}>{visiblePaymentMethods.length > 0 ? <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>{visiblePaymentMethods.map((method) => <Box key={method.paymentMethod} borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'><HStack justify='space-between' gap={4} align='start' flexWrap='wrap'><Stack gap={1}><Text fontWeight='700' color='gray.900'>{method.label}</Text><Text fontSize='sm' color='gray.600'>Available for this registration flow.</Text></Stack>{method.isOrganizerOnly ? <Badge colorPalette='purple' variant='subtle' borderRadius='full' px={3} py={1}>Organizer only</Badge> : null}</HStack></Box>)}</SimpleGrid> : <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'><Text color='gray.600' fontSize='sm'>No public payment methods are currently mapped for this event.</Text></Box>}</Stack>
-                        </SupportCard>
-                      ) : null}
+                          {tab.id === 'payment' ? (
+                            <SupportCard title='Payment' subtitle='Show the mapped payment methods and protect organizer-only cheque payments.' icon={<CreditCard size={18} />}>
+                              <Stack gap={4}>{visiblePaymentMethods.length > 0 ? <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>{visiblePaymentMethods.map((method) => <Box key={method.paymentMethod} borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'><HStack justify='space-between' gap={4} align='start' flexWrap='wrap'><Stack gap={1}><Text fontWeight='700' color='gray.900'>{method.label}</Text><Text fontSize='sm' color='gray.600'>Available for this registration flow.</Text></Stack>{method.isOrganizerOnly ? <Badge colorPalette='purple' variant='subtle' borderRadius='full' px={3} py={1}>Organizer only</Badge> : null}</HStack></Box>)}</SimpleGrid> : <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'><Text color='gray.600' fontSize='sm'>No public payment methods are currently mapped for this event.</Text></Box>}</Stack>
+                            </SupportCard>
+                          ) : null}
+                        </Stack>
+                      </Box>
 
                       <Flex justify='space-between' gap={3} align={{ base: 'stretch', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
                         <Button {...CONTROL_BUTTON_OUTLINE} onClick={handleBackStep} disabled={activeIndex <= 0}><HStack gap={2}><ArrowLeft size={16} /><Text as='span'>Back</Text></HStack></Button>
