@@ -378,9 +378,14 @@ function getTicketQuantityOptions(ticket: EventRegistrationTicket, quantity: num
 
   if (maxAllowed !== null) {
     const upperBound = Math.max(maxAllowed, 0)
+    const quantities = new Set<number>([0])
 
-    return Array.from({ length: upperBound + 1 }, (_, index) => index)
-      .filter((value) => value >= 0 && value <= upperBound)
+    for (let value = minimumPurchase; value <= upperBound; value += 1) {
+      quantities.add(value)
+    }
+
+    return Array.from(quantities)
+      .sort((left, right) => left - right)
       .map((value) => ({
         value: String(value),
         label: String(value),
@@ -388,10 +393,18 @@ function getTicketQuantityOptions(ticket: EventRegistrationTicket, quantity: num
   }
 
   const rollingUpperBound = Math.max(quantity + 10, minimumPurchase + 9)
-  return Array.from({ length: rollingUpperBound + 1 }, (_, index) => index).map((value) => ({
-    value: String(value),
-    label: String(value),
-  }))
+  const quantities = new Set<number>([0])
+
+  for (let value = minimumPurchase; value <= rollingUpperBound; value += 1) {
+    quantities.add(value)
+  }
+
+  return Array.from(quantities)
+    .sort((left, right) => left - right)
+    .map((value) => ({
+      value: String(value),
+      label: String(value),
+    }))
 }
 
 function getTicketQuantityAfterDecrement(ticket: EventRegistrationTicket, quantity: number) {
@@ -977,11 +990,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     const minimumPurchase = Math.max(ticket.minPurchase ?? 1, 1)
 
     setSelectedTicketQuantities((current) => {
-      const currentQuantity = current[ticket.uniqueId] ?? 0
-      const requestedQuantity =
-        currentQuantity <= 0 && nextQuantity > 0
-          ? Math.max(nextQuantity, minimumPurchase)
-          : nextQuantity
+      const requestedQuantity = nextQuantity <= 0 ? 0 : Math.max(nextQuantity, minimumPurchase)
       const normalized = Math.max(0, maxAllowed === null ? requestedQuantity : Math.min(requestedQuantity, maxAllowed))
 
       if (normalized <= 0) {
