@@ -1562,6 +1562,12 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
                       <Separator borderColor='gray.200' />
 
+                      <Box borderWidth='1px' borderColor='orange.200' bg='orange.50' borderRadius='16px' px={3.5} py={3}>
+                        <Text fontSize='sm' color='orange.900' lineHeight='1.6' fontWeight='800'>
+                          Prices exclusive of tax and other charges.
+                        </Text>
+                      </Box>
+
                       <Flex justify='space-between' align='center' gap={3}>
                         <Text fontSize='sm' color='gray.600'>
                           Total
