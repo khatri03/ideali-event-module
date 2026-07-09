@@ -187,6 +187,24 @@ function getTicketDisplayPrice(ticket: EventRegistrationTicket) {
   return getTicketPricePeriod(ticket)?.amount ?? ticket.fullPrice ?? 0
 }
 
+function getTicketSavings(ticket: EventRegistrationTicket) {
+  const fullPrice = ticket.fullPrice ?? 0
+  const displayPrice = getTicketDisplayPrice(ticket)
+
+  if (!Number.isFinite(fullPrice) || !Number.isFinite(displayPrice) || fullPrice <= 0 || displayPrice >= fullPrice) {
+    return null
+  }
+
+  const amountSaved = fullPrice - displayPrice
+  const percentageSaved = Math.round((amountSaved / fullPrice) * 100)
+
+  return {
+    fullPrice,
+    amountSaved,
+    percentageSaved,
+  }
+}
+
 function getTicketSelectableMax(ticket: EventRegistrationTicket) {
   const remaining = getTicketRemaining(ticket)
   const purchaseMax = ticket.maxPurchase ?? null
@@ -328,6 +346,7 @@ function TicketCard({
   const activePricePeriod = getTicketPricePeriod(ticket)
   const remaining = getTicketRemaining(ticket)
   const displayPrice = getTicketDisplayPrice(ticket)
+  const savings = getTicketSavings(ticket)
   const selectableMax = getTicketSelectableMax(ticket)
   const subtotal = displayPrice * quantity
   const [pricingExpanded, setPricingExpanded] = useState(false)
@@ -335,65 +354,52 @@ function TicketCard({
   return (
     <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' p={{ base: 4, md: 4.5 }}>
       <Stack gap={3}>
-        <Flex
-          gap={{ base: 4, lg: 5 }}
-          align={{ base: 'stretch', lg: 'center' }}
-          direction={{ base: 'column', lg: 'row' }}
-        >
-          <Stack gap={1.5} flex='1' minW='0'>
+        <SimpleGrid columns={{ base: 1, lg: 12 }} gap={{ base: 4, lg: 5 }} alignItems='center'>
+          <Stack gap={1.25} minW='0' gridColumn={{ lg: 'span 8' }} justify='center'>
             <Text fontSize='md' fontWeight='700' color='gray.900' lineHeight='1.4'>{ticket.name}</Text>
+            <HStack gap={3} flexWrap='wrap' align='baseline'>
+              <Text fontSize='xl' fontWeight='800' color='gray.900'>{formatAmount(displayPrice ?? 0, currencyCode)}</Text>
+              {savings ? (
+                <>
+                  <Text fontSize='sm' color='gray.400' textDecoration='line-through'>
+                    {formatAmount(savings.fullPrice, currencyCode)}
+                  </Text>
+                  <Text fontSize='xs' fontWeight='700' color='green.600'>
+                    Save {formatAmount(savings.amountSaved, currencyCode)}{savings.percentageSaved > 0 ? ` (${savings.percentageSaved}%)` : ''}
+                  </Text>
+                </>
+              ) : null}
+            </HStack>
             {ticket.description ? (
               <Text
                 fontSize='sm'
                 color='gray.600'
-                lineHeight='1.6'
+                lineHeight='1.5'
                 display='-webkit-box'
                 overflow='hidden'
-                sx={{ WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}
+                sx={{ WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}
               >
                 {ticket.description}
               </Text>
-            ) : null}
-            <HStack gap={3} flexWrap='wrap' color='gray.500'>
-              <Text fontSize='xs' fontWeight='600'>
-                {activePricePeriod?.name ?? 'Current price'}
-              </Text>
-              {remaining !== null ? <Text fontSize='xs'>{remaining} remaining</Text> : null}
-              {ticket.pricePeriods.length > 1 ? (
-                <Link
-                  as='button'
-                  type='button'
-                  fontSize='xs'
-                  fontWeight='700'
-                  color='gray.700'
-                  textDecoration='underline'
-                  textUnderlineOffset='3px'
-                  onClick={() => setPricingExpanded((current) => !current)}
-                >
-                  {pricingExpanded ? 'Hide pricing' : 'View pricing'}
-                </Link>
-              ) : null}
-            </HStack>
-          </Stack>
-
-          <Stack gap={1} minW={{ base: 'full', lg: '140px' }} align={{ base: 'start', lg: 'end' }}>
-            <Text fontSize='xl' fontWeight='800' color='gray.900'>{formatAmount(displayPrice ?? 0, currencyCode)}</Text>
-            <Text fontSize='xs' color='gray.500'>
-              {quantity > 0 ? `Subtotal ${formatAmount(subtotal, currencyCode)}` : 'Per ticket'}
-            </Text>
+            ) : (
+              <Box />
+            )}
+            <Box />
           </Stack>
 
           <Flex
+            gridColumn={{ lg: 'span 4' }}
             borderWidth='1px'
             borderColor='gray.200'
             borderRadius='full'
             bg='gray.50'
             px={2}
-            py={1.5}
+            py={1}
             align='center'
             justify='space-between'
             gap={2}
-            minW={{ base: 'full', sm: '220px', lg: '172px' }}
+            minW={{ base: 'full', sm: '220px', lg: '220px' }}
+            justifySelf={{ lg: 'end' }}
           >
             <Button
               minW='0'
@@ -430,11 +436,30 @@ function TicketCard({
               <Plus size={14} />
             </Button>
           </Flex>
-        </Flex>
+        </SimpleGrid>
+
+        {ticket.pricePeriods.length > 1 ? (
+          <>
+            <Separator borderColor='gray.200' />
+            <Flex justify='flex-end'>
+              <Link
+                as='button'
+                type='button'
+                fontSize='xs'
+                fontWeight='700'
+                color='gray.700'
+                textDecoration='underline'
+                textUnderlineOffset='3px'
+                onClick={() => setPricingExpanded((current) => !current)}
+              >
+                {pricingExpanded ? 'Hide pricing' : 'View pricing'}
+              </Link>
+            </Flex>
+          </>
+        ) : null}
 
         {pricingExpanded && ticket.pricePeriods.length > 1 ? (
-          <Stack gap={2.5} pt={1}>
-            <Separator borderColor='gray.200' />
+          <Stack gap={2.5}>
             <Stack gap={2}>
               {ticket.pricePeriods.map((period) => (
                 <Box key={period.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='gray.50' px={3.5} py={3}>
