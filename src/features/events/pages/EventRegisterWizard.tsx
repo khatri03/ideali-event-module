@@ -295,7 +295,7 @@ function SessionTitleCard({
               textAlign='left'
               textDecoration='underline'
               textUnderlineOffset='4px'
-              title='Open session description in a dialog'
+              title='View description'
               _hover={{ color: 'gray.700' }}
             >
               {title}
@@ -598,10 +598,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       {event.termsConditions ? (
         <Dialog.Root open={termsOpen} onOpenChange={(details) => setTermsOpen(details.open)} size='xl'>
           <Dialog.Backdrop backdropFilter='blur(8px)' bg='blackAlpha.600' />
-          <Dialog.Positioner>
-            <Dialog.Content borderRadius='28px' overflow='hidden' bg='white' boxShadow='0 30px 70px rgba(15, 23, 42, 0.25)'>
+          <Dialog.Positioner alignItems='center' justifyContent='center' px={{ base: 4, md: 6 }} py={{ base: 6, md: 8 }}>
+            <Dialog.Content borderRadius='28px' overflow='hidden' bg='white' boxShadow='0 30px 70px rgba(15, 23, 42, 0.25)' maxH='80vh' display='flex' flexDirection='column'>
               <Box px={{ base: 4, md: 6 }} py={4} borderBottomWidth='1px' borderBottomColor='gray.200'><Flex justify='space-between' align='start' gap={4}><Stack gap={1}><Text fontSize='xs' textTransform='uppercase' letterSpacing='0.14em' color='gray.500' fontWeight='700'>Terms & Conditions</Text><Heading fontSize={{ base: 'xl', md: '2xl' }} color='gray.900' letterSpacing='-0.03em'>Registration agreement</Heading></Stack><CloseButton onClick={() => setTermsOpen(false)} /></Flex></Box>
-              <Box px={{ base: 4, md: 6 }} py={{ base: 5, md: 6 }} maxH='70vh' overflowY='auto'>{isHtmlContent(event.termsConditions) ? <RichTextBlock html={event.termsConditions} /> : <Text color='gray.700' lineHeight='1.75'>{event.termsConditions}</Text>}</Box>
+              <Box px={{ base: 4, md: 6 }} py={{ base: 5, md: 6 }} flex='1' overflowY='auto'>{isHtmlContent(event.termsConditions) ? <RichTextBlock html={event.termsConditions} /> : <Text color='gray.700' lineHeight='1.75'>{event.termsConditions}</Text>}</Box>
             </Dialog.Content>
           </Dialog.Positioner>
         </Dialog.Root>
@@ -609,8 +609,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
       <Dialog.Root open={Boolean(activeSessionDescription)} onOpenChange={(details) => { if (!details.open) setActiveSessionDescription(null) }} size='lg'>
         <Dialog.Backdrop backdropFilter='blur(8px)' bg='blackAlpha.600' />
-        <Dialog.Positioner>
-          <Dialog.Content borderRadius='28px' overflow='hidden' bg='white' boxShadow='0 30px 70px rgba(15, 23, 42, 0.25)'>
+        <Dialog.Positioner alignItems='center' justifyContent='center' px={{ base: 4, md: 6 }} py={{ base: 6, md: 8 }}>
+          <Dialog.Content borderRadius='28px' overflow='hidden' bg='white' boxShadow='0 30px 70px rgba(15, 23, 42, 0.25)' maxH='80vh' display='flex' flexDirection='column'>
             <Box px={{ base: 4, md: 6 }} py={4} borderBottomWidth='1px' borderBottomColor='gray.200'>
               <Flex justify='space-between' align='start' gap={4}>
                 <Stack gap={1}>
@@ -622,7 +622,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                 <CloseButton onClick={() => setActiveSessionDescription(null)} />
               </Flex>
             </Box>
-            <Box px={{ base: 4, md: 6 }} py={{ base: 5, md: 6 }} maxH='70vh' overflowY='auto'>
+            <Box px={{ base: 4, md: 6 }} py={{ base: 5, md: 6 }} flex='1' overflowY='auto'>
               {activeSessionDescription ? (
                 isHtmlContent(activeSessionDescription.description) ? (
                   <RichTextBlock html={activeSessionDescription.description} />
