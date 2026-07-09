@@ -321,6 +321,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   }, [firstTab])
 
   const activeIndex = getStepIndex(tabs, activeTab)
+  const isFinalStep = activeIndex >= 0 && activeIndex === tabs.length - 1
   const visiblePaymentMethods = getVisiblePaymentMethods(event)
 
   function isStepEnabled(stepId: WizardTabId) {
@@ -552,7 +553,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
                       <Flex justify='space-between' gap={3} align={{ base: 'stretch', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
                         <Button {...CONTROL_BUTTON_OUTLINE} onClick={handleBackStep} disabled={activeIndex <= 0}><HStack gap={2}><ArrowLeft size={16} /><Text as='span'>Back</Text></HStack></Button>
-                        <Button {...CONTROL_BUTTON_PRIMARY} bg={formAccent} _hover={{ bg: hexToRgba(formAccent, 0.88), transform: 'translateY(-1px)' }} onClick={handleContinue} disabled={Boolean(event.termsConditions) && !termsAccepted}><HStack gap={2}><Text as='span'>Continue</Text><ChevronRight size={16} /></HStack></Button>
+                        <Button {...CONTROL_BUTTON_PRIMARY} bg={formAccent} _hover={{ bg: hexToRgba(formAccent, 0.88), transform: 'translateY(-1px)' }} onClick={handleContinue} disabled={isFinalStep && Boolean(event.termsConditions) && !termsAccepted}><HStack gap={2}><Text as='span'>Continue</Text><ChevronRight size={16} /></HStack></Button>
                       </Flex>
                     </Stack>
                   </Tabs.Content>
