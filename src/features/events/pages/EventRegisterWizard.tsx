@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, ReactNode } from 'react'
 import {
   AspectRatio,
@@ -41,6 +41,7 @@ import {
   X,
 } from 'lucide-react'
 import { format } from 'date-fns'
+import { toaster } from '@/lib/toaster'
 import type {
   EventRegistrationPaymentMethod,
   EventRegistrationSession,
@@ -142,6 +143,106 @@ function hexToRgba(hex: string, alpha: number) {
   const blue = Number.parseInt(normalized.slice(4, 6), 16)
   if ([red, green, blue].some((channel) => Number.isNaN(channel))) return hex
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`
+}
+
+function hexToRgb(hex: string) {
+  const normalized = hex.replace('#', '').trim()
+  if (normalized.length !== 6) return null
+
+  const red = Number.parseInt(normalized.slice(0, 2), 16)
+  const green = Number.parseInt(normalized.slice(2, 4), 16)
+  const blue = Number.parseInt(normalized.slice(4, 6), 16)
+
+  if ([red, green, blue].some((channel) => Number.isNaN(channel))) return null
+
+  return { red, green, blue }
+}
+
+function rgbToHex(red: number, green: number, blue: number) {
+  const toHex = (value: number) => Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, '0')
+  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`
+}
+
+function mixHexColors(from: string, to: string, ratio: number) {
+  const fromRgb = hexToRgb(from)
+  const toRgb = hexToRgb(to)
+
+  if (!fromRgb || !toRgb) return to
+
+  const safeRatio = Math.max(0, Math.min(1, ratio))
+  return rgbToHex(
+    fromRgb.red + (toRgb.red - fromRgb.red) * safeRatio,
+    fromRgb.green + (toRgb.green - fromRgb.green) * safeRatio,
+    fromRgb.blue + (toRgb.blue - fromRgb.blue) * safeRatio,
+  )
+}
+
+function clamp01(value: number) {
+  return Math.max(0, Math.min(1, value))
+}
+
+function getPurchaseTimerVisuals(remainingMs: number, durationMs: number) {
+  const remainingRatio = clamp01(remainingMs / durationMs)
+
+  const calm = {
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    iconBackgroundColor: '#F3F4F6',
+    iconColor: '#4B5563',
+    labelColor: '#6B7280',
+    valueColor: '#111827',
+    descriptionColor: '#4B5563',
+  }
+  const warning = {
+    borderColor: '#FDBA74',
+    backgroundColor: '#FFF7ED',
+    iconBackgroundColor: '#FFEDD5',
+    iconColor: '#C2410C',
+    labelColor: '#C2410C',
+    valueColor: '#9A3412',
+    descriptionColor: '#C2410C',
+  }
+  const critical = {
+    borderColor: '#FCA5A5',
+    backgroundColor: '#FEF2F2',
+    iconBackgroundColor: '#FEE2E2',
+    iconColor: '#B91C1C',
+    labelColor: '#B91C1C',
+    valueColor: '#991B1B',
+    descriptionColor: '#B91C1C',
+  }
+
+  if (remainingRatio <= 0.05) {
+    return critical
+  }
+
+  if (remainingRatio <= 0.2) {
+    const warningProgress = (0.2 - remainingRatio) / 0.15
+    return {
+      borderColor: mixHexColors(warning.borderColor, critical.borderColor, warningProgress),
+      backgroundColor: mixHexColors(warning.backgroundColor, critical.backgroundColor, warningProgress),
+      iconBackgroundColor: mixHexColors(warning.iconBackgroundColor, critical.iconBackgroundColor, warningProgress),
+      iconColor: mixHexColors(warning.iconColor, critical.iconColor, warningProgress),
+      labelColor: mixHexColors(warning.labelColor, critical.labelColor, warningProgress),
+      valueColor: mixHexColors(warning.valueColor, critical.valueColor, warningProgress),
+      descriptionColor: mixHexColors(warning.descriptionColor, critical.descriptionColor, warningProgress),
+    }
+  }
+
+  if (remainingRatio <= 0.5) {
+    const calmProgress = (0.5 - remainingRatio) / 0.3
+    return {
+      borderColor: mixHexColors(calm.borderColor, warning.borderColor, calmProgress),
+      backgroundColor: mixHexColors(calm.backgroundColor, warning.backgroundColor, calmProgress),
+      iconBackgroundColor: mixHexColors(calm.iconBackgroundColor, warning.iconBackgroundColor, calmProgress),
+      iconColor: mixHexColors(calm.iconColor, warning.iconColor, calmProgress),
+      labelColor: mixHexColors(calm.labelColor, warning.labelColor, calmProgress),
+      valueColor: mixHexColors(calm.valueColor, warning.valueColor, calmProgress),
+      descriptionColor: mixHexColors(calm.descriptionColor, warning.descriptionColor, calmProgress),
+    }
+  }
+
+  return calm
 }
 
 function formatAmount(value: number, currencyCode?: string | null) {
@@ -728,6 +829,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [purchaseTimerNow, setPurchaseTimerNow] = useState(() => Date.now())
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
   const [pendingDeleteAction, setPendingDeleteAction] = useState<PendingDeleteAction | null>(null)
+  const purchaseTimerWarningShownForRef = useRef<number | null>(null)
 
   useEffect(() => {
     setActiveTab(firstTab)
@@ -754,6 +856,11 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const purchaseTimerRemainingMs = purchaseTimerStartedAt === null ? null : purchaseTimerStartedAt + purchaseTimerDurationMs - purchaseTimerNow
   const purchaseTimerVisible = purchaseTimerStartedAt !== null
   const purchaseTimerExpired = purchaseTimerRemainingMs !== null && purchaseTimerRemainingMs <= 0
+  const purchaseTimerWarningThresholdMs = purchaseTimerDurationMs * 0.2
+  const purchaseTimerVisuals =
+    purchaseTimerRemainingMs === null
+      ? null
+      : getPurchaseTimerVisuals(Math.max(purchaseTimerRemainingMs, 0), purchaseTimerDurationMs)
   const selectedTicketSummary = useMemo<SelectedTicketSummaryItem[]>(
     () =>
       event.sessions.flatMap((session) =>
@@ -934,37 +1041,50 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setPendingDeleteAction(null)
   }
 
+  function restartPurchaseProcess() {
+    setActiveTab(firstTab)
+    setHighestUnlockedIndex(0)
+    setTermsAccepted(false)
+    setTermsOpen(false)
+    setExpandedSessionIds(event.sessions.map((session) => session.uniqueId))
+    setActiveSessionDescription(null)
+    setSessionTicketSearch({})
+    setSelectedTicketQuantities({})
+    setPurchaseTimerStartedAt(null)
+    setPurchaseTimerNow(Date.now())
+    setIsSummaryOpen(false)
+    setPendingDeleteAction(null)
+  }
+
+  useEffect(() => {
+    if (purchaseTimerStartedAt === null) {
+      purchaseTimerWarningShownForRef.current = null
+      return
+    }
+
+    if (purchaseTimerRemainingMs === null || purchaseTimerExpired) {
+      return
+    }
+
+    if (purchaseTimerRemainingMs > purchaseTimerWarningThresholdMs) {
+      return
+    }
+
+    if (purchaseTimerWarningShownForRef.current === purchaseTimerStartedAt) {
+      return
+    }
+
+    purchaseTimerWarningShownForRef.current = purchaseTimerStartedAt
+    toaster.create({
+      type: 'info',
+      title: 'Time is running low',
+      description: 'Complete the registration soon. The purchase window is almost over.',
+      duration: 10000,
+    })
+  }, [purchaseTimerExpired, purchaseTimerRemainingMs, purchaseTimerStartedAt, purchaseTimerWarningThresholdMs])
+
   const areAllSessionsExpanded =
     event.sessions.length > 0 && expandedSessionIds.length === event.sessions.length
-
-  if (purchaseTimerVisible && purchaseTimerExpired) {
-    return (
-      <Box minH='100dvh' bg={accentBackground} color='gray.900'>
-        <Flex minH='100dvh' align='center' justify='center' px={{ base: 3, md: 6, xl: 8 }} py={{ base: 5, md: 8 }}>
-          <Container maxW='4xl' p={0}>
-            <Box bg='white' borderWidth='1px' borderColor='gray.200' borderRadius='28px' p={{ base: 5, md: 8 }} boxShadow='0 24px 60px rgba(15, 23, 42, 0.08)'>
-              <Stack gap={5} align='center' textAlign='center'>
-                <Box w='72px' h='72px' borderRadius='24px' display='grid' placeItems='center' bg='red.50' color='red.600'>
-                  <Clock3 size={30} />
-                </Box>
-                <Stack gap={2} maxW='2xl'>
-                  <Heading fontSize={{ base: '2xl', md: '3xl' }} letterSpacing='-0.04em'>
-                    Purchase time limit reached
-                  </Heading>
-                  <Text color='gray.600' lineHeight='1.7'>
-                    Your registration session expired. Please restart the registration flow to continue.
-                  </Text>
-                </Stack>
-                <Button minH='12' borderRadius='16px' color='white' bg='gray.900' onClick={onBack}>
-                  Restart registration
-                </Button>
-              </Stack>
-            </Box>
-          </Container>
-        </Flex>
-      </Box>
-    )
-  }
 
   return (
     <Box minH='100dvh' bg={accentBackground} color='gray.900'>
@@ -1005,26 +1125,58 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
             {purchaseTimerVisible ? (
               <Box
                 borderWidth='1px'
-                borderColor={purchaseTimerExpired ? 'red.200' : 'gray.200'}
+                borderColor={purchaseTimerVisuals?.borderColor ?? 'gray.200'}
                 borderRadius='20px'
-                bg={purchaseTimerExpired ? 'red.50' : 'white'}
+                bg={purchaseTimerVisuals?.backgroundColor ?? 'white'}
                 px={{ base: 4, md: 5 }}
                 py={4}
                 boxShadow='0 12px 30px rgba(15, 23, 42, 0.08)'
                 animation={`${timerRevealAnimation} 280ms ease-out`}
                 transformOrigin='top center'
+                transition='background-color 220ms ease, border-color 220ms ease, color 220ms ease'
               >
                 <Flex align={{ base: 'start', md: 'center' }} justify='space-between' gap={4} direction={{ base: 'column', md: 'row' }}>
                   <HStack gap={3} align='start'>
-                    <Box w='10' h='10' borderRadius='12px' display='grid' placeItems='center' bg={purchaseTimerExpired ? 'red.100' : 'gray.100'} color={purchaseTimerExpired ? 'red.600' : 'gray.700'}>
+                    <Box
+                      w='10'
+                      h='10'
+                      borderRadius='12px'
+                      display='grid'
+                      placeItems='center'
+                      bg={purchaseTimerVisuals?.iconBackgroundColor ?? 'gray.100'}
+                      color={purchaseTimerVisuals?.iconColor ?? 'gray.700'}
+                      transition='background-color 220ms ease, color 220ms ease'
+                    >
                       <Clock3 size={18} />
                     </Box>
                     <Stack gap={0.5}>
-                      <Text fontSize='xs' fontWeight='800' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>Purchase time left</Text>
-                      <Text fontSize='lg' fontWeight='800' color={purchaseTimerExpired ? 'red.600' : 'gray.900'}>{formatCountdown(purchaseTimerRemainingMs ?? 0)}</Text>
+                      <Text
+                        fontSize='xs'
+                        fontWeight='800'
+                        color={purchaseTimerVisuals?.labelColor ?? 'gray.500'}
+                        textTransform='uppercase'
+                        letterSpacing='0.12em'
+                        transition='color 220ms ease'
+                      >
+                        Purchase time left
+                      </Text>
+                      <Text
+                        fontSize='lg'
+                        fontWeight='800'
+                        color={purchaseTimerVisuals?.valueColor ?? 'gray.900'}
+                        transition='color 220ms ease'
+                      >
+                        {formatCountdown(purchaseTimerRemainingMs ?? 0)}
+                      </Text>
                     </Stack>
                   </HStack>
-                  <Text fontSize='sm' color='gray.600' lineHeight='1.6' maxW='2xl'>
+                  <Text
+                    fontSize='sm'
+                    color={purchaseTimerVisuals?.descriptionColor ?? 'gray.600'}
+                    lineHeight='1.6'
+                    maxW='2xl'
+                    transition='color 220ms ease'
+                  >
                     {purchaseTimerExpired
                       ? 'Purchase time limit reached. Please restart registration.'
                       : 'Complete your registration before the timer reaches zero.'}
@@ -1604,6 +1756,40 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                     Remove
                   </Button>
                 </Flex>
+              </Stack>
+            </Box>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+
+      <Dialog.Root
+        open={purchaseTimerVisible && purchaseTimerExpired}
+        onOpenChange={(details) => {
+          if (!details.open) {
+            restartPurchaseProcess()
+          }
+        }}
+        size='sm'
+      >
+        <Dialog.Backdrop backdropFilter='blur(8px)' bg='blackAlpha.650' />
+        <Dialog.Positioner alignItems='center' justifyContent='center' px={{ base: 4, md: 6 }} py={{ base: 6, md: 8 }}>
+          <Dialog.Content borderRadius='28px' overflow='hidden' bg='white' boxShadow='0 30px 70px rgba(15, 23, 42, 0.25)'>
+            <Box px={{ base: 4, md: 5 }} py={{ base: 5, md: 6 }}>
+              <Stack gap={5} align='center' textAlign='center'>
+                <Box w='72px' h='72px' borderRadius='24px' display='grid' placeItems='center' bg='red.50' color='red.600'>
+                  <Clock3 size={30} />
+                </Box>
+                <Stack gap={2} maxW='2xl'>
+                  <Heading fontSize={{ base: '2xl', md: '3xl' }} letterSpacing='-0.04em'>
+                    Purchase time limit reached
+                  </Heading>
+                  <Text color='gray.600' lineHeight='1.7'>
+                    The purchase session expired. Restart registration to continue from the beginning.
+                  </Text>
+                </Stack>
+                <Button minH='12' px={6} borderRadius='16px' color='white' bg='gray.900' _hover={{ bg: 'gray.800' }} _active={{ bg: 'gray.700' }} onClick={restartPurchaseProcess}>
+                  Restart registration
+                </Button>
               </Stack>
             </Box>
           </Dialog.Content>

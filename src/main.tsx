@@ -19,10 +19,10 @@ createRoot(document.getElementById("root")!).render(
               key={toast.id}
               role="status"
               aria-live="polite"
-              bg={toast.type === "error" ? "red.50" : toast.type === "success" ? "green.50" : "gray.50"}
-              color={toast.type === "error" ? "red.900" : toast.type === "success" ? "green.900" : "gray.900"}
+              bg={toast.type === "error" ? "red.50" : toast.type === "success" ? "green.50" : toast.type === "info" ? "orange.50" : "gray.50"}
+              color={toast.type === "error" ? "red.900" : toast.type === "success" ? "green.900" : toast.type === "info" ? "orange.950" : "gray.900"}
               border="1px solid"
-              borderColor={toast.type === "error" ? "red.200" : toast.type === "success" ? "green.200" : "gray.200"}
+              borderColor={toast.type === "error" ? "red.200" : toast.type === "success" ? "green.200" : toast.type === "info" ? "orange.200" : "gray.200"}
               borderRadius="16px"
               boxShadow="0 18px 40px rgba(15, 23, 42, 0.15)"
               px={4}
@@ -31,7 +31,7 @@ createRoot(document.getElementById("root")!).render(
             >
               <Flex align="flex-start" gap={3}>
                 <Box mt={1} fontSize="lg" lineHeight={1} aria-hidden="true">
-                  {toast.type === "error" ? "!" : toast.type === "success" ? "✓" : "i"}
+                  {toast.type === "error" ? "!" : toast.type === "success" ? "✓" : toast.type === "info" ? "!" : "i"}
                 </Box>
                 <Box minW={0} flex="1">
                   <Text fontSize="sm" fontWeight="800" lineHeight={1.25}>
