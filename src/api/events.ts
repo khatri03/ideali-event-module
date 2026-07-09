@@ -113,6 +113,21 @@ const organizerEventListPageSchema = z.object({
   pageData: z.array(organizerEventListItemSchema).optional(),
 })
 
+const eventRegistrationTicketPricePeriodSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  Name: z.string().nullable().optional(),
+  name: z.string().nullable().optional(),
+  Amount: z.number().nullable().optional(),
+  amount: z.number().nullable().optional(),
+  StartDateTime: z.string().nullable().optional(),
+  startDateTime: z.string().nullable().optional(),
+  EndDateTime: z.string().nullable().optional(),
+  endDateTime: z.string().nullable().optional(),
+  CurrentStatus: z.string().optional(),
+  currentStatus: z.string().optional(),
+})
+
 const eventRegistrationTicketSchema = z.object({
   UniqueId: z.string().optional(),
   uniqueId: z.string().optional(),
@@ -140,6 +155,76 @@ const eventRegistrationTicketSchema = z.object({
   salesStartDateUtc: z.string().nullable().optional(),
   SalesEndDateUtc: z.string().nullable().optional(),
   salesEndDateUtc: z.string().nullable().optional(),
+  PricePeriods: z.array(eventRegistrationTicketPricePeriodSchema).optional(),
+  pricePeriods: z.array(eventRegistrationTicketPricePeriodSchema).optional(),
+})
+
+const eventRegistrationQuestionOptionSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  DisplayText: z.string().optional(),
+  displayText: z.string().optional(),
+  Value: z.string().optional(),
+  value: z.string().optional(),
+  IsDefault: z.boolean().optional(),
+  isDefault: z.boolean().optional(),
+})
+
+const eventRegistrationQuestionSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  ControlId: z.number().int().optional(),
+  controlId: z.number().int().optional(),
+  ControlName: z.string().optional(),
+  controlName: z.string().optional(),
+  ControlType: z.string().optional(),
+  controlType: z.string().optional(),
+  IconClass: z.string().optional(),
+  iconClass: z.string().optional(),
+  Label: z.string().optional(),
+  label: z.string().optional(),
+  PlaceHolder: z.string().nullable().optional(),
+  placeHolder: z.string().nullable().optional(),
+  Tooltip: z.string().nullable().optional(),
+  tooltip: z.string().nullable().optional(),
+  Required: z.boolean().optional(),
+  required: z.boolean().optional(),
+  RequiredMessage: z.string().nullable().optional(),
+  requiredMessage: z.string().nullable().optional(),
+  AcceptedFileTypes: z.string().nullable().optional(),
+  acceptedFileTypes: z.string().nullable().optional(),
+  MinLength: z.string().nullable().optional(),
+  minLength: z.string().nullable().optional(),
+  MaxLength: z.string().nullable().optional(),
+  maxLength: z.string().nullable().optional(),
+  DefaultValue: z.string().nullable().optional(),
+  defaultValue: z.string().nullable().optional(),
+  IsActive: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  DisplayOrder: z.number().int().optional(),
+  displayOrder: z.number().int().optional(),
+  Options: z.array(eventRegistrationQuestionOptionSchema).optional(),
+  options: z.array(eventRegistrationQuestionOptionSchema).optional(),
+})
+
+const eventRegistrationSessionFormSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  Name: z.string().optional(),
+  name: z.string().optional(),
+  HeaderText: z.string().nullable().optional(),
+  headerText: z.string().nullable().optional(),
+  Description: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+})
+
+const eventRegistrationPaymentMethodSchema = z.object({
+  PaymentMethod: z.string().optional(),
+  paymentMethod: z.string().optional(),
+  Label: z.string().optional(),
+  label: z.string().optional(),
+  IsOrganizerOnly: z.boolean().optional(),
+  isOrganizerOnly: z.boolean().optional(),
 })
 
 const eventRegistrationSessionSchema = z.object({
@@ -165,6 +250,12 @@ const eventRegistrationSessionSchema = z.object({
   bookingEndDate: z.string().nullable().optional(),
   TicketTypes: z.array(eventRegistrationTicketSchema).optional(),
   ticketTypes: z.array(eventRegistrationTicketSchema).optional(),
+  RequiresAttendeeInfo: z.boolean().optional(),
+  requiresAttendeeInfo: z.boolean().optional(),
+  CustomForms: z.array(eventRegistrationSessionFormSchema).optional(),
+  customForms: z.array(eventRegistrationSessionFormSchema).optional(),
+  CustomQuestions: z.array(eventRegistrationQuestionSchema).optional(),
+  customQuestions: z.array(eventRegistrationQuestionSchema).optional(),
 })
 
 const eventRegistrationResponseSchema = z.object({
@@ -204,6 +295,10 @@ const eventRegistrationResponseSchema = z.object({
   canRegister: z.boolean().optional(),
   RegistrationBlockedReason: z.string().nullable().optional(),
   registrationBlockedReason: z.string().nullable().optional(),
+  IsOrganizer: z.boolean().optional(),
+  isOrganizer: z.boolean().optional(),
+  PaymentMethods: z.array(eventRegistrationPaymentMethodSchema).optional(),
+  paymentMethods: z.array(eventRegistrationPaymentMethodSchema).optional(),
   Sessions: z.array(eventRegistrationSessionSchema).optional(),
   sessions: z.array(eventRegistrationSessionSchema).optional(),
 })
@@ -616,6 +711,50 @@ export interface EventRegistrationTicket {
   isActive: boolean
   salesStartDateUtc: string | null
   salesEndDateUtc: string | null
+  pricePeriods: EventRegistrationTicketPricePeriod[]
+}
+
+export interface EventRegistrationTicketPricePeriod {
+  uniqueId: string
+  name: string | null
+  amount: number
+  startDateTime: string | null
+  endDateTime: string | null
+  currentStatus: string
+}
+
+export interface EventRegistrationSessionForm {
+  uniqueId: string
+  name: string
+  headerText: string | null
+  description: string | null
+}
+
+export interface EventRegistrationQuestionOption {
+  uniqueId: string
+  displayText: string
+  value: string
+  isDefault: boolean
+}
+
+export interface EventRegistrationQuestion {
+  uniqueId: string
+  controlId: number
+  controlName: string
+  controlType: string
+  iconClass: string
+  label: string
+  placeHolder: string | null
+  tooltip: string | null
+  required: boolean
+  requiredMessage: string | null
+  acceptedFileTypes: string | null
+  minLength: string | null
+  maxLength: string | null
+  defaultValue: string | null
+  isActive: boolean
+  displayOrder: number
+  options: EventRegistrationQuestionOption[]
 }
 
 export interface EventRegistrationSession {
@@ -623,6 +762,7 @@ export interface EventRegistrationSession {
   name: string
   description: string | null
   bannerUrl: string | null
+  requiresAttendeeInfo: boolean
   setupState: string
   bookingStatus: string
   startDate: string | null
@@ -630,6 +770,14 @@ export interface EventRegistrationSession {
   bookingStartDate: string | null
   bookingEndDate: string | null
   ticketTypes: EventRegistrationTicket[]
+  customForms: EventRegistrationSessionForm[]
+  customQuestions: EventRegistrationQuestion[]
+}
+
+export interface EventRegistrationPaymentMethod {
+  paymentMethod: string
+  label: string
+  isOrganizerOnly: boolean
 }
 
 export interface EventRegistrationResponse {
@@ -651,6 +799,8 @@ export interface EventRegistrationResponse {
   registrationStatus: string
   canRegister: boolean
   registrationBlockedReason: string | null
+  isOrganizer: boolean
+  paymentMethods: EventRegistrationPaymentMethod[]
   sessions: EventRegistrationSession[]
 }
 
@@ -669,6 +819,14 @@ function parseEventRegistrationTicket(item: z.infer<typeof eventRegistrationTick
     isActive: item.IsActive ?? item.isActive ?? false,
     salesStartDateUtc: item.SalesStartDateUtc ?? item.salesStartDateUtc ?? null,
     salesEndDateUtc: item.SalesEndDateUtc ?? item.salesEndDateUtc ?? null,
+    pricePeriods: (item.PricePeriods ?? item.pricePeriods ?? []).map((period) => ({
+      uniqueId: period.UniqueId ?? period.uniqueId ?? "",
+      name: period.Name ?? period.name ?? null,
+      amount: period.Amount ?? period.amount ?? 0,
+      startDateTime: period.StartDateTime ?? period.startDateTime ?? null,
+      endDateTime: period.EndDateTime ?? period.endDateTime ?? null,
+      currentStatus: period.CurrentStatus ?? period.currentStatus ?? "",
+    })),
   }
 }
 
@@ -685,6 +843,37 @@ function parseEventRegistrationSession(item: z.infer<typeof eventRegistrationSes
     bookingStartDate: item.BookingStartDate ?? item.bookingStartDate ?? null,
     bookingEndDate: item.BookingEndDate ?? item.bookingEndDate ?? null,
     ticketTypes: (item.TicketTypes ?? item.ticketTypes ?? []).map(parseEventRegistrationTicket),
+    requiresAttendeeInfo: item.RequiresAttendeeInfo ?? item.requiresAttendeeInfo ?? false,
+    customForms: (item.CustomForms ?? item.customForms ?? []).map((form) => ({
+      uniqueId: form.UniqueId ?? form.uniqueId ?? "",
+      name: form.Name ?? form.name ?? "",
+      headerText: form.HeaderText ?? form.headerText ?? null,
+      description: form.Description ?? form.description ?? null,
+    })),
+    customQuestions: (item.CustomQuestions ?? item.customQuestions ?? []).map((question) => ({
+      uniqueId: question.UniqueId ?? question.uniqueId ?? "",
+      controlId: question.ControlId ?? question.controlId ?? 0,
+      controlName: question.ControlName ?? question.controlName ?? "",
+      controlType: question.ControlType ?? question.controlType ?? "",
+      iconClass: question.IconClass ?? question.iconClass ?? "",
+      label: question.Label ?? question.label ?? "",
+      placeHolder: question.PlaceHolder ?? question.placeHolder ?? null,
+      tooltip: question.Tooltip ?? question.tooltip ?? null,
+      required: question.Required ?? question.required ?? false,
+      requiredMessage: question.RequiredMessage ?? question.requiredMessage ?? null,
+      acceptedFileTypes: question.AcceptedFileTypes ?? question.acceptedFileTypes ?? null,
+      minLength: question.MinLength ?? question.minLength ?? null,
+      maxLength: question.MaxLength ?? question.maxLength ?? null,
+      defaultValue: question.DefaultValue ?? question.defaultValue ?? null,
+      isActive: question.IsActive ?? question.isActive ?? false,
+      displayOrder: question.DisplayOrder ?? question.displayOrder ?? 0,
+      options: (question.Options ?? question.options ?? []).map((option) => ({
+        uniqueId: option.UniqueId ?? option.uniqueId ?? "",
+        displayText: option.DisplayText ?? option.displayText ?? "",
+        value: option.Value ?? option.value ?? "",
+        isDefault: option.IsDefault ?? option.isDefault ?? false,
+      })),
+    })),
   }
 }
 
@@ -710,6 +899,12 @@ function parseEventRegistrationResponse(payload: unknown): EventRegistrationResp
     canRegister: response.CanRegister ?? response.canRegister ?? false,
     registrationBlockedReason:
       response.RegistrationBlockedReason ?? response.registrationBlockedReason ?? null,
+    isOrganizer: response.IsOrganizer ?? response.isOrganizer ?? false,
+    paymentMethods: (response.PaymentMethods ?? response.paymentMethods ?? []).map((method) => ({
+      paymentMethod: method.PaymentMethod ?? method.paymentMethod ?? "",
+      label: method.Label ?? method.label ?? "",
+      isOrganizerOnly: method.IsOrganizerOnly ?? method.isOrganizerOnly ?? false,
+    })),
     sessions: (response.Sessions ?? response.sessions ?? []).map(parseEventRegistrationSession),
   }
 }
