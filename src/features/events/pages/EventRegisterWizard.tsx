@@ -300,88 +300,124 @@ function TicketCard({
   const displayPrice = getTicketDisplayPrice(ticket)
   const selectableMax = getTicketSelectableMax(ticket)
   const subtotal = displayPrice * quantity
+  const [pricingExpanded, setPricingExpanded] = useState(false)
 
   return (
-    <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='gray.50' p={{ base: 4, md: 5 }}>
-      <Stack gap={4}>
-        <Flex justify='space-between' align='start' gap={4} wrap='wrap'>
-          <Stack gap={1} flex='1' minW='220px'>
-            <Text fontSize='lg' fontWeight='700' color='gray.900'>{ticket.name}</Text>
-            {ticket.description ? <Text fontSize='sm' color='gray.600' lineHeight='1.7'>{ticket.description}</Text> : null}
+    <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' p={{ base: 4, md: 4.5 }}>
+      <Stack gap={3}>
+        <Flex
+          gap={{ base: 4, lg: 5 }}
+          align={{ base: 'stretch', lg: 'center' }}
+          direction={{ base: 'column', lg: 'row' }}
+        >
+          <Stack gap={1.5} flex='1' minW='0'>
+            <Text fontSize='md' fontWeight='700' color='gray.900' lineHeight='1.4'>{ticket.name}</Text>
+            {ticket.description ? (
+              <Text
+                fontSize='sm'
+                color='gray.600'
+                lineHeight='1.6'
+                display='-webkit-box'
+                overflow='hidden'
+                sx={{ WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}
+              >
+                {ticket.description}
+              </Text>
+            ) : null}
+            <HStack gap={3} flexWrap='wrap' color='gray.500'>
+              <Text fontSize='xs' fontWeight='600'>
+                {activePricePeriod?.name ?? 'Current price'}
+              </Text>
+              {remaining !== null ? <Text fontSize='xs'>{remaining} remaining</Text> : null}
+              {ticket.pricePeriods.length > 1 ? (
+                <Link
+                  as='button'
+                  type='button'
+                  fontSize='xs'
+                  fontWeight='700'
+                  color='gray.700'
+                  textDecoration='underline'
+                  textUnderlineOffset='3px'
+                  onClick={() => setPricingExpanded((current) => !current)}
+                >
+                  {pricingExpanded ? 'Hide pricing' : 'View pricing'}
+                </Link>
+              ) : null}
+            </HStack>
           </Stack>
-          <Stack gap={1} align={{ base: 'start', md: 'end' }}>
-            <Text fontSize='2xl' fontWeight='800' color='gray.900'>{formatAmount(displayPrice ?? 0)}</Text>
-            <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>
-              {activePricePeriod?.name ?? 'Current price'}
+
+          <Stack gap={1} minW={{ base: 'full', lg: '140px' }} align={{ base: 'start', lg: 'end' }}>
+            <Text fontSize='xl' fontWeight='800' color='gray.900'>{formatAmount(displayPrice ?? 0)}</Text>
+            <Text fontSize='xs' color='gray.500'>
+              {quantity > 0 ? `Subtotal ${formatAmount(subtotal)}` : 'Per ticket'}
             </Text>
           </Stack>
+
+          <Flex
+            borderWidth='1px'
+            borderColor='gray.200'
+            borderRadius='full'
+            bg='gray.50'
+            px={2}
+            py={1.5}
+            align='center'
+            justify='space-between'
+            gap={2}
+            minW={{ base: 'full', sm: '220px', lg: '172px' }}
+          >
+            <Button
+              minW='0'
+              w='32px'
+              h='32px'
+              p='0'
+              borderRadius='full'
+              borderWidth='1px'
+              borderColor='gray.300'
+              bg='white'
+              onClick={onDecrease}
+              disabled={quantity <= 0}
+            >
+              <Minus size={14} />
+            </Button>
+            <Stack gap={0} align='center' flex='1'>
+              <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.1em'>
+                Qty
+              </Text>
+              <Text fontSize='sm' fontWeight='800' color='gray.900'>{quantity}</Text>
+            </Stack>
+            <Button
+              minW='0'
+              w='32px'
+              h='32px'
+              p='0'
+              borderRadius='full'
+              borderWidth='1px'
+              borderColor='gray.300'
+              bg='white'
+              onClick={onIncrease}
+              disabled={selectableMax !== null && quantity >= selectableMax}
+            >
+              <Plus size={14} />
+            </Button>
+          </Flex>
         </Flex>
 
-        <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='white' p={4}>
-          <Flex justify='space-between' align={{ base: 'stretch', md: 'center' }} gap={4} direction={{ base: 'column', md: 'row' }}>
-            <Stack gap={1}>
-              <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>Quantity</Text>
-              <HStack gap={2}>
-                <Button
-                  minW='0'
-                  w='34px'
-                  h='34px'
-                  p='0'
-                  borderRadius='full'
-                  borderWidth='1px'
-                  borderColor='gray.300'
-                  bg='white'
-                  onClick={onDecrease}
-                  disabled={quantity <= 0}
-                >
-                  <Minus size={14} />
-                </Button>
-                <Flex minW='52px' h='34px' px={3} borderWidth='1px' borderColor='gray.200' borderRadius='full' align='center' justify='center' bg='gray.50'>
-                  <Text fontSize='sm' fontWeight='700' color='gray.900'>{quantity}</Text>
-                </Flex>
-                <Button
-                  minW='0'
-                  w='34px'
-                  h='34px'
-                  p='0'
-                  borderRadius='full'
-                  borderWidth='1px'
-                  borderColor='gray.300'
-                  bg='white'
-                  onClick={onIncrease}
-                  disabled={selectableMax !== null && quantity >= selectableMax}
-                >
-                  <Plus size={14} />
-                </Button>
-              </HStack>
-            </Stack>
-
-            <Stack gap={1} align={{ base: 'start', md: 'end' }}>
-              <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>Subtotal</Text>
-              <Text fontSize='lg' fontWeight='800' color='gray.900'>{formatAmount(subtotal)}</Text>
-            </Stack>
-          </Flex>
-        </Box>
-
-        {ticket.pricePeriods.length > 1 ? (
-          <Stack gap={3}>
+        {pricingExpanded && ticket.pricePeriods.length > 1 ? (
+          <Stack gap={2.5} pt={1}>
             <Separator borderColor='gray.200' />
-            <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>
-              Pricing windows
-            </Text>
-            <Stack gap={3}>
+            <Stack gap={2}>
               {ticket.pricePeriods.map((period) => (
-                <Box key={period.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={3}>
+                <Box key={period.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='gray.50' px={3.5} py={3}>
                   <Flex justify='space-between' align='start' gap={3} wrap='wrap'>
-                    <Stack gap={1}>
+                    <Stack gap={0.5}>
                       <Text fontSize='sm' fontWeight='700' color='gray.900'>{period.name ?? 'Price window'}</Text>
                       <Text fontSize='xs' color='gray.500'>{formatDateTimeRange(period.startDateTime, period.endDateTime)}</Text>
                     </Stack>
-                    <Stack gap={1} align={{ base: 'start', md: 'end' }}>
+                    <Stack gap={0.5} align={{ base: 'start', md: 'end' }}>
                       <Text fontSize='sm' fontWeight='700' color='gray.900'>{formatAmount(period.amount ?? 0)}</Text>
-                      <Badge colorPalette={period.uniqueId === activePricePeriod?.uniqueId ? 'green' : 'gray'} variant='subtle' borderRadius='full' px={2.5} py={0.5}>
+                      <Text fontSize='xs' color={period.uniqueId === activePricePeriod?.uniqueId ? 'green.600' : 'gray.500'}>
                         {period.currentStatus}
-                      </Badge>
+                      </Text>
                     </Stack>
                   </Flex>
                 </Box>
@@ -730,10 +766,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                     >
                                       {session.ticketTypes.length > 0 ? (
                                         <Stack gap={4}>
-                                          <Flex justify='space-between' align={{ base: 'stretch', md: 'center' }} gap={3} direction={{ base: 'column', md: 'row' }}>
-                                            <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>
-                                              Available Tickets
-                                            </Text>
+                                          <Flex justify='flex-end' align={{ base: 'stretch', md: 'center' }} gap={3} direction={{ base: 'column', md: 'row' }}>
                                             <Box position='relative' w='full' maxW={{ base: 'full', md: '280px' }}>
                                               <Input
                                                 value={searchValue}
