@@ -1402,61 +1402,57 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                               overflow='hidden'
                               boxShadow='0 12px 28px rgba(15, 23, 42, 0.05)'
                             >
-                              <Box
-                                px={4}
-                                py={3.5}
-                                bg='gray.50'
-                                borderBottomWidth='1px'
-                                borderBottomColor='gray.200'
-                              >
-                                <Grid templateColumns='minmax(0, 1fr) auto' columnGap={3} rowGap={2.5} alignItems='center'>
-                                  <Text
-                                    fontSize='sm'
-                                    fontWeight='800'
-                                    color='gray.900'
-                                    lineHeight='1.4'
-                                    whiteSpace='normal'
-                                    wordBreak='break-word'
-                                    minW={0}
-                                  >
-                                    {sessionGroup.sessionName}
-                                  </Text>
-                                  <Button
-                                    minW='0'
-                                    h='18px'
-                                    p='0'
-                                    justifySelf='end'
-                                    variant='ghost'
-                                    color='red.500'
-                                    _hover={{ bg: 'transparent', color: 'red.600' }}
-                                    _active={{ bg: 'transparent', color: 'red.700' }}
-                                    aria-label={`Remove ${sessionGroup.sessionName}`}
-                                    title={`Remove ${sessionGroup.sessionName}`}
-                                    onClick={() => requestRemoveSession(sessionGroup.items, sessionGroup.sessionName)}
-                                  >
-                                    <X size={13} strokeWidth={2.3} />
-                                  </Button>
+                              <Box px={4} py={3.5} bg='gray.50' borderBottomWidth='1px' borderBottomColor='gray.200'>
+                                <Flex align='start' justify='space-between' gap={3}>
+                                  <Stack gap={1} minW={0}>
+                                    <Text
+                                      fontSize='sm'
+                                      fontWeight='800'
+                                      color='gray.900'
+                                      lineHeight='1.4'
+                                      whiteSpace='normal'
+                                      wordBreak='break-word'
+                                      minW={0}
+                                    >
+                                      {sessionGroup.sessionName}
+                                    </Text>
+                                    <Text fontSize='xs' color='gray.500' lineHeight='1.4'>
+                                      {sessionGroup.items.length} {sessionGroup.items.length === 1 ? 'ticket type selected' : 'ticket types selected'}
+                                    </Text>
+                                  </Stack>
 
-                                  <Text fontSize='xs' color='gray.500' lineHeight='1.4'>
-                                    {sessionGroup.items.length} {sessionGroup.items.length === 1 ? 'ticket type selected' : 'ticket types selected'}
-                                  </Text>
-                                  <Badge
-                                    justifySelf='end'
-                                    colorPalette='gray'
-                                    variant='subtle'
-                                    borderRadius='full'
-                                    px={3}
-                                    py={1.5}
-                                    fontSize='sm'
-                                    fontWeight='800'
-                                    color='gray.800'
-                                    bg='white'
-                                    borderWidth='1px'
-                                    borderColor='gray.200'
-                                  >
-                                    {formatAmount(sessionGroup.total, event.paymentAccountCurrency)}
-                                  </Badge>
-                                </Grid>
+                                  <HStack gap={2.5} flexShrink={0}>
+                                    <Badge
+                                      colorPalette='gray'
+                                      variant='subtle'
+                                      borderRadius='full'
+                                      px={3}
+                                      py={1.5}
+                                      fontSize='sm'
+                                      fontWeight='800'
+                                      color='gray.800'
+                                      bg='white'
+                                      borderWidth='1px'
+                                      borderColor='gray.200'
+                                    >
+                                      {formatAmount(sessionGroup.total, event.paymentAccountCurrency)}
+                                    </Badge>
+                                    <Button
+                                      minW='0'
+                                      h='20px'
+                                      p='0'
+                                      variant='ghost'
+                                      color='red.500'
+                                      _hover={{ bg: 'transparent', color: 'red.600' }}
+                                      _active={{ bg: 'transparent', color: 'red.700' }}
+                                      aria-label={`Remove ${sessionGroup.sessionName}`}
+                                      title={`Remove ${sessionGroup.sessionName}`}
+                                      onClick={() => requestRemoveSession(sessionGroup.items, sessionGroup.sessionName)}
+                                    >
+                                      <X size={13} strokeWidth={2.3} />
+                                    </Button>
+                                  </HStack>
+                                </Flex>
                               </Box>
 
                               <Stack gap={0} px={4} py={2.5}>
@@ -1467,64 +1463,81 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                     borderBottomWidth={itemIndex < sessionGroup.items.length - 1 ? '1px' : '0'}
                                     borderBottomColor='gray.100'
                                   >
-                                    <Grid templateColumns='minmax(0, 1fr) auto' columnGap={3} rowGap={2.5} alignItems='center'>
-                                      <Text
-                                        fontSize='sm'
-                                        fontWeight='700'
-                                        color='gray.900'
-                                        lineHeight='1.4'
-                                        whiteSpace='normal'
-                                        wordBreak='break-word'
-                                        minW={0}
-                                      >
-                                        {item.ticketName}
-                                      </Text>
-                                      <Button
-                                        minW='0'
-                                        h='16px'
-                                        p='0'
-                                        justifySelf='end'
-                                        variant='ghost'
-                                        color='red.500'
-                                        _hover={{ bg: 'transparent', color: 'red.600' }}
-                                        _active={{ bg: 'transparent', color: 'red.700' }}
-                                        aria-label={`Remove ${item.ticketName}`}
-                                        title={`Remove ${item.ticketName}`}
-                                        onClick={() => requestRemoveTicket(item.ticket, item.ticketName)}
-                                      >
-                                        <Trash2 size={12} strokeWidth={2.2} />
-                                      </Button>
+                                    <Stack gap={2.5}>
+                                      <Flex justify='space-between' align='start' gap={3}>
+                                        <Stack gap={1} minW={0}>
+                                          <Text
+                                            fontSize='sm'
+                                            fontWeight='800'
+                                            color='gray.900'
+                                            lineHeight='1.4'
+                                            whiteSpace='normal'
+                                            wordBreak='break-word'
+                                            minW={0}
+                                          >
+                                            {item.ticketName}
+                                          </Text>
+                                          <HStack gap={2} wrap='wrap' minW={0} align='center'>
+                                            <Text fontSize='xs' color='gray.500'>
+                                              {formatAmount(item.unitPrice, event.paymentAccountCurrency)} each
+                                            </Text>
+                                            <Text fontSize='xs' color='gray.300'>|</Text>
+                                            <Text fontSize='xs' fontWeight='700' color='gray.700'>
+                                              {formatAmount(item.lineTotal, event.paymentAccountCurrency)}
+                                            </Text>
+                                          </HStack>
+                                        </Stack>
 
-                                      <HStack gap={2} wrap='wrap' minW={0} align='center'>
-                                        <Text fontSize='xs' color='gray.500'>
-                                          {formatAmount(item.unitPrice, event.paymentAccountCurrency)} each
-                                        </Text>
-                                        <Text fontSize='xs' color='gray.300'>|</Text>
-                                        <Text fontSize='xs' fontWeight='700' color='gray.700'>
-                                          {formatAmount(item.lineTotal, event.paymentAccountCurrency)}
-                                        </Text>
-                                      </HStack>
+                                        <Button
+                                          minW='0'
+                                          h='16px'
+                                          p='0'
+                                          variant='ghost'
+                                          color='red.500'
+                                          _hover={{ bg: 'transparent', color: 'red.600' }}
+                                          _active={{ bg: 'transparent', color: 'red.700' }}
+                                          aria-label={`Remove ${item.ticketName}`}
+                                          title={`Remove ${item.ticketName}`}
+                                          onClick={() => requestRemoveTicket(item.ticket, item.ticketName)}
+                                        >
+                                          <Trash2 size={12} strokeWidth={2.2} />
+                                        </Button>
+                                      </Flex>
+
                                       <HStack
                                         gap={2}
-                                        justifySelf='end'
+                                        align='center'
+                                        justify='space-between'
                                         borderWidth='1px'
                                         borderColor='gray.200'
-                                        borderRadius='full'
+                                        borderRadius='16px'
                                         bg='gray.50'
-                                        px={1.5}
-                                        py={1}
-                                        minW='116px'
-                                        justify='space-between'
+                                        px={2}
+                                        py={1.5}
                                       >
+                                        <Text fontSize='xs' color='gray.500' fontWeight='600'>
+                                          Qty
+                                        </Text>
+                                        <HStack
+                                          gap={2}
+                                          borderWidth='1px'
+                                          borderColor='gray.200'
+                                          borderRadius='full'
+                                          bg='white'
+                                          px={1.5}
+                                          py={1}
+                                          minW='116px'
+                                          justify='space-between'
+                                        >
                                           <Button
                                             minW='0'
                                             w='24px'
                                             h='24px'
                                             p='0'
-                                          borderRadius='full'
-                                          borderWidth='1px'
-                                          borderColor='gray.300'
-                                          bg='white'
+                                            borderRadius='full'
+                                            borderWidth='1px'
+                                            borderColor='gray.300'
+                                            bg='white'
                                             color='gray.700'
                                             fontSize='sm'
                                             fontWeight='800'
@@ -1533,28 +1546,29 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                           >
                                             -
                                           </Button>
-                                        <Text minW='20px' textAlign='center' fontSize='sm' fontWeight='800' color='gray.900'>
-                                          {item.quantity}
-                                        </Text>
-                                        <Button
-                                          minW='0'
-                                          w='24px'
-                                          h='24px'
-                                          p='0'
-                                          borderRadius='full'
-                                          borderWidth='1px'
-                                          borderColor='gray.300'
-                                          bg='white'
-                                          color='gray.700'
-                                          fontSize='sm'
-                                          fontWeight='800'
-                                          onClick={() => handleTicketQuantityChange(item.ticket, item.quantity + 1)}
-                                          disabled={getTicketSelectableMax(item.ticket) !== null && item.quantity >= (getTicketSelectableMax(item.ticket) ?? 0)}
-                                        >
-                                          +
-                                        </Button>
+                                          <Text minW='20px' textAlign='center' fontSize='sm' fontWeight='800' color='gray.900'>
+                                            {item.quantity}
+                                          </Text>
+                                          <Button
+                                            minW='0'
+                                            w='24px'
+                                            h='24px'
+                                            p='0'
+                                            borderRadius='full'
+                                            borderWidth='1px'
+                                            borderColor='gray.300'
+                                            bg='white'
+                                            color='gray.700'
+                                            fontSize='sm'
+                                            fontWeight='800'
+                                            onClick={() => handleTicketQuantityChange(item.ticket, item.quantity + 1)}
+                                            disabled={getTicketSelectableMax(item.ticket) !== null && item.quantity >= (getTicketSelectableMax(item.ticket) ?? 0)}
+                                          >
+                                            +
+                                          </Button>
+                                        </HStack>
                                       </HStack>
-                                    </Grid>
+                                    </Stack>
                                   </Box>
                                 ))}
                               </Stack>
@@ -1841,9 +1855,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                           <HStack justify='space-between' gap={3} align='start' flexWrap='wrap'>
                                             <Stack gap={1}>
                                               <Text fontWeight='800' color='gray.900'>{breakdown.label}</Text>
-                                              {breakdown.merchantName ? (
-                                                <Text fontSize='sm' color='gray.600'>Merchant: {breakdown.merchantName}</Text>
-                                              ) : null}
                                             </Stack>
                                             {breakdown.isOrganizerOnly ? <Badge colorPalette='purple' variant='subtle' borderRadius='full' px={3} py={1}>Organizer only</Badge> : null}
                                           </HStack>
@@ -1854,16 +1865,15 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                               <Text fontSize='sm' fontWeight='700' color='gray.900'>{formatAmount(breakdown.subtotal, currentEvent.paymentAccountCurrency)}</Text>
                                             </HStack>
                                             {breakdown.charges.length > 0 ? breakdown.charges.map((charge) => (
-                                              <HStack key={`${breakdown.paymentMethod}-${charge.source}-${charge.title}`} justify='space-between' gap={4} align='start'>
-                                                <Stack gap={0}>
-                                                  <Text fontSize='sm' color='gray.700' fontWeight='600'>{charge.title}</Text>
-                                                  <Text fontSize='xs' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>{charge.source.replace(/-/g, ' ')}</Text>
-                                                </Stack>
-                                                <Text fontSize='sm' fontWeight='700' color='gray.900'>
-                                                  {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
-                                                </Text>
-                                              </HStack>
-                                            )) : (
+                                            <HStack key={`${breakdown.paymentMethod}-${charge.source}-${charge.title}`} justify='space-between' gap={4} align='start'>
+                                              <Text fontSize='sm' color='gray.700' fontWeight='600'>
+                                                {charge.title}
+                                              </Text>
+                                              <Text fontSize='sm' fontWeight='700' color='gray.900'>
+                                                {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
+                                              </Text>
+                                            </HStack>
+                                          )) : (
                                               <Text fontSize='sm' color='gray.600'>No additional buyer charges apply for this method.</Text>
                                             )}
                                           </Stack>
