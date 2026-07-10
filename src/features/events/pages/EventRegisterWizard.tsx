@@ -2285,19 +2285,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                 </Fragment>
                                               ))}
 
-                                              <Table.Row bg='white'>
-                                                <Table.Cell borderColor='gray.200' px={4} py={3}>
-                                                  <Text fontWeight='800' color='gray.900'>Item Total</Text>
-                                                </Table.Cell>
-                                                <Table.Cell borderColor='gray.200' px={4} py={3} />
-                                                <Table.Cell borderColor='gray.200' px={4} py={3} />
-                                                <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
-                                                  <Text fontWeight='800' color='gray.900'>
-                                                    {formatAmount(selectedPaymentBreakdown.subtotal, currentEvent.paymentAccountCurrency)}
-                                                  </Text>
-                                                </Table.Cell>
-                                              </Table.Row>
-
                                               {selectedPaymentBreakdown.charges.length > 0 ? selectedPaymentBreakdown.charges.map((charge) => (
                                                 <Table.Row key={`${selectedPaymentBreakdown.paymentMethod}-${charge.source}-${charge.title}`}>
                                                   <Table.Cell borderColor='gray.200' px={4} py={3}>
