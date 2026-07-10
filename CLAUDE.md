@@ -79,6 +79,7 @@ npm install -D playwright @playwright/test
 - Browser-visible frontend routes must mirror backend routes exactly, excluding the `/api` prefix.
 - Keep the same path segments and route params on the frontend when a backend route already exists.
 - UI-only routes are allowed only when there is no backend route to mirror.
+- Event registration UI, especially `/events/.../register` and payment-tab work, belongs in `D:\My Projects\V4Ideas\templates\ideali-events`. Do not do that work in the membership checkout.
 
 ---
 

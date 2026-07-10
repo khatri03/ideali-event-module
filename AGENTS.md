@@ -87,6 +87,7 @@ npm install -D playwright @playwright/test
 - Browser-visible frontend routes must mirror backend routes exactly, excluding the `/api` prefix.
 - Keep the same path segments and route params on the frontend when a backend route already exists.
 - UI-only routes are allowed only when there is no backend route to mirror.
+- Event registration UI, especially `/events/.../register` and payment-tab work, belongs in this repo: `D:\My Projects\V4Ideas\templates\ideali-events`. Do not do that work in the membership checkout.
 
 ---
 
@@ -367,14 +368,14 @@ Enterprise SaaS must work on all viewports. Responsive design is **mandatory on 
 
 ### Breakpoints (Chakra UI v3)
 
-| Token | Width | Target |
-| ----- | ----- | ------ |
-| `base` | 0px | Mobile — design starts here |
-| `sm` | 480px | Large mobile |
-| `md` | 768px | Tablet |
-| `lg` | 992px | Desktop |
-| `xl` | 1280px | Large desktop |
-| `2xl` | 1536px | Wide screen |
+| Token  | Width  | Target                      |
+| ------ | ------ | --------------------------- |
+| `base` | 0px    | Mobile — design starts here |
+| `sm`   | 480px  | Large mobile                |
+| `md`   | 768px  | Tablet                      |
+| `lg`   | 992px  | Desktop                     |
+| `xl`   | 1280px | Large desktop               |
+| `2xl`  | 1536px | Wide screen                 |
 
 **Mobile-first. Always.** `base` value targets mobile. Override upward. Never write desktop layout as default then patch mobile.
 
@@ -400,32 +401,40 @@ Enterprise SaaS must work on all viewports. Responsive design is **mandatory on 
 ### Mandatory Rules by Surface
 
 **Page layout:**
+
 - All pages use `maxW` + `mx="auto"` container. Never full-bleed without explicit design intent.
 - Sidebar: `display={{ base: "none", lg: "flex" }}`. Mobile gets hamburger + `Drawer`.
 
 **Grids and lists:**
+
 - Always `SimpleGrid` with responsive `columns`. Never hardcoded `Flex` with fixed widths.
 - `columns={{ base: 1, md: 2, xl: 3 }}` minimum pattern for card grids.
 
 **Typography:**
+
 - Headings: `fontSize={{ base: "xl", md: "2xl", lg: "3xl" }}`.
 - Body: `fontSize={{ base: "sm", md: "md" }}`. Never hardcode a single size for text that appears on all viewports.
 
 **Data tables:**
+
 - Always wrap in `TableContainer` with `overflowX="auto"`. Never clip or truncate silently on mobile.
 - At `base`, consider card-list layout if table has 5+ columns.
 
 **Forms:**
+
 - Full width at `base`. Two-column `SimpleGrid` allowed at `md+` only.
 - Submit/primary CTA button: `w={{ base: "full", md: "auto" }}`.
 
 **Modals:**
+
 - `size={{ base: "full", md: "lg" }}`. Full screen on mobile — no tiny modals on small viewports.
 
 **Charts (Recharts):**
+
 - Container `Box` must have `w="100%"` and an explicit `h` prop. Recharts respects container width — never set a fixed `width` prop on the chart component.
 
 **Touch targets:**
+
 - All interactive elements minimum 44×44px. Use `minH="11"` (44px) on buttons/links where Chakra default is smaller.
 
 ### Anti-Patterns — Hard Prohibited
