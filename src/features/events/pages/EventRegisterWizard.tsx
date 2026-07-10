@@ -314,6 +314,17 @@ function formatAmount(value: number, currencyCode?: string | null) {
   return value.toFixed(2)
 }
 
+function formatChargeDisplayText(title: string, valueType: string, value: number) {
+  if (!title) return ''
+
+  if (!valueType.trim().toLowerCase().includes('percent')) {
+    return title
+  }
+
+  const normalizedValue = Number.isInteger(value) ? value.toFixed(0) : value.toFixed(2).replace(/\.?0+$/, '')
+  return `${title} (${normalizedValue}%)`
+}
+
 function isHtmlContent(value: string | null | undefined) {
   return Boolean(value && /<[^>]+>/.test(value))
 }
@@ -1861,19 +1872,19 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
                                           <Stack gap={2}>
                                             <HStack justify='space-between' gap={4}>
-                                              <Text fontSize='sm' color='gray.600'>Subtotal</Text>
+                                              <Text fontSize='sm' color='gray.600'>Item Total</Text>
                                               <Text fontSize='sm' fontWeight='700' color='gray.900'>{formatAmount(breakdown.subtotal, currentEvent.paymentAccountCurrency)}</Text>
                                             </HStack>
                                             {breakdown.charges.length > 0 ? breakdown.charges.map((charge) => (
-                                            <HStack key={`${breakdown.paymentMethod}-${charge.source}-${charge.title}`} justify='space-between' gap={4} align='start'>
-                                              <Text fontSize='sm' color='gray.700' fontWeight='600'>
-                                                {charge.title}
-                                              </Text>
-                                              <Text fontSize='sm' fontWeight='700' color='gray.900'>
-                                                {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
-                                              </Text>
-                                            </HStack>
-                                          )) : (
+                                              <HStack key={`${breakdown.paymentMethod}-${charge.source}-${charge.title}`} justify='space-between' gap={4} align='start'>
+                                                <Text fontSize='sm' color='gray.700' fontWeight='600'>
+                                                  {formatChargeDisplayText(charge.title, charge.valueType, charge.value)}
+                                                </Text>
+                                                <Text fontSize='sm' fontWeight='700' color='gray.900'>
+                                                  {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
+                                                </Text>
+                                              </HStack>
+                                            )) : (
                                               <Text fontSize='sm' color='gray.600'>No additional buyer charges apply for this method.</Text>
                                             )}
                                           </Stack>
