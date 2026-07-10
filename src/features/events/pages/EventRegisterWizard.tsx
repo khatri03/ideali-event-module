@@ -494,6 +494,7 @@ function StripePaymentFields({
               bg='white'
               borderRadius='14px'
               h='12'
+              px={4}
             />
           </Box>
 
