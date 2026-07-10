@@ -95,6 +95,8 @@ export const API_ROUTES = {
   eventRegisterAttendeeInfo: (eventUniqueId: string) => `/api/events/${eventUniqueId}/register/attendee-info`,
   eventRegisterQuestionnaire: (eventUniqueId: string) => `/api/events/${eventUniqueId}/register/questionnaire`,
   eventRegisterPayment: (eventUniqueId: string) => `/api/events/${eventUniqueId}/register/payment`,
+  organizerPaymentAccountPciCredentials: (paymentAccountUniqueId: string) =>
+    `/api/organizer/payment-account/pci/${paymentAccountUniqueId}/credentials`,
   eventWizardProgress: (id: string) => `/api/organizer/events/${id}/wizard-progress`,
   eventWizardNameCreate: "/api/organizer/events/name",
   eventWizardSkip: (id: string) => `/api/organizer/events/${id}/skip`,

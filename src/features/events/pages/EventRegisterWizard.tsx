@@ -26,6 +26,8 @@ import {
   Text,
 } from '@chakra-ui/react'
 import { keyframes } from '@emotion/react'
+import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement } from '@stripe/react-stripe-js'
+import { loadStripe } from '@stripe/stripe-js'
 import {
   ArrowLeft,
   CalendarDays,
@@ -50,6 +52,7 @@ import {
   fetchEventRegistrationPayment,
   fetchEventRegistrationQuestionnaire,
   fetchEventRegistrationSessions,
+  fetchStripePublicCredentials,
 } from '@/api/events'
 import { toaster } from '@/lib/toaster'
 import type {
@@ -102,6 +105,7 @@ export interface EventRegisterWizardEvent {
   registrationBlockedReason: string | null
   isOrganizer: boolean
   paymentAccountCurrency: string | null
+  paymentAccountUniqueId: string | null
   paymentMethods: EventRegistrationPaymentMethod[]
   sessions: EventRegistrationSession[]
   visibleTabs?: string[]
@@ -370,6 +374,160 @@ function AnimatedPaymentMethodBody({ isOpen, children }: { isOpen: boolean; chil
         {children}
       </Box>
     </Box>
+  )
+}
+
+function isCardPaymentMethod(paymentMethod: string) {
+  return /card/i.test(paymentMethod)
+}
+
+function StripePaymentFields({
+  paymentMethod,
+  paymentAccountUniqueId,
+  paymentAccountCurrency,
+  cardHolderName,
+  onCardHolderNameChange,
+}: {
+  paymentMethod: string
+  paymentAccountUniqueId: string | null
+  paymentAccountCurrency: string | null
+  cardHolderName: string
+  onCardHolderNameChange: (value: string) => void
+}) {
+  const stripeCredentialsQuery = useQuery({
+    queryKey: ['event-registration', paymentAccountUniqueId, 'stripe-credentials'],
+    queryFn: () => fetchStripePublicCredentials(paymentAccountUniqueId ?? ''),
+    enabled: isCardPaymentMethod(paymentMethod) && Boolean(paymentAccountUniqueId),
+    retry: 1,
+  })
+
+  const stripePromise = useMemo(() => {
+    const stripeCredentials = stripeCredentialsQuery.data
+    if (!stripeCredentials) return null
+
+    const stripeAccount = stripeCredentials.stripeAccount.trim()
+    return loadStripe(
+      stripeCredentials.publishableKey,
+      stripeAccount ? { stripeAccount } : undefined,
+    )
+  }, [stripeCredentialsQuery.data])
+
+  const elementOptions = useMemo(
+    () => ({
+      style: {
+        base: {
+          color: '#0f172a',
+          fontSize: '16px',
+          fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
+          fontSmoothing: 'antialiased',
+          '::placeholder': {
+            color: '#94a3b8',
+          },
+        },
+        invalid: {
+          color: '#dc2626',
+        },
+      },
+    }),
+    [],
+  )
+
+  if (!isCardPaymentMethod(paymentMethod)) {
+    return null
+  }
+
+  if (!paymentAccountUniqueId) {
+    return (
+      <Box borderWidth='1px' borderColor='orange.200' bg='orange.50' borderRadius='18px' p={4}>
+        <Text fontSize='sm' color='orange.800'>
+          Card fields are unavailable because the payment account is not configured.
+        </Text>
+      </Box>
+    )
+  }
+
+  if (stripeCredentialsQuery.isLoading) {
+    return (
+      <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'>
+        <SkeletonText noOfLines={4} gap='3' />
+      </Box>
+    )
+  }
+
+  if (stripeCredentialsQuery.isError) {
+    return (
+      <Box borderWidth='1px' borderColor='red.200' bg='red.50' borderRadius='18px' p={4}>
+        <Text fontSize='sm' color='red.700'>
+          Unable to load card fields right now.
+        </Text>
+      </Box>
+    )
+  }
+
+  if (!stripePromise) {
+    return null
+  }
+
+  return (
+    <Elements stripe={stripePromise}>
+      <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='white' overflow='hidden'>
+        <Box px={4} py={3} bg='gray.50' borderBottomWidth='1px' borderBottomColor='gray.200'>
+          <Text fontSize='sm' fontWeight='700' color='gray.700'>
+            Card details
+          </Text>
+          <Text fontSize='sm' color='gray.500'>
+            Enter the cardholder name and card information for {paymentAccountCurrency ?? 'the selected currency'}.
+          </Text>
+        </Box>
+
+        <Stack gap={4} p={4}>
+          <Box>
+            <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
+              Name on card <Text as='span' color='red.500'>*</Text>
+            </Text>
+            <Input
+              value={cardHolderName}
+              onChange={(event) => onCardHolderNameChange(event.target.value)}
+              autoComplete='cc-name'
+              placeholder='Enter cardholder name'
+              borderColor='gray.200'
+              bg='white'
+              borderRadius='14px'
+              h='12'
+            />
+          </Box>
+
+          <Box>
+            <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
+              Card number <Text as='span' color='red.500'>*</Text>
+            </Text>
+            <Box borderWidth='1px' borderColor='gray.200' borderRadius='14px' px={3} py={3} bg='white'>
+              <CardNumberElement options={elementOptions} />
+            </Box>
+          </Box>
+
+          <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
+            <Box>
+              <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
+                Expiry <Text as='span' color='red.500'>*</Text>
+              </Text>
+              <Box borderWidth='1px' borderColor='gray.200' borderRadius='14px' px={3} py={3} bg='white'>
+                <CardExpiryElement options={elementOptions} />
+              </Box>
+            </Box>
+
+            <Box>
+              <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
+                CVV <Text as='span' color='red.500'>*</Text>
+              </Text>
+              <Box borderWidth='1px' borderColor='gray.200' borderRadius='14px' px={3} py={3} bg='white'>
+                <CardCvcElement options={elementOptions} />
+              </Box>
+            </Box>
+          </SimpleGrid>
+        </Stack>
+      </Box>
+    </Elements>
   )
 }
 
@@ -923,6 +1081,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [sessionTicketSearch, setSessionTicketSearch] = useState<Record<string, string>>({})
   const [selectedTicketQuantities, setSelectedTicketQuantities] = useState<Record<string, number>>({})
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null)
+  const [cardHolderName, setCardHolderName] = useState('')
   const [expandedPaymentMethod, setExpandedPaymentMethod] = useState<string | null>(null)
   const [purchaseTimerStartedAt, setPurchaseTimerStartedAt] = useState<number | null>(null)
   const [purchaseTimerNow, setPurchaseTimerNow] = useState(() => Date.now())
@@ -1045,6 +1204,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     paymentBreakdowns.find((breakdown) => breakdown.paymentMethod === selectedPaymentMethod) ??
     paymentBreakdowns[0] ??
     null
+  const selectedCardPaymentMethod = selectedPaymentMethod ?? selectedPaymentBreakdown?.paymentMethod ?? null
   const eventData = {
     ...event,
     description: descriptionData.description ?? event.description,
@@ -1913,8 +2073,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                         <Text fontSize='sm' color='gray.500'>Method order is sorted by total payable.</Text>
                                       </HStack>
 
-                                      <Stack gap={3}>
-                                        {paymentBreakdowns.map((breakdown) => {
+                                    <Stack gap={3}>
+                                      {paymentBreakdowns.map((breakdown) => {
                                           const isSelected = selectedPaymentBreakdown?.paymentMethod === breakdown.paymentMethod
                                           const isExpanded = expandedPaymentMethod === breakdown.paymentMethod
 
@@ -2013,9 +2173,19 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                               </AnimatedPaymentMethodBody>
                                             </Box>
                                           )
-                                        })}
-                                      </Stack>
+                                      })}
                                     </Stack>
+
+                                    {selectedCardPaymentMethod ? (
+                                      <StripePaymentFields
+                                        paymentMethod={selectedCardPaymentMethod}
+                                        paymentAccountUniqueId={currentEvent.paymentAccountUniqueId}
+                                        paymentAccountCurrency={currentEvent.paymentAccountCurrency}
+                                        cardHolderName={cardHolderName}
+                                        onCardHolderNameChange={setCardHolderName}
+                                      />
+                                    ) : null}
+                                  </Stack>
 
                                     {selectedPaymentBreakdown ? (
                                       <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' overflow='hidden' boxShadow='0 10px 24px rgba(15, 23, 42, 0.04)'>
@@ -2029,66 +2199,69 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                           </HStack>
                                         </Box>
 
-                                        <Table.Root variant='line' size='sm' borderColor='gray.200'>
-                                          <Table.Header>
-                                            <Table.Row bg='white'>
-                                              <Table.ColumnHeader borderColor='gray.200' px={4} py={3} color='gray.600' fontSize='xs' textTransform='uppercase' letterSpacing='0.12em'>
-                                                Description
-                                              </Table.ColumnHeader>
-                                              <Table.ColumnHeader borderColor='gray.200' px={4} py={3} color='gray.600' fontSize='xs' textTransform='uppercase' letterSpacing='0.12em' textAlign='right'>
-                                                Amount
-                                              </Table.ColumnHeader>
-                                            </Table.Row>
-                                          </Table.Header>
-
-                                          <Table.Body>
-                                            <Table.Row>
-                                              <Table.Cell borderColor='gray.200' px={4} py={3}>
-                                                <Text fontWeight='700' color='gray.900'>Item Total</Text>
-                                              </Table.Cell>
-                                              <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
-                                                <Text fontWeight='700' color='gray.900'>
-                                                  {formatAmount(selectedPaymentBreakdown.subtotal, currentEvent.paymentAccountCurrency)}
-                                                </Text>
-                                              </Table.Cell>
-                                            </Table.Row>
-
-                                            {selectedPaymentBreakdown.charges.length > 0 ? selectedPaymentBreakdown.charges.map((charge) => (
-                                              <Table.Row key={`${selectedPaymentBreakdown.paymentMethod}-${charge.source}-${charge.title}`}>
-                                              <Table.Cell borderColor='gray.200' px={4} py={3}>
-                                                <Stack gap={0.5}>
-                                                  <Text fontWeight='600' color='gray.800'>
-                                                    {formatChargeDisplayText(charge.title, charge.valueType, charge.value)}
-                                                  </Text>
-                                                </Stack>
-                                              </Table.Cell>
-                                                <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
-                                                  <Text fontWeight='700' color='gray.900'>
-                                                    {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
-                                                  </Text>
-                                                </Table.Cell>
+                                        <Stack gap={4} p={4}>
+                                          <Table.Root variant='line' size='sm' borderColor='gray.200'>
+                                            <Table.Header>
+                                              <Table.Row bg='white'>
+                                                <Table.ColumnHeader borderColor='gray.200' px={4} py={3} color='gray.600' fontSize='xs' textTransform='uppercase' letterSpacing='0.12em'>
+                                                  Description
+                                                </Table.ColumnHeader>
+                                                <Table.ColumnHeader borderColor='gray.200' px={4} py={3} color='gray.600' fontSize='xs' textTransform='uppercase' letterSpacing='0.12em' textAlign='right'>
+                                                  Amount
+                                                </Table.ColumnHeader>
                                               </Table.Row>
-                                            )) : (
+                                            </Table.Header>
+
+                                            <Table.Body>
                                               <Table.Row>
                                                 <Table.Cell borderColor='gray.200' px={4} py={3}>
-                                                  <Text fontSize='sm' color='gray.600'>No additional buyer charges apply for this method.</Text>
+                                                  <Text fontWeight='700' color='gray.900'>Item Total</Text>
                                                 </Table.Cell>
-                                                <Table.Cell borderColor='gray.200' px={4} py={3} />
+                                                <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
+                                                  <Text fontWeight='700' color='gray.900'>
+                                                    {formatAmount(selectedPaymentBreakdown.subtotal, currentEvent.paymentAccountCurrency)}
+                                                  </Text>
+                                                </Table.Cell>
                                               </Table.Row>
-                                            )}
 
-                                            <Table.Row bg='gray.50'>
-                                              <Table.Cell borderColor='gray.200' px={4} py={3}>
-                                                <Text fontWeight='800' color='gray.900'>Total payable</Text>
-                                              </Table.Cell>
-                                              <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
-                                                <Text fontSize='lg' fontWeight='800' color='gray.900'>
-                                                  {formatAmount(selectedPaymentBreakdown.grandTotal, currentEvent.paymentAccountCurrency)}
-                                                </Text>
-                                              </Table.Cell>
-                                            </Table.Row>
-                                          </Table.Body>
-                                        </Table.Root>
+                                              {selectedPaymentBreakdown.charges.length > 0 ? selectedPaymentBreakdown.charges.map((charge) => (
+                                                <Table.Row key={`${selectedPaymentBreakdown.paymentMethod}-${charge.source}-${charge.title}`}>
+                                                <Table.Cell borderColor='gray.200' px={4} py={3}>
+                                                  <Stack gap={0.5}>
+                                                    <Text fontWeight='600' color='gray.800'>
+                                                      {formatChargeDisplayText(charge.title, charge.valueType, charge.value)}
+                                                    </Text>
+                                                  </Stack>
+                                                </Table.Cell>
+                                                  <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
+                                                    <Text fontWeight='700' color='gray.900'>
+                                                      {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
+                                                    </Text>
+                                                  </Table.Cell>
+                                                </Table.Row>
+                                              )) : (
+                                                <Table.Row>
+                                                  <Table.Cell borderColor='gray.200' px={4} py={3}>
+                                                    <Text fontSize='sm' color='gray.600'>No additional buyer charges apply for this method.</Text>
+                                                  </Table.Cell>
+                                                  <Table.Cell borderColor='gray.200' px={4} py={3} />
+                                                </Table.Row>
+                                              )}
+
+                                              <Table.Row bg='gray.50'>
+                                                <Table.Cell borderColor='gray.200' px={4} py={3}>
+                                                  <Text fontWeight='800' color='gray.900'>Total payable</Text>
+                                                </Table.Cell>
+                                                <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
+                                                  <Text fontSize='lg' fontWeight='800' color='gray.900'>
+                                                    {formatAmount(selectedPaymentBreakdown.grandTotal, currentEvent.paymentAccountCurrency)}
+                                                  </Text>
+                                                </Table.Cell>
+                                              </Table.Row>
+                                            </Table.Body>
+                                          </Table.Root>
+
+                                        </Stack>
                                       </Box>
                                     ) : null}
                                   </Stack>

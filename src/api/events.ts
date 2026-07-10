@@ -333,6 +333,8 @@ const eventRegistrationResponseSchema = z.object({
   isOrganizer: z.boolean().optional(),
   PaymentAccountCurrency: z.string().nullable().optional(),
   paymentAccountCurrency: z.string().nullable().optional(),
+  PaymentAccountUniqueId: z.string().nullable().optional(),
+  paymentAccountUniqueId: z.string().nullable().optional(),
   VisibleTabs: z.array(z.string()).optional(),
   visibleTabs: z.array(z.string()).optional(),
   PaymentMethods: z.array(eventRegistrationPaymentMethodSchema).optional(),
@@ -861,10 +863,16 @@ export interface EventRegistrationResponse {
   registrationBlockedReason: string | null
   isOrganizer: boolean
   paymentAccountCurrency: string | null
+  paymentAccountUniqueId: string | null
   visibleTabs: string[]
   paymentMethods: EventRegistrationPaymentMethod[]
   paymentBreakdowns: EventRegistrationPaymentBreakdown[]
   sessions: EventRegistrationSession[]
+}
+
+export interface StripePublicCredentials {
+  publishableKey: string
+  stripeAccount: string
 }
 
 function parseEventRegistrationTicket(item: z.infer<typeof eventRegistrationTicketSchema>): EventRegistrationTicket {
@@ -972,6 +980,8 @@ function parseEventRegistrationResponse(payload: unknown): EventRegistrationResp
     isOrganizer: response.IsOrganizer ?? response.isOrganizer ?? false,
     paymentAccountCurrency:
       response.PaymentAccountCurrency ?? response.paymentAccountCurrency ?? null,
+    paymentAccountUniqueId:
+      response.PaymentAccountUniqueId ?? response.paymentAccountUniqueId ?? null,
     visibleTabs: response.VisibleTabs ?? response.visibleTabs ?? [],
     paymentMethods: (response.PaymentMethods ?? response.paymentMethods ?? []).map((method) => ({
       paymentMethod: method.PaymentMethod ?? method.paymentMethod ?? "",
@@ -1031,6 +1041,26 @@ export async function fetchEventRegistrationQuestionnaire(eventUniqueId: string)
 export async function fetchEventRegistrationPayment(eventUniqueId: string, subtotal = 0): Promise<EventRegistrationResponse> {
   const res = await client.get<unknown>(`${API_ROUTES.eventRegisterPayment(eventUniqueId)}?subtotal=${encodeURIComponent(subtotal.toFixed(2))}`)
   return parseEventRegistrationResponse(res.data)
+}
+
+const stripePublicCredentialsSchema = z.object({
+  PublishableKey: z.string().optional(),
+  publishableKey: z.string().optional(),
+  StripeAccount: z.string().optional(),
+  stripeAccount: z.string().optional(),
+})
+
+export async function fetchStripePublicCredentials(paymentAccountUniqueId: string): Promise<StripePublicCredentials> {
+  const res = await client.get<unknown>(API_ROUTES.organizerPaymentAccountPciCredentials(paymentAccountUniqueId))
+  const responseData = parseServiceResponseData(res.data)
+  const response = stripePublicCredentialsSchema.parse(responseData)
+  const publishableKey = response.PublishableKey ?? response.publishableKey ?? ''
+  const stripeAccount = response.StripeAccount ?? response.stripeAccount ?? ''
+
+  return {
+    publishableKey,
+    stripeAccount,
+  }
 }
 
 export async function createEvent(payload: Omit<AppEvent, "id">): Promise<AppEvent> {
