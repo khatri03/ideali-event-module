@@ -344,6 +344,35 @@ function getVisibleTabs(event: EventRegisterWizardEvent) {
   return tabs
 }
 
+function AnimatedPaymentMethodBody({ isOpen, children }: { isOpen: boolean; children: ReactNode }) {
+  const contentRef = useRef<HTMLDivElement | null>(null)
+  const [contentHeight, setContentHeight] = useState(0)
+
+  useEffect(() => {
+    if (!contentRef.current) return
+
+    // Use the real content height so auto-collapsing panels animate cleanly.
+    setContentHeight(contentRef.current.scrollHeight)
+  }, [children, isOpen])
+
+  return (
+    <Box
+      maxH={isOpen ? `${Math.max(contentHeight, 1)}px` : '0px'}
+      opacity={isOpen ? 1 : 0}
+      transform={isOpen ? 'translateY(0) scaleY(1)' : 'translateY(-10px) scaleY(0.98)'}
+      transformOrigin='top'
+      transition='max-height 360ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease, transform 360ms cubic-bezier(0.22, 1, 0.36, 1)'
+      overflow='hidden'
+      pointerEvents={isOpen ? 'auto' : 'none'}
+      willChange='max-height, opacity, transform'
+    >
+      <Box ref={contentRef}>
+        {children}
+      </Box>
+    </Box>
+  )
+}
+
 function getStepIndex(tabs: Array<{ id: WizardTabId }>, stepId: WizardTabId) {
   return tabs.findIndex((item) => item.id === stepId)
 }
@@ -1860,7 +1889,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                       </Text>
                                     </Stack>
                                     <Text fontSize='sm' color='gray.600' textAlign='right' maxW='sm'>
-                                      Buyer-facing fees are calculated by the backend for each available merchant and payment method.
+                                      Review the charges for each payment method before choosing how to pay.
                                     </Text>
                                   </HStack>
                                 </Box>
@@ -1953,7 +1982,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
                                               <Separator borderColor='gray.200' />
 
-                                              {isExpanded ? (
+                                              <AnimatedPaymentMethodBody isOpen={isExpanded}>
                                                 <Stack gap={3} px={4} py={4}>
                                                   <HStack justify='space-between' gap={3} minW={0}>
                                                     <Text fontSize='sm' color='gray.600' fontWeight='600'>
@@ -1981,7 +2010,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                     <Text fontSize='sm' color='gray.600'>No additional buyer charges</Text>
                                                   )}
                                                 </Stack>
-                                              ) : null}
+                                              </AnimatedPaymentMethodBody>
                                             </Box>
                                           )
                                         })}
@@ -2026,16 +2055,13 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
                                             {selectedPaymentBreakdown.charges.length > 0 ? selectedPaymentBreakdown.charges.map((charge) => (
                                               <Table.Row key={`${selectedPaymentBreakdown.paymentMethod}-${charge.source}-${charge.title}`}>
-                                                <Table.Cell borderColor='gray.200' px={4} py={3}>
-                                                  <Stack gap={0.5}>
-                                                    <Text fontWeight='600' color='gray.800'>
-                                                      {formatChargeDisplayText(charge.title, charge.valueType, charge.value)}
-                                                    </Text>
-                                                    <Text fontSize='xs' color='gray.500'>
-                                                      Backend calculated
-                                                    </Text>
-                                                  </Stack>
-                                                </Table.Cell>
+                                              <Table.Cell borderColor='gray.200' px={4} py={3}>
+                                                <Stack gap={0.5}>
+                                                  <Text fontWeight='600' color='gray.800'>
+                                                    {formatChargeDisplayText(charge.title, charge.valueType, charge.value)}
+                                                  </Text>
+                                                </Stack>
+                                              </Table.Cell>
                                                 <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
                                                   <Text fontWeight='700' color='gray.900'>
                                                     {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
