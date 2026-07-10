@@ -10,7 +10,6 @@ import {
   Container,
   Dialog,
   Flex,
-  Grid,
   Heading,
   HStack,
   Image,
@@ -19,6 +18,7 @@ import {
   Portal,
   Separator,
   SimpleGrid,
+  Table,
   Skeleton,
   SkeletonText,
   Stack,
@@ -903,6 +903,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [activeSessionDescription, setActiveSessionDescription] = useState<{ title: string; description: string } | null>(null)
   const [sessionTicketSearch, setSessionTicketSearch] = useState<Record<string, string>>({})
   const [selectedTicketQuantities, setSelectedTicketQuantities] = useState<Record<string, number>>({})
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null)
   const [purchaseTimerStartedAt, setPurchaseTimerStartedAt] = useState<number | null>(null)
   const [purchaseTimerNow, setPurchaseTimerNow] = useState(() => Date.now())
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
@@ -1020,6 +1021,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const paymentMethodsData = paymentQuery.data?.paymentMethods ?? event.paymentMethods ?? []
   const visiblePaymentMethods = paymentMethodsData.filter((method) => !method.isOrganizerOnly || event.isOrganizer)
   const paymentBreakdowns = paymentQuery.data?.paymentBreakdowns ?? []
+  const selectedPaymentBreakdown =
+    paymentBreakdowns.find((breakdown) => breakdown.paymentMethod === selectedPaymentMethod) ??
+    paymentBreakdowns[0] ??
+    null
   const eventData = {
     ...event,
     description: descriptionData.description ?? event.description,
@@ -1056,6 +1061,21 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     paymentSubtotalSnapshotRef.current = selectedTicketTotal
     refetchPaymentBreakdown()
   }, [activeTab, paymentBreakdownLoaded, refetchPaymentBreakdown, selectedTicketTotal])
+
+  useEffect(() => {
+    if (activeTab !== 'payment') return
+
+    const availableMethods = paymentBreakdowns.length > 0
+      ? paymentBreakdowns.map((breakdown) => breakdown.paymentMethod)
+      : visiblePaymentMethods.map((method) => method.paymentMethod)
+
+    if (availableMethods.length === 0) {
+      setSelectedPaymentMethod(null)
+      return
+    }
+
+    setSelectedPaymentMethod((current) => (current && availableMethods.includes(current) ? current : availableMethods[0]))
+  }, [activeTab, paymentBreakdowns, visiblePaymentMethods])
   const shouldHighlightSummaryLauncher = selectedTicketCount > 0 || purchaseTimerVisible
   const isDescriptionStep = activeTab === 'description'
   const sessionsStepIndex = getStepIndex(tabs, 'sessions')
@@ -1855,66 +1875,173 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                 </Box>
 
                                 {paymentQuery.isFetching && paymentBreakdowns.length === 0 ? (
-                                  <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
-                                    <Text fontSize='sm' color='gray.600'>Loading payment breakdown...</Text>
-                                  </Box>
+                                  <Stack gap={4}>
+                                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
+                                      {[0, 1].map((index) => (
+                                        <Skeleton key={index} h='92px' borderRadius='18px' />
+                                      ))}
+                                    </SimpleGrid>
+                                    <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
+                                      <SkeletonText noOfLines={4} gap='4' />
+                                    </Box>
+                                  </Stack>
                                 ) : paymentBreakdowns.length > 0 ? (
-                                  <SimpleGrid columns={{ base: 1, xl: 2 }} gap={4}>
-                                    {paymentBreakdowns.map((breakdown) => (
-                                      <Box key={breakdown.paymentMethod} borderWidth='1px' borderColor='gray.200' borderRadius='20px' p={4} bg='white' boxShadow='0 10px 24px rgba(15, 23, 42, 0.04)'>
-                                        <Stack gap={4}>
-                                          <HStack justify='space-between' gap={3} align='start' flexWrap='wrap'>
+                                  <Stack gap={4}>
+                                    <Stack gap={2}>
+                                      <HStack justify='space-between' gap={4} flexWrap='wrap'>
+                                        <Text fontSize='sm' fontWeight='700' color='gray.700'>Select payment method</Text>
+                                        <Text fontSize='sm' color='gray.500'>Method order is sorted by total payable.</Text>
+                                      </HStack>
+
+                                      <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
+                                        {paymentBreakdowns.map((breakdown) => {
+                                          const isSelected = selectedPaymentBreakdown?.paymentMethod === breakdown.paymentMethod
+
+                                          return (
+                                            <Button
+                                              key={breakdown.paymentMethod}
+                                              onClick={() => setSelectedPaymentMethod(breakdown.paymentMethod)}
+                                              variant='outline'
+                                              h='auto'
+                                              minH='92px'
+                                              px={4}
+                                              py={4}
+                                              justifyContent='space-between'
+                                              alignItems='stretch'
+                                              textAlign='left'
+                                              bg={isSelected ? hexToRgba(formAccent, 0.08) : 'white'}
+                                              borderColor={isSelected ? formAccent : 'gray.200'}
+                                              boxShadow={isSelected ? `0 0 0 1px ${formAccent}` : '0 10px 24px rgba(15, 23, 42, 0.04)'}
+                                              _hover={{ bg: isSelected ? hexToRgba(formAccent, 0.12) : 'gray.50', borderColor: isSelected ? formAccent : 'gray.300' }}
+                                              _active={{ bg: isSelected ? hexToRgba(formAccent, 0.16) : 'gray.100' }}
+                                            >
+                                              <Stack gap={2} align='start' flex='1' minW={0}>
+                                                <HStack gap={2} wrap='wrap' minW={0}>
+                                                  <Text fontWeight='800' color='gray.900'>{breakdown.label}</Text>
+                                                  {breakdown.isOrganizerOnly ? <Badge colorPalette='purple' variant='subtle' borderRadius='full' px={3} py={1}>Organizer only</Badge> : null}
+                                                </HStack>
+                                                <HStack justify='space-between' gap={3} minW={0}>
+                                                  <Text fontSize='sm' color='gray.600' fontWeight='600'>
+                                                    Item Total
+                                                  </Text>
+                                                  <Text fontSize='sm' color='gray.700' fontWeight='700' flexShrink={0}>
+                                                    {formatAmount(breakdown.subtotal, currentEvent.paymentAccountCurrency)}
+                                                  </Text>
+                                                </HStack>
+                                                {breakdown.charges.length > 0 ? (
+                                                  <Stack gap={1} minW={0}>
+                                                    {breakdown.charges.map((charge) => (
+                                                      <HStack key={`${breakdown.paymentMethod}-${charge.source}-${charge.title}`} justify='space-between' gap={3} minW={0}>
+                                                        <Text fontSize='sm' color='gray.600' noOfLines={1}>
+                                                          {formatChargeDisplayText(charge.title, charge.valueType, charge.value)}
+                                                        </Text>
+                                                        <Text fontSize='sm' color='gray.700' fontWeight='700' flexShrink={0}>
+                                                          {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
+                                                        </Text>
+                                                      </HStack>
+                                                    ))}
+                                                  </Stack>
+                                                ) : (
+                                                  <Text fontSize='sm' color='gray.600'>No additional buyer charges</Text>
+                                                )}
+                                              </Stack>
+
+                                              <Stack gap={0} align='end' flexShrink={0} mt={1}>
+                                                <Text fontSize='xs' color='gray.500' fontWeight='700' textTransform='uppercase' letterSpacing='0.12em'>
+                                                  Total payable
+                                                </Text>
+                                                <Text fontSize='lg' fontWeight='800' color='gray.900'>
+                                                  {formatAmount(breakdown.grandTotal, currentEvent.paymentAccountCurrency)}
+                                                </Text>
+                                              </Stack>
+                                            </Button>
+                                          )
+                                        })}
+                                      </SimpleGrid>
+                                    </Stack>
+
+                                    {selectedPaymentBreakdown ? (
+                                      <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' overflow='hidden' boxShadow='0 10px 24px rgba(15, 23, 42, 0.04)'>
+                                        <Box px={4} py={4} borderBottomWidth='1px' borderBottomColor='gray.200' bg='gray.50'>
+                                          <HStack justify='space-between' gap={4} flexWrap='wrap'>
                                             <Stack gap={1}>
-                                              <Text fontWeight='800' color='gray.900'>{breakdown.label}</Text>
+                                              <Text fontSize='sm' fontWeight='700' color='gray.600'>Payment breakdown</Text>
+                                              <Text fontSize='lg' fontWeight='800' color='gray.900'>{selectedPaymentBreakdown.label}</Text>
                                             </Stack>
-                                            {breakdown.isOrganizerOnly ? <Badge colorPalette='purple' variant='subtle' borderRadius='full' px={3} py={1}>Organizer only</Badge> : null}
+                                            {selectedPaymentBreakdown.isOrganizerOnly ? <Badge colorPalette='purple' variant='subtle' borderRadius='full' px={3} py={1}>Organizer only</Badge> : null}
                                           </HStack>
+                                        </Box>
 
-                                          <Stack gap={2}>
-                                            <HStack justify='space-between' gap={4}>
-                                              <Text fontSize='sm' color='gray.600'>Item Total</Text>
-                                              <Text fontSize='sm' fontWeight='700' color='gray.900'>{formatAmount(breakdown.subtotal, currentEvent.paymentAccountCurrency)}</Text>
-                                            </HStack>
-                                            {breakdown.charges.length > 0 ? breakdown.charges.map((charge) => (
-                                              <HStack key={`${breakdown.paymentMethod}-${charge.source}-${charge.title}`} justify='space-between' gap={4} align='start'>
-                                                <Text fontSize='sm' color='gray.700' fontWeight='600'>
-                                                  {formatChargeDisplayText(charge.title, charge.valueType, charge.value)}
+                                        <Table.Root variant='line' size='sm' borderColor='gray.200'>
+                                          <Table.Header>
+                                            <Table.Row bg='white'>
+                                              <Table.ColumnHeader borderColor='gray.200' px={4} py={3} color='gray.600' fontSize='xs' textTransform='uppercase' letterSpacing='0.12em'>
+                                                Description
+                                              </Table.ColumnHeader>
+                                              <Table.ColumnHeader borderColor='gray.200' px={4} py={3} color='gray.600' fontSize='xs' textTransform='uppercase' letterSpacing='0.12em' textAlign='right'>
+                                                Amount
+                                              </Table.ColumnHeader>
+                                            </Table.Row>
+                                          </Table.Header>
+
+                                          <Table.Body>
+                                            <Table.Row>
+                                              <Table.Cell borderColor='gray.200' px={4} py={3}>
+                                                <Text fontWeight='700' color='gray.900'>Item Total</Text>
+                                              </Table.Cell>
+                                              <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
+                                                <Text fontWeight='700' color='gray.900'>
+                                                  {formatAmount(selectedPaymentBreakdown.subtotal, currentEvent.paymentAccountCurrency)}
                                                 </Text>
-                                                <Text fontSize='sm' fontWeight='700' color='gray.900'>
-                                                  {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
-                                                </Text>
-                                              </HStack>
+                                              </Table.Cell>
+                                            </Table.Row>
+
+                                            {selectedPaymentBreakdown.charges.length > 0 ? selectedPaymentBreakdown.charges.map((charge) => (
+                                              <Table.Row key={`${selectedPaymentBreakdown.paymentMethod}-${charge.source}-${charge.title}`}>
+                                                <Table.Cell borderColor='gray.200' px={4} py={3}>
+                                                  <Stack gap={0.5}>
+                                                    <Text fontWeight='600' color='gray.800'>
+                                                      {formatChargeDisplayText(charge.title, charge.valueType, charge.value)}
+                                                    </Text>
+                                                    <Text fontSize='xs' color='gray.500'>
+                                                      Backend calculated
+                                                    </Text>
+                                                  </Stack>
+                                                </Table.Cell>
+                                                <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
+                                                  <Text fontWeight='700' color='gray.900'>
+                                                    {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
+                                                  </Text>
+                                                </Table.Cell>
+                                              </Table.Row>
                                             )) : (
-                                              <Text fontSize='sm' color='gray.600'>No additional buyer charges apply for this method.</Text>
+                                              <Table.Row>
+                                                <Table.Cell borderColor='gray.200' px={4} py={3}>
+                                                  <Text fontSize='sm' color='gray.600'>No additional buyer charges apply for this method.</Text>
+                                                </Table.Cell>
+                                                <Table.Cell borderColor='gray.200' px={4} py={3} />
+                                              </Table.Row>
                                             )}
-                                          </Stack>
 
-                                          <Separator borderColor='gray.200' />
-
-                                          <HStack justify='space-between' gap={4}>
-                                            <Text fontSize='sm' color='gray.600'>Total payable</Text>
-                                            <Text fontSize='xl' fontWeight='800' color='gray.900'>
-                                              {formatAmount(breakdown.grandTotal, currentEvent.paymentAccountCurrency)}
-                                            </Text>
-                                          </HStack>
-                                        </Stack>
+                                            <Table.Row bg='gray.50'>
+                                              <Table.Cell borderColor='gray.200' px={4} py={3}>
+                                                <Text fontWeight='800' color='gray.900'>Total payable</Text>
+                                              </Table.Cell>
+                                              <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
+                                                <Text fontSize='lg' fontWeight='800' color='gray.900'>
+                                                  {formatAmount(selectedPaymentBreakdown.grandTotal, currentEvent.paymentAccountCurrency)}
+                                                </Text>
+                                              </Table.Cell>
+                                            </Table.Row>
+                                          </Table.Body>
+                                        </Table.Root>
                                       </Box>
-                                    ))}
-                                  </SimpleGrid>
+                                    ) : null}
+                                  </Stack>
                                 ) : visiblePaymentMethods.length > 0 ? (
-                                  <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
-                                    {visiblePaymentMethods.map((method) => (
-                                      <Box key={method.paymentMethod} borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'>
-                                        <HStack justify='space-between' gap={4} align='start' flexWrap='wrap'>
-                                          <Stack gap={1}>
-                                            <Text fontWeight='700' color='gray.900'>{method.label}</Text>
-                                            <Text fontSize='sm' color='gray.600'>Available for this registration flow.</Text>
-                                          </Stack>
-                                          {method.isOrganizerOnly ? <Badge colorPalette='purple' variant='subtle' borderRadius='full' px={3} py={1}>Organizer only</Badge> : null}
-                                        </HStack>
-                                      </Box>
-                                    ))}
-                                  </SimpleGrid>
+                                  <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'>
+                                    <Text color='gray.600' fontSize='sm'>Payment methods are available, but the price breakdown could not be loaded yet.</Text>
+                                  </Box>
                                 ) : (
                                   <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'>
                                     <Text color='gray.600' fontSize='sm'>No public payment methods are currently mapped for this event.</Text>
