@@ -414,6 +414,7 @@ function StripePaymentFields({
 
   const elementOptions = useMemo(
     () => ({
+      disableLink: true,
       style: {
         base: {
           color: '#0f172a',
