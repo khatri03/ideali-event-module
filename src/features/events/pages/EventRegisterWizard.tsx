@@ -866,7 +866,7 @@ function SessionsTabSkeleton() {
             <Box px={4} py={4} borderBottomWidth='1px' borderBottomColor='gray.100' bg='gray.50'>
               <Stack gap={3}>
                 <Skeleton h='18px' w='70%' borderRadius='full' />
-                <SkeletonText noOfLines={1} spacing='3' skeletonHeight='12px' />
+                <Skeleton h='12px' w='45%' borderRadius='full' />
               </Stack>
             </Box>
             <Stack gap={4} px={4} py={4}>
@@ -897,6 +897,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
   const [pendingDeleteAction, setPendingDeleteAction] = useState<PendingDeleteAction | null>(null)
   const purchaseTimerWarningShownForRef = useRef<number | null>(null)
+  const paymentSubtotalSnapshotRef = useRef<number | null>(null)
   const descriptionQuery = useQuery({
     queryKey: ['event-registration', event.uniqueId, 'description'],
     queryFn: () => fetchEventRegistrationDescription(event.uniqueId),
@@ -921,43 +922,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     enabled: tabs.some((tab) => tab.id === 'questionnaire') && activeTab === 'questionnaire',
     retry: 1,
   })
-  const paymentQuery = useQuery({
-    queryKey: ['event-registration', event.uniqueId, 'payment'],
-    queryFn: () => fetchEventRegistrationPayment(event.uniqueId),
-    enabled: tabs.some((tab) => tab.id === 'payment') && activeTab === 'payment',
-    retry: 1,
-  })
-
-  const descriptionData = descriptionQuery.data ?? event
-  const sessionsData =
-    sessionsQuery.data?.sessions ??
-    attendeeInfoQuery.data?.sessions ??
-    questionnaireQuery.data?.sessions ??
-    event.sessions ??
-    []
-  const paymentMethodsData = paymentQuery.data?.paymentMethods ?? event.paymentMethods ?? []
-  const visiblePaymentMethods = paymentMethodsData.filter((method) => !method.isOrganizerOnly || event.isOrganizer)
-  const eventData = {
-    ...event,
-    description: descriptionData.description ?? event.description,
-    summary: descriptionData.summary ?? event.summary,
-    termsConditions: descriptionData.termsConditions ?? event.termsConditions,
-    sessions: sessionsData,
-    paymentMethods: paymentMethodsData,
-  }
-  const currentEvent = eventData
-  const sessions = currentEvent.sessions
-  const bannerSlides = useMemo(() => getSessionBannerSlides(currentEvent), [currentEvent])
-  const sessionsLoading = sessionsQuery.isLoading || (sessionsQuery.isFetching && sessions.length === 0)
-
   useEffect(() => {
     setActiveTab(firstTab)
     setHighestUnlockedIndex(0)
   }, [firstTab])
-
-  useEffect(() => {
-    setExpandedSessionIds(sessions.map((session) => session.uniqueId))
-  }, [sessions])
 
   useEffect(() => {
     if (purchaseTimerStartedAt === null) return
@@ -970,18 +938,16 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
   const activeIndex = getStepIndex(tabs, activeTab)
   const isFinalStep = activeIndex >= 0 && activeIndex === tabs.length - 1
-  const purchaseTimerDurationMs = Math.max(currentEvent.purchaseTimeLimitMinutes, 1) * 60 * 1000
-  const purchaseTimerRemainingMs = purchaseTimerStartedAt === null ? null : purchaseTimerStartedAt + purchaseTimerDurationMs - purchaseTimerNow
-  const purchaseTimerVisible = purchaseTimerStartedAt !== null
-  const purchaseTimerExpired = purchaseTimerRemainingMs !== null && purchaseTimerRemainingMs <= 0
-  const purchaseTimerWarningThresholdMs = purchaseTimerDurationMs * 0.2
-  const purchaseTimerVisuals =
-    purchaseTimerRemainingMs === null
-      ? null
-      : getPurchaseTimerVisuals(Math.max(purchaseTimerRemainingMs, 0), purchaseTimerDurationMs)
+  const descriptionData = descriptionQuery.data ?? event
+  const sessionsData =
+    sessionsQuery.data?.sessions ??
+    attendeeInfoQuery.data?.sessions ??
+    questionnaireQuery.data?.sessions ??
+    event.sessions ??
+    []
   const selectedTicketSummary = useMemo<SelectedTicketSummaryItem[]>(
     () =>
-      sessions.flatMap((session) =>
+      sessionsData.flatMap((session) =>
         session.ticketTypes.flatMap((ticket) => {
           const quantity = selectedTicketQuantities[ticket.uniqueId] ?? 0
           if (quantity <= 0) return []
@@ -1002,7 +968,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
           ]
         }),
       ),
-    [sessions, selectedTicketQuantities],
+    [sessionsData, selectedTicketQuantities],
   )
   const selectedTicketSummaryBySession = useMemo(
     () =>
@@ -1033,6 +999,52 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   )
   const selectedTicketCount = selectedTicketSummary.reduce((total, item) => total + item.quantity, 0)
   const selectedTicketTotal = selectedTicketSummary.reduce((total, item) => total + item.lineTotal, 0)
+  const paymentQuery = useQuery({
+    queryKey: ['event-registration', event.uniqueId, 'payment'],
+    queryFn: () => fetchEventRegistrationPayment(event.uniqueId, selectedTicketTotal),
+    enabled: tabs.some((tab) => tab.id === 'payment') && activeTab === 'payment',
+    retry: 1,
+  })
+  const { refetch: refetchPaymentBreakdown, isSuccess: paymentBreakdownLoaded } = paymentQuery
+  const paymentMethodsData = paymentQuery.data?.paymentMethods ?? event.paymentMethods ?? []
+  const visiblePaymentMethods = paymentMethodsData.filter((method) => !method.isOrganizerOnly || event.isOrganizer)
+  const paymentBreakdowns = paymentQuery.data?.paymentBreakdowns ?? []
+  const eventData = {
+    ...event,
+    description: descriptionData.description ?? event.description,
+    summary: descriptionData.summary ?? event.summary,
+    termsConditions: descriptionData.termsConditions ?? event.termsConditions,
+    sessions: sessionsData,
+    paymentMethods: paymentMethodsData,
+  }
+  const currentEvent = eventData
+  const sessions = currentEvent.sessions
+  const bannerSlides = useMemo(() => getSessionBannerSlides(currentEvent), [currentEvent])
+  const sessionsLoading = sessionsQuery.isLoading || (sessionsQuery.isFetching && sessions.length === 0)
+  useEffect(() => {
+    setExpandedSessionIds(sessions.map((session) => session.uniqueId))
+  }, [sessions])
+  const purchaseTimerDurationMs = Math.max(currentEvent.purchaseTimeLimitMinutes, 1) * 60 * 1000
+  const purchaseTimerRemainingMs = purchaseTimerStartedAt === null ? null : purchaseTimerStartedAt + purchaseTimerDurationMs - purchaseTimerNow
+  const purchaseTimerVisible = purchaseTimerStartedAt !== null
+  const purchaseTimerExpired = purchaseTimerRemainingMs !== null && purchaseTimerRemainingMs <= 0
+  const purchaseTimerWarningThresholdMs = purchaseTimerDurationMs * 0.2
+  const purchaseTimerVisuals =
+    purchaseTimerRemainingMs === null
+      ? null
+      : getPurchaseTimerVisuals(Math.max(purchaseTimerRemainingMs, 0), purchaseTimerDurationMs)
+  useEffect(() => {
+    if (activeTab !== 'payment' || !paymentBreakdownLoaded) return
+    if (paymentSubtotalSnapshotRef.current === null) {
+      paymentSubtotalSnapshotRef.current = selectedTicketTotal
+      return
+    }
+
+    if (paymentSubtotalSnapshotRef.current === selectedTicketTotal) return
+
+    paymentSubtotalSnapshotRef.current = selectedTicketTotal
+    refetchPaymentBreakdown()
+  }, [activeTab, paymentBreakdownLoaded, refetchPaymentBreakdown, selectedTicketTotal])
   const shouldHighlightSummaryLauncher = selectedTicketCount > 0 || purchaseTimerVisible
   const isDescriptionStep = activeTab === 'description'
   const sessionsStepIndex = getStepIndex(tabs, 'sessions')
@@ -1802,7 +1814,92 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
                           {tab.id === 'payment' ? (
                             <SupportCard title='Payment' subtitle='Show the mapped payment methods and protect organizer-only cheque payments.' icon={<CreditCard size={18} />}>
-                              <Stack gap={4}>{paymentQuery.isFetching && visiblePaymentMethods.length === 0 ? <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}><Text fontSize='sm' color='gray.600'>Loading payment methods...</Text></Box> : visiblePaymentMethods.length > 0 ? <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>{visiblePaymentMethods.map((method) => <Box key={method.paymentMethod} borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'><HStack justify='space-between' gap={4} align='start' flexWrap='wrap'><Stack gap={1}><Text fontWeight='700' color='gray.900'>{method.label}</Text><Text fontSize='sm' color='gray.600'>Available for this registration flow.</Text></Stack>{method.isOrganizerOnly ? <Badge colorPalette='purple' variant='subtle' borderRadius='full' px={3} py={1}>Organizer only</Badge> : null}</HStack></Box>)}</SimpleGrid> : <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'><Text color='gray.600' fontSize='sm'>No public payment methods are currently mapped for this event.</Text></Box>}</Stack>
+                              <Stack gap={4}>
+                                <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'>
+                                  <HStack justify='space-between' gap={4} align='start' flexWrap='wrap'>
+                                    <Stack gap={1}>
+                                      <Text fontSize='sm' color='gray.600'>Selected ticket subtotal</Text>
+                                      <Text fontSize='2xl' fontWeight='800' color='gray.900'>
+                                        {formatAmount(selectedTicketTotal, currentEvent.paymentAccountCurrency)}
+                                      </Text>
+                                    </Stack>
+                                    <Text fontSize='sm' color='gray.600' textAlign='right' maxW='sm'>
+                                      Buyer-facing fees are calculated by the backend for each available merchant and payment method.
+                                    </Text>
+                                  </HStack>
+                                </Box>
+
+                                {paymentQuery.isFetching && paymentBreakdowns.length === 0 ? (
+                                  <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
+                                    <Text fontSize='sm' color='gray.600'>Loading payment breakdown...</Text>
+                                  </Box>
+                                ) : paymentBreakdowns.length > 0 ? (
+                                  <SimpleGrid columns={{ base: 1, xl: 2 }} gap={4}>
+                                    {paymentBreakdowns.map((breakdown) => (
+                                      <Box key={breakdown.paymentMethod} borderWidth='1px' borderColor='gray.200' borderRadius='20px' p={4} bg='white' boxShadow='0 10px 24px rgba(15, 23, 42, 0.04)'>
+                                        <Stack gap={4}>
+                                          <HStack justify='space-between' gap={3} align='start' flexWrap='wrap'>
+                                            <Stack gap={1}>
+                                              <Text fontWeight='800' color='gray.900'>{breakdown.label}</Text>
+                                              {breakdown.merchantName ? (
+                                                <Text fontSize='sm' color='gray.600'>Merchant: {breakdown.merchantName}</Text>
+                                              ) : null}
+                                            </Stack>
+                                            {breakdown.isOrganizerOnly ? <Badge colorPalette='purple' variant='subtle' borderRadius='full' px={3} py={1}>Organizer only</Badge> : null}
+                                          </HStack>
+
+                                          <Stack gap={2}>
+                                            <HStack justify='space-between' gap={4}>
+                                              <Text fontSize='sm' color='gray.600'>Subtotal</Text>
+                                              <Text fontSize='sm' fontWeight='700' color='gray.900'>{formatAmount(breakdown.subtotal, currentEvent.paymentAccountCurrency)}</Text>
+                                            </HStack>
+                                            {breakdown.charges.length > 0 ? breakdown.charges.map((charge) => (
+                                              <HStack key={`${breakdown.paymentMethod}-${charge.source}-${charge.title}`} justify='space-between' gap={4} align='start'>
+                                                <Stack gap={0}>
+                                                  <Text fontSize='sm' color='gray.700' fontWeight='600'>{charge.title}</Text>
+                                                  <Text fontSize='xs' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>{charge.source.replace(/-/g, ' ')}</Text>
+                                                </Stack>
+                                                <Text fontSize='sm' fontWeight='700' color='gray.900'>
+                                                  {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
+                                                </Text>
+                                              </HStack>
+                                            )) : (
+                                              <Text fontSize='sm' color='gray.600'>No additional buyer charges apply for this method.</Text>
+                                            )}
+                                          </Stack>
+
+                                          <Separator borderColor='gray.200' />
+
+                                          <HStack justify='space-between' gap={4}>
+                                            <Text fontSize='sm' color='gray.600'>Total payable</Text>
+                                            <Text fontSize='xl' fontWeight='800' color='gray.900'>
+                                              {formatAmount(breakdown.grandTotal, currentEvent.paymentAccountCurrency)}
+                                            </Text>
+                                          </HStack>
+                                        </Stack>
+                                      </Box>
+                                    ))}
+                                  </SimpleGrid>
+                                ) : visiblePaymentMethods.length > 0 ? (
+                                  <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
+                                    {visiblePaymentMethods.map((method) => (
+                                      <Box key={method.paymentMethod} borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'>
+                                        <HStack justify='space-between' gap={4} align='start' flexWrap='wrap'>
+                                          <Stack gap={1}>
+                                            <Text fontWeight='700' color='gray.900'>{method.label}</Text>
+                                            <Text fontSize='sm' color='gray.600'>Available for this registration flow.</Text>
+                                          </Stack>
+                                          {method.isOrganizerOnly ? <Badge colorPalette='purple' variant='subtle' borderRadius='full' px={3} py={1}>Organizer only</Badge> : null}
+                                        </HStack>
+                                      </Box>
+                                    ))}
+                                  </SimpleGrid>
+                                ) : (
+                                  <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'>
+                                    <Text color='gray.600' fontSize='sm'>No public payment methods are currently mapped for this event.</Text>
+                                  </Box>
+                                )}
+                              </Stack>
                             </SupportCard>
                           ) : null}
                         </Stack>

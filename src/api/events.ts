@@ -227,6 +227,38 @@ const eventRegistrationPaymentMethodSchema = z.object({
   isOrganizerOnly: z.boolean().optional(),
 })
 
+const eventRegistrationPaymentChargeSchema = z.object({
+  Source: z.string().optional(),
+  source: z.string().optional(),
+  Title: z.string().optional(),
+  title: z.string().optional(),
+  ValueType: z.string().optional(),
+  valueType: z.string().optional(),
+  Value: z.number().optional(),
+  value: z.number().optional(),
+  Amount: z.number().optional(),
+  amount: z.number().optional(),
+})
+
+const eventRegistrationPaymentBreakdownSchema = z.object({
+  PaymentMethod: z.string().optional(),
+  paymentMethod: z.string().optional(),
+  Label: z.string().optional(),
+  label: z.string().optional(),
+  IsOrganizerOnly: z.boolean().optional(),
+  isOrganizerOnly: z.boolean().optional(),
+  MerchantName: z.string().nullable().optional(),
+  merchantName: z.string().nullable().optional(),
+  Subtotal: z.number().optional(),
+  subtotal: z.number().optional(),
+  BuyerChargeTotal: z.number().optional(),
+  buyerChargeTotal: z.number().optional(),
+  GrandTotal: z.number().optional(),
+  grandTotal: z.number().optional(),
+  Charges: z.array(eventRegistrationPaymentChargeSchema).optional(),
+  charges: z.array(eventRegistrationPaymentChargeSchema).optional(),
+})
+
 const eventRegistrationSessionSchema = z.object({
   UniqueId: z.string().optional(),
   uniqueId: z.string().optional(),
@@ -305,6 +337,8 @@ const eventRegistrationResponseSchema = z.object({
   visibleTabs: z.array(z.string()).optional(),
   PaymentMethods: z.array(eventRegistrationPaymentMethodSchema).optional(),
   paymentMethods: z.array(eventRegistrationPaymentMethodSchema).optional(),
+  PaymentBreakdowns: z.array(eventRegistrationPaymentBreakdownSchema).optional(),
+  paymentBreakdowns: z.array(eventRegistrationPaymentBreakdownSchema).optional(),
   Sessions: z.array(eventRegistrationSessionSchema).optional(),
   sessions: z.array(eventRegistrationSessionSchema).optional(),
 })
@@ -786,6 +820,25 @@ export interface EventRegistrationPaymentMethod {
   isOrganizerOnly: boolean
 }
 
+export interface EventRegistrationPaymentCharge {
+  source: string
+  title: string
+  valueType: string
+  value: number
+  amount: number
+}
+
+export interface EventRegistrationPaymentBreakdown {
+  paymentMethod: string
+  label: string
+  isOrganizerOnly: boolean
+  merchantName: string | null
+  subtotal: number
+  buyerChargeTotal: number
+  grandTotal: number
+  charges: EventRegistrationPaymentCharge[]
+}
+
 export interface EventRegistrationResponse {
   uniqueId: string
   name: string
@@ -810,6 +863,7 @@ export interface EventRegistrationResponse {
   paymentAccountCurrency: string | null
   visibleTabs: string[]
   paymentMethods: EventRegistrationPaymentMethod[]
+  paymentBreakdowns: EventRegistrationPaymentBreakdown[]
   sessions: EventRegistrationSession[]
 }
 
@@ -924,6 +978,22 @@ function parseEventRegistrationResponse(payload: unknown): EventRegistrationResp
       label: method.Label ?? method.label ?? "",
       isOrganizerOnly: method.IsOrganizerOnly ?? method.isOrganizerOnly ?? false,
     })),
+    paymentBreakdowns: (response.PaymentBreakdowns ?? response.paymentBreakdowns ?? []).map((breakdown) => ({
+      paymentMethod: breakdown.PaymentMethod ?? breakdown.paymentMethod ?? "",
+      label: breakdown.Label ?? breakdown.label ?? "",
+      isOrganizerOnly: breakdown.IsOrganizerOnly ?? breakdown.isOrganizerOnly ?? false,
+      merchantName: breakdown.MerchantName ?? breakdown.merchantName ?? null,
+      subtotal: breakdown.Subtotal ?? breakdown.subtotal ?? 0,
+      buyerChargeTotal: breakdown.BuyerChargeTotal ?? breakdown.buyerChargeTotal ?? 0,
+      grandTotal: breakdown.GrandTotal ?? breakdown.grandTotal ?? 0,
+      charges: (breakdown.Charges ?? breakdown.charges ?? []).map((charge) => ({
+        source: charge.Source ?? charge.source ?? "",
+        title: charge.Title ?? charge.title ?? "",
+        valueType: charge.ValueType ?? charge.valueType ?? "",
+        value: charge.Value ?? charge.value ?? 0,
+        amount: charge.Amount ?? charge.amount ?? 0,
+      })),
+    })),
     sessions: (response.Sessions ?? response.sessions ?? []).map(parseEventRegistrationSession),
   }
 }
@@ -958,8 +1028,8 @@ export async function fetchEventRegistrationQuestionnaire(eventUniqueId: string)
   return parseEventRegistrationResponse(res.data)
 }
 
-export async function fetchEventRegistrationPayment(eventUniqueId: string): Promise<EventRegistrationResponse> {
-  const res = await client.get<unknown>(`${API_ROUTES.eventRegisterPayment(eventUniqueId)}`)
+export async function fetchEventRegistrationPayment(eventUniqueId: string, subtotal = 0): Promise<EventRegistrationResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventRegisterPayment(eventUniqueId)}?subtotal=${encodeURIComponent(subtotal.toFixed(2))}`)
   return parseEventRegistrationResponse(res.data)
 }
 
