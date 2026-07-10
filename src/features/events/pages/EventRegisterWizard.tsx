@@ -319,6 +319,16 @@ function formatChargeDisplayText(title: string, valueType: string, value: number
   return `${title} (${normalizedValue}%)`
 }
 
+function formatChargeRate(valueType: string, value: number, currencyCode?: string | null) {
+  const normalizedValue = Number.isInteger(value) ? value.toFixed(0) : value.toFixed(2).replace(/\.?0+$/, '')
+
+  if (valueType.trim().toLowerCase().includes('percent')) {
+    return `${normalizedValue}%`
+  }
+
+  return formatAmount(value, currencyCode)
+}
+
 function isHtmlContent(value: string | null | undefined) {
   return Boolean(value && /<[^>]+>/.test(value))
 }
@@ -1692,7 +1702,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                           </Text>
                                           <HStack gap={2} wrap='wrap' minW={0} align='center'>
                                             <Text fontSize='xs' color='gray.500'>
-                                              {formatAmount(item.unitPrice, event.paymentAccountCurrency)} each
+                                              {formatAmount(item.unitPrice, event.paymentAccountCurrency)}
                                             </Text>
                                             <Text fontSize='xs' color='gray.300'>|</Text>
                                             <Text fontSize='xs' fontWeight='700' color='gray.700'>
@@ -2209,10 +2219,13 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                   Item
                                                 </Table.ColumnHeader>
                                                 <Table.ColumnHeader borderColor='gray.200' px={4} py={3} color='gray.600' fontSize='xs' textTransform='uppercase' letterSpacing='0.12em'>
-                                                  Qty
+                                                  Price
+                                                </Table.ColumnHeader>
+                                                <Table.ColumnHeader borderColor='gray.200' px={4} py={3} color='gray.600' fontSize='xs' textTransform='uppercase' letterSpacing='0.12em'>
+                                                  Quantity
                                                 </Table.ColumnHeader>
                                                 <Table.ColumnHeader borderColor='gray.200' px={4} py={3} color='gray.600' fontSize='xs' textTransform='uppercase' letterSpacing='0.12em' textAlign='right'>
-                                                  Amount
+                                                  Total
                                                 </Table.ColumnHeader>
                                               </Table.Row>
                                             </Table.Header>
@@ -2221,7 +2234,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                               {selectedTicketSummaryBySession.map((sessionGroup, sessionIndex) => (
                                                 <Fragment key={sessionGroup.sessionId}>
                                                   <Table.Row key={`${sessionGroup.sessionId}-header`} bg='gray.50'>
-                                                    <Table.Cell borderColor='gray.200' px={4} py={3} colSpan={3}>
+                                                    <Table.Cell borderColor='gray.200' px={4} py={3} colSpan={4}>
                                                       <HStack justify='space-between' gap={3} minW={0}>
                                                         <Stack gap={0.5} minW={0}>
                                                           <Text fontWeight='800' color='gray.900' lineHeight='1.4' whiteSpace='normal' wordBreak='break-word'>
@@ -2231,22 +2244,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                             {sessionGroup.items.length} {sessionGroup.items.length === 1 ? 'ticket type selected' : 'ticket types selected'}
                                                           </Text>
                                                         </Stack>
-                                                        <Badge
-                                                          colorPalette='gray'
-                                                          variant='subtle'
-                                                          borderRadius='full'
-                                                          px={3}
-                                                          py={1.5}
-                                                          fontSize='sm'
-                                                          fontWeight='800'
-                                                          color='gray.800'
-                                                          bg='white'
-                                                          borderWidth='1px'
-                                                          borderColor='gray.200'
-                                                          flexShrink={0}
-                                                        >
-                                                          {formatAmount(sessionGroup.total, currentEvent.paymentAccountCurrency)}
-                                                        </Badge>
                                                       </HStack>
                                                     </Table.Cell>
                                                   </Table.Row>
@@ -2258,10 +2255,12 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                           <Text fontWeight='700' color='gray.900' lineHeight='1.4'>
                                                             {item.ticketName}
                                                           </Text>
-                                                          <Text fontSize='xs' color='gray.500'>
-                                                            {formatAmount(item.unitPrice, currentEvent.paymentAccountCurrency)} each
-                                                          </Text>
                                                         </Stack>
+                                                      </Table.Cell>
+                                                      <Table.Cell borderColor='gray.200' px={4} py={3}>
+                                                        <Text fontWeight='700' color='gray.800'>
+                                                          {formatAmount(item.unitPrice, currentEvent.paymentAccountCurrency)}
+                                                        </Text>
                                                       </Table.Cell>
                                                       <Table.Cell borderColor='gray.200' px={4} py={3}>
                                                         <Text fontWeight='700' color='gray.800'>
@@ -2278,7 +2277,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
                                                   {sessionIndex < selectedTicketSummaryBySession.length - 1 ? (
                                                     <Table.Row>
-                                                      <Table.Cell borderColor='gray.200' px={4} py={0} colSpan={3}>
+                                                      <Table.Cell borderColor='gray.200' px={4} py={0} colSpan={4}>
                                                         <Separator borderColor='gray.200' />
                                                       </Table.Cell>
                                                     </Table.Row>
@@ -2291,6 +2290,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                   <Text fontWeight='800' color='gray.900'>Item Total</Text>
                                                 </Table.Cell>
                                                 <Table.Cell borderColor='gray.200' px={4} py={3} />
+                                                <Table.Cell borderColor='gray.200' px={4} py={3} />
                                                 <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
                                                   <Text fontWeight='800' color='gray.900'>
                                                     {formatAmount(selectedPaymentBreakdown.subtotal, currentEvent.paymentAccountCurrency)}
@@ -2301,11 +2301,22 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                               {selectedPaymentBreakdown.charges.length > 0 ? selectedPaymentBreakdown.charges.map((charge) => (
                                                 <Table.Row key={`${selectedPaymentBreakdown.paymentMethod}-${charge.source}-${charge.title}`}>
                                                   <Table.Cell borderColor='gray.200' px={4} py={3}>
-                                                    <Text fontWeight='600' color='gray.800'>
-                                                      {formatChargeDisplayText(charge.title, charge.valueType, charge.value)}
+                                                    <Stack gap={0.5}>
+                                                      <Text fontWeight='700' color='gray.900'>
+                                                        {charge.title}
+                                                      </Text>
+                                                    </Stack>
+                                                  </Table.Cell>
+                                                  <Table.Cell borderColor='gray.200' px={4} py={3}>
+                                                    <Text fontWeight='700' color='gray.800'>
+                                                      {formatChargeRate(charge.valueType, charge.value, currentEvent.paymentAccountCurrency)}
                                                     </Text>
                                                   </Table.Cell>
-                                                  <Table.Cell borderColor='gray.200' px={4} py={3} />
+                                                  <Table.Cell borderColor='gray.200' px={4} py={3}>
+                                                    <Text fontWeight='700' color='gray.800'>
+                                                      1
+                                                    </Text>
+                                                  </Table.Cell>
                                                   <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
                                                     <Text fontWeight='700' color='gray.900'>
                                                       {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
@@ -2314,7 +2325,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                 </Table.Row>
                                               )) : (
                                                 <Table.Row>
-                                                  <Table.Cell borderColor='gray.200' px={4} py={3} colSpan={3}>
+                                                  <Table.Cell borderColor='gray.200' px={4} py={3} colSpan={4}>
                                                     <Text fontSize='sm' color='gray.600'>No additional buyer charges apply for this method.</Text>
                                                   </Table.Cell>
                                                 </Table.Row>
@@ -2324,6 +2335,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                 <Table.Cell borderColor='gray.200' px={4} py={3}>
                                                   <Text fontWeight='800' color='gray.900'>Total payable</Text>
                                                 </Table.Cell>
+                                                <Table.Cell borderColor='gray.200' px={4} py={3} />
                                                 <Table.Cell borderColor='gray.200' px={4} py={3} />
                                                 <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
                                                   <Text fontSize='lg' fontWeight='800' color='gray.900'>
