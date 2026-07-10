@@ -147,6 +147,36 @@ function formatCountdown(milliseconds: number) {
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
+function getCurrencyDisplayPrefix(currencyCode?: string | null) {
+  const trimmedCurrency = currencyCode?.trim()
+
+  if (!trimmedCurrency) {
+    return '$'
+  }
+
+  const normalizedCurrency = trimmedCurrency.toUpperCase()
+
+  if (normalizedCurrency === 'CAD') return 'CAD$'
+  if (normalizedCurrency === 'USD') return 'USD$'
+  if (normalizedCurrency === 'AUD') return 'AUD$'
+  if (normalizedCurrency === 'NZD') return 'NZD$'
+  if (normalizedCurrency === 'SGD') return 'SGD$'
+  if (normalizedCurrency === 'HKD') return 'HK$'
+  if (normalizedCurrency === 'MXN') return 'MX$'
+  if (normalizedCurrency === 'JPY') return 'JPY¥'
+  if (normalizedCurrency === 'EUR') return 'EUR€'
+  if (normalizedCurrency === 'GBP') return 'GBP£'
+
+  return `${normalizedCurrency} `
+}
+
+function formatCurrencyNumber(value: number) {
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)
+}
+
 function hexToRgba(hex: string, alpha: number) {
   const normalized = hex.replace('#', '').trim()
   if (normalized.length !== 6) return hex
@@ -258,60 +288,20 @@ function getPurchaseTimerVisuals(remainingMs: number, durationMs: number) {
 }
 
 function formatAmount(value: number, currencyCode?: string | null) {
-  if (!Number.isFinite(value) || value < 0) return '$0'
-  if (value === 0) {
-    const trimmedCurrency = currencyCode?.trim()
-
-    if (trimmedCurrency) {
-      const isIsoCurrencyCode = /^[A-Za-z]{3}$/.test(trimmedCurrency)
-
-      if (isIsoCurrencyCode) {
-        try {
-          return new Intl.NumberFormat(undefined, {
-            style: 'currency',
-            currency: trimmedCurrency.toUpperCase(),
-            currencyDisplay: 'narrowSymbol',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-          }).format(0)
-        } catch {
-          return `${trimmedCurrency.toUpperCase()} 0`
-        }
-      }
-
-      return `${trimmedCurrency}0`
-    }
-
-    return '$0'
-  }
-
+  if (!Number.isFinite(value) || value < 0) return '$0.00'
   const trimmedCurrency = currencyCode?.trim()
 
   if (trimmedCurrency) {
     const isIsoCurrencyCode = /^[A-Za-z]{3}$/.test(trimmedCurrency)
 
     if (isIsoCurrencyCode) {
-      try {
-        return new Intl.NumberFormat(undefined, {
-          style: 'currency',
-          currency: trimmedCurrency.toUpperCase(),
-          currencyDisplay: 'narrowSymbol',
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }).format(value)
-      } catch {
-        return `${trimmedCurrency.toUpperCase()} ${value.toFixed(2)}`
-      }
+      return `${getCurrencyDisplayPrefix(trimmedCurrency)}${formatCurrencyNumber(value)}`
     }
 
-    try {
-      return `${trimmedCurrency}${value.toFixed(2)}`
-    } catch {
-      return `${trimmedCurrency}${value.toFixed(2)}`
-    }
+    return `${trimmedCurrency}${formatCurrencyNumber(value)}`
   }
 
-  return value.toFixed(2)
+  return `$${formatCurrencyNumber(value)}`
 }
 
 function formatChargeDisplayText(title: string, valueType: string, value: number) {
@@ -904,6 +894,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [sessionTicketSearch, setSessionTicketSearch] = useState<Record<string, string>>({})
   const [selectedTicketQuantities, setSelectedTicketQuantities] = useState<Record<string, number>>({})
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null)
+  const [expandedPaymentMethod, setExpandedPaymentMethod] = useState<string | null>(null)
   const [purchaseTimerStartedAt, setPurchaseTimerStartedAt] = useState<number | null>(null)
   const [purchaseTimerNow, setPurchaseTimerNow] = useState(() => Date.now())
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
@@ -1893,71 +1884,108 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                         <Text fontSize='sm' color='gray.500'>Method order is sorted by total payable.</Text>
                                       </HStack>
 
-                                      <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
+                                      <Stack gap={3}>
                                         {paymentBreakdowns.map((breakdown) => {
                                           const isSelected = selectedPaymentBreakdown?.paymentMethod === breakdown.paymentMethod
+                                          const isExpanded = expandedPaymentMethod === breakdown.paymentMethod
 
                                           return (
-                                            <Button
+                                            <Box
                                               key={breakdown.paymentMethod}
-                                              onClick={() => setSelectedPaymentMethod(breakdown.paymentMethod)}
-                                              variant='outline'
-                                              h='auto'
-                                              minH='92px'
-                                              px={4}
-                                              py={4}
-                                              justifyContent='space-between'
-                                              alignItems='stretch'
-                                              textAlign='left'
-                                              bg={isSelected ? hexToRgba(formAccent, 0.08) : 'white'}
+                                              borderWidth='1px'
                                               borderColor={isSelected ? formAccent : 'gray.200'}
+                                              borderRadius='18px'
+                                              bg={isSelected ? hexToRgba(formAccent, 0.08) : 'white'}
                                               boxShadow={isSelected ? `0 0 0 1px ${formAccent}` : '0 10px 24px rgba(15, 23, 42, 0.04)'}
-                                              _hover={{ bg: isSelected ? hexToRgba(formAccent, 0.12) : 'gray.50', borderColor: isSelected ? formAccent : 'gray.300' }}
-                                              _active={{ bg: isSelected ? hexToRgba(formAccent, 0.16) : 'gray.100' }}
+                                              overflow='hidden'
                                             >
-                                              <Stack gap={2} align='start' flex='1' minW={0}>
-                                                <HStack gap={2} wrap='wrap' minW={0}>
-                                                  <Text fontWeight='800' color='gray.900'>{breakdown.label}</Text>
-                                                  {breakdown.isOrganizerOnly ? <Badge colorPalette='purple' variant='subtle' borderRadius='full' px={3} py={1}>Organizer only</Badge> : null}
-                                                </HStack>
-                                                <HStack justify='space-between' gap={3} minW={0}>
-                                                  <Text fontSize='sm' color='gray.600' fontWeight='600'>
-                                                    Item Total
-                                                  </Text>
-                                                  <Text fontSize='sm' color='gray.700' fontWeight='700' flexShrink={0}>
-                                                    {formatAmount(breakdown.subtotal, currentEvent.paymentAccountCurrency)}
-                                                  </Text>
-                                                </HStack>
-                                                {breakdown.charges.length > 0 ? (
-                                                  <Stack gap={1} minW={0}>
-                                                    {breakdown.charges.map((charge) => (
-                                                      <HStack key={`${breakdown.paymentMethod}-${charge.source}-${charge.title}`} justify='space-between' gap={3} minW={0}>
-                                                        <Text fontSize='sm' color='gray.600' noOfLines={1}>
-                                                          {formatChargeDisplayText(charge.title, charge.valueType, charge.value)}
-                                                        </Text>
-                                                        <Text fontSize='sm' color='gray.700' fontWeight='700' flexShrink={0}>
-                                                          {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
-                                                        </Text>
-                                                      </HStack>
-                                                    ))}
+                                              <Button
+                                                onClick={() => {
+                                                  setSelectedPaymentMethod(breakdown.paymentMethod)
+                                                  setExpandedPaymentMethod((current) =>
+                                                    current === breakdown.paymentMethod ? null : breakdown.paymentMethod,
+                                                  )
+                                                }}
+                                                variant='ghost'
+                                                w='full'
+                                                h='auto'
+                                                px={4}
+                                                py={4}
+                                                justifyContent='space-between'
+                                                alignItems='center'
+                                                textAlign='left'
+                                                borderRadius={0}
+                                                _hover={{ bg: isSelected ? hexToRgba(formAccent, 0.12) : 'gray.50' }}
+                                                _active={{ bg: isSelected ? hexToRgba(formAccent, 0.16) : 'gray.100' }}
+                                              >
+                                                <HStack gap={3} minW={0} flex='1' justify='space-between' align='start'>
+                                                  <Stack gap={1} minW={0} flex='1'>
+                                                    <HStack gap={2} wrap='wrap' minW={0}>
+                                                      <Text fontWeight='800' color='gray.900'>{breakdown.label}</Text>
+                                                      {breakdown.isOrganizerOnly ? <Badge colorPalette='purple' variant='subtle' borderRadius='full' px={3} py={1}>Organizer only</Badge> : null}
+                                                    </HStack>
                                                   </Stack>
-                                                ) : (
-                                                  <Text fontSize='sm' color='gray.600'>No additional buyer charges</Text>
-                                                )}
-                                              </Stack>
 
-                                              <Stack gap={0} align='end' flexShrink={0} mt={1}>
-                                                <Text fontSize='xs' color='gray.500' fontWeight='700' textTransform='uppercase' letterSpacing='0.12em'>
-                                                  Total payable
-                                                </Text>
-                                                <Text fontSize='lg' fontWeight='800' color='gray.900'>
-                                                  {formatAmount(breakdown.grandTotal, currentEvent.paymentAccountCurrency)}
-                                                </Text>
-                                              </Stack>
-                                            </Button>
+                                                  <HStack gap={2} flexShrink={0}>
+                                                    <Text fontSize='lg' fontWeight='800' color='gray.900'>
+                                                      {formatAmount(breakdown.grandTotal, currentEvent.paymentAccountCurrency)}
+                                                    </Text>
+                                                    <Box
+                                                      display='inline-flex'
+                                                      alignItems='center'
+                                                      justifyContent='center'
+                                                      w='28px'
+                                                      h='28px'
+                                                      borderRadius='full'
+                                                      borderWidth='1px'
+                                                      borderColor={isExpanded ? formAccent : 'gray.300'}
+                                                      bg={isExpanded ? hexToRgba(formAccent, 0.12) : 'gray.50'}
+                                                      color='gray.700'
+                                                      flexShrink={0}
+                                                    >
+                                                      <Box transform={isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'} transition='transform 0.2s ease'>
+                                                        <ChevronDown size={14} />
+                                                      </Box>
+                                                    </Box>
+                                                  </HStack>
+                                                </HStack>
+                                              </Button>
+
+                                              <Separator borderColor='gray.200' />
+
+                                              {isExpanded ? (
+                                                <Stack gap={3} px={4} py={4}>
+                                                  <HStack justify='space-between' gap={3} minW={0}>
+                                                    <Text fontSize='sm' color='gray.600' fontWeight='600'>
+                                                      Item Total
+                                                    </Text>
+                                                    <Text fontSize='sm' color='gray.700' fontWeight='700' flexShrink={0}>
+                                                      {formatAmount(breakdown.subtotal, currentEvent.paymentAccountCurrency)}
+                                                    </Text>
+                                                  </HStack>
+
+                                                  {breakdown.charges.length > 0 ? (
+                                                    <Stack gap={1} minW={0}>
+                                                      {breakdown.charges.map((charge) => (
+                                                        <HStack key={`${breakdown.paymentMethod}-${charge.source}-${charge.title}`} justify='space-between' gap={3} minW={0}>
+                                                          <Text fontSize='sm' color='gray.600' maxW='full' overflow='hidden' textOverflow='ellipsis' whiteSpace='nowrap'>
+                                                            {formatChargeDisplayText(charge.title, charge.valueType, charge.value)}
+                                                          </Text>
+                                                          <Text fontSize='sm' color='gray.700' fontWeight='700' flexShrink={0}>
+                                                            {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
+                                                          </Text>
+                                                        </HStack>
+                                                      ))}
+                                                    </Stack>
+                                                  ) : (
+                                                    <Text fontSize='sm' color='gray.600'>No additional buyer charges</Text>
+                                                  )}
+                                                </Stack>
+                                              ) : null}
+                                            </Box>
                                           )
                                         })}
-                                      </SimpleGrid>
+                                      </Stack>
                                     </Stack>
 
                                     {selectedPaymentBreakdown ? (
@@ -2191,6 +2219,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     </Box>
   )
 }
+
+
 
 
 
