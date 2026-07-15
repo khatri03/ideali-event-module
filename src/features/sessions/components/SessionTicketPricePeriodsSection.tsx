@@ -77,17 +77,18 @@ function formatMoneyDisplay(value: string) {
   }).format(parsed)}`
 }
 
-function toDateValue(value: string | null) {
+function toWallClockDate(value: string | null) {
   if (!value) {
     return null
   }
 
-  const parsed = new Date(value)
+  const normalized = value.replace(/([zZ]|[+-]\d{2}:?\d{2})$/, "")
+  const parsed = new Date(normalized)
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
 function formatDateTime(value: string) {
-  const parsed = toDateValue(value)
+  const parsed = toWallClockDate(value)
   return parsed ? format(parsed, "dd-MMM-yyyy hh:mm aa") : "—"
 }
 
@@ -96,12 +97,12 @@ function toLocalDateTimeString(value: Date) {
 }
 
 function formatDateOnly(value: string) {
-  const parsed = toDateValue(value)
+  const parsed = toWallClockDate(value)
   return parsed ? format(parsed, "dd-MMM-yyyy") : "—"
 }
 
 function formatTimeOnly(value: string) {
-  const parsed = toDateValue(value)
+  const parsed = toWallClockDate(value)
   return parsed ? format(parsed, "hh:mm aa") : "—"
 }
 
@@ -362,8 +363,8 @@ export const SessionTicketPricePeriodsSection = forwardRef<
     setEditingPricePeriodId(pricePeriod.uniqueId)
     setName(pricePeriod.name ?? "")
     setAmount(formatMoneyInput(pricePeriod.amount))
-    setStartDateTime(toDateValue(pricePeriod.startDateTime))
-    setEndDateTime(toDateValue(pricePeriod.endDateTime))
+    setStartDateTime(toWallClockDate(pricePeriod.startDateTime))
+    setEndDateTime(toWallClockDate(pricePeriod.endDateTime))
     setAmountError("")
     setStartDateTimeError("")
     setEndDateTimeError("")
