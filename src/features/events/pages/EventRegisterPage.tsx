@@ -384,7 +384,6 @@ export function EventRegisterPage() {
   const bookingStartAt = useMemo(() => parseUtcDateTime(event?.bookingStartDate), [event?.bookingStartDate])
   const [now, setNow] = useState(() => Date.now())
   const bookingOpenRef = useRef(false)
-  const bookingReloadedRef = useRef(false)
   const loadErrorMessage = eventQuery.isError ? extractApiError(eventQuery.error) : ''
   const isUnavailableLoadError = eventQuery.isError && /not available|unavailable/i.test(loadErrorMessage)
 
@@ -396,13 +395,6 @@ export function EventRegisterPage() {
       setNow(currentNow)
 
       if (currentNow >= bookingStartAt.getTime()) {
-        if (!bookingReloadedRef.current) {
-          bookingReloadedRef.current = true
-          window.clearInterval(timer)
-          window.location.reload()
-          return
-        }
-
         window.clearInterval(timer)
       }
     }, 1000)
@@ -412,7 +404,6 @@ export function EventRegisterPage() {
 
   useEffect(() => {
     bookingOpenRef.current = false
-    bookingReloadedRef.current = false
   }, [eventUniqueId, bookingStartAt?.getTime()])
 
   useEffect(() => {
