@@ -1329,7 +1329,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       kind: 'ticket',
       ticket,
       title: 'Remove ticket',
-      description: `Remove ${ticketName} from your summary?`,
+      description: `Remove ${ticketName} from your selected items?`,
     })
   }
 
@@ -2122,11 +2122,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                   {sessionGroup.items.map((item) => (
                                                     <Table.Row key={item.ticketId}>
                                                       <Table.Cell borderColor='gray.200' px={4} py={3}>
-                                                        <Stack gap={0.5}>
-                                                          <Text fontWeight='700' color='gray.900' lineHeight='1.4'>
-                                                            {item.ticketName}
-                                                          </Text>
-                                                        </Stack>
+                                                        <Text fontWeight='700' color='gray.900' lineHeight='1.4' whiteSpace='normal' wordBreak='break-word'>
+                                                          {item.ticketName}
+                                                        </Text>
                                                       </Table.Cell>
                                                       <Table.Cell borderColor='gray.200' px={4} py={3}>
                                                         <Text fontWeight='700' color='gray.800'>
@@ -2134,14 +2132,65 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                         </Text>
                                                       </Table.Cell>
                                                       <Table.Cell borderColor='gray.200' px={4} py={3}>
-                                                        <Text fontWeight='700' color='gray.800'>
-                                                          {item.quantity}
-                                                        </Text>
+                                                        <Box flex='1' minW='84px' maxW='128px' position='relative'>
+                                                          <chakra.select
+                                                            value={String(item.quantity)}
+                                                            onChange={(event) => handleTicketQuantityChange(item.ticket, Number(event.target.value))}
+                                                            w='full'
+                                                            h='34px'
+                                                            pl={3}
+                                                            pr={8}
+                                                            borderWidth='1px'
+                                                            borderColor='gray.200'
+                                                            borderRadius='full'
+                                                            bg='white'
+                                                            color='gray.900'
+                                                            fontSize='sm'
+                                                            fontWeight='800'
+                                                            textAlign='center'
+                                                            textAlignLast='center'
+                                                            appearance='none'
+                                                            cursor='pointer'
+                                                            _focusVisible={{ outline: 'none', borderColor: 'gray.400' }}
+                                                          >
+                                                            {getTicketQuantityOptions(item.ticket, item.quantity).map((option) => (
+                                                              <option key={option.value} value={option.value}>
+                                                                {option.label}
+                                                              </option>
+                                                            ))}
+                                                          </chakra.select>
+                                                          <Flex
+                                                            position='absolute'
+                                                            insetY='0'
+                                                            right={3}
+                                                            align='center'
+                                                            pointerEvents='none'
+                                                            color='gray.500'
+                                                          >
+                                                            <ChevronDown size={14} strokeWidth={2.25} />
+                                                          </Flex>
+                                                        </Box>
                                                       </Table.Cell>
                                                       <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
-                                                        <Text fontWeight='700' color='gray.900'>
-                                                          {formatAmount(item.lineTotal, currentEvent.paymentAccountCurrency)}
-                                                        </Text>
+                                                        <HStack justify='flex-end' gap={2} align='center'>
+                                                          <Text fontWeight='700' color='gray.900'>
+                                                            {formatAmount(item.lineTotal, currentEvent.paymentAccountCurrency)}
+                                                          </Text>
+                                                          <Button
+                                                            minW='0'
+                                                            h='28px'
+                                                            px={2.5}
+                                                            variant='ghost'
+                                                            color='red.500'
+                                                            _hover={{ bg: 'red.50', color: 'red.600' }}
+                                                            _active={{ bg: 'red.100', color: 'red.700' }}
+                                                            aria-label={`Remove ${item.ticketName}`}
+                                                            title={`Remove ${item.ticketName}`}
+                                                            onClick={() => requestRemoveTicket(item.ticket, item.ticketName)}
+                                                          >
+                                                            <Trash2 size={13} strokeWidth={2.2} />
+                                                          </Button>
+                                                        </HStack>
                                                       </Table.Cell>
                                                     </Table.Row>
                                                   ))}
