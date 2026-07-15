@@ -33,6 +33,7 @@ import {
   ChevronDown,
   ChevronRight,
   CreditCard,
+  Clock3,
   ExternalLink,
   FileText,
   MapPin,
@@ -121,6 +122,20 @@ function formatDateTimeRange(startDate: string | null | undefined, endDate: stri
   if (start === 'Date not set' && end === 'Date not set') return 'Not set'
   if (start === end) return start
   return `${start} - ${end}`
+}
+
+function formatPurchaseCountdown(milliseconds: number) {
+  const safeMilliseconds = Math.max(milliseconds, 0)
+  const totalSeconds = Math.floor(safeMilliseconds / 1000)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  if (hours > 0) {
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+  }
+
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
 function getCurrencyDisplayPrefix(currencyCode?: string | null) {
@@ -650,6 +665,59 @@ type PendingDeleteAction =
       title: string
       description: string
     }
+
+function PurchaseTimerCard({
+  remainingMs,
+  expired,
+  accentColor,
+}: {
+  remainingMs: number
+  expired: boolean
+  accentColor: string
+}) {
+  const remainingText = formatPurchaseCountdown(remainingMs)
+  const borderColor = expired ? 'red.200' : hexToRgba(accentColor, 0.16)
+  const background = expired ? 'red.50' : 'white'
+  const iconBackground = expired ? 'red.600' : accentColor
+  const labelColor = expired ? 'red.600' : accentColor
+  const textColor = expired ? 'red.700' : 'gray.800'
+
+  return (
+    <Box
+      borderWidth='1px'
+      borderColor={borderColor}
+      borderRadius='28px'
+      bg={background}
+      boxShadow='0 18px 44px rgba(15, 23, 42, 0.08)'
+      overflow='hidden'
+    >
+      <Box h='3px' bg={expired ? 'red.500' : accentColor} />
+      <Box p={{ base: 4, md: 5 }}>
+        <Flex align={{ base: 'start', md: 'center' }} justify='space-between' gap={4} direction={{ base: 'column', md: 'row' }}>
+          <HStack gap={3} align='start'>
+            <Box w='12' h='12' borderRadius='16px' display='grid' placeItems='center' bg={iconBackground} color='white' flexShrink={0}>
+              <Clock3 size={20} />
+            </Box>
+            <Stack gap={0.5}>
+              <Text fontSize='xs' fontWeight='800' color={labelColor} textTransform='uppercase' letterSpacing='0.12em'>
+                Purchase time left
+              </Text>
+              <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight='900' color={textColor} letterSpacing='-0.04em' lineHeight='1'>
+                {remainingText}
+              </Text>
+            </Stack>
+          </HStack>
+
+          <Text fontSize='sm' color={expired ? 'red.600' : 'gray.600'} lineHeight='1.7' maxW='2xl'>
+            {expired
+              ? 'Purchase time limit reached. Remove selected tickets to start a new purchase flow.'
+              : 'Your purchase window started the moment you selected your first ticket.'}
+          </Text>
+        </Flex>
+      </Box>
+    </Box>
+  )
+}
 
 function TicketCard({
   ticket,
@@ -1309,6 +1377,14 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                 </SimpleGrid>
               </Box>
             </Box>
+
+            {purchaseTimerVisible ? (
+              <PurchaseTimerCard
+                remainingMs={purchaseTimerRemainingMs ?? 0}
+                expired={purchaseTimerExpired}
+                accentColor={formAccent}
+              />
+            ) : null}
 
             <Portal>
               <Box position='fixed' right={{ base: 1.5, md: 2.5 }} bottom={{ base: '6.5rem', sm: '4.5rem', md: 2.5 }} zIndex={999} pointerEvents='none'>
