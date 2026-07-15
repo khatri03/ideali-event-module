@@ -668,19 +668,28 @@ type PendingDeleteAction =
 
 function PurchaseTimerCard({
   remainingMs,
+  durationMs,
   expired,
   accentColor,
 }: {
   remainingMs: number
+  durationMs: number
   expired: boolean
   accentColor: string
 }) {
   const remainingText = formatPurchaseCountdown(remainingMs)
-  const borderColor = expired ? 'red.200' : hexToRgba(accentColor, 0.16)
-  const background = expired ? 'red.50' : 'white'
-  const iconBackground = expired ? 'red.600' : accentColor
-  const labelColor = expired ? 'red.600' : accentColor
-  const textColor = expired ? 'red.700' : 'gray.800'
+  const isRunningLow = !expired && remainingMs <= durationMs * 0.2
+  const borderColor = expired ? 'red.200' : isRunningLow ? 'orange.200' : hexToRgba(accentColor, 0.16)
+  const background = expired ? 'red.50' : isRunningLow ? 'orange.50' : 'white'
+  const iconBackground = expired ? 'red.600' : isRunningLow ? 'orange.600' : accentColor
+  const labelColor = expired ? 'red.600' : isRunningLow ? 'orange.700' : accentColor
+  const textColor = expired ? 'red.700' : isRunningLow ? 'orange.800' : 'gray.800'
+  const helperColor = expired ? 'red.600' : isRunningLow ? 'orange.700' : 'gray.600'
+  const helperText = expired
+    ? 'Purchase time limit reached. Remove selected tickets to start a new purchase flow.'
+    : isRunningLow
+      ? 'Time is running out. Less than 20% of your purchase window remains.'
+      : 'Your purchase window started the moment you selected your first ticket.'
 
   return (
     <Box
@@ -705,13 +714,16 @@ function PurchaseTimerCard({
               <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight='900' color={textColor} letterSpacing='-0.04em' lineHeight='1'>
                 {remainingText}
               </Text>
+              {isRunningLow ? (
+                <Badge alignSelf='flex-start' variant='subtle' borderRadius='full' px={3} py={1} bg='orange.100' color='orange.800' fontSize='xs' fontWeight='800' textTransform='uppercase' letterSpacing='0.12em'>
+                  Time is running out
+                </Badge>
+              ) : null}
             </Stack>
           </HStack>
 
-          <Text fontSize='sm' color={expired ? 'red.600' : 'gray.600'} lineHeight='1.7' maxW='2xl'>
-            {expired
-              ? 'Purchase time limit reached. Remove selected tickets to start a new purchase flow.'
-              : 'Your purchase window started the moment you selected your first ticket.'}
+          <Text fontSize='sm' color={helperColor} lineHeight='1.7' maxW='2xl'>
+            {helperText}
           </Text>
         </Flex>
       </Box>
@@ -1037,6 +1049,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [expandedPaymentMethod, setExpandedPaymentMethod] = useState<string | null>(null)
   const [purchaseTimerStartedAt, setPurchaseTimerStartedAt] = useState<number | null>(null)
   const [purchaseTimerNow, setPurchaseTimerNow] = useState(() => Date.now())
+  const [purchaseTimerExpiryOpen, setPurchaseTimerExpiryOpen] = useState(false)
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
   const [pendingDeleteAction, setPendingDeleteAction] = useState<PendingDeleteAction | null>(null)
   const paymentSubtotalSnapshotRef = useRef<number | null>(null)
@@ -1077,6 +1090,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
     return () => window.clearInterval(timer)
   }, [purchaseTimerStartedAt])
+
+  function restartPurchaseFlow() {
+    window.location.reload()
+  }
 
   const activeIndex = getStepIndex(tabs, activeTab)
   const isFinalStep = activeIndex >= 0 && activeIndex === tabs.length - 1
@@ -1175,6 +1192,13 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const purchaseTimerRemainingMs = purchaseTimerStartedAt === null ? null : purchaseTimerStartedAt + purchaseTimerDurationMs - purchaseTimerNow
   const purchaseTimerVisible = purchaseTimerStartedAt !== null
   const purchaseTimerExpired = purchaseTimerRemainingMs !== null && purchaseTimerRemainingMs <= 0
+
+  useEffect(() => {
+    if (purchaseTimerRemainingMs === null || purchaseTimerRemainingMs > 0) return
+
+    setPurchaseTimerExpiryOpen(true)
+  }, [purchaseTimerRemainingMs])
+
   useEffect(() => {
     if (activeTab !== 'payment' || !paymentBreakdownLoaded) return
     if (paymentSubtotalSnapshotRef.current === null) {
@@ -1381,20 +1405,30 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
             {purchaseTimerVisible ? (
               <PurchaseTimerCard
                 remainingMs={purchaseTimerRemainingMs ?? 0}
+                durationMs={purchaseTimerDurationMs}
                 expired={purchaseTimerExpired}
                 accentColor={formAccent}
               />
             ) : null}
 
             <Portal>
-              <Box position='fixed' right={{ base: 1.5, md: 2.5 }} bottom={{ base: '6.5rem', sm: '4.5rem', md: 2.5 }} zIndex={999} pointerEvents='none'>
+              <Box
+                position='fixed'
+                left={{ base: 0, md: 'auto' }}
+                right={{ base: 0, md: 2.5 }}
+                bottom={{ base: 0, sm: 0, md: 2.5 }}
+                zIndex={999}
+                pointerEvents='none'
+                px={{ base: 0, md: 0 }}
+                pb={{ base: 0, md: 0 }}
+              >
                 <Box
                   pointerEvents='auto'
-                  w={{ base: 'min(calc(100vw - 0.75rem), 360px)', md: '380px' }}
-                  maxH={{ base: 'calc(100dvh - 0.75rem)', md: 'calc(100dvh - 1.5rem)' }}
+                  w={{ base: 'full', md: '380px' }}
+                  maxH={{ base: 'min(72dvh, 560px)', md: 'calc(100dvh - 1.5rem)' }}
                   borderWidth='1px'
                   borderColor='gray.200'
-                  borderRadius='26px'
+                  borderRadius={{ base: '24px 24px 0 0', md: '26px' }}
                   bg='white'
                   boxShadow='0 28px 80px rgba(15, 23, 42, 0.22)'
                   overflow='hidden'
@@ -2284,6 +2318,50 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                     Remove
                   </Button>
                 </Flex>
+              </Stack>
+            </Box>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+
+      <Dialog.Root
+        open={purchaseTimerExpiryOpen}
+        onOpenChange={(details) => {
+          if (!details.open) {
+            restartPurchaseFlow()
+          }
+        }}
+        size='sm'
+      >
+        <Dialog.Backdrop backdropFilter='blur(8px)' bg='blackAlpha.650' />
+        <Dialog.Positioner alignItems='center' justifyContent='center' px={{ base: 4, md: 6 }} py={{ base: 6, md: 8 }}>
+          <Dialog.Content borderRadius='28px' overflow='hidden' bg='white' boxShadow='0 30px 80px rgba(15, 23, 42, 0.28)'>
+            <Box h='5px' bg={formAccent} />
+            <Box px={{ base: 4, md: 5 }} py={{ base: 5, md: 6 }}>
+              <Stack gap={5} align='center' textAlign='center'>
+                <Box w='72px' h='72px' borderRadius='24px' display='grid' placeItems='center' bg={hexToRgba(formAccent, 0.12)} color={formAccent}>
+                  <Clock3 size={30} />
+                </Box>
+                <Stack gap={2} maxW='2xl'>
+                  <Heading fontSize={{ base: '2xl', md: '3xl' }} letterSpacing='-0.04em'>
+                    Purchase time expired
+                  </Heading>
+                  <Text color='gray.600' lineHeight='1.7'>
+                    The purchase window has ended. Press OK to reload the registration form and start again.
+                  </Text>
+                </Stack>
+                <Button
+                  minH='12'
+                  px={6}
+                  borderRadius='16px'
+                  color='white'
+                  bg={formAccent}
+                  _hover={{ bg: hexToRgba(formAccent, 0.9) }}
+                  _active={{ bg: hexToRgba(formAccent, 0.82) }}
+                  onClick={restartPurchaseFlow}
+                >
+                  OK
+                </Button>
               </Stack>
             </Box>
           </Dialog.Content>

@@ -1,6 +1,6 @@
 # AGENTS.md — Ideali Events
 
-Enterprise SaaS event management platform. **Frontend-only repo.** Backend is a separate .NET Core 9 modular monolith at `D:\My Projects\V4Ideas\Ideali\ideali.api`.
+Enterprise SaaS event management platform. **Frontend-only repo.** Backend is a separate .NET Core 9 modular monolith at `D:\V4Ideas\Ideali\ideali.api`.
 
 ---
 

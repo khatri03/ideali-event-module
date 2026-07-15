@@ -81,17 +81,18 @@ function parseMoneyInput(value: string) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function toDateValue(value: string | null) {
+function toWallClockDate(value: string | null) {
   if (!value) {
     return null
   }
 
-  const parsed = new Date(value)
+  const normalized = value.replace(/([zZ]|[+-]\d{2}:?\d{2})$/, "")
+  const parsed = new Date(normalized)
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
 function formatDateTime(value: string) {
-  const parsed = toDateValue(value)
+  const parsed = toWallClockDate(value)
   if (!parsed) {
     return "—"
   }
