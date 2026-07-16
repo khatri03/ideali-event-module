@@ -665,6 +665,11 @@ type PendingDeleteAction =
       title: string
       description: string
     }
+  | {
+      kind: 'all'
+      title: string
+      description: string
+    }
 
 function PurchaseTimerCard({
   remainingMs,
@@ -1324,11 +1329,27 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     })
   }
 
+  function handleRemoveAllTickets() {
+    const resetIndex = sessionsStepIndex >= 0 ? sessionsStepIndex : 0
+    setSelectedTicketQuantities({})
+    setSelectedPaymentMethod(null)
+    setExpandedPaymentMethod(null)
+    setCardHolderName('')
+    setTermsAccepted(false)
+    setTermsOpen(false)
+    setPurchaseTimerStartedAt(null)
+    setPurchaseTimerNow(Date.now())
+    paymentSubtotalSnapshotRef.current = null
+    setIsSummaryOpen(false)
+    setHighestUnlockedIndex((current) => Math.min(current, resetIndex))
+    setActiveTab(tabs[resetIndex]?.id ?? 'sessions')
+  }
+
   function requestRemoveTicket(ticket: EventRegistrationTicket, ticketName: string) {
     setPendingDeleteAction({
       kind: 'ticket',
       ticket,
-      title: 'Remove ticket',
+      title: 'Remove item',
       description: `Remove ${ticketName} from your selected items?`,
     })
   }
@@ -1342,13 +1363,23 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     })
   }
 
+  function requestRemoveAllTickets() {
+    setPendingDeleteAction({
+      kind: 'all',
+      title: 'Remove all items',
+      description: 'Remove all selected tickets from your registration?',
+    })
+  }
+
   function confirmDeleteAction() {
     if (!pendingDeleteAction) return
 
     if (pendingDeleteAction.kind === 'ticket') {
       handleRemoveTicket(pendingDeleteAction.ticket)
-    } else {
+    } else if (pendingDeleteAction.kind === 'session') {
       handleRemoveSession(pendingDeleteAction.items)
+    } else {
+      handleRemoveAllTickets()
     }
 
     setPendingDeleteAction(null)
@@ -1422,10 +1453,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                 px={{ base: 0, md: 0 }}
                 pb={{ base: 0, md: 0 }}
               >
-                <Box
-                  pointerEvents='auto'
-                  w={{ base: 'full', md: '380px' }}
-                  maxH={{ base: 'min(72dvh, 560px)', md: 'calc(100dvh - 1.5rem)' }}
+              <Box
+                pointerEvents='auto'
+                w={{ base: 'full', md: '380px' }}
+                maxH={{ base: 'min(72dvh, 560px)', md: 'calc(100dvh - 1.5rem)' }}
                   borderWidth='1px'
                   borderColor='gray.200'
                   borderRadius={{ base: '24px 24px 0 0', md: '26px' }}
@@ -1769,6 +1800,24 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                     )
                   })}
                 </Tabs.List>
+
+                {selectedTicketCount > 0 ? (
+                  <Flex justify='flex-end' mb={4}>
+                    <Button
+                      variant='ghost'
+                      color='red.600'
+                      fontSize='sm'
+                      fontWeight='700'
+                      minH='11'
+                      px={0}
+                      _hover={{ bg: 'transparent', color: 'red.700', textDecoration: 'underline' }}
+                      _active={{ bg: 'transparent', color: 'red.800' }}
+                      onClick={requestRemoveAllTickets}
+                    >
+                      Remove all
+                    </Button>
+                  </Flex>
+                ) : null}
 
                 {tabs.map((tab) => (
                   <Tabs.Content key={tab.id} value={tab.id}>
