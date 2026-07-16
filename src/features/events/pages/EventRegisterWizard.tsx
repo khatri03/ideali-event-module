@@ -195,17 +195,6 @@ function formatAmount(value: number, currencyCode?: string | null) {
   return `$${formatCurrencyNumber(value)}`
 }
 
-function formatChargeDisplayText(title: string, valueType: string, value: number) {
-  if (!title) return ''
-
-  if (!valueType.trim().toLowerCase().includes('percent')) {
-    return title
-  }
-
-  const normalizedValue = Number.isInteger(value) ? value.toFixed(0) : value.toFixed(2).replace(/\.?0+$/, '')
-  return `${title} (${normalizedValue}%)`
-}
-
 function formatChargeRate(valueType: string, value: number, currencyCode?: string | null) {
   const normalizedValue = Number.isInteger(value) ? value.toFixed(0) : value.toFixed(2).replace(/\.?0+$/, '')
 
@@ -2082,9 +2071,16 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                     <Stack gap={1} minW={0}>
                                                       {breakdown.charges.map((charge) => (
                                                         <HStack key={`${breakdown.paymentMethod}-${charge.source}-${charge.title}`} justify='space-between' gap={3} minW={0}>
-                                                          <Text fontSize='sm' color='gray.600' maxW='full' overflow='hidden' textOverflow='ellipsis' whiteSpace='nowrap'>
-                                                            {formatChargeDisplayText(charge.title, charge.valueType, charge.value)}
-                                                          </Text>
+                                                          <Stack gap={0.5} minW={0}>
+                                                            <Text fontSize='sm' color='gray.600' maxW='full' overflow='hidden' textOverflow='ellipsis' whiteSpace='nowrap'>
+                                                              {charge.title}
+                                                            </Text>
+                                                            {charge.source === 'processor-fee' ? (
+                                                              <Text fontSize='xs' color='gray.500'>
+                                                                Price: {formatChargeRate(charge.valueType, charge.value, currentEvent.paymentAccountCurrency)}
+                                                              </Text>
+                                                            ) : null}
+                                                          </Stack>
                                                           <Text fontSize='sm' color='gray.700' fontWeight='700' flexShrink={0}>
                                                             {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
                                                           </Text>
@@ -2313,13 +2309,13 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                   </Table.Cell>
                                                   <Table.Cell borderColor='gray.200' px={4} py={3}>
                                                     <Text fontWeight='700' color='gray.800'>
-                                                      {formatChargeRate(charge.valueType, charge.value, currentEvent.paymentAccountCurrency)}
+                                                      {charge.source === 'processor-fee'
+                                                        ? formatChargeRate(charge.valueType, charge.value, currentEvent.paymentAccountCurrency)
+                                                        : ''}
                                                     </Text>
                                                   </Table.Cell>
-                                                  <Table.Cell borderColor='gray.200' px={4} py={3}>
-                                                    <Text fontWeight='700' color='gray.800'>
-                                                      1
-                                                    </Text>
+                                                  <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='center'>
+                                                    <Text fontWeight='700' color='gray.800'>&nbsp;</Text>
                                                   </Table.Cell>
                                                   <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
                                                     <Text fontWeight='700' color='gray.900'>
