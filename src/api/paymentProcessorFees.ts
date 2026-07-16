@@ -67,7 +67,7 @@ const paymentProcessorFeeInputSchema = z.object({
 
 export type PaymentProcessorFeeInput = z.infer<typeof paymentProcessorFeeInputSchema>
 
-export interface OrganizerPaymentMerchantOption {
+export interface PaymentMerchantOption {
   id: number
   name: string
 }
@@ -120,8 +120,8 @@ function assertSuccess(payload: unknown, fallbackMessage: string): void {
   }
 }
 
-export async function fetchOrganizerPaymentMerchants(): Promise<OrganizerPaymentMerchantOption[]> {
-  const response = await client.get<unknown>(API_ROUTES.organizerPaymentMerchants)
+export async function fetchPaymentMerchantOptions(): Promise<PaymentMerchantOption[]> {
+  const response = await client.get<unknown>(API_ROUTES.adminPaymentMerchants)
   const data = parseServicePayload(response.data)
 
   return z

@@ -120,7 +120,6 @@ export const API_ROUTES = {
   eventWizardSessions: (id: string) => `/api/organizer/events/${id}/sessions`,
   eventWizardDiscountCoupon: (id: string) => `/api/organizer/events/${id}/discount-coupon`,
   eventWizardQuestions: (id: string) => `/api/organizer/events/${id}/questions`,
-  organizerPaymentMerchants: "/api/organizer/payment-merchant/list",
   organizerPaymentMerchantMethods: (paymentMerchantId: number) =>
     `/api/organizer/payment-merchant/${paymentMerchantId}/payment-methods`,
   organizerPaymentProcessorFees: "/api/organizer/payment-processor-fee/list",
@@ -143,6 +142,7 @@ export const API_ROUTES = {
   adminRevenuePlanScopes: "/api/admin/list-items/revenue-plan-scopes",
   adminOrganizersList: "/api/admin/organizer/list/Active",
   adminTimeZones: "/api/admin/list-items/time-zones",
+  adminPaymentMerchants: "/api/admin/list-items/payment-merchants",
   organizerEvents: "/api/organizer/events/list",
   membershipTypeOptions: "/api/organizer/membership/type/options",
   seatsIoWorkspace: "/api/organizer/seatsio/workspace",

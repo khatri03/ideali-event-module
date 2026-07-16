@@ -28,13 +28,13 @@ import { StyledSelect } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
 import {
   createOrganizerPaymentProcessorFee,
-  fetchOrganizerPaymentMerchants,
+  fetchPaymentMerchantOptions,
   fetchOrganizerPaymentMerchantMethods,
   fetchOrganizerPaymentProcessorFees,
-  type OrganizerPaymentMerchantOption,
   type OrganizerPaymentMethodOption,
   type OrganizerPaymentProcessorFee,
   type PaymentProcessorFeeInput,
+  type PaymentMerchantOption,
   updateOrganizerPaymentProcessorFee,
 } from "@/api/paymentProcessorFees"
 
@@ -114,7 +114,7 @@ export function PaymentProcessorFeesManager() {
 
   const merchantsQuery = useQuery({
     queryKey: ["payment-merchants"],
-    queryFn: fetchOrganizerPaymentMerchants,
+    queryFn: fetchPaymentMerchantOptions,
   })
 
   const {
@@ -142,7 +142,7 @@ export function PaymentProcessorFeesManager() {
 
   const merchantOptions = useMemo(
     () =>
-      merchantsQuery.data?.map((merchant: OrganizerPaymentMerchantOption) => ({
+      merchantsQuery.data?.map((merchant: PaymentMerchantOption) => ({
         label: merchant.name,
         value: String(merchant.id),
       })) ?? [],
@@ -585,8 +585,13 @@ export function PaymentProcessorFeesManager() {
                         setValue("paymentProductId", 0, { shouldDirty: true, shouldValidate: true })
                       }}
                       placeholder={merchantsQuery.isLoading ? "Loading merchants..." : "Select merchant"}
-                      disabled={merchantsQuery.isLoading}
+                      disabled={merchantsQuery.isLoading || merchantsQuery.isError}
                     />
+                    {merchantsQuery.isError ? (
+                      <Text mt={2} fontSize="sm" color="red.600">
+                        {extractApiError(merchantsQuery.error)}
+                      </Text>
+                    ) : null}
                     {errors.paymentMerchantId ? <Field.ErrorText>{errors.paymentMerchantId.message}</Field.ErrorText> : null}
                   </Field.Root>
 

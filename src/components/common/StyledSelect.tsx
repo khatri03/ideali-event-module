@@ -55,21 +55,61 @@ export function StyledSelect({
         borderRadius={radius}
         minH={h}
         minW={minW}
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        gap={3}
+        px={4}
         {...CONTROL_SELECT_TRIGGER}
+        bg="app.bg"
+        borderColor="border.subtle"
+        boxShadow="0 1px 2px rgba(15, 23, 42, 0.04)"
+        _hover={{
+          borderColor: "brand.300",
+          boxShadow: "0 8px 18px rgba(15, 23, 42, 0.04)",
+        }}
       >
-        <Select.ValueText placeholder={placeholder} />
-        <Select.Indicator color="secondaryGray.600" _dark={{ color: "secondaryGray.300" }}>
+        <Select.ValueText placeholder={placeholder} flex="1" minW={0} fontWeight="600" />
+        <Select.Indicator
+          color="secondaryGray.600"
+          _dark={{ color: "secondaryGray.300" }}
+          transition="transform 0.18s ease, color 0.18s ease"
+          flexShrink={0}
+          ml="auto"
+        >
           <ChevronDown size={15} />
         </Select.Indicator>
       </Select.Trigger>
 
       <Select.Positioner>
-        <Select.Content {...CONTROL_SELECT_CONTENT}>
+        <Select.Content
+          {...CONTROL_SELECT_CONTENT}
+          bg="white"
+          borderColor="border.subtle"
+          borderRadius="20px"
+          p={2}
+          boxShadow="0 24px 60px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.05)"
+        >
           {collection.items.map((item) => (
             <Select.Item
               key={item.value}
               item={item}
               {...CONTROL_SELECT_ITEM}
+              minH="44px"
+              px={3.5}
+              py={2.5}
+              borderRadius="14px"
+              _highlighted={{
+                bg: "brand.50",
+                _dark: { bg: "navy.700" },
+                outline: "none",
+              }}
+              _checked={{
+                color: "brand.600",
+                _dark: { color: "brand.400" },
+                fontWeight: "700",
+                bg: "brand.50",
+              }}
             >
               {item.swatchColor ? (
                 <Box
@@ -86,7 +126,7 @@ export function StyledSelect({
                 />
               ) : null}
               <Box flex={1} minW={0}>
-                <Select.ItemText>{item.label}</Select.ItemText>
+                <Select.ItemText style={{ fontWeight: 600 }}>{item.label}</Select.ItemText>
                 {item.description ? (
                   <Text fontSize="xs" color="secondaryGray.500" lineHeight={1.4} mt={0.5}>
                     {item.description}
