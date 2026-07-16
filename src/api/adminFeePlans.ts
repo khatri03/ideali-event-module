@@ -420,16 +420,30 @@ export async function fetchAdminRevenuePlanOrganizerNames(uniqueId: string): Pro
 }
 
 export async function fetchAdminRevenuePlanModules(): Promise<AdminRevenuePlanModuleOption[]> {
-  const response = await client.get<unknown>(API_ROUTES.adminRevenuePlanModules)
-  const data = parseServicePayload(response.data)
+  const routesToTry = [API_ROUTES.adminRevenuePlanModules, API_ROUTES.adminModules]
+  let lastError: unknown = null
 
-  return z
-    .array(moduleOptionSchema)
-    .parse(data)
-    .map((item) => ({
-      value: item.Value ?? item.value ?? 0,
-      text: item.Text ?? item.text ?? "",
-    }))
+  for (const route of routesToTry) {
+    try {
+      const response = await client.get<unknown>(route)
+      const data = parseServicePayload(response.data)
+      const modules = z
+        .array(moduleOptionSchema)
+        .parse(data)
+        .map((item) => ({
+          value: item.Value ?? item.value ?? 0,
+          text: item.Text ?? item.text ?? "",
+        }))
+
+      if (modules.length > 0 || route === API_ROUTES.adminModules) {
+        return modules
+      }
+    } catch (error: unknown) {
+      lastError = error
+    }
+  }
+
+  throw lastError ?? new Error("Failed to load revenue plan modules.")
 }
 
 export async function fetchAdminRevenuePlanScopes(): Promise<AdminRevenuePlanScopeOption[]> {
