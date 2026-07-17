@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react"
+import { useMemo, useState, type ReactNode } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -27,6 +27,8 @@ import { StyledSelect } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
 import { useCreateChargeRule, useChargeRules, useUpdateChargeRule } from "../hooks/useChargeRules"
 import type { OrganizerChargeRuleInput, OrganizerChargeRuleListItem } from "@/api/chargeRules"
+
+const PAGE_SIZE = 10
 
 const chargeRuleFormSchema = z
   .object({
@@ -73,6 +75,18 @@ function formatChargeValue(item: OrganizerChargeRuleListItem) {
   return item.calculationType === "Percent" ? `${value}%` : value
 }
 
+function buildPageNumbers(page: number, totalPages: number) {
+  const pages: number[] = []
+  const start = Math.max(1, page - 2)
+  const end = Math.min(totalPages, page + 2)
+
+  for (let current = start; current <= end; current += 1) {
+    pages.push(current)
+  }
+
+  return pages
+}
+
 function ChargeRulesSkeleton() {
   return (
     <Box borderRadius="20px" border="1px solid" borderColor="border.subtle" bg="card.bg" p={5}>
@@ -96,7 +110,8 @@ function RequiredFieldLabel({ children }: { children: ReactNode }) {
 }
 
 export function ChargeRulesManager() {
-  const chargeRulesQuery = useChargeRules()
+  const [page, setPage] = useState(1)
+  const chargeRulesQuery = useChargeRules(page, PAGE_SIZE)
   const createChargeRuleMutation = useCreateChargeRule()
   const updateChargeRuleMutation = useUpdateChargeRule()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -119,7 +134,11 @@ export function ChargeRulesManager() {
   const isActive = useWatch({ control, name: "isActive" })
 
   const isBusy = createChargeRuleMutation.isPending || updateChargeRuleMutation.isPending
-  const rules = chargeRulesQuery.data ?? []
+  const rulesPage = chargeRulesQuery.data
+  const rules = rulesPage?.items ?? []
+  const totalPages = rulesPage?.totalPages ?? 0
+  const currentPage = rulesPage?.page ?? page
+  const pageNumbers = useMemo(() => buildPageNumbers(currentPage, totalPages), [currentPage, totalPages])
 
   function resetDialogState() {
     createChargeRuleMutation.reset()
@@ -223,7 +242,7 @@ export function ChargeRulesManager() {
 
       {chargeRulesQuery.isLoading && !chargeRulesQuery.data ? (
         <ChargeRulesSkeleton />
-      ) : (
+        ) : (
         <Box borderRadius="20px" border="1px solid" borderColor="border.subtle" bg="card.bg" boxShadow="card" overflow="hidden">
           <Flex
             px={{ base: 4, md: 6 }}
@@ -255,32 +274,76 @@ export function ChargeRulesManager() {
             </Button>
           </Flex>
 
+          <Flex
+            px={{ base: 4, md: 6 }}
+            py={3}
+            align={{ base: "stretch", md: "center" }}
+            justify="space-between"
+            direction={{ base: "column", md: "row" }}
+            gap={3}
+            borderBottom="1px solid"
+            borderColor="border.subtle"
+          >
+            <Text fontSize="sm" color="gray.600">
+              Page {currentPage} of {Math.max(totalPages, 1)}
+            </Text>
+
+            {totalPages > 1 ? (
+              <Flex gap={2} align="center" wrap="wrap" justify="flex-end">
+                <Button variant="outline" disabled={currentPage <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+                  Previous
+                </Button>
+                {pageNumbers.map((pageNumber) => (
+                  <Button
+                    key={pageNumber}
+                    variant={pageNumber === currentPage ? "solid" : "outline"}
+                    onClick={() => setPage(pageNumber)}
+                    minW="42px"
+                    colorPalette={pageNumber === currentPage ? "brand" : undefined}
+                  >
+                    {pageNumber}
+                  </Button>
+                ))}
+                <Button variant="outline" disabled={currentPage >= totalPages} onClick={() => setPage((current) => Math.min(totalPages || 1, current + 1))}>
+                  Next
+                </Button>
+              </Flex>
+            ) : null}
+          </Flex>
+
           <Box overflowX="auto">
-            <Table.Root variant="line" size="sm">
+            <Table.Root
+              variant="line"
+              size="sm"
+              css={{
+                borderCollapse: "collapse",
+                "& th, & td": {
+                  border: "1px solid",
+                  borderColor: "gray.300",
+                },
+              }}
+            >
               <Table.Header>
                 <Table.Row bg="app.bg">
-                  <Table.ColumnHeader px={4} py={3} textAlign="right">
+                  <Table.ColumnHeader px={4} py={3} textAlign="center">
                     Actions
                   </Table.ColumnHeader>
-                  <Table.ColumnHeader px={6} py={3}>
+                  <Table.ColumnHeader px={6} py={3} textAlign="center">
                     Name
                   </Table.ColumnHeader>
-                  <Table.ColumnHeader px={4} py={3}>
+                  <Table.ColumnHeader px={4} py={3} textAlign="center">
                     Display Text
                   </Table.ColumnHeader>
-                  <Table.ColumnHeader px={4} py={3}>
+                  <Table.ColumnHeader px={4} py={3} textAlign="center">
                     Category
                   </Table.ColumnHeader>
-                  <Table.ColumnHeader px={4} py={3}>
+                  <Table.ColumnHeader px={4} py={3} textAlign="center">
                     Calculation
                   </Table.ColumnHeader>
-                  <Table.ColumnHeader px={4} py={3}>
+                  <Table.ColumnHeader px={4} py={3} textAlign="center">
                     Value
                   </Table.ColumnHeader>
-                  <Table.ColumnHeader px={4} py={3}>
-                    Order
-                  </Table.ColumnHeader>
-                  <Table.ColumnHeader px={4} py={3}>
+                  <Table.ColumnHeader px={4} py={3} textAlign="center">
                     Status
                   </Table.ColumnHeader>
                 </Table.Row>
@@ -288,7 +351,7 @@ export function ChargeRulesManager() {
               <Table.Body>
                 {rules.length === 0 ? (
                   <Table.Row>
-                    <Table.Cell colSpan={8} py={14}>
+                    <Table.Cell colSpan={7} py={14}>
                       <Box textAlign="center">
                         <Text fontSize="lg" fontWeight="700" color="gray.900">
                           No charge rules configured
@@ -317,7 +380,7 @@ export function ChargeRulesManager() {
                 ) : (
                   rules.map((rule) => (
                     <Table.Row key={rule.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
-                      <Table.Cell px={4} py={4} textAlign="right">
+                      <Table.Cell px={4} py={4} textAlign="center">
                         <Menu.Root>
                           <Menu.Trigger asChild>
                             <Button
@@ -379,22 +442,17 @@ export function ChargeRulesManager() {
                           {rule.chargeKind}
                         </Text>
                       </Table.Cell>
-                      <Table.Cell px={4} py={4}>
+                      <Table.Cell px={4} py={4} textAlign="center">
                         <Text fontSize="sm" color="text.primary">
                           {rule.calculationType}
                         </Text>
                       </Table.Cell>
-                      <Table.Cell px={4} py={4}>
+                      <Table.Cell px={4} py={4} textAlign="center">
                         <Text fontSize="sm" fontWeight="700" color="text.primary">
                           {formatChargeValue(rule)}
                         </Text>
                       </Table.Cell>
-                      <Table.Cell px={4} py={4}>
-                        <Text fontSize="sm" fontWeight="700" color="text.primary" textAlign="center">
-                          {rule.displayOrder}
-                        </Text>
-                      </Table.Cell>
-                      <Table.Cell px={4} py={4}>
+                      <Table.Cell px={4} py={4} textAlign="center">
                         <Badge
                           colorPalette={rule.isActive ? "green" : "gray"}
                           variant="subtle"
@@ -415,6 +473,43 @@ export function ChargeRulesManager() {
               </Table.Body>
             </Table.Root>
           </Box>
+
+          <Flex
+            px={{ base: 4, md: 6 }}
+            py={4}
+            align={{ base: "stretch", md: "center" }}
+            justify="space-between"
+            direction={{ base: "column", md: "row" }}
+            gap={3}
+            borderTop="1px solid"
+            borderColor="border.subtle"
+          >
+            <Text fontSize="sm" color="gray.600">
+              Page {currentPage} of {Math.max(totalPages, 1)}
+            </Text>
+
+            {totalPages > 1 ? (
+              <Flex gap={2} align="center" wrap="wrap" justify="flex-end">
+                <Button variant="outline" disabled={currentPage <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+                  Previous
+                </Button>
+                {pageNumbers.map((pageNumber) => (
+                  <Button
+                    key={pageNumber}
+                    variant={pageNumber === currentPage ? "solid" : "outline"}
+                    onClick={() => setPage(pageNumber)}
+                    minW="42px"
+                    colorPalette={pageNumber === currentPage ? "brand" : undefined}
+                  >
+                    {pageNumber}
+                  </Button>
+                ))}
+                <Button variant="outline" disabled={currentPage >= totalPages} onClick={() => setPage((current) => Math.min(totalPages || 1, current + 1))}>
+                  Next
+                </Button>
+              </Flex>
+            ) : null}
+          </Flex>
         </Box>
       )}
 

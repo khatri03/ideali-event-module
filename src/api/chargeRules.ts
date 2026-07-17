@@ -37,6 +37,21 @@ const chargeRuleSchema = z.object({
   displayOrder: z.number().int().optional(),
 })
 
+const chargeRulePageSchema = z
+  .object({
+    PageNo: z.number().int().optional(),
+    pageNo: z.number().int().optional(),
+    PageSize: z.number().int().optional(),
+    pageSize: z.number().int().optional(),
+    PageCount: z.number().int().optional(),
+    pageCount: z.number().int().optional(),
+    TotalRecordsCount: z.number().int().optional(),
+    totalRecordsCount: z.number().int().optional(),
+    PageData: z.array(chargeRuleSchema).optional(),
+    pageData: z.array(chargeRuleSchema).optional(),
+  })
+  .passthrough()
+
 const chargeRuleInputSchema = z.object({
   name: z.string().trim().min(1).max(80),
   label: z.string().trim().min(1).max(120),
@@ -59,6 +74,14 @@ export interface OrganizerChargeRuleListItem {
   value: number
   isActive: boolean
   displayOrder: number
+}
+
+export interface OrganizerChargeRulePage {
+  items: OrganizerChargeRuleListItem[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
 }
 
 function readResponseData(payload: unknown): unknown {
@@ -104,10 +127,37 @@ function normalizeChargeRule(item: z.infer<typeof chargeRuleSchema>): OrganizerC
   }
 }
 
-export async function fetchOrganizerChargeRules(): Promise<OrganizerChargeRuleListItem[]> {
-  const response = await client.get<unknown>(API_ROUTES.organizerChargeRules)
+function parseChargeRulePage(payload: unknown, requestedPage: number, requestedPageSize: number): OrganizerChargeRulePage {
+  if (Array.isArray(payload)) {
+    const items = z.array(chargeRuleSchema).parse(payload).map(normalizeChargeRule)
+
+    return {
+      items,
+      total: items.length,
+      page: requestedPage,
+      pageSize: requestedPageSize,
+      totalPages: items.length > 0 ? 1 : 0,
+    }
+  }
+
+  const page = chargeRulePageSchema.parse(payload)
+  const items = (page.PageData ?? page.pageData ?? []).map(normalizeChargeRule)
+
+  return {
+    items,
+    total: page.TotalRecordsCount ?? page.totalRecordsCount ?? items.length,
+    page: page.PageNo ?? page.pageNo ?? requestedPage,
+    pageSize: page.PageSize ?? page.pageSize ?? requestedPageSize,
+    totalPages: page.PageCount ?? page.pageCount ?? 0,
+  }
+}
+
+export async function fetchOrganizerChargeRules(pageNo = 1, pageSize = 10): Promise<OrganizerChargeRulePage> {
+  const response = await client.get<unknown>(API_ROUTES.organizerChargeRules, {
+    params: { pageNo, pageSize },
+  })
   const data = parseServicePayload(response.data)
-  return z.array(chargeRuleSchema).parse(data).map(normalizeChargeRule)
+  return parseChargeRulePage(data, pageNo, pageSize)
 }
 
 export async function createOrganizerChargeRule(input: OrganizerChargeRuleInput): Promise<void> {
