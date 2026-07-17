@@ -660,7 +660,7 @@ type PendingDeleteAction =
       description: string
     }
 
-function PurchaseTimerCard({
+function PurchaseTimerChip({
   remainingMs,
   durationMs,
   expired,
@@ -676,9 +676,8 @@ function PurchaseTimerCard({
   const borderColor = expired ? 'red.200' : isRunningLow ? 'orange.200' : hexToRgba(accentColor, 0.16)
   const background = expired ? 'red.50' : isRunningLow ? 'orange.50' : 'white'
   const iconBackground = expired ? 'red.600' : isRunningLow ? 'orange.600' : accentColor
-  const labelColor = expired ? 'red.600' : isRunningLow ? 'orange.700' : accentColor
   const textColor = expired ? 'red.700' : isRunningLow ? 'orange.800' : 'gray.800'
-  const helperColor = expired ? 'red.600' : isRunningLow ? 'orange.700' : 'gray.600'
+  const borderGlow = expired ? '0 0 0 1px rgba(239, 68, 68, 0.12)' : isRunningLow ? '0 0 0 1px rgba(249, 115, 22, 0.12)' : '0 0 0 1px rgba(15, 23, 42, 0.06)'
   const helperText = expired
     ? 'Purchase time limit reached. Remove selected tickets to start a new purchase flow.'
     : isRunningLow
@@ -687,40 +686,29 @@ function PurchaseTimerCard({
 
   return (
     <Box
+      as='span'
+      title={helperText}
+      aria-label={helperText}
+      role='status'
+      display='inline-flex'
+      alignItems='center'
+      gap={2.5}
       borderWidth='1px'
       borderColor={borderColor}
-      borderRadius='28px'
+      borderRadius='full'
       bg={background}
-      boxShadow='0 18px 44px rgba(15, 23, 42, 0.08)'
-      overflow='hidden'
+      boxShadow={`0 12px 28px rgba(15, 23, 42, 0.08), ${borderGlow}`}
+      px={3}
+      py={2}
+      cursor='help'
+      maxW='full'
     >
-      <Box h='3px' bg={expired ? 'red.500' : accentColor} />
-      <Box p={{ base: 4, md: 5 }}>
-        <Flex align={{ base: 'start', md: 'center' }} justify='space-between' gap={4} direction={{ base: 'column', md: 'row' }}>
-          <HStack gap={3} align='start'>
-            <Box w='12' h='12' borderRadius='16px' display='grid' placeItems='center' bg={iconBackground} color='white' flexShrink={0}>
-              <Clock3 size={20} />
-            </Box>
-            <Stack gap={0.5}>
-              <Text fontSize='xs' fontWeight='800' color={labelColor} textTransform='uppercase' letterSpacing='0.12em'>
-                Purchase time left
-              </Text>
-              <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight='900' color={textColor} letterSpacing='-0.04em' lineHeight='1'>
-                {remainingText}
-              </Text>
-              {isRunningLow ? (
-                <Badge alignSelf='flex-start' variant='subtle' borderRadius='full' px={3} py={1} bg='orange.100' color='orange.800' fontSize='xs' fontWeight='800' textTransform='uppercase' letterSpacing='0.12em'>
-                  Time is running out
-                </Badge>
-              ) : null}
-            </Stack>
-          </HStack>
-
-          <Text fontSize='sm' color={helperColor} lineHeight='1.7' maxW='2xl'>
-            {helperText}
-          </Text>
-        </Flex>
+      <Box w='8' h='8' borderRadius='full' display='grid' placeItems='center' bg={iconBackground} color='white' flexShrink={0}>
+        <Clock3 size={16} />
       </Box>
+      <Text fontSize='sm' fontWeight='900' color={textColor} letterSpacing='-0.02em' lineHeight='1'>
+        {remainingText}
+      </Text>
     </Box>
   )
 }
@@ -1422,15 +1410,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
               </Box>
             </Box>
 
-            {purchaseTimerVisible ? (
-              <PurchaseTimerCard
-                remainingMs={purchaseTimerRemainingMs ?? 0}
-                durationMs={purchaseTimerDurationMs}
-                expired={purchaseTimerExpired}
-                accentColor={formAccent}
-              />
-            ) : null}
-
             <Portal>
               <Box
                 position='fixed'
@@ -1455,12 +1434,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                   display='flex'
                   flexDirection='column'
                 >
-                  <Flex
+                  <Box
                     px={4}
                     py={3.5}
-                    align='center'
-                    justify='space-between'
-                    gap={3}
                     borderBottomWidth={isSummaryOpen ? '1px' : '0'}
                     borderBottomColor={hexToRgba(formAccent, 0.32)}
                     bg={formAccent}
@@ -1469,30 +1445,36 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                     onClick={() => setIsSummaryOpen((current) => !current)}
                     transition='border-color 0.22s ease'
                   >
-                    <HStack gap={3} minW={0}>
-                      <Stack gap={0} minW={0}>
-                        <Text fontSize='sm' fontWeight='800' lineHeight='1.2'>Summary</Text>
-                        {isSummaryOpen && selectedTicketCount > 0 ? (
-                          <Text fontSize='xs' color={shouldHighlightSummaryLauncher ? 'white' : 'whiteAlpha.900'} lineHeight='1.3'>
-                            {selectedTicketCount} selected
-                          </Text>
-                        ) : null}
-                      </Stack>
-                    </HStack>
-                    <HStack gap={2.5} flexShrink={0}>
-                      <Text fontSize='sm' fontWeight='800' lineHeight='1.1' color='white'>
-                        {formatAmount(selectedTicketTotal, event.paymentAccountCurrency)}
-                      </Text>
-                      <Box
-                        color='whiteAlpha.900'
-                        transform={isSummaryOpen ? 'rotate(0deg)' : 'rotate(-90deg)'}
-                        transition='transform 220ms ease'
-                        flexShrink={0}
-                      >
-                        <ChevronDown size={18} />
-                      </Box>
-                    </HStack>
-                  </Flex>
+                    <Flex
+                      align='center'
+                      justify='space-between'
+                      gap={3}
+                    >
+                      <HStack gap={3} minW={0}>
+                        <Stack gap={0} minW={0}>
+                          <Text fontSize='sm' fontWeight='800' lineHeight='1.2'>Summary</Text>
+                          {isSummaryOpen && selectedTicketCount > 0 ? (
+                            <Text fontSize='xs' color={shouldHighlightSummaryLauncher ? 'white' : 'whiteAlpha.900'} lineHeight='1.3'>
+                              {selectedTicketCount} selected
+                            </Text>
+                          ) : null}
+                        </Stack>
+                      </HStack>
+                      <HStack gap={2.5} flexShrink={0}>
+                        <Text fontSize='sm' fontWeight='800' lineHeight='1.1' color='white'>
+                          {formatAmount(selectedTicketTotal, event.paymentAccountCurrency)}
+                        </Text>
+                        <Box
+                          color='whiteAlpha.900'
+                          transform={isSummaryOpen ? 'rotate(0deg)' : 'rotate(-90deg)'}
+                          transition='transform 220ms ease'
+                          flexShrink={0}
+                        >
+                          <ChevronDown size={18} />
+                        </Box>
+                      </HStack>
+                    </Flex>
+                  </Box>
 
                   <Box
                     flex='1'
@@ -1791,20 +1773,31 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                 </Tabs.List>
 
                 {selectedTicketCount > 0 ? (
-                  <Flex justify='flex-end' mb={4}>
-                    <Button
-                      variant='ghost'
-                      color='red.600'
-                      fontSize='sm'
-                      fontWeight='700'
-                      minH='11'
-                      px={0}
-                      _hover={{ bg: 'transparent', color: 'red.700', textDecoration: 'underline' }}
-                      _active={{ bg: 'transparent', color: 'red.800' }}
-                      onClick={requestRemoveAllTickets}
-                    >
-                      Remove all
-                    </Button>
+                  <Flex
+                    mb={4}
+                    align={{ base: 'center', md: 'center' }}
+                    justify='space-between'
+                    gap={3}
+                    wrap='wrap'
+                  >
+                    <Box minH='11' display='flex' alignItems='center'>
+                      {selectedTicketCount > 0 ? (
+                        <Button
+                          variant='ghost'
+                          color='red.600'
+                          fontSize='sm'
+                          fontWeight='700'
+                          minH='11'
+                          px={0}
+                          _hover={{ bg: 'transparent', color: 'red.700', textDecoration: 'underline' }}
+                          _active={{ bg: 'transparent', color: 'red.800' }}
+                          onClick={requestRemoveAllTickets}
+                        >
+                          Remove all
+                        </Button>
+                      ) : null}
+                    </Box>
+
                   </Flex>
                 ) : null}
 
@@ -2391,6 +2384,27 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
           </Stack>
         </Container>
       </Flex>
+
+      {purchaseTimerVisible ? (
+        <Portal>
+          <Box
+            position='fixed'
+            top={{ base: 3, md: 4 }}
+            right={{ base: 3, md: 4 }}
+            zIndex={1300}
+            pointerEvents='none'
+          >
+            <Box pointerEvents='auto'>
+              <PurchaseTimerChip
+                remainingMs={purchaseTimerRemainingMs ?? 0}
+                durationMs={purchaseTimerDurationMs}
+                expired={purchaseTimerExpired}
+                accentColor={formAccent}
+              />
+            </Box>
+          </Box>
+        </Portal>
+      ) : null}
 
       {currentEvent.termsConditions ? (
         <Dialog.Root open={termsOpen} onOpenChange={(details) => setTermsOpen(details.open)} size='xl'>
