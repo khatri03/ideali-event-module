@@ -4,6 +4,9 @@ export const APP_ROUTES = {
   events: "/events",
   calendar: "/calendar",
   settings: "/organizer/payment-processor-fee/list",
+  chargeRules: {
+    list: "/organizer/charge-rule/list",
+  },
   adminRevenuePlans: "/admin/revenue-plans/list",
   adminFeePlans: "/admin/revenue-plans/list",
   adminFeePlansLegacy: "/admin/admin-revenue-plans/list",
@@ -126,6 +129,9 @@ export const API_ROUTES = {
   organizerPaymentProcessorFeeCreate: "/api/organizer/payment-processor-fee/create",
   organizerPaymentProcessorFeeUpdate: (paymentProcessorFeeId: string) =>
     `/api/organizer/payment-processor-fee/${paymentProcessorFeeId}/update`,
+  organizerChargeRules: "/api/organizer/charge-rule/list",
+  organizerChargeRuleCreate: "/api/organizer/charge-rule/create",
+  organizerChargeRuleUpdate: (chargeRuleId: string) => `/api/organizer/charge-rule/${chargeRuleId}/update`,
   adminRevenuePlans: "/api/admin/revenue-plans/list",
   adminFeePlans: "/api/admin/revenue-plans/list",
   adminRevenuePlanDetail: (uniqueId: string) => `/api/admin/revenue-plans/${uniqueId}/detail`,

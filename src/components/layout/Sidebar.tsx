@@ -124,6 +124,9 @@ function SettingsSection({
   onToggle: () => void
   onNavigate?: () => void
 }) {
+  const isSettingsActive = pathname === APP_ROUTES.settings
+  const isChargeRulesActive = pathname === APP_ROUTES.chargeRules.list
+
   return (
     <Box mb={6}>
       <Flex
@@ -172,26 +175,60 @@ function SettingsSection({
               borderRadius="12px"
               mx={2}
               transition="all 0.18s ease"
-              bg={pathname === APP_ROUTES.settings ? "rgba(255,255,255,0.92)" : "transparent"}
-              _hover={pathname !== APP_ROUTES.settings ? { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" } : {}}
-              boxShadow={pathname === APP_ROUTES.settings ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
+              bg={isSettingsActive ? "rgba(255,255,255,0.92)" : "transparent"}
+              _hover={isSettingsActive ? {} : { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }}
+              boxShadow={isSettingsActive ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
             >
               <Box
                 w="6px"
                 h="6px"
                 borderRadius="full"
-                bg={pathname === APP_ROUTES.settings ? "#7551FF" : "rgba(255,255,255,0.6)"}
+                bg={isSettingsActive ? "#7551FF" : "rgba(255,255,255,0.6)"}
                 flexShrink={0}
               />
               <Text
                 fontSize="sm"
-                fontWeight={pathname === APP_ROUTES.settings ? "700" : "500"}
-                color={pathname === APP_ROUTES.settings ? "#422AFB" : "rgba(255,255,255,0.85)"}
+                fontWeight={isSettingsActive ? "700" : "500"}
+                color={isSettingsActive ? "#422AFB" : "rgba(255,255,255,0.85)"}
                 transition="color 0.18s"
                 flex={1}
-                letterSpacing={pathname === APP_ROUTES.settings ? "-0.01em" : "0"}
+                letterSpacing={isSettingsActive ? "-0.01em" : "0"}
               >
                 Processor Fees
+              </Text>
+            </Flex>
+          </NavLink>
+
+          <NavLink to={APP_ROUTES.chargeRules.list} style={{ textDecoration: "none" }} onClick={onNavigate}>
+            <Flex
+              align="center"
+              gap={3}
+              pl={10}
+              pr={3}
+              py={2.5}
+              borderRadius="12px"
+              mx={2}
+              transition="all 0.18s ease"
+              bg={isChargeRulesActive ? "rgba(255,255,255,0.92)" : "transparent"}
+              _hover={isChargeRulesActive ? {} : { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }}
+              boxShadow={isChargeRulesActive ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
+            >
+              <Box
+                w="6px"
+                h="6px"
+                borderRadius="full"
+                bg={isChargeRulesActive ? "#7551FF" : "rgba(255,255,255,0.6)"}
+                flexShrink={0}
+              />
+              <Text
+                fontSize="sm"
+                fontWeight={isChargeRulesActive ? "700" : "500"}
+                color={isChargeRulesActive ? "#422AFB" : "rgba(255,255,255,0.85)"}
+                transition="color 0.18s"
+                flex={1}
+                letterSpacing={isChargeRulesActive ? "-0.01em" : "0"}
+              >
+                Charge Rules
               </Text>
             </Flex>
           </NavLink>
@@ -298,7 +335,8 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
   const [isAdminManualOpen, setIsAdminManualOpen] = useState(false)
   const isAdmin = currentUser.role === "Admin"
   const isSettingsRouteActive = pathname === APP_ROUTES.settings
-  const isSettingsOpen = isSettingsManualOpen || isSettingsRouteActive
+  const isChargeRulesRouteActive = pathname === APP_ROUTES.chargeRules.list
+  const isSettingsOpen = isSettingsManualOpen || isSettingsRouteActive || isChargeRulesRouteActive
   const isAdminRouteActive = pathname === APP_ROUTES.adminRevenuePlans
   const isAdminOpen = isAdminManualOpen || isAdminRouteActive
 

@@ -9,6 +9,7 @@ import { Events } from "./pages/Events"
 import { CalendarPage } from "./pages/CalendarPage"
 import { Settings } from "./pages/Settings"
 import { AdminFeePlansPage } from "./features/admin-fee-plans"
+import { ChargeRulesPage } from "./features/charge-rules"
 import { VenueManagementPage } from "./features/venues"
 import { SeatingLayoutDesignerPage, SeatingLayoutsPage } from "./features/seating-layouts"
 import {
@@ -112,6 +113,7 @@ export default function App() {
           <Route path={APP_ROUTES.sessionWizard.list} element={<SessionListPage />} />
           <Route path={APP_ROUTES.calendar} element={<CalendarPage />} />
           <Route path={APP_ROUTES.settings} element={<Settings />} />
+          <Route path={APP_ROUTES.chargeRules.list} element={<ChargeRulesPage />} />
           <Route path={APP_ROUTES.adminRevenuePlans} element={<AdminFeePlansPage />} />
           <Route path={APP_ROUTES.adminFeePlansLegacy} element={<Navigate to={APP_ROUTES.adminRevenuePlans} replace />} />
           <Route path={APP_ROUTES.venues.list} element={<VenueManagementPage />} />
