@@ -388,13 +388,18 @@ function EventWizardLayoutContent() {
           shouldTouch: false,
           shouldValidate: false,
         })
-      } else if ("purchaseTimeLimit" in draftData || "visibility" in draftData) {
+      } else if ("purchaseTimeLimit" in draftData || "visibility" in draftData || "chargeRuleUniqueIds" in draftData) {
         form.setValue("purchaseTimeLimitMinutes", draftData.purchaseTimeLimit ?? undefined, {
           shouldDirty: false,
           shouldTouch: false,
           shouldValidate: false,
         })
         form.setValue("visibility", draftData.visibility ?? "Public", {
+          shouldDirty: false,
+          shouldTouch: false,
+          shouldValidate: false,
+        })
+        form.setValue("chargeRuleUniqueIds", draftData.chargeRuleUniqueIds ?? [], {
           shouldDirty: false,
           shouldTouch: false,
           shouldValidate: false,
@@ -588,7 +593,11 @@ function EventWizardLayoutContent() {
         } else if (activeStep.slug === "advanced-settings") {
           const result = await updateEventWizardAdvancedSettings(
             eventId,
-            { purchaseTimeLimit: purchaseTimeLimitMinutes, visibility: form.getValues("visibility") },
+            {
+              purchaseTimeLimit: purchaseTimeLimitMinutes,
+              visibility: form.getValues("visibility"),
+              chargeRuleUniqueIds: form.getValues("chargeRuleUniqueIds") ?? [],
+            },
             14,
           )
           setWizardStepCache("advanced-settings", result)
@@ -716,7 +725,11 @@ function EventWizardLayoutContent() {
         } else if (activeStep.slug === "advanced-settings") {
           const result = await updateEventWizardAdvancedSettings(
             eventId,
-            { purchaseTimeLimit: purchaseTimeLimitMinutes, visibility: form.getValues("visibility") },
+            {
+              purchaseTimeLimit: purchaseTimeLimitMinutes,
+              visibility: form.getValues("visibility"),
+              chargeRuleUniqueIds: form.getValues("chargeRuleUniqueIds") ?? [],
+            },
             14,
           )
           setWizardStepCache("advanced-settings", result)

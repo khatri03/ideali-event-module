@@ -424,8 +424,12 @@ const eventPurchaseTimeLimitOptionSchema = z.object({
 const eventPurchaseTimeLimitOptionsSchema = z.array(eventPurchaseTimeLimitOptionSchema)
 
 const eventWizardAdvancedSettingsResponseSchema = z.object({
+  PurchaseTimeLimit: z.number().int().positive().nullable().optional(),
+  Visibility: eventVisibilityValueSchema.nullable().optional(),
+  ChargeRuleUniqueIds: z.array(z.string()).nullable().optional(),
   purchaseTimeLimit: z.number().int().positive().nullable().optional(),
   visibility: eventVisibilityValueSchema.nullable().optional(),
+  chargeRuleUniqueIds: z.array(z.string()).nullable().optional(),
 })
 
 const eventEmailPlaceholderItemSchema = z.object({
@@ -1290,11 +1294,17 @@ export async function updateEventWizardDateTime(
 export interface EventWizardAdvancedSettingsResponse {
   purchaseTimeLimit?: number | null
   visibility?: EventVisibility | null
+  chargeRuleUniqueIds?: string[]
 }
 
 export async function fetchEventWizardAdvancedSettings(uniqueId: string): Promise<EventWizardAdvancedSettingsResponse> {
   const res = await client.get<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "advanced-settings")}`)
-  return eventWizardAdvancedSettingsResponseSchema.parse(res.data)
+  const parsed = eventWizardAdvancedSettingsResponseSchema.parse(res.data)
+  return {
+    purchaseTimeLimit: parsed.purchaseTimeLimit ?? parsed.PurchaseTimeLimit ?? null,
+    visibility: parsed.visibility ?? parsed.Visibility ?? null,
+    chargeRuleUniqueIds: parsed.chargeRuleUniqueIds ?? parsed.ChargeRuleUniqueIds ?? [],
+  }
 }
 
 export interface EventVisibilityOption {
@@ -1320,14 +1330,18 @@ export async function fetchEventWizardPurchaseTimeLimitOptions(): Promise<EventP
 
 export async function updateEventWizardAdvancedSettings(
   uniqueId: string,
-  payload: { purchaseTimeLimit: number | null; visibility: EventVisibility },
+  payload: { purchaseTimeLimit: number | null; visibility: EventVisibility; chargeRuleUniqueIds: string[] },
   stepNo = 14
 ): Promise<EventWizardAdvancedSettingsResponse> {
   const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "advanced-settings")}`, payload, {
     params: { stepNo },
   })
-
-  return eventWizardAdvancedSettingsResponseSchema.parse(res.data)
+  const parsed = eventWizardAdvancedSettingsResponseSchema.parse(res.data)
+  return {
+    purchaseTimeLimit: parsed.purchaseTimeLimit ?? parsed.PurchaseTimeLimit ?? null,
+    visibility: parsed.visibility ?? parsed.Visibility ?? null,
+    chargeRuleUniqueIds: parsed.chargeRuleUniqueIds ?? parsed.ChargeRuleUniqueIds ?? [],
+  }
 }
 
 export interface EventEmailPlaceholderItem {

@@ -7,6 +7,7 @@ import {
 } from "@/api/events"
 import { StyledSelect } from "@/components/common"
 import { StepFieldLabel } from "../components/StepFieldLabel"
+import { EventChargeRulesSection } from "../components/EventChargeRulesSection"
 import type { EventWizardValues } from "../schemas/eventWizard.schemas"
 
 export function EventPurchaseTimeLimitStepPage() {
@@ -76,6 +77,8 @@ export function EventPurchaseTimeLimitStepPage() {
             <Field.HelperText>Choose when sales should close before the event starts.</Field.HelperText>
           </Stack>
         </Field.Root>
+
+        <EventChargeRulesSection />
       </Stack>
     </Stack>
   )

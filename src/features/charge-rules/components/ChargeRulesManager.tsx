@@ -36,7 +36,7 @@ const chargeRuleFormSchema = z
     label: z.string().trim().min(1, "Label is required.").max(120, "Maximum 120 characters allowed."),
     chargeKind: z.enum(["Tax", "Other"], { message: "Charge category is required." }),
     calculationType: z.enum(["Fixed", "Percent"], { message: "Calculation type is required." }),
-    value: z.number().nonnegative("Value must be zero or greater."),
+    value: z.number().positive("Value must be greater than zero."),
     isActive: z.boolean(),
   })
   .superRefine((values, ctx) => {
@@ -56,7 +56,7 @@ const EMPTY_FORM_VALUES: ChargeRuleFormValues = {
   label: "",
   chargeKind: "Tax",
   calculationType: "Fixed",
-  value: 0,
+  value: 1,
   isActive: true,
 }
 
@@ -571,7 +571,9 @@ export function ChargeRulesManager() {
                     <Input {...register("label")} minH="11" borderRadius="14px" px={4} placeholder="Sales tax" />
                     {errors.label ? <Field.ErrorText>{errors.label.message}</Field.ErrorText> : null}
                   </Field.Root>
+                </SimpleGrid>
 
+                <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
                   <Field.Root invalid={Boolean(errors.chargeKind)}>
                     <RequiredFieldLabel>Charge category</RequiredFieldLabel>
                     <StyledSelect
@@ -604,8 +606,8 @@ export function ChargeRulesManager() {
                     <Input
                       {...register("value", { valueAsNumber: true })}
                       type="number"
-                      min="0"
-                      step={calculationType === "Percent" ? "0.01" : "1"}
+                      min="0.01"
+                      step="0.01"
                       minH="11"
                       borderRadius="14px"
                       px={4}

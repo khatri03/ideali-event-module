@@ -57,7 +57,7 @@ const chargeRuleInputSchema = z.object({
   label: z.string().trim().min(1).max(120),
   chargeKind: z.enum(["PaymentMethod", "RevenuePlan", "Tax", "Other"]),
   calculationType: z.enum(["Fixed", "Percent"]),
-  value: z.coerce.number().nonnegative(),
+  value: z.coerce.number().positive(),
   isActive: z.boolean(),
 })
 
