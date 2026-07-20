@@ -1179,6 +1179,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [purchaseReviewAttempted, setPurchaseReviewAttempted] = useState(false)
   const [purchaseReviewMessage, setPurchaseReviewMessage] = useState<string | null>(null)
   const [purchaseReviewScrollTarget, setPurchaseReviewScrollTarget] = useState<PurchaseReviewValidationTarget | null>(null)
+  const [purchaseReviewScrollRequestId, setPurchaseReviewScrollRequestId] = useState(0)
   const [expandedPaymentMethod, setExpandedPaymentMethod] = useState<string | null>(null)
   const [purchaseTimerStartedAt, setPurchaseTimerStartedAt] = useState<number | null>(null)
   const [purchaseTimerNow, setPurchaseTimerNow] = useState(() => Date.now())
@@ -1445,7 +1446,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     })
 
     return () => window.cancelAnimationFrame(frame)
-  }, [isPurchaseReviewOpen, purchaseReviewAttempted, purchaseReviewMessage, purchaseReviewScrollTarget])
+  }, [isPurchaseReviewOpen, purchaseReviewAttempted, purchaseReviewMessage, purchaseReviewScrollTarget, purchaseReviewScrollRequestId])
 
   function applyPurchaseReviewIssues(issues: PurchaseReviewIssue[]) {
     const firstIssue = issues[0] ?? null
@@ -1453,6 +1454,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setPurchaseReviewAttempted(true)
     setPurchaseReviewMessage(firstIssue?.message ?? null)
     setPurchaseReviewScrollTarget(firstIssue?.target ?? null)
+    setPurchaseReviewScrollRequestId((current) => current + 1)
     setIsPurchaseReviewOpen(false)
   }
 
@@ -1467,6 +1469,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setPurchaseReviewAttempted(true)
     setPurchaseReviewMessage(null)
     setPurchaseReviewScrollTarget(null)
+    setPurchaseReviewScrollRequestId((current) => current + 1)
     setIsPurchaseReviewOpen(true)
   }
 
