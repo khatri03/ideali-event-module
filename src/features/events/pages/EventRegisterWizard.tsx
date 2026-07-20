@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { ReactNode, RefObject } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Badge,
@@ -68,6 +68,7 @@ import {
 const LOCAL_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
 type WizardTabId = 'description' | 'sessions' | 'attendee-info' | 'questionnaire' | 'payment'
 type CardFieldId = 'number' | 'expiry' | 'cvc'
+type PurchaseReviewValidationTarget = 'payment-method' | 'payment-card' | 'terms'
 
 interface CardFieldState {
   complete: boolean
@@ -78,6 +79,11 @@ interface PaymentCardValidationState {
   number: CardFieldState
   expiry: CardFieldState
   cvc: CardFieldState
+}
+
+interface PurchaseReviewIssue {
+  message: string
+  target: PurchaseReviewValidationTarget
 }
 
 const INITIAL_CARD_FIELD_STATE: PaymentCardValidationState = {
@@ -297,6 +303,7 @@ function StripePaymentFields({
   showValidationErrors,
   onCardFieldStateChange,
   onAvailabilityChange,
+  validationRef,
 }: {
   paymentMethod: string
   paymentAccountUniqueId: string | null
@@ -307,6 +314,7 @@ function StripePaymentFields({
   showValidationErrors: boolean
   onCardFieldStateChange: (fieldId: CardFieldId, nextState: CardFieldState) => void
   onAvailabilityChange: (state: { isReady: boolean; message: string | null }) => void
+  validationRef?: RefObject<HTMLDivElement | null>
 }) {
   const stripeCredentialsQuery = useQuery({
     queryKey: ['event-registration', paymentAccountUniqueId, 'stripe-credentials'],
@@ -426,7 +434,7 @@ function StripePaymentFields({
 
   return (
     <Elements stripe={stripePromise}>
-      <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='white' overflow='hidden'>
+      <Box ref={validationRef} borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='white' overflow='hidden'>
         <Box px={4} py={3} bg='gray.50' borderBottomWidth='1px' borderBottomColor='gray.200'>
           <Text fontSize='sm' fontWeight='700' color='gray.700'>
             Card details
@@ -1170,6 +1178,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [isPurchaseReviewOpen, setIsPurchaseReviewOpen] = useState(false)
   const [purchaseReviewAttempted, setPurchaseReviewAttempted] = useState(false)
   const [purchaseReviewMessage, setPurchaseReviewMessage] = useState<string | null>(null)
+  const [purchaseReviewScrollTarget, setPurchaseReviewScrollTarget] = useState<PurchaseReviewValidationTarget | null>(null)
   const [expandedPaymentMethod, setExpandedPaymentMethod] = useState<string | null>(null)
   const [purchaseTimerStartedAt, setPurchaseTimerStartedAt] = useState<number | null>(null)
   const [purchaseTimerNow, setPurchaseTimerNow] = useState(() => Date.now())
@@ -1177,6 +1186,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
   const [pendingDeleteAction, setPendingDeleteAction] = useState<PendingDeleteAction | null>(null)
   const paymentSubtotalSnapshotRef = useRef<number | null>(null)
+  const paymentMethodValidationRef = useRef<HTMLDivElement | null>(null)
+  const paymentCardValidationRef = useRef<HTMLDivElement | null>(null)
+  const termsValidationRef = useRef<HTMLDivElement | null>(null)
   const descriptionQuery = useQuery({
     queryKey: ['event-registration', event.uniqueId, 'description'],
     queryFn: () => fetchEventRegistrationDescription(event.uniqueId),
@@ -1380,48 +1392,81 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   }
 
   function getPurchaseReviewIssues() {
-    const issues: string[] = []
+    const issues: PurchaseReviewIssue[] = []
 
     if (selectedTicketCount <= 0) {
-      issues.push('Select at least one ticket.')
+      issues.push({ message: 'Select at least one ticket.', target: 'payment-method' })
     }
 
     if (!selectedPaymentBreakdown) {
-      issues.push('Select a payment method.')
+      issues.push({ message: 'Select a payment method.', target: 'payment-method' })
     } else if (isCardPaymentMethod(selectedPaymentBreakdown.paymentMethod)) {
       if (!cardFieldAvailability.isReady) {
-        issues.push(cardFieldAvailability.message ?? 'Card fields are not ready yet.')
+        issues.push({ message: cardFieldAvailability.message ?? 'Card fields are not ready yet.', target: 'payment-card' })
       }
 
       if (!cardHolderName.trim()) {
-        issues.push('Enter the cardholder name.')
+        issues.push({ message: 'Enter the cardholder name.', target: 'payment-card' })
       }
 
       if (!cardFieldStates.number.complete || cardFieldStates.number.error) {
-        issues.push(cardFieldStates.number.error ?? 'Complete the card number.')
+        issues.push({ message: cardFieldStates.number.error ?? 'Complete the card number.', target: 'payment-card' })
       }
 
       if (!cardFieldStates.expiry.complete || cardFieldStates.expiry.error) {
-        issues.push(cardFieldStates.expiry.error ?? 'Complete the expiry date.')
+        issues.push({ message: cardFieldStates.expiry.error ?? 'Complete the expiry date.', target: 'payment-card' })
       }
 
       if (!cardFieldStates.cvc.complete || cardFieldStates.cvc.error) {
-        issues.push(cardFieldStates.cvc.error ?? 'Complete the CVV.')
+        issues.push({ message: cardFieldStates.cvc.error ?? 'Complete the CVV.', target: 'payment-card' })
       }
     }
 
     if (currentEvent.termsConditions && !termsAccepted) {
-      issues.push('Accept the registration terms and conditions.')
+      issues.push({ message: 'Accept the registration terms and conditions.', target: 'terms' })
     }
 
     return issues
   }
 
+  useEffect(() => {
+    if (!purchaseReviewAttempted || !purchaseReviewMessage || isPurchaseReviewOpen) return
+    if (!purchaseReviewScrollTarget) return
+
+    const targetRef =
+      purchaseReviewScrollTarget === 'payment-method'
+        ? paymentMethodValidationRef
+        : purchaseReviewScrollTarget === 'payment-card'
+          ? paymentCardValidationRef
+          : termsValidationRef
+
+    const frame = window.requestAnimationFrame(() => {
+      targetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [isPurchaseReviewOpen, purchaseReviewAttempted, purchaseReviewMessage, purchaseReviewScrollTarget])
+
+  function applyPurchaseReviewIssues(issues: PurchaseReviewIssue[]) {
+    const firstIssue = issues[0] ?? null
+
+    setPurchaseReviewAttempted(true)
+    setPurchaseReviewMessage(firstIssue?.message ?? null)
+    setPurchaseReviewScrollTarget(firstIssue?.target ?? null)
+    setIsPurchaseReviewOpen(false)
+  }
+
   function handlePurchaseReview() {
     const issues = getPurchaseReviewIssues()
 
+    if (issues.length > 0) {
+      applyPurchaseReviewIssues(issues)
+      return
+    }
+
     setPurchaseReviewAttempted(true)
-    setPurchaseReviewMessage(issues[0] ?? null)
+    setPurchaseReviewMessage(null)
+    setPurchaseReviewScrollTarget(null)
     setIsPurchaseReviewOpen(true)
   }
 
@@ -1438,8 +1483,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     const issues = getPurchaseReviewIssues()
 
     if (issues.length > 0) {
-      setPurchaseReviewAttempted(true)
-      setPurchaseReviewMessage(issues[0] ?? null)
+      applyPurchaseReviewIssues(issues)
       return
     }
 
@@ -1983,7 +2027,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
             </Portal>
 
             {currentEvent.termsConditions ? (
-              <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' px={{ base: 4, md: 5 }} py={4} boxShadow='0 12px 30px rgba(15, 23, 42, 0.08)'>
+              <Box ref={termsValidationRef} borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' px={{ base: 4, md: 5 }} py={4} boxShadow='0 12px 30px rgba(15, 23, 42, 0.08)'>
                 <Flex justify='space-between' align={{ base: 'stretch', md: 'center' }} gap={4} direction={{ base: 'column', md: 'row' }}>
                   <Checkbox.Root checked={termsAccepted} onCheckedChange={(details) => setTermsAccepted(details.checked === true)}>
                     <Checkbox.HiddenInput />
@@ -2256,7 +2300,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                 ) : paymentBreakdowns.length > 0 ? (
                                   <>
                                     <Stack gap={4}>
-                                    <Stack gap={2}>
+                                    <Stack gap={2} ref={paymentMethodValidationRef}>
                                       <HStack justify='space-between' gap={4} flexWrap='wrap'>
                                         <Text fontSize='sm' fontWeight='700' color='gray.700'>Select payment method</Text>
                                       </HStack>
@@ -2350,6 +2394,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                       }))
                                                     }
                                                     onAvailabilityChange={setCardFieldAvailability}
+                                                    validationRef={paymentCardValidationRef}
                                                   />
                                                 ) : (
                                                   <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
