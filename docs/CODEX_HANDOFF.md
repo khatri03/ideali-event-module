@@ -1,56 +1,54 @@
 # Codex Handoff
 
 ## Current Objective
-Continue polishing the registration Summary card quantity control in `src/features/events/pages/EventRegisterWizard.tsx`, now that the compact stepper update is committed.
+Continue refining `src/features/events/pages/EventRegisterWizard.tsx` so the registration flow stays stable while the session cue and buyer/attendee info UX remain clean and visible from the start.
 
 ## Completed Work
-- Replaced the Summary card quantity dropdown with a compact inline stepper plus select.
-- Added the missing local `quantityOptions` derivation inside the summary row map.
-- Tightened the Summary Qty control to a fixed compact width so the `+` button stays inside the row.
-- Committed the UI change as `e9a7784` with message `Compact summary ticket quantity stepper`.
+- Restored the `Payment` tab in the registration wizard.
+- Made the session-level `Requires Attendee Info` pill visible before any ticket selection.
+- Added a hover tooltip to that pill with the attendee-info explanation.
+- Grouped buyer/attendee entry cards by ticket instead of showing repeated top-level cards per selected attendee slot.
+- Kept the `Search tickets` box visible in the session card layout instead of hiding it until selection.
 
 ## Architectural Decisions and Reasons
-- Reused `getTicketQuantityOptions` and `getTicketQuantityAfterDecrement` instead of introducing new quantity logic.
-- Kept the Summary card control visually aligned with the Sessions tab pattern, but with a smaller fixed-width container.
-- Kept the quantity control local to `EventRegisterWizard.tsx` rather than extracting new shared UI while the layout is still being tuned.
+- Kept the registration work local to `EventRegisterWizard.tsx` instead of introducing new shared state or new dependencies.
+- Used Chakra v3 `Tooltip.Root` / `Tooltip.Trigger` / `Tooltip.Content` patterns already present in the repo.
+- Kept attendee entry data derived from selected sessions and tickets rather than duplicating server state.
+- Grouped attendee cards by ticket to reduce repeated session-level noise while preserving per-attendee input handling.
 
 ## Files Changed
-- `src/features/events/pages/EventRegisterWizard.tsx` (`e9a7784`)
-- `docs/CODEX_HANDOFF.md` (this handoff update)
+- `src/features/events/pages/EventRegisterWizard.tsx`
 
 ## Important Commands and Test Results
-- `git show --stat --oneline --name-only e9a7784 --` confirmed the only committed source file was `src/features/events/pages/EventRegisterWizard.tsx`.
-- `git status --short` currently shows only `?? CODEX_HANDOFF_INSTRUCTIONS.md` as untracked before this handoff update.
+- `git status --short` currently shows `M src/features/events/pages/EventRegisterWizard.tsx` and `?? CODEX_HANDOFF_INSTRUCTIONS.md`.
+- `git log --oneline -5` currently ends with `17dec26 Add attendee info tooltip to session cue`.
 - `git branch --show-current` returned `sohail/features/event/event-registration`.
-- `C:\\WINDOWS\\System32\\cmd.exe /c npm run build` failed on unrelated existing TypeScript errors in other files, including:
-  - `src/features/admin-fee-plans/components/AdminFeePlansManager.tsx`
-  - `src/features/events/components/EventChargeRulesSection.tsx`
-  - `src/features/sessions/components/SessionFiltersCard.tsx`
-  - `src/features/sessions/components/SessionListTable.tsx`
-  - `src/features/venues/pages/VenueManagementPage.tsx`
-  - `src/main.tsx`
+- `git diff --stat` currently shows one modified file: `src/features/events/pages/EventRegisterWizard.tsx` with `119 insertions(+), 17 deletions(-)`.
+- `npx eslint src/features/events/pages/EventRegisterWizard.tsx` still reports existing hook/purity warnings and errors in this file.
 
 ## Known Bugs or Limitations
-- The Summary Qty control is compact but still may need browser-level pixel tuning.
-- Repo-wide build is still blocked by unrelated TypeScript errors outside this change.
-- No automated UI test currently covers this exact Summary control layout.
+- `EventRegisterWizard.tsx` still triggers existing ESLint hook/purity complaints unrelated to the latest UX tweaks.
+- The repo still contains the unrelated untracked `CODEX_HANDOFF_INSTRUCTIONS.md`.
+- The wizard remains a large, highly coupled file, so small UI changes can still produce JSX balance regressions if edited carelessly.
 
 ## Unfinished Tasks
-1. Verify the Summary Qty control in the browser and confirm the `+` button stays fully inside the row.
-2. If needed, reduce the fixed width or padding by a few pixels.
-3. Decide whether the Summary card delete affordance needs separate visual refinement.
+1. Finish stabilizing the wizard file against the existing ESLint hook/purity issues.
+2. Verify the session header row feels balanced on desktop and mobile after the always-visible cue change.
+3. Confirm the grouped attendee cards still match the intended backend submission shape.
 
 ## Exact Next Action
-Open `src/features/events/pages/EventRegisterWizard.tsx`, inspect the Summary card Qty row in the browser, and tune the fixed width/padding only if the control still looks cramped.
+Re-open `src/features/events/pages/EventRegisterWizard.tsx`, verify the session header row and grouped attendee cards in the browser, and then decide whether to address the remaining lint issues or commit the current UI state.
 
 ## Assumptions That Must Not Be Changed
-- Keep the Summary card quantity control based on the Sessions-tab select-plus-stepper pattern.
+- Keep the `Payment` tab available in the wizard.
+- Keep the `Requires Attendee Info` cue visible before any ticket is selected.
+- Keep attendee entry grouped by ticket, not by repeated session-level cards.
 - Do not add new dependencies or global state.
-- Do not touch unrelated charge-rule or payment-tab work while continuing this UI polish.
 - Do not use `localStorage` or `sessionStorage`.
 
 ## Branch and Commit Status
-- Frontend repo branch: `sohail/features/event/event-registration`
-- Current HEAD: `e9a7784`
-- Latest commit: `Compact summary ticket quantity stepper`
-- Working tree is otherwise clean except for the pre-existing untracked `CODEX_HANDOFF_INSTRUCTIONS.md`
+- Branch: `sohail/features/event/event-registration`
+- Current `HEAD`: `17dec26`
+- Latest commit: `Add attendee info tooltip to session cue`
+- Working tree is dirty with one modified source file: `src/features/events/pages/EventRegisterWizard.tsx`
+- Untracked file present: `CODEX_HANDOFF_INSTRUCTIONS.md`

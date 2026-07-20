@@ -110,6 +110,19 @@ interface SelectedSessionSummary {
   hasQuestions: boolean
 }
 
+interface AttendeeTicketGroup {
+  key: string
+  sessionName: string
+  ticketName: string
+  attendeeCount: number
+  requiresAttendeeInfo: boolean
+  hasQuestions: boolean
+  slots: Array<{
+    key: string
+    attendeeLabel: string
+  }>
+}
+
 const EMPTY_BUYER_INFO: BuyerAttendeeInfoState = {
   firstName: '',
   lastName: '',
@@ -264,10 +277,6 @@ function formatChargeRate(valueType: string, value: number, currencyCode?: strin
 
 function isHtmlContent(value: string | null | undefined) {
   return Boolean(value && /<[^>]+>/.test(value))
-}
-
-function getVisiblePaymentMethods(event: EventRegisterWizardEvent) {
-  return event.paymentMethods.filter((method) => !method.isOrganizerOnly || event.isOrganizer)
 }
 
 function getSelectedSessionSummaries(
@@ -827,31 +836,61 @@ function RichTextBlock({ html }: { html: string }) {
   )
 }
 
-function SupportCard({ title, subtitle, icon, children }: { title: string; subtitle?: string; icon: ReactNode; children: ReactNode }) {
+function SupportCard({
+  title,
+  subtitle,
+  icon,
+  children,
+  bg = 'white',
+  hasDivider = false,
+}: {
+  title: string
+  subtitle?: string
+  icon: ReactNode
+  children: ReactNode
+  bg?: string
+  hasDivider?: boolean
+}) {
   return (
-    <Box borderWidth='1px' borderColor='gray.200' borderRadius='24px' bg='white' p={{ base: 5, md: 6 }} boxShadow='0 16px 40px rgba(15, 23, 42, 0.06)'>
-      <HStack gap={4} align='start' mb={4}>
+    <Box borderWidth='1px' borderColor='gray.200' borderRadius='24px' bg={bg} p={{ base: 5, md: 6 }} boxShadow='0 16px 40px rgba(15, 23, 42, 0.06)'>
+      <HStack gap={4} align='start' mb={hasDivider ? 0 : 4}>
         <Flex w='12' h='12' borderRadius='16px' align='center' justify='center' bg='gray.100' color='gray.700'>{icon}</Flex>
         <Stack gap={1} flex='1'>
           <Heading fontSize='lg' color='gray.900' letterSpacing='-0.02em'>{title}</Heading>
           {subtitle ? <Text fontSize='sm' color='gray.500' lineHeight='1.6'>{subtitle}</Text> : null}
         </Stack>
       </HStack>
-      {children}
+      {hasDivider ? <Box borderTopWidth='1px' borderTopColor='gray.200' mt={4} pt={4}>{children}</Box> : children}
     </Box>
   )
+}
+
+function formatPhoneNumberInput(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 10)
+
+  if (digits.length === 0) {
+    return ''
+  }
+
+  if (digits.length <= 3) {
+    return `(${digits}`
+  }
+
+  if (digits.length <= 6) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3)}`
+  }
+
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
 }
 
 function ContactDetailsFields({
   values,
   onChange,
   disabled = false,
-  required = false,
 }: {
   values: BuyerAttendeeInfoState
   onChange: (field: keyof BuyerAttendeeInfoState, value: string) => void
   disabled?: boolean
-  required?: boolean
 }) {
   const fieldCursor = disabled ? 'not-allowed' : 'text'
 
@@ -859,7 +898,7 @@ function ContactDetailsFields({
     <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
       <Box>
         <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
-          First name {required ? <Text as='span' color='red.500'>*</Text> : null}
+          First name
         </Text>
         <Input
           value={values.firstName}
@@ -877,7 +916,7 @@ function ContactDetailsFields({
 
       <Box>
         <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
-          Last name {required ? <Text as='span' color='red.500'>*</Text> : null}
+          Last name <Text as='span' color='red.500'>*</Text>
         </Text>
         <Input
           value={values.lastName}
@@ -895,7 +934,7 @@ function ContactDetailsFields({
 
       <Box>
         <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
-          Email {required ? <Text as='span' color='red.500'>*</Text> : null}
+          Email <Text as='span' color='red.500'>*</Text>
         </Text>
         <Input
           value={values.email}
@@ -920,7 +959,7 @@ function ContactDetailsFields({
         <Input
           value={values.phone}
           onChange={(event) => onChange('phone', event.target.value)}
-          placeholder='Phone number'
+          placeholder='(123) 456-7890'
           autoComplete='tel'
           disabled={disabled}
           cursor={fieldCursor}
@@ -929,7 +968,11 @@ function ContactDetailsFields({
           borderRadius='14px'
           h='12'
           px={4}
+          inputMode='tel'
         />
+        <Text mt={2} fontSize='xs' color='gray.500' lineHeight='1.5'>
+          Optional. Format is kept as (xxx) xxx-xxxx.
+        </Text>
       </Box>
     </SimpleGrid>
   )
@@ -1561,6 +1604,28 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       ),
     [selectedSessionSummaries],
   )
+  const attendeeTicketGroups = useMemo(
+    () =>
+      selectedSessionSummaries.flatMap<AttendeeTicketGroup>((sessionSummary) =>
+        sessionSummary.selectedTickets.map((selectedTicket) => {
+          const slots = Array.from({ length: selectedTicket.quantity }, (_, index) => ({
+            key: `${sessionSummary.session.uniqueId}:${selectedTicket.ticket.uniqueId}:${index + 1}`,
+            attendeeLabel: `Attendee ${index + 1}`,
+          }))
+
+          return {
+            key: `${sessionSummary.session.uniqueId}:${selectedTicket.ticket.uniqueId}`,
+            sessionName: sessionSummary.session.name,
+            ticketName: selectedTicket.ticket.name,
+            attendeeCount: selectedTicket.quantity,
+            requiresAttendeeInfo: sessionSummary.requiresAttendeeInfo,
+            hasQuestions: sessionSummary.hasQuestions,
+            slots,
+          }
+        }),
+      ),
+    [selectedSessionSummaries],
+  )
   const paymentQuery = useQuery({
     queryKey: ['event-registration', event.uniqueId, 'payment'],
     queryFn: () => fetchEventRegistrationPayment(event.uniqueId, selectedTicketTotal),
@@ -1727,7 +1792,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     }
 
     const buyerFields: Array<[keyof BuyerAttendeeInfoState, string]> = [
-      ['firstName', buyerInfo.firstName],
       ['lastName', buyerInfo.lastName],
       ['email', buyerInfo.email],
     ]
@@ -1874,7 +1938,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   function updateBuyerField(field: keyof BuyerAttendeeInfoState, value: string) {
     setBuyerInfo((current) => ({
       ...current,
-      [field]: value,
+      [field]: field === 'phone' ? formatPhoneNumberInput(value) : value,
     }))
   }
 
@@ -2588,7 +2652,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                       (ticket.description?.toLowerCase().includes(needle) ?? false)
                                     )
                                   })
-                                  const selectedSessionSummary = selectedSessionSummaries.find((summary) => summary.session.uniqueId === session.uniqueId) ?? null
 
                                   return (
                                     <SessionTitleCard
@@ -2602,7 +2665,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                     >
                                       {session.ticketTypes.length > 0 ? (
                                         <Stack gap={4}>
-                                          {selectedSessionSummary?.requiresAttendeeInfo ? (
+                                          {session.requiresAttendeeInfo ? (
                                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={3} alignItems='center'>
                                               <HStack gap={2} minW={0} align='center'>
                                                 <Tooltip.Root openDelay={250} closeDelay={100}>
@@ -2663,7 +2726,38 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                 ) : null}
                                               </Box>
                                             </SimpleGrid>
-                                          ) : null}
+                                          ) : (
+                                            <Box position='relative' w='full' maxW={{ base: 'full', md: '280px' }} ml={{ md: 'auto' }}>
+                                              <Input
+                                                value={searchValue}
+                                                onChange={(event) => handleSessionTicketSearchChange(session.uniqueId, event.target.value)}
+                                                placeholder='Search tickets'
+                                                h='44px'
+                                                px={4}
+                                                pe={searchValue ? 11 : 4}
+                                                borderRadius='full'
+                                                borderColor='gray.300'
+                                                bg='white'
+                                                fontSize='sm'
+                                                _focusVisible={{ borderColor: 'gray.500', boxShadow: '0 0 0 1px var(--chakra-colors-gray-500)' }}
+                                              />
+                                              {searchValue ? (
+                                                <CloseButton
+                                                  aria-label='Clear ticket search'
+                                                  size='sm'
+                                                  position='absolute'
+                                                  top='50%'
+                                                  right='10px'
+                                                  transform='translateY(-50%)'
+                                                  borderRadius='full'
+                                                  color='gray.500'
+                                                  bg='gray.100'
+                                                  _hover={{ bg: 'gray.200', color: 'gray.700' }}
+                                                  onClick={() => handleSessionTicketSearchChange(session.uniqueId, '')}
+                                                />
+                                              ) : null}
+                                            </Box>
+                                          )}
                                           {filteredTickets.length > 0 ? (
                                             <SimpleGrid columns={{ base: 1, xl: 3 }} gap={4}>
                                               {filteredTickets.map((ticket) => (
@@ -2700,31 +2794,32 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
                           {tab.id === 'buyer-attendee-info' ? (
                             <Box ref={buyerAttendeeValidationRef}>
-                              <SupportCard title='Buyer/Attendee info' subtitle='Capture the buyer first, then fill attendee details only for the sessions that require them.' icon={<Users size={18} />}>
-                                <Stack gap={5}>
-                                  {purchaseReviewAttempted && purchaseReviewMessage && purchaseReviewScrollTarget === 'buyer-attendee-info' ? (
-                                    <Box borderWidth='1px' borderColor='red.200' bg='red.50' borderRadius='18px' p={4}>
-                                      <Text fontSize='sm' color='red.700' fontWeight='600'>
-                                        {purchaseReviewMessage}
-                                      </Text>
-                                    </Box>
-                                  ) : null}
-
-                                  <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
-                                    <Stack gap={4}>
-                                      <Box>
-                                        <Text fontSize='sm' fontWeight='800' color='gray.900' mb={1}>
-                                          Buyer details
-                                        </Text>
-                                        <Text fontSize='sm' color='gray.600' lineHeight='1.6'>
-                                          This is the person placing the order and receiving the purchase confirmation.
-                                        </Text>
-                                      </Box>
-                                      <ContactDetailsFields values={buyerInfo} onChange={updateBuyerField} required />
-                                    </Stack>
+                              <Stack gap={5}>
+                                {purchaseReviewAttempted && purchaseReviewMessage && purchaseReviewScrollTarget === 'buyer-attendee-info' ? (
+                                  <Box borderWidth='1px' borderColor='red.200' bg='red.50' borderRadius='18px' p={4}>
+                                    <Text fontSize='sm' color='red.700' fontWeight='600'>
+                                      {purchaseReviewMessage}
+                                    </Text>
                                   </Box>
+                                ) : null}
 
-                                  {attendeeSlotEntries.length > 0 ? (
+                                  <SupportCard
+                                  title='Your Information'
+                                  subtitle='Enter the buyer contact details for order confirmation and follow-up.'
+                                  icon={<Users size={18} />}
+                                  bg='gray.100'
+                                  hasDivider
+                                >
+                                  <Stack gap={4}>
+                                    <Text fontSize='sm' color='gray.600' lineHeight='1.6'>
+                                      The buyer is the person placing the order and receiving the purchase confirmation.
+                                    </Text>
+                                    <ContactDetailsFields values={buyerInfo} onChange={updateBuyerField} />
+                                  </Stack>
+                                </SupportCard>
+
+                                <SupportCard title='Attendee details for selected tickets' subtitle='Use Same As Buyer when the buyer is also the attendee. Turn it off to enter a different attendee.' icon={<Users size={18} />}>
+                                  {attendeeTicketGroups.length > 0 ? (
                                     <Stack gap={4}>
                                       <Box borderWidth='1px' borderColor='blue.200' borderRadius='18px' bg='blue.50' p={4}>
                                         <Flex justify='space-between' gap={4} align='start' flexWrap='wrap'>
@@ -2752,15 +2847,56 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                       </Box>
 
                                       <Stack gap={4}>
-                                        {attendeeSlotEntries.map((slot) => (
-                                          <AttendeeSlotCard
-                                            key={slot.key}
-                                            slot={slot}
-                                            buyerInfo={buyerInfo}
-                                            attendeeInfo={attendeeInfoBySlot[slot.key] ?? { sameAsBuyer: true, ...buyerInfo }}
-                                            onToggleSameAsBuyer={toggleAttendeeSameAsBuyer}
-                                            onChangeField={updateAttendeeField}
-                                          />
+                                        {attendeeTicketGroups.map((group) => (
+                                          <Box key={group.key} borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' p={4} boxShadow='0 10px 24px rgba(15, 23, 42, 0.04)'>
+                                            <Stack gap={4}>
+                                              <Flex justify='space-between' gap={4} align={{ base: 'start', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
+                                                <Stack gap={1} minW={0}>
+                                                  <Text fontSize='sm' fontWeight='800' color='gray.900' lineHeight='1.4'>
+                                                    {group.sessionName}
+                                                  </Text>
+                                                  <Text fontSize='sm' color='gray.600' lineHeight='1.4'>
+                                                    {group.ticketName}
+                                                  </Text>
+                                                </Stack>
+                                                <HStack gap={2} flexWrap='wrap' justify='flex-end'>
+                                                  <Badge colorPalette='gray' variant='subtle' borderRadius='full' px={3} py={1}>
+                                                    {group.attendeeCount} {group.attendeeCount === 1 ? 'attendee' : 'attendees'}
+                                                  </Badge>
+                                                  {group.requiresAttendeeInfo ? (
+                                                    <Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>
+                                                      Required
+                                                    </Badge>
+                                                  ) : null}
+                                                  {group.hasQuestions ? (
+                                                    <Badge colorPalette='orange' variant='subtle' borderRadius='full' px={3} py={1}>
+                                                      Questions
+                                                    </Badge>
+                                                  ) : null}
+                                                </HStack>
+                                              </Flex>
+
+                                              <Stack gap={4}>
+                                                {group.slots.map((slot) => (
+                                                  <AttendeeSlotCard
+                                                    key={slot.key}
+                                                    slot={{
+                                                      key: slot.key,
+                                                      sessionName: group.sessionName,
+                                                      ticketName: group.ticketName,
+                                                      attendeeLabel: slot.attendeeLabel,
+                                                      requiresAttendeeInfo: group.requiresAttendeeInfo,
+                                                      hasQuestions: group.hasQuestions,
+                                                    }}
+                                                    buyerInfo={buyerInfo}
+                                                    attendeeInfo={attendeeInfoBySlot[slot.key] ?? { sameAsBuyer: true, ...buyerInfo }}
+                                                    onToggleSameAsBuyer={toggleAttendeeSameAsBuyer}
+                                                    onChangeField={updateAttendeeField}
+                                                  />
+                                                ))}
+                                              </Stack>
+                                            </Stack>
+                                          </Box>
                                         ))}
                                       </Stack>
                                     </Stack>
@@ -2771,8 +2907,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                       </Text>
                                     </Box>
                                   )}
-                                </Stack>
-                              </SupportCard>
+                                </SupportCard>
+                              </Stack>
                             </Box>
                           ) : null}
 
