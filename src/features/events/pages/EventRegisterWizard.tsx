@@ -24,6 +24,7 @@ import {
   SkeletonText,
   Stack,
   Tabs,
+  Switch,
   Text,
   Tooltip,
 } from '@chakra-ui/react'
@@ -1052,7 +1053,7 @@ function AttendeeTicketCard({
   attendeeInfoBySlot: Record<string, AttendeeSlotState>
   sessionSameAsBuyer: boolean
   ticketSameAsBuyer: boolean
-  onToggleSameAsBuyer: (sessionId: string, ticketId: string) => void
+  onToggleSameAsBuyer: (sessionId: string, ticketId: string, checked: boolean) => void
   onChangeField: (slotKey: string, field: keyof BuyerAttendeeInfoState, value: string) => void
 }) {
   const isLocked = sessionSameAsBuyer || ticketSameAsBuyer
@@ -1063,18 +1064,15 @@ function AttendeeTicketCard({
       <Stack gap={4}>
         <Flex justify='space-between' gap={4} align={{ base: 'start', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
           <Stack gap={1} minW={0}>
-            <Text fontSize='sm' fontWeight='800' color='gray.900' lineHeight='1.4'>
-              {group.ticketName}
-            </Text>
-            <Text fontSize='sm' color='gray.600' lineHeight='1.4'>
-              {group.attendeeCount} {group.attendeeCount === 1 ? 'attendee' : 'attendees'}
-            </Text>
+            <HStack gap={2} align='baseline' flexWrap='wrap' minW={0}>
+              <Text fontSize='sm' fontWeight='800' color='gray.900' lineHeight='1.4' noOfLines={1}>
+                {group.ticketName}
+              </Text>
+              <Text fontSize='sm' color='gray.600' lineHeight='1.4' whiteSpace='nowrap'>
+                | {group.attendeeCount} {group.attendeeCount === 1 ? 'attendee' : 'attendees'}
+              </Text>
+            </HStack>
             <HStack gap={2} flexWrap='wrap'>
-              {group.requiresAttendeeInfo ? (
-                <Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>
-                  Required
-                </Badge>
-              ) : null}
               {group.hasQuestions ? (
                 <Badge colorPalette='orange' variant='subtle' borderRadius='full' px={3} py={1}>
                   Questions
@@ -1083,27 +1081,28 @@ function AttendeeTicketCard({
             </HStack>
           </Stack>
 
-          <Button
-            type='button'
-            variant='outline'
-            borderRadius='14px'
-            minH='11'
-            justifyContent='space-between'
-            onClick={() => onToggleSameAsBuyer(group.sessionId, group.ticketId)}
-            aria-pressed={isSameAsBuyer}
-            disabled={sessionSameAsBuyer}
-            cursor={sessionSameAsBuyer ? 'not-allowed' : 'pointer'}
+          <HStack
+            gap={3}
+            align='center'
+            cursor='help'
+            title='Copy the buyer contact details into every attendee for this ticket.'
           >
-            <Text as='span' fontWeight='700'>
+            <Text fontSize='sm' fontWeight='700' color='gray.700'>
               Same As Buyer
             </Text>
-            <Badge colorPalette={isSameAsBuyer ? 'blue' : 'gray'} variant='subtle' borderRadius='full' px={3} py={1}>
-              {isSameAsBuyer ? 'On' : 'Off'}
-            </Badge>
-          </Button>
+            <Switch.Root
+              checked={isSameAsBuyer}
+              disabled={sessionSameAsBuyer}
+              onCheckedChange={(details) => onToggleSameAsBuyer(group.sessionId, group.ticketId, details.checked === true)}
+              colorPalette='brand'
+            >
+              <Switch.HiddenInput />
+              <Switch.Control />
+            </Switch.Root>
+          </HStack>
         </Flex>
 
-        <Stack gap={4}>
+        <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
           {group.slots.map((slot) => (
             <AttendeeSlotCard
               key={slot.key}
@@ -1117,7 +1116,7 @@ function AttendeeTicketCard({
               onChangeField={onChangeField}
             />
           ))}
-        </Stack>
+        </SimpleGrid>
       </Stack>
     </Box>
   )
@@ -1510,6 +1509,8 @@ function SessionsTabSkeleton() {
 export function EventRegisterWizard({ event, formAccent, onBack }: { event: EventRegisterWizardEvent; formAccent: string; onBack: () => void }) {
   const accentBackground = hexToRgba(formAccent, 0.18)
   const [buyerInfo, setBuyerInfo] = useState<BuyerAttendeeInfoState>(EMPTY_BUYER_INFO)
+  const [buyerDetailsAlertMessage, setBuyerDetailsAlertMessage] = useState<string | null>(null)
+  const [buyerDetailsAlertOpen, setBuyerDetailsAlertOpen] = useState(false)
   const [attendeeInfoBySlot, setAttendeeInfoBySlot] = useState<Record<string, AttendeeSlotState>>({})
   const [sessionSameAsBuyerById, setSessionSameAsBuyerById] = useState<Record<string, boolean>>({})
   const [ticketSameAsBuyerById, setTicketSameAsBuyerById] = useState<Record<string, boolean>>({})
@@ -2037,11 +2038,20 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const isSessionSameAsBuyer = (sessionId: string) => Boolean(sessionSameAsBuyerById[sessionId])
   const isTicketSameAsBuyer = (sessionId: string, ticketId: string) =>
     isSessionSameAsBuyer(sessionId) || Boolean(ticketSameAsBuyerById[ticketId])
+  const missingBuyerDetails = useMemo(
+    () => [
+      !buyerInfo.lastName.trim() ? 'Last name' : null,
+      !buyerInfo.email.trim() ? 'Email' : null,
+    ].filter((field): field is string => Boolean(field)),
+    [buyerInfo.email, buyerInfo.lastName],
+  )
 
   function updateBuyerField(field: keyof BuyerAttendeeInfoState, value: string) {
+    const nextValue = field === 'phone' ? formatPhoneNumberInput(value) : value
+
     setBuyerInfo((current) => ({
       ...current,
-      [field]: field === 'phone' ? formatPhoneNumberInput(value) : value,
+      [field]: nextValue,
     }))
   }
 
@@ -2063,20 +2073,53 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     })
   }
 
-  function toggleSessionSameAsBuyer(sessionId: string) {
-    setSessionSameAsBuyerById((current) => ({
-      ...current,
-      [sessionId]: !current[sessionId],
-    }))
+  function handleBuyerDetailsMissing() {
+    const message =
+      missingBuyerDetails.length === 1
+        ? `${missingBuyerDetails[0]} is required in Your Information before enabling Same As Buyer.`
+        : `${missingBuyerDetails.join(' and ')} are required in Your Information before enabling Same As Buyer.`
+
+    setBuyerDetailsAlertMessage(message)
+    setBuyerDetailsAlertOpen(true)
   }
 
-  function toggleTicketSameAsBuyer(sessionId: string, ticketId: string) {
+  function closeBuyerDetailsAlert() {
+    setBuyerDetailsAlertOpen(false)
+    setBuyerDetailsAlertMessage(null)
+  }
+
+  function toggleSessionSameAsBuyer(sessionId: string, checked: boolean) {
+    if (checked && missingBuyerDetails.length > 0) {
+      handleBuyerDetailsMissing()
+      return
+    }
+
+    setSessionSameAsBuyerById((current) => ({
+      ...current,
+      [sessionId]: checked,
+    }))
+
+    if (!checked) {
+      closeBuyerDetailsAlert()
+    }
+  }
+
+  function toggleTicketSameAsBuyer(sessionId: string, ticketId: string, checked: boolean) {
+    if (checked && missingBuyerDetails.length > 0) {
+      handleBuyerDetailsMissing()
+      return
+    }
+
     if (isSessionSameAsBuyer(sessionId)) return
 
     setTicketSameAsBuyerById((current) => ({
       ...current,
-      [ticketId]: !current[ticketId],
+      [ticketId]: checked,
     }))
+
+    if (!checked) {
+      closeBuyerDetailsAlert()
+    }
   }
 
   function handleBackStep() {
@@ -2985,28 +3028,24 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                     </Text>
                                                   </Stack>
 
-                                                  <Button
-                                                    type='button'
-                                                    variant='outline'
-                                                    borderRadius='14px'
-                                                    minH='11'
-                                                    justifyContent='space-between'
-                                                    onClick={() => toggleSessionSameAsBuyer(sessionGroup.sessionId)}
-                                                    aria-pressed={sessionSameAsBuyer}
+                                                  <HStack
+                                                    gap={3}
+                                                    align='center'
+                                                    cursor='help'
+                                                    title='Copy the buyer contact details into every attendee for this session.'
                                                   >
-                                                    <Text as='span' fontWeight='700'>
+                                                    <Text fontSize='sm' fontWeight='700' color='gray.700'>
                                                       Same As Buyer
                                                     </Text>
-                                                    <Badge
-                                                      colorPalette={sessionSameAsBuyer ? 'blue' : 'gray'}
-                                                      variant='subtle'
-                                                      borderRadius='full'
-                                                      px={3}
-                                                      py={1}
+                                                    <Switch.Root
+                                                      checked={sessionSameAsBuyer}
+                                                      onCheckedChange={(details) => toggleSessionSameAsBuyer(sessionGroup.sessionId, details.checked === true)}
+                                                      colorPalette='brand'
                                                     >
-                                                      {sessionSameAsBuyer ? 'On' : 'Off'}
-                                                    </Badge>
-                                                  </Button>
+                                                      <Switch.HiddenInput />
+                                                      <Switch.Control />
+                                                    </Switch.Root>
+                                                  </HStack>
                                                 </Flex>
 
                                                 <Stack gap={4}>
@@ -3056,13 +3095,19 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                               {session.attendeeCount} attendee {session.attendeeCount === 1 ? 'slot' : 'slots'} selected for this session.
                                             </Text>
                                           </Stack>
-                                          <Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>Required</Badge>
                                         </HStack>
                                         <Stack gap={2} mt={4}>
                                           {session.selectedTickets.map((ticket) => (
                                             <Flex key={ticket.ticket.uniqueId} justify='space-between' gap={4} align='center' bg='white' borderWidth='1px' borderColor='gray.200' borderRadius='14px' px={4} py={3}>
                                               <Stack gap={0.5} minW={0}>
-                                                <Text fontWeight='700' color='gray.900'>{ticket.ticket.name}</Text>
+                                                <HStack gap={2} align='baseline' flexWrap='wrap' minW={0}>
+                                                  <Text fontWeight='700' color='gray.900' noOfLines={1}>
+                                                    {ticket.ticket.name}
+                                                  </Text>
+                                                  <Text fontSize='sm' fontWeight='400' color='gray.600' whiteSpace='nowrap'>
+                                                    | {ticket.quantity} {ticket.quantity === 1 ? 'ticket' : 'tickets'} added
+                                                  </Text>
+                                                </HStack>
                                                 <Text fontSize='sm' color='gray.600'>
                                                   {ticket.quantity} {ticket.quantity === 1 ? 'attendee' : 'attendees'} needed for this ticket.
                                                 </Text>
@@ -3637,6 +3682,50 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
           </Dialog.Positioner>
         </Dialog.Root>
       ) : null}
+
+      <Dialog.Root
+        open={buyerDetailsAlertOpen}
+        onOpenChange={(details) => {
+          if (!details.open) {
+            closeBuyerDetailsAlert()
+          }
+        }}
+        size='sm'
+      >
+        <Dialog.Backdrop backdropFilter='blur(8px)' bg='blackAlpha.650' />
+        <Dialog.Positioner alignItems='center' justifyContent='center' px={{ base: 4, md: 6 }} py={{ base: 6, md: 8 }}>
+          <Dialog.Content borderRadius='28px' overflow='hidden' bg='white' boxShadow='0 30px 80px rgba(15, 23, 42, 0.28)'>
+            <Box h='5px' bg='orange.400' />
+            <Box px={{ base: 4, md: 5 }} py={{ base: 5, md: 6 }}>
+              <Stack gap={5} align='center' textAlign='center'>
+                <Box w='72px' h='72px' borderRadius='24px' display='grid' placeItems='center' bg='orange.50' color='orange.500'>
+                  <AlertCircle size={30} />
+                </Box>
+                <Stack gap={2} maxW='2xl'>
+                  <Heading fontSize={{ base: '2xl', md: '3xl' }} letterSpacing='-0.04em'>
+                    Buyer details missing
+                  </Heading>
+                  <Text color='gray.600' lineHeight='1.7'>
+                    {buyerDetailsAlertMessage}
+                  </Text>
+                </Stack>
+                <Button
+                  minH='12'
+                  px={6}
+                  borderRadius='16px'
+                  color='white'
+                  bg='orange.500'
+                  _hover={{ bg: 'orange.600' }}
+                  _active={{ bg: 'orange.700' }}
+                  onClick={closeBuyerDetailsAlert}
+                >
+                  Ok
+                </Button>
+              </Stack>
+            </Box>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
 
       <Dialog.Root open={Boolean(activeSessionDescription)} onOpenChange={(details) => { if (!details.open) setActiveSessionDescription(null) }} size='lg'>
         <Dialog.Backdrop backdropFilter='blur(8px)' bg='blackAlpha.600' />
