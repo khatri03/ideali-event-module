@@ -1783,7 +1783,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                 </Box>
 
                                 <Stack gap={0} px={4} py={2.5}>
-                                  {sessionGroup.items.map((item, itemIndex) => (
+                                  {sessionGroup.items.map((item, itemIndex) => {
+                                    const quantityOptions = getTicketQuantityOptions(item.ticket, item.quantity)
+
+                                    return (
                                     <Box
                                       key={item.ticketId}
                                       py={3}
@@ -1842,51 +1845,101 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                           px={2}
                                           py={1.5}
                                         >
-                                          <Text fontSize='xs' color='gray.500' fontWeight='600'>
+                                          <Text fontSize='xs' color='gray.500' fontWeight='600' flexShrink={0}>
                                             Qty
                                           </Text>
-                                          <Box flex='1' minW='84px' maxW='128px' position='relative'>
-                                            <chakra.select
-                                              value={String(item.quantity)}
-                                              onChange={(event) => handleTicketQuantityChange(item.ticket, Number(event.target.value))}
-                                              w='full'
-                                              h='34px'
-                                              pl={3}
-                                              pr={8}
-                                              borderWidth='1px'
-                                              borderColor='gray.200'
+                                          <HStack
+                                            gap={1}
+                                            borderWidth='1px'
+                                            borderColor='gray.200'
+                                            borderRadius='full'
+                                            bg='white'
+                                            px={1}
+                                            py={0.5}
+                                            w='132px'
+                                            minW='132px'
+                                            flexShrink={0}
+                                            justify='space-between'
+                                            align='center'
+                                          >
+                                              <Button
+                                                minW='0'
+                                                w='28px'
+                                                h='28px'
+                                                p='0'
+                                                borderRadius='full'
+                                                borderWidth='1px'
+                                                borderColor='gray.300'
+                                                bg='white'
+                                                onClick={() => handleTicketQuantityChange(item.ticket, getTicketQuantityAfterDecrement(item.ticket, item.quantity))}
+                                                disabled={item.quantity <= 0}
+                                                aria-label={`Decrease ${item.ticketName}`}
+                                                title={`Decrease ${item.ticketName}`}
+                                              >
+                                                <Text as='span' fontSize='md' fontWeight='800' lineHeight='1' color='gray.700'>-</Text>
+                                              </Button>
+
+                                            <Box flex='1' minW='0' position='relative'>
+                                              <chakra.select
+                                                value={String(item.quantity)}
+                                                onChange={(event) => handleTicketQuantityChange(item.ticket, Number(event.target.value))}
+                                                w='full'
+                                                h='28px'
+                                                pl={2}
+                                                pr={6}
+                                                border='none'
+                                                outline='none'
+                                                bg='transparent'
+                                                color='gray.900'
+                                                fontSize='sm'
+                                                fontWeight='800'
+                                                textAlign='center'
+                                                textAlignLast='center'
+                                                appearance='none'
+                                                cursor='pointer'
+                                                _focusVisible={{ outline: 'none' }}
+                                              >
+                                                {quantityOptions.map((option) => (
+                                                  <option key={option.value} value={option.value}>
+                                                    {option.label}
+                                                  </option>
+                                                ))}
+                                              </chakra.select>
+                                              <Flex
+                                                position='absolute'
+                                                insetY='0'
+                                                right={2}
+                                                align='center'
+                                                pointerEvents='none'
+                                                color='gray.500'
+                                              >
+                                                <ChevronDown size={14} strokeWidth={2.25} />
+                                              </Flex>
+                                            </Box>
+
+                                            <Button
+                                              minW='0'
+                                              w='28px'
+                                              h='28px'
+                                              p='0'
                                               borderRadius='full'
+                                              borderWidth='1px'
+                                              borderColor='gray.300'
                                               bg='white'
-                                              color='gray.900'
-                                              fontSize='sm'
-                                              fontWeight='800'
-                                              textAlign='center'
-                                              textAlignLast='center'
-                                              appearance='none'
-                                              cursor='pointer'
-                                              _focusVisible={{ outline: 'none', borderColor: 'gray.400' }}
+                                              color='gray.700'
+                                              onClick={() => handleTicketQuantityChange(item.ticket, item.quantity + 1)}
+                                              disabled={getTicketSelectableMax(item.ticket) !== null && item.quantity >= (getTicketSelectableMax(item.ticket) ?? 0)}
+                                              aria-label={`Increase ${item.ticketName}`}
+                                              title={`Increase ${item.ticketName}`}
                                             >
-                                              {getTicketQuantityOptions(item.ticket, item.quantity).map((option) => (
-                                                <option key={option.value} value={option.value}>
-                                                  {option.label}
-                                                </option>
-                                              ))}
-                                            </chakra.select>
-                                            <Flex
-                                              position='absolute'
-                                              insetY='0'
-                                              right={3}
-                                              align='center'
-                                              pointerEvents='none'
-                                              color='gray.500'
-                                            >
-                                              <ChevronDown size={14} strokeWidth={2.25} />
-                                            </Flex>
-                                          </Box>
+                                              <Text as='span' fontSize='md' fontWeight='800' lineHeight='1'>+</Text>
+                                            </Button>
+                                          </HStack>
                                         </HStack>
                                       </Stack>
                                     </Box>
-                                  ))}
+                                    )
+                                  })}
                                 </Stack>
                               </Box>
                             ))}
