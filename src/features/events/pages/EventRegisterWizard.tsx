@@ -1297,6 +1297,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     paymentBreakdowns[0] ??
     null
   const isSelectedPaymentMethodCard = Boolean(selectedPaymentBreakdown && isCardPaymentMethod(selectedPaymentBreakdown.paymentMethod))
+  const paymentBreakdownSubtotal = selectedPaymentBreakdown?.subtotal ?? selectedTicketTotal
   const eventData = {
     ...event,
     description: descriptionData.description ?? event.description,
@@ -2549,6 +2550,19 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                   ) : null}
                                                 </Fragment>
                                               ))}
+
+                                              <Table.Row bg='gray.50'>
+                                                <Table.Cell borderColor='gray.200' px={4} py={3}>
+                                                  <Text fontWeight='800' color='gray.900'>Subtotal</Text>
+                                                </Table.Cell>
+                                                <Table.Cell borderColor='gray.200' px={4} py={3} />
+                                                <Table.Cell borderColor='gray.200' px={4} py={3} />
+                                                <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
+                                                  <Text fontSize='lg' fontWeight='800' color='gray.900'>
+                                                    {formatAmount(paymentBreakdownSubtotal, currentEvent.paymentAccountCurrency)}
+                                                  </Text>
+                                                </Table.Cell>
+                                              </Table.Row>
 
                                               {selectedPaymentBreakdown.charges.length > 0 ? selectedPaymentBreakdown.charges.map((charge) => (
                                                 <Table.Row key={`${selectedPaymentBreakdown.paymentMethod}-${charge.source}-${charge.title}`}>

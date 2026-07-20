@@ -1,61 +1,56 @@
 # Codex Handoff
 
 ## Current Objective
-Carry the event charge-rule work forward safely. The backend now includes mapped event charge rules in registration payment breakdowns; the next session should verify any UI follow-through only if needed.
+Continue polishing the registration Summary card quantity control in `src/features/events/pages/EventRegisterWizard.tsx`, now that the compact stepper update is committed.
 
 ## Completed Work
-- Event advanced settings now persists `ChargeRuleUniqueIds`.
-- Event registration payment breakdowns now include mapped event charge rules in the existing `Charges` array.
-- Frontend registration UI already consumes `paymentBreakdowns[].charges`, so no new response field was needed.
-- Backend build completed successfully after the change.
+- Replaced the Summary card quantity dropdown with a compact inline stepper plus select.
+- Added the missing local `quantityOptions` derivation inside the summary row map.
+- Tightened the Summary Qty control to a fixed compact width so the `+` button stays inside the row.
+- Committed the UI change as `e9a7784` with message `Compact summary ticket quantity stepper`.
 
 ## Architectural Decisions and Reasons
-- Reused `paymentBreakdowns[].charges` instead of adding a new payment payload field, to avoid a contract fork.
-- Tagged mapped event charge rows with `Source = "event-charge-rule"` so they can coexist with revenue-plan and processor-fee rows.
-- Kept revenue-plan and processor-fee behavior unchanged.
-- Kept charge-rule mapping in event advanced settings rather than introducing a separate event charge configuration path.
+- Reused `getTicketQuantityOptions` and `getTicketQuantityAfterDecrement` instead of introducing new quantity logic.
+- Kept the Summary card control visually aligned with the Sessions tab pattern, but with a smaller fixed-width container.
+- Kept the quantity control local to `EventRegisterWizard.tsx` rather than extracting new shared UI while the layout is still being tuned.
 
 ## Files Changed
-- Frontend commit `8809faa`
-  - `src/api/chargeRules.ts`
-  - `src/api/events.ts`
-  - `src/features/charge-rules/components/ChargeRuleDialog.tsx`
-  - `src/features/charge-rules/components/ChargeRulesManager.tsx`
-  - `src/features/charge-rules/index.ts`
-  - `src/features/events/components/EventChargeRulesSection.tsx`
-  - `src/features/events/hooks/useEventChargeRuleOptions.ts`
-  - `src/features/events/hooks/useEventWizardResumeValues.ts`
-  - `src/features/events/pages/EventPurchaseTimeLimitStepPage.tsx`
-  - `src/features/events/pages/EventWizardLayout.tsx`
-  - `src/features/events/schemas/eventWizard.schemas.ts`
-- Backend commit `dda5004a`
-  - `src/Modules/Event/Ideas.Event.Infrastructure/Services/EventRegistrationService.cs`
-  - `tests/Ideas.API.Tests/Wizard/EventWizardServiceTests.cs`
+- `src/features/events/pages/EventRegisterWizard.tsx` (`e9a7784`)
+- `docs/CODEX_HANDOFF.md` (this handoff update)
 
 ## Important Commands and Test Results
-- `git show --stat --oneline --name-only 8809faa --`
-- `git show --stat --oneline --name-only dda5004a --`
-- `dotnet build D:\V4Ideas\Ideali\ideali.api\Ideali.API.sln` succeeded.
-- Frontend repo status was checked and had only an untracked `CODEX_HANDOFF_INSTRUCTIONS.md`.
-- Backend repo status was checked and was clean on the tracked branch.
+- `git show --stat --oneline --name-only e9a7784 --` confirmed the only committed source file was `src/features/events/pages/EventRegisterWizard.tsx`.
+- `git status --short` currently shows only `?? CODEX_HANDOFF_INSTRUCTIONS.md` as untracked before this handoff update.
+- `git branch --show-current` returned `sohail/features/event/event-registration`.
+- `C:\\WINDOWS\\System32\\cmd.exe /c npm run build` failed on unrelated existing TypeScript errors in other files, including:
+  - `src/features/admin-fee-plans/components/AdminFeePlansManager.tsx`
+  - `src/features/events/components/EventChargeRulesSection.tsx`
+  - `src/features/sessions/components/SessionFiltersCard.tsx`
+  - `src/features/sessions/components/SessionListTable.tsx`
+  - `src/features/venues/pages/VenueManagementPage.tsx`
+  - `src/main.tsx`
 
 ## Known Bugs or Limitations
-- The frontend currently does not visually distinguish `event-charge-rule` rows from revenue-plan rows; only `processor-fee` gets a special secondary label.
-- No additional frontend behavior was changed in this turn.
+- The Summary Qty control is compact but still may need browser-level pixel tuning.
+- Repo-wide build is still blocked by unrelated TypeScript errors outside this change.
+- No automated UI test currently covers this exact Summary control layout.
 
 ## Unfinished Tasks
-1. Verify the registration payment tab in the browser with the new backend payload.
-2. If product wants it, add a visual distinction for `event-charge-rule` rows.
+1. Verify the Summary Qty control in the browser and confirm the `+` button stays fully inside the row.
+2. If needed, reduce the fixed width or padding by a few pixels.
+3. Decide whether the Summary card delete affordance needs separate visual refinement.
 
 ## Exact Next Action
-Open `src/features/events/pages/EventRegisterWizard.tsx` and confirm whether the new `event-charge-rule` rows need any UI-specific styling or labeling.
+Open `src/features/events/pages/EventRegisterWizard.tsx`, inspect the Summary card Qty row in the browser, and tune the fixed width/padding only if the control still looks cramped.
 
-## Assumptions That Must Not Change
-- Do not split event charge rules into a separate registration payload field.
-- Do not change revenue-plan or processor-fee behavior while continuing this work.
-- Keep charge-rule mapping attached to event advanced settings.
+## Assumptions That Must Not Be Changed
+- Keep the Summary card quantity control based on the Sessions-tab select-plus-stepper pattern.
+- Do not add new dependencies or global state.
+- Do not touch unrelated charge-rule or payment-tab work while continuing this UI polish.
+- Do not use `localStorage` or `sessionStorage`.
 
 ## Branch and Commit Status
-- Frontend repo: `sohail/features/event/event-registration`, HEAD `8809faa`, tracking `origin/sohail/features/event/event-registration`.
-- Backend repo: `sohail/features/event/event-registration`, HEAD `dda5004a`, tracking `origin/sohail/features/event/event-registration`.
-- Current frontend working tree is not clean because `docs/CODEX_HANDOFF.md` is new and `CODEX_HANDOFF_INSTRUCTIONS.md` is still untracked.
+- Frontend repo branch: `sohail/features/event/event-registration`
+- Current HEAD: `e9a7784`
+- Latest commit: `Compact summary ticket quantity stepper`
+- Working tree is otherwise clean except for the pre-existing untracked `CODEX_HANDOFF_INSTRUCTIONS.md`
