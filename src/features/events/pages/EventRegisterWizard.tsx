@@ -66,9 +66,9 @@ import {
 } from '@/components/common/controlStyles'
 
 const LOCAL_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
-type WizardTabId = 'description' | 'sessions' | 'attendee-info' | 'questionnaire' | 'payment'
+type WizardTabId = 'description' | 'sessions' | 'buyer-attendee-info' | 'attendee-info' | 'questionnaire' | 'payment'
 type CardFieldId = 'number' | 'expiry' | 'cvc'
-type PurchaseReviewValidationTarget = 'payment-method' | 'payment-card' | 'terms'
+type PurchaseReviewValidationTarget = 'buyer-attendee-info' | 'payment-method' | 'payment-card' | 'terms'
 
 interface CardFieldState {
   complete: boolean
@@ -84,6 +84,35 @@ interface PaymentCardValidationState {
 interface PurchaseReviewIssue {
   message: string
   target: PurchaseReviewValidationTarget
+}
+
+interface BuyerAttendeeInfoState {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+}
+
+interface AttendeeSlotState extends BuyerAttendeeInfoState {
+  sameAsBuyer: boolean
+}
+
+interface SelectedSessionSummary {
+  session: EventRegistrationSession
+  selectedTickets: Array<{
+    ticket: EventRegistrationTicket
+    quantity: number
+  }>
+  attendeeCount: number
+  requiresAttendeeInfo: boolean
+  hasQuestions: boolean
+}
+
+const EMPTY_BUYER_INFO: BuyerAttendeeInfoState = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
 }
 
 const INITIAL_CARD_FIELD_STATE: PaymentCardValidationState = {
@@ -239,24 +268,63 @@ function getVisiblePaymentMethods(event: EventRegisterWizardEvent) {
   return event.paymentMethods.filter((method) => !method.isOrganizerOnly || event.isOrganizer)
 }
 
-function getVisibleTabs(event: EventRegisterWizardEvent) {
-  const tabs: Array<{ id: WizardTabId; label: string; icon: typeof FileText }> = []
-  const visibleTabs = event.visibleTabs ?? []
+function getSelectedSessionSummaries(
+  sessions: EventRegistrationSession[],
+  selectedTicketQuantities: Record<string, number>,
+) {
+  return sessions.reduce<SelectedSessionSummary[]>((summaries, session) => {
+    const selectedTickets = session.ticketTypes.flatMap((ticket) => {
+      const quantity = selectedTicketQuantities[ticket.uniqueId] ?? 0
 
-  if (visibleTabs.length > 0) {
-    if (visibleTabs.includes('description')) tabs.push({ id: 'description', label: 'Description', icon: FileText })
-    if (visibleTabs.includes('sessions')) tabs.push({ id: 'sessions', label: 'Sessions', icon: CalendarDays })
-    if (visibleTabs.includes('attendee-info')) tabs.push({ id: 'attendee-info', label: 'Attendee Info', icon: Users })
-    if (visibleTabs.includes('questionnaire')) tabs.push({ id: 'questionnaire', label: 'Questionnaire', icon: MessageSquareText })
-    if (visibleTabs.includes('payment')) tabs.push({ id: 'payment', label: 'Payment', icon: CreditCard })
-    return tabs
+      if (quantity <= 0) return []
+
+      return [{ ticket, quantity }]
+    })
+
+    if (selectedTickets.length === 0) {
+      return summaries
+    }
+
+    summaries.push({
+      session,
+      selectedTickets,
+      attendeeCount: selectedTickets.reduce((total, item) => total + item.quantity, 0),
+      requiresAttendeeInfo: session.requiresAttendeeInfo,
+      hasQuestions: session.customForms.length > 0 || session.customQuestions.length > 0,
+    })
+
+    return summaries
+  }, [])
+}
+
+function getVisibleTabs(event: EventRegisterWizardEvent, selectedTicketQuantities: Record<string, number>) {
+  const tabs: Array<{ id: WizardTabId; label: string; icon: typeof FileText }> = []
+  const selectedSessionSummaries = getSelectedSessionSummaries(event.sessions, selectedTicketQuantities)
+  const hasSelectedAttendeeInfo = selectedSessionSummaries.some((session) => session.requiresAttendeeInfo)
+  const hasSelectedQuestions = selectedSessionSummaries.some((session) => session.hasQuestions)
+  const visibleTabs = event.visibleTabs ?? []
+  const shouldHonorServerTabs = visibleTabs.length > 0
+  const isVisible = (tabId: Exclude<WizardTabId, 'buyer-attendee-info'>) =>
+    !shouldHonorServerTabs || visibleTabs.includes(tabId)
+
+  if (isVisible('description') && (event.description?.trim() || event.summary?.trim())) {
+    tabs.push({ id: 'description', label: 'Description', icon: FileText })
   }
 
-  if (event.description?.trim() || event.summary?.trim()) tabs.push({ id: 'description', label: 'Description', icon: FileText })
   tabs.push({ id: 'sessions', label: 'Sessions', icon: CalendarDays })
-  if (event.sessions.some((session) => session.requiresAttendeeInfo)) tabs.push({ id: 'attendee-info', label: 'Attendee Info', icon: Users })
-  if (event.sessions.some((session) => session.customForms.length > 0 || session.customQuestions.length > 0)) tabs.push({ id: 'questionnaire', label: 'Questionnaire', icon: MessageSquareText })
-  if (getVisiblePaymentMethods(event).length > 0) tabs.push({ id: 'payment', label: 'Payment', icon: CreditCard })
+
+  tabs.push({ id: 'buyer-attendee-info', label: 'Buyer/Attendee info', icon: Users })
+
+  if (hasSelectedAttendeeInfo || isVisible('attendee-info') && event.sessions.some((session) => session.requiresAttendeeInfo)) {
+    tabs.push({ id: 'attendee-info', label: 'Attendee Info', icon: Users })
+  }
+
+  if (hasSelectedQuestions || isVisible('questionnaire') && event.sessions.some((session) => session.customForms.length > 0 || session.customQuestions.length > 0)) {
+    tabs.push({ id: 'questionnaire', label: 'Questionnaire', icon: MessageSquareText })
+  }
+
+  tabs.push({ id: 'payment', label: 'Payment', icon: CreditCard })
+
   return tabs
 }
 
@@ -772,6 +840,178 @@ function SupportCard({ title, subtitle, icon, children }: { title: string; subti
   )
 }
 
+function ContactDetailsFields({
+  values,
+  onChange,
+  disabled = false,
+  required = false,
+}: {
+  values: BuyerAttendeeInfoState
+  onChange: (field: keyof BuyerAttendeeInfoState, value: string) => void
+  disabled?: boolean
+  required?: boolean
+}) {
+  const fieldCursor = disabled ? 'not-allowed' : 'text'
+
+  return (
+    <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+      <Box>
+        <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
+          First name {required ? <Text as='span' color='red.500'>*</Text> : null}
+        </Text>
+        <Input
+          value={values.firstName}
+          onChange={(event) => onChange('firstName', event.target.value)}
+          placeholder='First name'
+          disabled={disabled}
+          cursor={fieldCursor}
+          borderColor='gray.200'
+          bg={disabled ? 'gray.100' : 'white'}
+          borderRadius='14px'
+          h='12'
+          px={4}
+        />
+      </Box>
+
+      <Box>
+        <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
+          Last name {required ? <Text as='span' color='red.500'>*</Text> : null}
+        </Text>
+        <Input
+          value={values.lastName}
+          onChange={(event) => onChange('lastName', event.target.value)}
+          placeholder='Last name'
+          disabled={disabled}
+          cursor={fieldCursor}
+          borderColor='gray.200'
+          bg={disabled ? 'gray.100' : 'white'}
+          borderRadius='14px'
+          h='12'
+          px={4}
+        />
+      </Box>
+
+      <Box>
+        <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
+          Email {required ? <Text as='span' color='red.500'>*</Text> : null}
+        </Text>
+        <Input
+          value={values.email}
+          onChange={(event) => onChange('email', event.target.value)}
+          placeholder='Email address'
+          type='email'
+          autoComplete='email'
+          disabled={disabled}
+          cursor={fieldCursor}
+          borderColor='gray.200'
+          bg={disabled ? 'gray.100' : 'white'}
+          borderRadius='14px'
+          h='12'
+          px={4}
+        />
+      </Box>
+
+      <Box>
+        <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
+          Phone
+        </Text>
+        <Input
+          value={values.phone}
+          onChange={(event) => onChange('phone', event.target.value)}
+          placeholder='Phone number'
+          autoComplete='tel'
+          disabled={disabled}
+          cursor={fieldCursor}
+          borderColor='gray.200'
+          bg={disabled ? 'gray.100' : 'white'}
+          borderRadius='14px'
+          h='12'
+          px={4}
+        />
+      </Box>
+    </SimpleGrid>
+  )
+}
+
+function AttendeeSlotCard({
+  slot,
+  buyerInfo,
+  attendeeInfo,
+  onToggleSameAsBuyer,
+  onChangeField,
+}: {
+  slot: {
+    key: string
+    sessionName: string
+    ticketName: string
+    attendeeLabel: string
+    requiresAttendeeInfo: boolean
+    hasQuestions: boolean
+  }
+  buyerInfo: BuyerAttendeeInfoState
+  attendeeInfo: AttendeeSlotState
+  onToggleSameAsBuyer: (slotKey: string) => void
+  onChangeField: (slotKey: string, field: keyof BuyerAttendeeInfoState, value: string) => void
+}) {
+  const displayedValues = attendeeInfo.sameAsBuyer ? buyerInfo : attendeeInfo
+
+  return (
+    <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' p={4} boxShadow='0 10px 24px rgba(15, 23, 42, 0.04)'>
+      <Stack gap={4}>
+        <Flex justify='space-between' gap={4} align={{ base: 'start', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
+          <Stack gap={1} minW={0}>
+            <Text fontSize='sm' fontWeight='800' color='gray.900' lineHeight='1.4'>
+              {slot.sessionName}
+            </Text>
+            <Text fontSize='sm' color='gray.600' lineHeight='1.4'>
+              {slot.ticketName}
+            </Text>
+          </Stack>
+          <HStack gap={2} flexWrap='wrap' justify='flex-end'>
+            <Badge colorPalette='gray' variant='subtle' borderRadius='full' px={3} py={1}>
+              {slot.attendeeLabel}
+            </Badge>
+            {slot.requiresAttendeeInfo ? (
+              <Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>
+                Required
+              </Badge>
+            ) : null}
+            {slot.hasQuestions ? (
+              <Badge colorPalette='orange' variant='subtle' borderRadius='full' px={3} py={1}>
+                Questions
+              </Badge>
+            ) : null}
+          </HStack>
+        </Flex>
+
+        <Button
+          type='button'
+          variant='outline'
+          borderRadius='14px'
+          minH='11'
+          justifyContent='space-between'
+          onClick={() => onToggleSameAsBuyer(slot.key)}
+          aria-pressed={attendeeInfo.sameAsBuyer}
+        >
+          <Text as='span' fontWeight='700'>
+            Same As Buyer
+          </Text>
+          <Badge colorPalette={attendeeInfo.sameAsBuyer ? 'blue' : 'gray'} variant='subtle' borderRadius='full' px={3} py={1}>
+            {attendeeInfo.sameAsBuyer ? 'On' : 'Off'}
+          </Badge>
+        </Button>
+
+        <ContactDetailsFields
+          values={displayedValues}
+          onChange={(field, value) => onChangeField(slot.key, field, value)}
+          disabled={attendeeInfo.sameAsBuyer}
+          required={slot.requiresAttendeeInfo}
+        />
+      </Stack>
+    </Box>
+  )
+}
+
 interface SelectedTicketSummaryItem {
   sessionId: string
   sessionName: string
@@ -1158,16 +1398,18 @@ function SessionsTabSkeleton() {
 
 export function EventRegisterWizard({ event, formAccent, onBack }: { event: EventRegisterWizardEvent; formAccent: string; onBack: () => void }) {
   const accentBackground = hexToRgba(formAccent, 0.18)
-  const tabs = useMemo(() => getVisibleTabs(event), [event])
-  const firstTab = tabs[0]?.id ?? 'sessions'
-  const [activeTab, setActiveTab] = useState<WizardTabId>(firstTab)
-  const [highestUnlockedIndex, setHighestUnlockedIndex] = useState(0)
+  const [buyerInfo, setBuyerInfo] = useState<BuyerAttendeeInfoState>(EMPTY_BUYER_INFO)
+  const [attendeeInfoBySlot, setAttendeeInfoBySlot] = useState<Record<string, AttendeeSlotState>>({})
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [termsOpen, setTermsOpen] = useState(false)
   const [expandedSessionIds, setExpandedSessionIds] = useState<string[]>([])
   const [activeSessionDescription, setActiveSessionDescription] = useState<{ title: string; description: string } | null>(null)
   const [sessionTicketSearch, setSessionTicketSearch] = useState<Record<string, string>>({})
   const [selectedTicketQuantities, setSelectedTicketQuantities] = useState<Record<string, number>>({})
+  const tabs = useMemo(() => getVisibleTabs(event, selectedTicketQuantities), [event, selectedTicketQuantities])
+  const firstTab = tabs[0]?.id ?? 'sessions'
+  const [activeTab, setActiveTab] = useState<WizardTabId>(firstTab)
+  const [highestUnlockedIndex, setHighestUnlockedIndex] = useState(0)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null)
   const [cardHolderName, setCardHolderName] = useState('')
   const [cardFieldStates, setCardFieldStates] = useState<PaymentCardValidationState>(INITIAL_CARD_FIELD_STATE)
@@ -1187,6 +1429,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
   const [pendingDeleteAction, setPendingDeleteAction] = useState<PendingDeleteAction | null>(null)
   const paymentSubtotalSnapshotRef = useRef<number | null>(null)
+  const buyerAttendeeValidationRef = useRef<HTMLDivElement | null>(null)
   const paymentMethodValidationRef = useRef<HTMLDivElement | null>(null)
   const paymentCardValidationRef = useRef<HTMLDivElement | null>(null)
   const termsValidationRef = useRef<HTMLDivElement | null>(null)
@@ -1215,9 +1458,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     retry: 1,
   })
   useEffect(() => {
-    setActiveTab(firstTab)
-    setHighestUnlockedIndex(0)
-  }, [firstTab])
+    setActiveTab((current) => (tabs.some((tab) => tab.id === current) ? current : firstTab))
+  }, [firstTab, tabs])
 
   useEffect(() => {
     if (purchaseTimerStartedAt === null) return
@@ -1295,6 +1537,28 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   )
   const selectedTicketCount = selectedTicketSummary.reduce((total, item) => total + item.quantity, 0)
   const selectedTicketTotal = selectedTicketSummary.reduce((total, item) => total + item.lineTotal, 0)
+  const selectedSessionSummaries = useMemo(
+    () => getSelectedSessionSummaries(sessionsData, selectedTicketQuantities),
+    [sessionsData, selectedTicketQuantities],
+  )
+  const attendeeSlotEntries = useMemo(
+    () =>
+      selectedSessionSummaries.flatMap((sessionSummary) =>
+        sessionSummary.selectedTickets.flatMap((selectedTicket) =>
+          Array.from({ length: selectedTicket.quantity }, (_, index) => ({
+            key: `${sessionSummary.session.uniqueId}:${selectedTicket.ticket.uniqueId}:${index + 1}`,
+            sessionId: sessionSummary.session.uniqueId,
+            sessionName: sessionSummary.session.name,
+            ticketId: selectedTicket.ticket.uniqueId,
+            ticketName: selectedTicket.ticket.name,
+            attendeeLabel: `Attendee ${index + 1}`,
+            requiresAttendeeInfo: sessionSummary.requiresAttendeeInfo,
+            hasQuestions: sessionSummary.hasQuestions,
+          })),
+        ),
+      ),
+    [selectedSessionSummaries],
+  )
   const paymentQuery = useQuery({
     queryKey: ['event-registration', event.uniqueId, 'payment'],
     queryFn: () => fetchEventRegistrationPayment(event.uniqueId, selectedTicketTotal),
@@ -1326,6 +1590,62 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   useEffect(() => {
     setExpandedSessionIds(sessions.map((session) => session.uniqueId))
   }, [sessions])
+  useEffect(() => {
+    setAttendeeInfoBySlot((current) => {
+      const next: Record<string, AttendeeSlotState> = {}
+      let hasChanges = false
+
+      attendeeSlotEntries.forEach((slot) => {
+        const existing = current[slot.key]
+
+        if (existing) {
+          next[slot.key] = existing
+          return
+        }
+
+        next[slot.key] = {
+          sameAsBuyer: true,
+          ...buyerInfo,
+        }
+        hasChanges = true
+      })
+
+      if (Object.keys(current).length !== Object.keys(next).length) {
+        hasChanges = true
+      }
+
+      return hasChanges ? next : current
+    })
+  }, [attendeeSlotEntries, buyerInfo])
+  useEffect(() => {
+    setAttendeeInfoBySlot((current) => {
+      let hasChanges = false
+      const next = { ...current }
+
+      Object.entries(next).forEach(([slotKey, slot]) => {
+        if (!slot.sameAsBuyer) return
+
+        const normalized = {
+          sameAsBuyer: true,
+          ...buyerInfo,
+        }
+
+        if (
+          slot.firstName === normalized.firstName &&
+          slot.lastName === normalized.lastName &&
+          slot.email === normalized.email &&
+          slot.phone === normalized.phone
+        ) {
+          return
+        }
+
+        next[slotKey] = normalized
+        hasChanges = true
+      })
+
+      return hasChanges ? next : current
+    })
+  }, [buyerInfo])
   const purchaseTimerDurationMs = Math.max(currentEvent.purchaseTimeLimitMinutes, 1) * 60 * 1000
   const purchaseTimerRemainingMs = purchaseTimerStartedAt === null ? null : purchaseTimerStartedAt + purchaseTimerDurationMs - purchaseTimerNow
   const purchaseTimerVisible = purchaseTimerStartedAt !== null
@@ -1364,6 +1684,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
     setSelectedPaymentMethod((current) => (current && availableMethods.includes(current) ? current : availableMethods[0]))
   }, [activeTab, paymentBreakdowns, visiblePaymentMethods])
+  useEffect(() => {
+    setHighestUnlockedIndex((current) => Math.min(current, Math.max(tabs.length - 1, 0)))
+  }, [tabs.length])
   const shouldHighlightSummaryLauncher = selectedTicketCount > 0 || purchaseTimerVisible
   const isDescriptionStep = activeTab === 'description'
   const sessionsStepIndex = getStepIndex(tabs, 'sessions')
@@ -1373,6 +1696,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const footerActionLabel = isFinalStep ? 'Review Purchase' : 'Continue'
   const FooterActionIcon = isFinalStep ? Check : ChevronRight
   const footerActionDisabled = !canContinueForward || (isFinalStep && selectedTicketCount <= 0)
+  const requiresAttendeeInfo = selectedSessionSummaries.some((session) => session.requiresAttendeeInfo)
+  const requiresQuestions = selectedSessionSummaries.some((session) => session.hasQuestions)
 
   function isStepEnabled(stepId: WizardTabId) {
     const index = getStepIndex(tabs, stepId)
@@ -1397,6 +1722,36 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
     if (selectedTicketCount <= 0) {
       issues.push({ message: 'Select at least one ticket.', target: 'payment-method' })
+    }
+
+    const buyerFields: Array<[keyof BuyerAttendeeInfoState, string]> = [
+      ['firstName', buyerInfo.firstName],
+      ['lastName', buyerInfo.lastName],
+      ['email', buyerInfo.email],
+    ]
+
+    if (buyerFields.some(([, value]) => !value.trim())) {
+      issues.push({ message: 'Complete the buyer details before continuing.', target: 'buyer-attendee-info' })
+    }
+
+    const attendeeIssues = attendeeSlotEntries.find((slot) => {
+      if (!slot.requiresAttendeeInfo) {
+        return false
+      }
+
+      const info = attendeeInfoBySlot[slot.key]
+      if (!info) {
+        return true
+      }
+
+      return ['firstName', 'lastName', 'email'].some((field) => !(info[field as keyof BuyerAttendeeInfoState] ?? '').trim())
+    })
+
+    if (attendeeIssues) {
+      issues.push({
+        message: `${attendeeIssues.sessionName} needs attendee details for ${attendeeIssues.ticketName}.`,
+        target: 'buyer-attendee-info',
+      })
     }
 
     if (!selectedPaymentBreakdown) {
@@ -1435,11 +1790,13 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     if (!purchaseReviewScrollTarget) return
 
     const targetRef =
-      purchaseReviewScrollTarget === 'payment-method'
-        ? paymentMethodValidationRef
-        : purchaseReviewScrollTarget === 'payment-card'
-          ? paymentCardValidationRef
-          : termsValidationRef
+      purchaseReviewScrollTarget === 'buyer-attendee-info'
+        ? buyerAttendeeValidationRef
+        : purchaseReviewScrollTarget === 'payment-method'
+          ? paymentMethodValidationRef
+          : purchaseReviewScrollTarget === 'payment-card'
+            ? paymentCardValidationRef
+            : termsValidationRef
 
     const frame = window.requestAnimationFrame(() => {
       targetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -1511,6 +1868,47 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     selectedPaymentBreakdown?.label ??
     selectedPaymentBreakdown?.paymentMethod ??
     'Payment method not selected'
+
+  function updateBuyerField(field: keyof BuyerAttendeeInfoState, value: string) {
+    setBuyerInfo((current) => ({
+      ...current,
+      [field]: value,
+    }))
+  }
+
+  function updateAttendeeField(slotKey: string, field: keyof BuyerAttendeeInfoState, value: string) {
+    setAttendeeInfoBySlot((current) => {
+      const slot = current[slotKey]
+      if (!slot || slot.sameAsBuyer) return current
+
+      return {
+        ...current,
+        [slotKey]: {
+          ...slot,
+          [field]: value,
+        },
+      }
+    })
+  }
+
+  function toggleAttendeeSameAsBuyer(slotKey: string) {
+    setAttendeeInfoBySlot((current) => {
+      const slot = current[slotKey]
+      if (!slot) return current
+
+      const nextSameAsBuyer = !slot.sameAsBuyer
+
+      return {
+        ...current,
+        [slotKey]: nextSameAsBuyer
+          ? {
+              sameAsBuyer: true,
+              ...buyerInfo,
+            }
+          : slot,
+      }
+    })
+  }
 
   function handleBackStep() {
     if (activeIndex <= 0) {
@@ -1591,8 +1989,13 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setSelectedPaymentMethod(null)
     setExpandedPaymentMethod(null)
     setCardHolderName('')
+    setBuyerInfo(EMPTY_BUYER_INFO)
+    setAttendeeInfoBySlot({})
     setTermsAccepted(false)
     setTermsOpen(false)
+    setPurchaseReviewAttempted(false)
+    setPurchaseReviewMessage(null)
+    setPurchaseReviewScrollTarget(null)
     setPurchaseTimerStartedAt(null)
     setPurchaseTimerNow(Date.now())
     paymentSubtotalSnapshotRef.current = null
@@ -2125,6 +2528,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                               {sessionsLoading ? (
                                 <SessionsTabSkeleton />
                               ) : sessions.length > 0 ? (
+                                <>
                                 <Flex
                                   align={{ base: 'stretch', md: 'center' }}
                                   justify='space-between'
@@ -2171,7 +2575,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                     </Button>
                                   </Box>
                                 </Flex>
-                              ) : null}
                               {sessions.map((session) => (
                                 (() => {
                                   const searchValue = sessionTicketSearch[session.uniqueId] ?? ''
@@ -2183,6 +2586,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                       (ticket.description?.toLowerCase().includes(needle) ?? false)
                                     )
                                   })
+                                  const selectedSessionSummary = selectedSessionSummaries.find((summary) => summary.session.uniqueId === session.uniqueId) ?? null
 
                                   return (
                                     <SessionTitleCard
@@ -2194,6 +2598,32 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                       onToggle={() => handleSessionToggle(session.uniqueId)}
                                       onOpenDescription={() => setActiveSessionDescription({ title: session.name, description: session.description ?? '' })}
                                     >
+                                      {selectedSessionSummary && (selectedSessionSummary.requiresAttendeeInfo || selectedSessionSummary.hasQuestions) ? (
+                                        <Box borderWidth='1px' borderColor={selectedSessionSummary.requiresAttendeeInfo ? 'blue.200' : 'orange.200'} borderRadius='18px' bg={selectedSessionSummary.requiresAttendeeInfo ? 'blue.50' : 'orange.50'} p={4}>
+                                          <Flex justify='space-between' gap={4} align='start' flexWrap='wrap'>
+                                            <Stack gap={1} minW={0}>
+                                              <Text fontSize='sm' fontWeight='800' color='gray.900'>
+                                                This selection needs extra information.
+                                              </Text>
+                                              <Text fontSize='sm' color='gray.600' lineHeight='1.6'>
+                                                Buyer/Attendee info will collect the attendee details for these tickets before payment.
+                                              </Text>
+                                            </Stack>
+                                            <HStack gap={2} flexWrap='wrap'>
+                                              {selectedSessionSummary.requiresAttendeeInfo ? (
+                                                <Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>
+                                                  Attendee info required
+                                                </Badge>
+                                              ) : null}
+                                              {selectedSessionSummary.hasQuestions ? (
+                                                <Badge colorPalette='orange' variant='subtle' borderRadius='full' px={3} py={1}>
+                                                  Questions required
+                                                </Badge>
+                                              ) : null}
+                                            </HStack>
+                                          </Flex>
+                                        </Box>
+                                      ) : null}
                                       {session.ticketTypes.length > 0 ? (
                                         <Stack gap={4}>
                                           <Flex justify='flex-end' align={{ base: 'stretch', md: 'center' }} gap={3} direction={{ base: 'column', md: 'row' }}>
@@ -2257,18 +2687,209 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                   )
                                 })()
                               ))}
+                                </>
+                              ) : null}
                             </Stack>
                           ) : null}
 
+                          {tab.id === 'buyer-attendee-info' ? (
+                            <Box ref={buyerAttendeeValidationRef}>
+                              <SupportCard title='Buyer/Attendee info' subtitle='Capture the buyer first, then fill attendee details only for the sessions that require them.' icon={<Users size={18} />}>
+                                <Stack gap={5}>
+                                  {purchaseReviewAttempted && purchaseReviewMessage && purchaseReviewScrollTarget === 'buyer-attendee-info' ? (
+                                    <Box borderWidth='1px' borderColor='red.200' bg='red.50' borderRadius='18px' p={4}>
+                                      <Text fontSize='sm' color='red.700' fontWeight='600'>
+                                        {purchaseReviewMessage}
+                                      </Text>
+                                    </Box>
+                                  ) : null}
+
+                                  <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
+                                    <Stack gap={4}>
+                                      <Box>
+                                        <Text fontSize='sm' fontWeight='800' color='gray.900' mb={1}>
+                                          Buyer details
+                                        </Text>
+                                        <Text fontSize='sm' color='gray.600' lineHeight='1.6'>
+                                          This is the person placing the order and receiving the purchase confirmation.
+                                        </Text>
+                                      </Box>
+                                      <ContactDetailsFields values={buyerInfo} onChange={updateBuyerField} required />
+                                    </Stack>
+                                  </Box>
+
+                                  {attendeeSlotEntries.length > 0 ? (
+                                    <Stack gap={4}>
+                                      <Box borderWidth='1px' borderColor='blue.200' borderRadius='18px' bg='blue.50' p={4}>
+                                        <Flex justify='space-between' gap={4} align='start' flexWrap='wrap'>
+                                          <Stack gap={1} minW={0}>
+                                            <Text fontSize='sm' fontWeight='800' color='gray.900'>
+                                              Attendee details for selected tickets
+                                            </Text>
+                                            <Text fontSize='sm' color='gray.600' lineHeight='1.6'>
+                                              Use Same As Buyer when the buyer is also the attendee. Turn it off to enter a different attendee.
+                                            </Text>
+                                          </Stack>
+                                          <HStack gap={2} flexWrap='wrap'>
+                                            {requiresAttendeeInfo ? (
+                                              <Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>
+                                                Attendee info required
+                                              </Badge>
+                                            ) : null}
+                                            {requiresQuestions ? (
+                                              <Badge colorPalette='orange' variant='subtle' borderRadius='full' px={3} py={1}>
+                                                Questions required
+                                              </Badge>
+                                            ) : null}
+                                          </HStack>
+                                        </Flex>
+                                      </Box>
+
+                                      <Stack gap={4}>
+                                        {attendeeSlotEntries.map((slot) => (
+                                          <AttendeeSlotCard
+                                            key={slot.key}
+                                            slot={slot}
+                                            buyerInfo={buyerInfo}
+                                            attendeeInfo={attendeeInfoBySlot[slot.key] ?? { sameAsBuyer: true, ...buyerInfo }}
+                                            onToggleSameAsBuyer={toggleAttendeeSameAsBuyer}
+                                            onChangeField={updateAttendeeField}
+                                          />
+                                        ))}
+                                      </Stack>
+                                    </Stack>
+                                  ) : (
+                                    <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
+                                      <Text fontSize='sm' color='gray.600' lineHeight='1.7'>
+                                        No attendee details are required for the tickets you have selected yet.
+                                      </Text>
+                                    </Box>
+                                  )}
+                                </Stack>
+                              </SupportCard>
+                            </Box>
+                          ) : null}
+
                           {tab.id === 'attendee-info' ? (
-                            <SupportCard title='Attendee Info' subtitle='These sessions require attendee details before registration can continue.' icon={<Users size={18} />}>
-                              <Stack gap={4}>{sessions.filter((session) => session.requiresAttendeeInfo).map((session) => <Box key={session.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}><HStack justify='space-between' gap={4} align='start' flexWrap='wrap'><Stack gap={1}><Text fontWeight='700' color='gray.900'>{session.name}</Text><Text fontSize='sm' color='gray.600'>Attendee information will be collected for this session.</Text></Stack><Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>Required</Badge></HStack></Box>)}</Stack>
+                            <SupportCard title='Attendee Info' subtitle='These selected sessions require attendee details before registration can continue.' icon={<Users size={18} />}>
+                              <Stack gap={4}>
+                                {selectedSessionSummaries.filter((session) => session.requiresAttendeeInfo).length > 0 ? (
+                                  selectedSessionSummaries
+                                    .filter((session) => session.requiresAttendeeInfo)
+                                    .map((session) => (
+                                      <Box key={session.session.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
+                                        <HStack justify='space-between' gap={4} align='start' flexWrap='wrap'>
+                                          <Stack gap={1}>
+                                            <Text fontWeight='700' color='gray.900'>{session.session.name}</Text>
+                                            <Text fontSize='sm' color='gray.600'>
+                                              {session.attendeeCount} attendee {session.attendeeCount === 1 ? 'slot' : 'slots'} selected for this session.
+                                            </Text>
+                                          </Stack>
+                                          <Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>Required</Badge>
+                                        </HStack>
+                                        <Stack gap={2} mt={4}>
+                                          {session.selectedTickets.map((ticket) => (
+                                            <Flex key={ticket.ticket.uniqueId} justify='space-between' gap={4} align='center' bg='white' borderWidth='1px' borderColor='gray.200' borderRadius='14px' px={4} py={3}>
+                                              <Stack gap={0.5} minW={0}>
+                                                <Text fontWeight='700' color='gray.900'>{ticket.ticket.name}</Text>
+                                                <Text fontSize='sm' color='gray.600'>
+                                                  {ticket.quantity} {ticket.quantity === 1 ? 'attendee' : 'attendees'} needed for this ticket.
+                                                </Text>
+                                              </Stack>
+                                              <Badge colorPalette='gray' variant='subtle' borderRadius='full' px={3} py={1}>
+                                                {ticket.quantity}
+                                              </Badge>
+                                            </Flex>
+                                          ))}
+                                        </Stack>
+                                      </Box>
+                                    ))
+                                ) : (
+                                  <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
+                                    <Text fontSize='sm' color='gray.600'>
+                                      No selected session currently requires attendee information.
+                                    </Text>
+                                  </Box>
+                                )}
+                              </Stack>
                             </SupportCard>
                           ) : null}
 
                           {tab.id === 'questionnaire' ? (
-                            <SupportCard title='Questionnaire' subtitle='Custom forms and questions mapped to the sessions are rendered here.' icon={<MessageSquareText size={18} />}>
-                              <Stack gap={5}>{sessions.filter((session) => session.customForms.length > 0 || session.customQuestions.length > 0).map((session) => <Box key={session.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='20px' p={5} bg='gray.50'><Stack gap={4}><Box><Text fontSize='lg' fontWeight='700' color='gray.900'>{session.name}</Text><Text fontSize='sm' color='gray.600'>Questionnaire content mapped to this session.</Text></Box>{session.customForms.length > 0 ? <Stack gap={3}><Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>Custom Forms</Text><SimpleGrid columns={{ base: 1, lg: 2 }} gap={3}>{session.customForms.map((form) => <Box key={form.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={4}><Text fontWeight='700' color='gray.900'>{form.headerText ?? form.name}</Text>{form.description ? <Text mt={2} fontSize='sm' color='gray.600' lineHeight='1.7'>{form.description}</Text> : null}</Box>)}</SimpleGrid></Stack> : null}{session.customQuestions.length > 0 ? <Stack gap={3}><Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>Custom Questions</Text><Stack gap={3}>{session.customQuestions.map((question) => <Box key={question.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={4}><HStack justify='space-between' gap={4} align='start' flexWrap='wrap'><Stack gap={1}><Text fontWeight='700' color='gray.900'>{question.label}</Text><Text fontSize='sm' color='gray.600'>{question.controlType}</Text></Stack><Badge colorPalette={question.required ? 'red' : 'gray'} variant='subtle' borderRadius='full' px={3} py={1}>{question.required ? 'Required' : 'Optional'}</Badge></HStack></Box>)}</Stack></Stack> : null}</Stack></Box>)}</Stack>
+                            <SupportCard title='Questionnaire' subtitle='Custom forms and questions mapped to the selected sessions are rendered here.' icon={<MessageSquareText size={18} />}>
+                              <Stack gap={5}>
+                                {selectedSessionSummaries.filter((session) => session.hasQuestions).length > 0 ? (
+                                  selectedSessionSummaries
+                                    .filter((session) => session.hasQuestions)
+                                    .map((session) => (
+                                      <Box key={session.session.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='20px' p={5} bg='gray.50'>
+                                        <Stack gap={4}>
+                                          <Box>
+                                            <Text fontSize='lg' fontWeight='700' color='gray.900'>
+                                              {session.session.name}
+                                            </Text>
+                                            <Text fontSize='sm' color='gray.600'>
+                                              Questionnaire content mapped to this selected session.
+                                            </Text>
+                                          </Box>
+                                          {session.session.customForms.length > 0 ? (
+                                            <Stack gap={3}>
+                                              <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>
+                                                Custom Forms
+                                              </Text>
+                                              <SimpleGrid columns={{ base: 1, lg: 2 }} gap={3}>
+                                                {session.session.customForms.map((form) => (
+                                                  <Box key={form.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={4}>
+                                                    <Text fontWeight='700' color='gray.900'>
+                                                      {form.headerText ?? form.name}
+                                                    </Text>
+                                                    {form.description ? (
+                                                      <Text mt={2} fontSize='sm' color='gray.600' lineHeight='1.7'>
+                                                        {form.description}
+                                                      </Text>
+                                                    ) : null}
+                                                  </Box>
+                                                ))}
+                                              </SimpleGrid>
+                                            </Stack>
+                                          ) : null}
+                                          {session.session.customQuestions.length > 0 ? (
+                                            <Stack gap={3}>
+                                              <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>
+                                                Custom Questions
+                                              </Text>
+                                              <Stack gap={3}>
+                                                {session.session.customQuestions.map((question) => (
+                                                  <Box key={question.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={4}>
+                                                    <HStack justify='space-between' gap={4} align='start' flexWrap='wrap'>
+                                                      <Stack gap={1}>
+                                                        <Text fontWeight='700' color='gray.900'>
+                                                          {question.label}
+                                                        </Text>
+                                                        <Text fontSize='sm' color='gray.600'>
+                                                          {question.controlType}
+                                                        </Text>
+                                                      </Stack>
+                                                      <Badge colorPalette={question.required ? 'red' : 'gray'} variant='subtle' borderRadius='full' px={3} py={1}>
+                                                        {question.required ? 'Required' : 'Optional'}
+                                                      </Badge>
+                                                    </HStack>
+                                                  </Box>
+                                                ))}
+                                              </Stack>
+                                            </Stack>
+                                          ) : null}
+                                        </Stack>
+                                      </Box>
+                                    ))
+                                ) : (
+                                  <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
+                                    <Text fontSize='sm' color='gray.600'>
+                                      No selected session currently requires custom forms or questions.
+                                    </Text>
+                                  </Box>
+                                )}
+                              </Stack>
                             </SupportCard>
                           ) : null}
 
