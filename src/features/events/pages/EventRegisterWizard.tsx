@@ -15,6 +15,7 @@ import {
   Image,
   Input,
   Link,
+  Grid,
   Portal,
   Separator,
   SimpleGrid,
@@ -25,6 +26,7 @@ import {
   Tabs,
   Text,
 } from '@chakra-ui/react'
+import { toaster } from '@/lib/toaster'
 import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement } from '@stripe/react-stripe-js'
 import { loadStripe } from '@stripe/stripe-js'
 import {
@@ -65,6 +67,24 @@ import {
 
 const LOCAL_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
 type WizardTabId = 'description' | 'sessions' | 'attendee-info' | 'questionnaire' | 'payment'
+type CardFieldId = 'number' | 'expiry' | 'cvc'
+
+interface CardFieldState {
+  complete: boolean
+  error: string | null
+}
+
+interface PaymentCardValidationState {
+  number: CardFieldState
+  expiry: CardFieldState
+  cvc: CardFieldState
+}
+
+const INITIAL_CARD_FIELD_STATE: PaymentCardValidationState = {
+  number: { complete: false, error: null },
+  expiry: { complete: false, error: null },
+  cvc: { complete: false, error: null },
+}
 
 interface BannerSlide {
   imageUrl: string
@@ -226,7 +246,7 @@ function getVisibleTabs(event: EventRegisterWizardEvent) {
     return tabs
   }
 
-  if (Boolean(event.description?.trim() || event.summary?.trim())) tabs.push({ id: 'description', label: 'Description', icon: FileText })
+  if (event.description?.trim() || event.summary?.trim()) tabs.push({ id: 'description', label: 'Description', icon: FileText })
   tabs.push({ id: 'sessions', label: 'Sessions', icon: CalendarDays })
   if (event.sessions.some((session) => session.requiresAttendeeInfo)) tabs.push({ id: 'attendee-info', label: 'Attendee Info', icon: Users })
   if (event.sessions.some((session) => session.customForms.length > 0 || session.customQuestions.length > 0)) tabs.push({ id: 'questionnaire', label: 'Questionnaire', icon: MessageSquareText })
@@ -273,12 +293,20 @@ function StripePaymentFields({
   paymentAccountCurrency,
   cardHolderName,
   onCardHolderNameChange,
+  cardFieldStates,
+  showValidationErrors,
+  onCardFieldStateChange,
+  onAvailabilityChange,
 }: {
   paymentMethod: string
   paymentAccountUniqueId: string | null
   paymentAccountCurrency: string | null
   cardHolderName: string
   onCardHolderNameChange: (value: string) => void
+  cardFieldStates: PaymentCardValidationState
+  showValidationErrors: boolean
+  onCardFieldStateChange: (fieldId: CardFieldId, nextState: CardFieldState) => void
+  onAvailabilityChange: (state: { isReady: boolean; message: string | null }) => void
 }) {
   const stripeCredentialsQuery = useQuery({
     queryKey: ['event-registration', paymentAccountUniqueId, 'stripe-credentials'],
@@ -286,6 +314,47 @@ function StripePaymentFields({
     enabled: isCardPaymentMethod(paymentMethod) && Boolean(paymentAccountUniqueId),
     retry: 1,
   })
+
+  useEffect(() => {
+    if (!isCardPaymentMethod(paymentMethod)) return
+
+    if (!paymentAccountUniqueId) {
+      onAvailabilityChange({
+        isReady: false,
+        message: 'Card fields are unavailable because the payment account is not configured.',
+      })
+      return
+    }
+
+    if (stripeCredentialsQuery.isLoading) {
+      onAvailabilityChange({
+        isReady: false,
+        message: 'Loading card fields...',
+      })
+      return
+    }
+
+    if (stripeCredentialsQuery.isError) {
+      onAvailabilityChange({
+        isReady: false,
+        message: 'Unable to load card fields right now.',
+      })
+      return
+    }
+
+    if (!stripeCredentialsQuery.data) {
+      onAvailabilityChange({
+        isReady: false,
+        message: 'Card fields are not ready yet.',
+      })
+      return
+    }
+
+    onAvailabilityChange({
+      isReady: true,
+      message: null,
+    })
+  }, [onAvailabilityChange, paymentAccountUniqueId, paymentMethod, stripeCredentialsQuery.data, stripeCredentialsQuery.isError, stripeCredentialsQuery.isLoading])
 
   const stripePromise = useMemo(() => {
     const stripeCredentials = stripeCredentialsQuery.data
@@ -377,42 +446,107 @@ function StripePaymentFields({
               onChange={(event) => onCardHolderNameChange(event.target.value)}
               autoComplete='cc-name'
               placeholder='Enter cardholder name'
-              borderColor='gray.200'
+              borderColor={showValidationErrors && !cardHolderName.trim() ? 'red.300' : 'gray.200'}
               bg='white'
               borderRadius='14px'
               h='12'
               px={4}
             />
+            {showValidationErrors && !cardHolderName.trim() ? (
+              <Text mt={2} fontSize='xs' color='red.600'>
+                Enter the cardholder name.
+              </Text>
+            ) : null}
           </Box>
 
-          <Box>
-            <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
-              Card number <Text as='span' color='red.500'>*</Text>
-            </Text>
-            <Box borderWidth='1px' borderColor='gray.200' borderRadius='14px' px={3} py={3} bg='white'>
-              <CardNumberElement options={elementOptions} />
+          <Grid templateColumns={{ base: '1fr', md: '3fr 1fr 1fr' }} gap={3}>
+            <Box>
+              <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
+                Card number <Text as='span' color='red.500'>*</Text>
+              </Text>
+              <Box
+                borderWidth='1px'
+                borderColor={showValidationErrors && (!cardFieldStates.number.complete || Boolean(cardFieldStates.number.error)) ? 'red.300' : 'gray.200'}
+                borderRadius='14px'
+                px={3}
+                py={3}
+                bg='white'
+              >
+                <CardNumberElement
+                  options={elementOptions}
+                  onChange={(details) =>
+                    onCardFieldStateChange('number', {
+                      complete: details.complete,
+                      error: details.error?.message ?? null,
+                    })
+                  }
+                />
+              </Box>
+              {showValidationErrors && (!cardFieldStates.number.complete || Boolean(cardFieldStates.number.error)) ? (
+                <Text mt={2} fontSize='xs' color='red.600'>
+                  {cardFieldStates.number.error ?? 'Complete the card number.'}
+                </Text>
+              ) : null}
             </Box>
-          </Box>
 
-          <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
             <Box>
               <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
                 Expiry <Text as='span' color='red.500'>*</Text>
               </Text>
-              <Box borderWidth='1px' borderColor='gray.200' borderRadius='14px' px={3} py={3} bg='white'>
-                <CardExpiryElement options={elementOptions} />
+              <Box
+                borderWidth='1px'
+                borderColor={showValidationErrors && (!cardFieldStates.expiry.complete || Boolean(cardFieldStates.expiry.error)) ? 'red.300' : 'gray.200'}
+                borderRadius='14px'
+                px={3}
+                py={3}
+                bg='white'
+              >
+                <CardExpiryElement
+                  options={elementOptions}
+                  onChange={(details) =>
+                    onCardFieldStateChange('expiry', {
+                      complete: details.complete,
+                      error: details.error?.message ?? null,
+                    })
+                  }
+                />
               </Box>
+              {showValidationErrors && (!cardFieldStates.expiry.complete || Boolean(cardFieldStates.expiry.error)) ? (
+                <Text mt={2} fontSize='xs' color='red.600'>
+                  {cardFieldStates.expiry.error ?? 'Complete the expiry date.'}
+                </Text>
+              ) : null}
             </Box>
 
             <Box>
               <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
                 CVV <Text as='span' color='red.500'>*</Text>
               </Text>
-              <Box borderWidth='1px' borderColor='gray.200' borderRadius='14px' px={3} py={3} bg='white'>
-                <CardCvcElement options={elementOptions} />
+              <Box
+                borderWidth='1px'
+                borderColor={showValidationErrors && (!cardFieldStates.cvc.complete || Boolean(cardFieldStates.cvc.error)) ? 'red.300' : 'gray.200'}
+                borderRadius='14px'
+                px={3}
+                py={3}
+                bg='white'
+              >
+                <CardCvcElement
+                  options={elementOptions}
+                  onChange={(details) =>
+                    onCardFieldStateChange('cvc', {
+                      complete: details.complete,
+                      error: details.error?.message ?? null,
+                    })
+                  }
+                />
               </Box>
+              {showValidationErrors && (!cardFieldStates.cvc.complete || Boolean(cardFieldStates.cvc.error)) ? (
+                <Text mt={2} fontSize='xs' color='red.600'>
+                  {cardFieldStates.cvc.error ?? 'Complete the CVV.'}
+                </Text>
+              ) : null}
             </Box>
-          </SimpleGrid>
+          </Grid>
         </Stack>
       </Box>
     </Elements>
@@ -1028,6 +1162,14 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [selectedTicketQuantities, setSelectedTicketQuantities] = useState<Record<string, number>>({})
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null)
   const [cardHolderName, setCardHolderName] = useState('')
+  const [cardFieldStates, setCardFieldStates] = useState<PaymentCardValidationState>(INITIAL_CARD_FIELD_STATE)
+  const [cardFieldAvailability, setCardFieldAvailability] = useState<{ isReady: boolean; message: string | null }>({
+    isReady: false,
+    message: null,
+  })
+  const [isPurchaseReviewOpen, setIsPurchaseReviewOpen] = useState(false)
+  const [purchaseReviewAttempted, setPurchaseReviewAttempted] = useState(false)
+  const [purchaseReviewMessage, setPurchaseReviewMessage] = useState<string | null>(null)
   const [expandedPaymentMethod, setExpandedPaymentMethod] = useState<string | null>(null)
   const [purchaseTimerStartedAt, setPurchaseTimerStartedAt] = useState<number | null>(null)
   const [purchaseTimerNow, setPurchaseTimerNow] = useState(() => Date.now())
@@ -1155,6 +1297,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     paymentBreakdowns[0] ??
     null
   const selectedCardPaymentMethod = selectedPaymentMethod ?? selectedPaymentBreakdown?.paymentMethod ?? null
+  const isSelectedPaymentMethodCard = Boolean(selectedPaymentBreakdown && isCardPaymentMethod(selectedPaymentBreakdown.paymentMethod))
   const eventData = {
     ...event,
     description: descriptionData.description ?? event.description,
@@ -1214,6 +1357,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const effectiveHighestUnlockedIndex =
     selectedTicketCount > 0 ? highestUnlockedIndex : Math.min(highestUnlockedIndex, sessionsStepIndex)
   const canContinueForward = !purchaseTimerExpired && (isDescriptionStep || selectedTicketCount > 0)
+  const footerActionLabel = isFinalStep ? 'Review Purchase' : 'Continue'
+  const FooterActionIcon = isFinalStep ? Check : ChevronRight
+  const footerActionDisabled = !canContinueForward || (isFinalStep && selectedTicketCount <= 0)
 
   function isStepEnabled(stepId: WizardTabId) {
     const index = getStepIndex(tabs, stepId)
@@ -1232,6 +1378,83 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setHighestUnlockedIndex((current) => Math.max(current, nextIndex))
     setActiveTab(tabs[nextIndex].id)
   }
+
+  function handlePurchaseReview() {
+    const issues: string[] = []
+
+    if (selectedTicketCount <= 0) {
+      issues.push('Select at least one ticket.')
+    }
+
+    if (!selectedPaymentBreakdown) {
+      issues.push('Select a payment method.')
+    } else if (isCardPaymentMethod(selectedPaymentBreakdown.paymentMethod)) {
+      if (!cardFieldAvailability.isReady) {
+        issues.push(cardFieldAvailability.message ?? 'Card fields are not ready yet.')
+      }
+
+      if (!cardHolderName.trim()) {
+        issues.push('Enter the cardholder name.')
+      }
+
+      if (!cardFieldStates.number.complete || cardFieldStates.number.error) {
+        issues.push(cardFieldStates.number.error ?? 'Complete the card number.')
+      }
+
+      if (!cardFieldStates.expiry.complete || cardFieldStates.expiry.error) {
+        issues.push(cardFieldStates.expiry.error ?? 'Complete the expiry date.')
+      }
+
+      if (!cardFieldStates.cvc.complete || cardFieldStates.cvc.error) {
+        issues.push(cardFieldStates.cvc.error ?? 'Complete the CVV.')
+      }
+    }
+
+    if (currentEvent.termsConditions && !termsAccepted) {
+      issues.push('Accept the registration terms and conditions.')
+    }
+
+    setPurchaseReviewAttempted(true)
+    setPurchaseReviewMessage(issues[0] ?? null)
+
+    if (issues.length > 0) {
+      return
+    }
+
+    setIsPurchaseReviewOpen(true)
+  }
+
+  function handlePrimaryAction() {
+    if (isFinalStep) {
+      handlePurchaseReview()
+      return
+    }
+
+    handleContinue()
+  }
+
+  function handleConfirmPurchase() {
+    setIsPurchaseReviewOpen(false)
+    toaster.create({
+      type: 'success',
+      title: 'Purchase summary confirmed',
+      description: 'Your selected tickets and payment method have been reviewed.',
+    })
+  }
+
+  const purchaseReviewTicketRows = selectedTicketSummaryBySession.flatMap((sessionGroup) =>
+    sessionGroup.items.map((item) => ({
+      sessionName: sessionGroup.sessionName,
+      ticketName: item.ticketName,
+      quantity: item.quantity,
+      lineTotal: item.lineTotal,
+    })),
+  )
+  const purchaseReviewChargeRows = selectedPaymentBreakdown?.charges ?? []
+  const selectedPaymentMethodLabel =
+    selectedPaymentBreakdown?.label ??
+    selectedPaymentBreakdown?.paymentMethod ??
+    'Payment method not selected'
 
   function handleBackStep() {
     if (activeIndex <= 0) {
@@ -2090,9 +2313,26 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                         paymentAccountCurrency={currentEvent.paymentAccountCurrency}
                                         cardHolderName={cardHolderName}
                                         onCardHolderNameChange={setCardHolderName}
+                                        cardFieldStates={cardFieldStates}
+                                        showValidationErrors={purchaseReviewAttempted}
+                                        onCardFieldStateChange={(fieldId, nextState) =>
+                                          setCardFieldStates((current) => ({
+                                            ...current,
+                                            [fieldId]: nextState,
+                                          }))
+                                        }
+                                        onAvailabilityChange={setCardFieldAvailability}
                                       />
                                     ) : null}
                                   </Stack>
+
+                                  {isFinalStep && purchaseReviewAttempted && purchaseReviewMessage ? (
+                                    <Box borderWidth='1px' borderColor='red.200' bg='red.50' borderRadius='18px' p={4}>
+                                      <Text fontSize='sm' color='red.700' fontWeight='600'>
+                                        {purchaseReviewMessage}
+                                      </Text>
+                                    </Box>
+                                  ) : null}
 
                                     {selectedPaymentBreakdown ? (
                                       <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' overflow='hidden' boxShadow='0 10px 24px rgba(15, 23, 42, 0.04)'>
@@ -2354,12 +2594,12 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                           {...CONTROL_BUTTON_PRIMARY}
                           bg={formAccent}
                           _hover={{ bg: hexToRgba(formAccent, 0.88), transform: 'translateY(-1px)' }}
-                          onClick={handleContinue}
-                          disabled={!canContinueForward || (isFinalStep && Boolean(currentEvent.termsConditions) && !termsAccepted)}
+                          onClick={handlePrimaryAction}
+                          disabled={footerActionDisabled}
                         >
                           <HStack gap={2}>
-                            <Text as='span'>Continue</Text>
-                            <ChevronRight size={16} />
+                            <Text as='span'>{footerActionLabel}</Text>
+                            <FooterActionIcon size={16} />
                           </HStack>
                         </Button>
                       </Flex>
@@ -2506,6 +2746,149 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                   OK
                 </Button>
               </Stack>
+            </Box>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+
+      <Dialog.Root open={isPurchaseReviewOpen} onOpenChange={(details) => setIsPurchaseReviewOpen(details.open)} size='xl'>
+        <Dialog.Backdrop backdropFilter='blur(8px)' bg='blackAlpha.650' />
+        <Dialog.Positioner alignItems='center' justifyContent='center' px={{ base: 4, md: 6 }} py={{ base: 6, md: 8 }}>
+          <Dialog.Content borderRadius='28px' overflow='hidden' bg='white' boxShadow='0 30px 80px rgba(15, 23, 42, 0.28)' maxH='85vh' display='flex' flexDirection='column'>
+            <Box h='5px' bg={formAccent} />
+            <Box px={{ base: 4, md: 6 }} py={4} borderBottomWidth='1px' borderBottomColor='gray.200'>
+              <Flex justify='space-between' align='start' gap={4}>
+                <Stack gap={1}>
+                  <Text fontSize='xs' textTransform='uppercase' letterSpacing='0.14em' color='gray.500' fontWeight='700'>
+                    Review purchase
+                  </Text>
+                  <Heading fontSize={{ base: 'xl', md: '2xl' }} color='gray.900' letterSpacing='-0.03em'>
+                    {currentEvent.title}
+                  </Heading>
+                </Stack>
+                <CloseButton onClick={() => setIsPurchaseReviewOpen(false)} />
+              </Flex>
+            </Box>
+
+            <Box px={{ base: 4, md: 6 }} py={{ base: 5, md: 6 }} flex='1' overflowY='auto'>
+              <Stack gap={5}>
+                <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='gray.50' p={4}>
+                  <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+                    <Stack gap={1}>
+                      <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>
+                        Tickets
+                      </Text>
+                      <Text fontSize='lg' fontWeight='800' color='gray.900'>
+                        {selectedTicketCount} selected
+                      </Text>
+                    </Stack>
+                    <Stack gap={1}>
+                      <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>
+                        Total
+                      </Text>
+                      <Text fontSize='lg' fontWeight='800' color='gray.900'>
+                        {formatAmount(selectedTicketTotal, currentEvent.paymentAccountCurrency)}
+                      </Text>
+                    </Stack>
+                    <Stack gap={1}>
+                      <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>
+                        Payment method
+                      </Text>
+                      <Text fontSize='lg' fontWeight='800' color='gray.900' lineHeight='1.3'>
+                        {selectedPaymentMethodLabel}
+                      </Text>
+                    </Stack>
+                  </SimpleGrid>
+                  {isSelectedPaymentMethodCard ? (
+                    <Text mt={3} fontSize='sm' color='gray.600'>
+                      Cardholder: {cardHolderName.trim() || 'Not entered'}
+                    </Text>
+                  ) : null}
+                </Box>
+
+                <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' overflow='hidden'>
+                  <Box px={4} py={3} bg='gray.50' borderBottomWidth='1px' borderBottomColor='gray.200'>
+                    <Text fontSize='sm' fontWeight='700' color='gray.700'>
+                      Ticket summary
+                    </Text>
+                  </Box>
+                  <Table.Root variant='line' size='sm' borderColor='gray.200'>
+                    <Table.Header>
+                      <Table.Row bg='white'>
+                        <Table.ColumnHeader borderColor='gray.200' px={4} py={3}>Session</Table.ColumnHeader>
+                        <Table.ColumnHeader borderColor='gray.200' px={4} py={3}>Ticket</Table.ColumnHeader>
+                        <Table.ColumnHeader borderColor='gray.200' px={4} py={3} textAlign='center'>Qty</Table.ColumnHeader>
+                        <Table.ColumnHeader borderColor='gray.200' px={4} py={3} textAlign='right'>Total</Table.ColumnHeader>
+                      </Table.Row>
+                    </Table.Header>
+                    <Table.Body>
+                      {purchaseReviewTicketRows.map((row) => (
+                        <Table.Row key={`${row.sessionName}-${row.ticketName}`}>
+                          <Table.Cell borderColor='gray.200' px={4} py={3}>
+                            <Text fontWeight='700' color='gray.900' lineHeight='1.4'>{row.sessionName}</Text>
+                          </Table.Cell>
+                          <Table.Cell borderColor='gray.200' px={4} py={3}>
+                            <Text color='gray.700' lineHeight='1.4'>{row.ticketName}</Text>
+                          </Table.Cell>
+                          <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='center'>
+                            <Text fontWeight='700' color='gray.900'>{row.quantity}</Text>
+                          </Table.Cell>
+                          <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
+                            <Text fontWeight='700' color='gray.900'>{formatAmount(row.lineTotal, currentEvent.paymentAccountCurrency)}</Text>
+                          </Table.Cell>
+                        </Table.Row>
+                      ))}
+                    </Table.Body>
+                  </Table.Root>
+                </Box>
+
+                <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' overflow='hidden'>
+                  <Box px={4} py={3} bg='gray.50' borderBottomWidth='1px' borderBottomColor='gray.200'>
+                    <Text fontSize='sm' fontWeight='700' color='gray.700'>
+                      Charges
+                    </Text>
+                  </Box>
+                  <Stack gap={3} p={4}>
+                    {purchaseReviewChargeRows.length > 0 ? (
+                      purchaseReviewChargeRows.map((charge) => (
+                        <Flex key={`${charge.source}-${charge.title}`} justify='space-between' gap={4} align='start'>
+                          <Stack gap={0.5} minW={0}>
+                            <Text fontSize='sm' fontWeight='600' color='gray.900'>{charge.title}</Text>
+                            <Text fontSize='xs' color='gray.500'>
+                              {charge.source === 'processor-fee' ? 'Price' : 'Rate'}: {formatChargeRate(charge.valueType, charge.value, currentEvent.paymentAccountCurrency)}
+                            </Text>
+                          </Stack>
+                          <Text fontSize='sm' fontWeight='700' color='gray.900' flexShrink={0}>
+                            {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
+                          </Text>
+                        </Flex>
+                      ))
+                    ) : (
+                      <Text fontSize='sm' color='gray.600'>No additional buyer charges.</Text>
+                    )}
+                  </Stack>
+                </Box>
+              </Stack>
+            </Box>
+
+            <Box px={{ base: 4, md: 6 }} py={4} borderTopWidth='1px' borderTopColor='gray.200' bg='gray.50'>
+              <Flex justify='flex-end' gap={3} direction={{ base: 'column-reverse', sm: 'row' }}>
+                <Button {...CONTROL_BUTTON_OUTLINE} onClick={() => setIsPurchaseReviewOpen(false)}>
+                  Back to payment
+                </Button>
+                <Button
+                  bg={formAccent}
+                  color='white'
+                  borderRadius='16px'
+                  minH='11'
+                  px={5}
+                  _hover={{ bg: hexToRgba(formAccent, 0.88) }}
+                  _active={{ bg: hexToRgba(formAccent, 0.95) }}
+                  onClick={handleConfirmPurchase}
+                >
+                  Confirm Purchase
+                </Button>
+              </Flex>
             </Box>
           </Dialog.Content>
         </Dialog.Positioner>
