@@ -95,9 +95,7 @@ interface BuyerAttendeeInfoState {
   phone: string
 }
 
-interface AttendeeSlotState extends BuyerAttendeeInfoState {
-  sameAsBuyer: boolean
-}
+type AttendeeSlotState = BuyerAttendeeInfoState
 
 interface SelectedSessionSummary {
   session: EventRegistrationSession
@@ -112,7 +110,9 @@ interface SelectedSessionSummary {
 
 interface AttendeeTicketGroup {
   key: string
+  sessionId: string
   sessionName: string
+  ticketId: string
   ticketName: string
   attendeeCount: number
   requiresAttendeeInfo: boolean
@@ -121,6 +121,27 @@ interface AttendeeTicketGroup {
     key: string
     attendeeLabel: string
   }>
+}
+
+interface AttendeeSessionGroup {
+  key: string
+  sessionId: string
+  sessionName: string
+  attendeeCount: number
+  requiresAttendeeInfo: boolean
+  hasQuestions: boolean
+  tickets: AttendeeTicketGroup[]
+}
+
+interface AttendeeSlotEntry {
+  key: string
+  sessionId: string
+  sessionName: string
+  ticketId: string
+  ticketName: string
+  attendeeLabel: string
+  requiresAttendeeInfo: boolean
+  hasQuestions: boolean
 }
 
 const EMPTY_BUYER_INFO: BuyerAttendeeInfoState = {
@@ -980,25 +1001,62 @@ function ContactDetailsFields({
 
 function AttendeeSlotCard({
   slot,
-  buyerInfo,
-  attendeeInfo,
-  onToggleSameAsBuyer,
+  values,
+  disabled,
   onChangeField,
 }: {
   slot: {
     key: string
     sessionName: string
-    ticketName: string
     attendeeLabel: string
-    requiresAttendeeInfo: boolean
-    hasQuestions: boolean
   }
-  buyerInfo: BuyerAttendeeInfoState
-  attendeeInfo: AttendeeSlotState
-  onToggleSameAsBuyer: (slotKey: string) => void
+  values: BuyerAttendeeInfoState
+  disabled: boolean
   onChangeField: (slotKey: string, field: keyof BuyerAttendeeInfoState, value: string) => void
 }) {
-  const displayedValues = attendeeInfo.sameAsBuyer ? buyerInfo : attendeeInfo
+  return (
+    <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' p={4} boxShadow='0 10px 24px rgba(15, 23, 42, 0.04)'>
+      <Stack gap={4}>
+        <Flex justify='space-between' gap={4} align='start' wrap='wrap'>
+          <Stack gap={1} minW={0}>
+            <Text fontSize='sm' fontWeight='800' color='gray.900' lineHeight='1.4'>
+              {slot.attendeeLabel}
+            </Text>
+            <Text fontSize='sm' color='gray.600' lineHeight='1.4'>
+              {slot.sessionName}
+            </Text>
+          </Stack>
+        </Flex>
+
+        <ContactDetailsFields
+          values={values}
+          onChange={(field, value) => onChangeField(slot.key, field, value)}
+          disabled={disabled}
+        />
+      </Stack>
+    </Box>
+  )
+}
+
+function AttendeeTicketCard({
+  group,
+  buyerInfo,
+  attendeeInfoBySlot,
+  sessionSameAsBuyer,
+  ticketSameAsBuyer,
+  onToggleSameAsBuyer,
+  onChangeField,
+}: {
+  group: AttendeeTicketGroup
+  buyerInfo: BuyerAttendeeInfoState
+  attendeeInfoBySlot: Record<string, AttendeeSlotState>
+  sessionSameAsBuyer: boolean
+  ticketSameAsBuyer: boolean
+  onToggleSameAsBuyer: (sessionId: string, ticketId: string) => void
+  onChangeField: (slotKey: string, field: keyof BuyerAttendeeInfoState, value: string) => void
+}) {
+  const isLocked = sessionSameAsBuyer || ticketSameAsBuyer
+  const isSameAsBuyer = sessionSameAsBuyer || ticketSameAsBuyer
 
   return (
     <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' p={4} boxShadow='0 10px 24px rgba(15, 23, 42, 0.04)'>
@@ -1006,52 +1064,60 @@ function AttendeeSlotCard({
         <Flex justify='space-between' gap={4} align={{ base: 'start', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
           <Stack gap={1} minW={0}>
             <Text fontSize='sm' fontWeight='800' color='gray.900' lineHeight='1.4'>
-              {slot.sessionName}
+              {group.ticketName}
             </Text>
             <Text fontSize='sm' color='gray.600' lineHeight='1.4'>
-              {slot.ticketName}
+              {group.attendeeCount} {group.attendeeCount === 1 ? 'attendee' : 'attendees'}
             </Text>
+            <HStack gap={2} flexWrap='wrap'>
+              {group.requiresAttendeeInfo ? (
+                <Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>
+                  Required
+                </Badge>
+              ) : null}
+              {group.hasQuestions ? (
+                <Badge colorPalette='orange' variant='subtle' borderRadius='full' px={3} py={1}>
+                  Questions
+                </Badge>
+              ) : null}
+            </HStack>
           </Stack>
-          <HStack gap={2} flexWrap='wrap' justify='flex-end'>
-            <Badge colorPalette='gray' variant='subtle' borderRadius='full' px={3} py={1}>
-              {slot.attendeeLabel}
+
+          <Button
+            type='button'
+            variant='outline'
+            borderRadius='14px'
+            minH='11'
+            justifyContent='space-between'
+            onClick={() => onToggleSameAsBuyer(group.sessionId, group.ticketId)}
+            aria-pressed={isSameAsBuyer}
+            disabled={sessionSameAsBuyer}
+            cursor={sessionSameAsBuyer ? 'not-allowed' : 'pointer'}
+          >
+            <Text as='span' fontWeight='700'>
+              Same As Buyer
+            </Text>
+            <Badge colorPalette={isSameAsBuyer ? 'blue' : 'gray'} variant='subtle' borderRadius='full' px={3} py={1}>
+              {isSameAsBuyer ? 'On' : 'Off'}
             </Badge>
-            {slot.requiresAttendeeInfo ? (
-              <Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>
-                Required
-              </Badge>
-            ) : null}
-            {slot.hasQuestions ? (
-              <Badge colorPalette='orange' variant='subtle' borderRadius='full' px={3} py={1}>
-                Questions
-              </Badge>
-            ) : null}
-          </HStack>
+          </Button>
         </Flex>
 
-        <Button
-          type='button'
-          variant='outline'
-          borderRadius='14px'
-          minH='11'
-          justifyContent='space-between'
-          onClick={() => onToggleSameAsBuyer(slot.key)}
-          aria-pressed={attendeeInfo.sameAsBuyer}
-        >
-          <Text as='span' fontWeight='700'>
-            Same As Buyer
-          </Text>
-          <Badge colorPalette={attendeeInfo.sameAsBuyer ? 'blue' : 'gray'} variant='subtle' borderRadius='full' px={3} py={1}>
-            {attendeeInfo.sameAsBuyer ? 'On' : 'Off'}
-          </Badge>
-        </Button>
-
-        <ContactDetailsFields
-          values={displayedValues}
-          onChange={(field, value) => onChangeField(slot.key, field, value)}
-          disabled={attendeeInfo.sameAsBuyer}
-          required={slot.requiresAttendeeInfo}
-        />
+        <Stack gap={4}>
+          {group.slots.map((slot) => (
+            <AttendeeSlotCard
+              key={slot.key}
+              slot={{
+                key: slot.key,
+                sessionName: group.sessionName,
+                attendeeLabel: slot.attendeeLabel,
+              }}
+              values={isLocked ? buyerInfo : attendeeInfoBySlot[slot.key] ?? EMPTY_BUYER_INFO}
+              disabled={isLocked}
+              onChangeField={onChangeField}
+            />
+          ))}
+        </Stack>
       </Stack>
     </Box>
   )
@@ -1445,6 +1511,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const accentBackground = hexToRgba(formAccent, 0.18)
   const [buyerInfo, setBuyerInfo] = useState<BuyerAttendeeInfoState>(EMPTY_BUYER_INFO)
   const [attendeeInfoBySlot, setAttendeeInfoBySlot] = useState<Record<string, AttendeeSlotState>>({})
+  const [sessionSameAsBuyerById, setSessionSameAsBuyerById] = useState<Record<string, boolean>>({})
+  const [ticketSameAsBuyerById, setTicketSameAsBuyerById] = useState<Record<string, boolean>>({})
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [termsOpen, setTermsOpen] = useState(false)
   const [expandedSessionIds, setExpandedSessionIds] = useState<string[]>([])
@@ -1586,28 +1654,16 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     () => getSelectedSessionSummaries(sessionsData, selectedTicketQuantities),
     [sessionsData, selectedTicketQuantities],
   )
-  const attendeeSlotEntries = useMemo(
+  const attendeeSessionGroups = useMemo<AttendeeSessionGroup[]>(
     () =>
-      selectedSessionSummaries.flatMap((sessionSummary) =>
-        sessionSummary.selectedTickets.flatMap((selectedTicket) =>
-          Array.from({ length: selectedTicket.quantity }, (_, index) => ({
-            key: `${sessionSummary.session.uniqueId}:${selectedTicket.ticket.uniqueId}:${index + 1}`,
-            sessionId: sessionSummary.session.uniqueId,
-            sessionName: sessionSummary.session.name,
-            ticketId: selectedTicket.ticket.uniqueId,
-            ticketName: selectedTicket.ticket.name,
-            attendeeLabel: `Attendee ${index + 1}`,
-            requiresAttendeeInfo: sessionSummary.requiresAttendeeInfo,
-            hasQuestions: sessionSummary.hasQuestions,
-          })),
-        ),
-      ),
-    [selectedSessionSummaries],
-  )
-  const attendeeTicketGroups = useMemo(
-    () =>
-      selectedSessionSummaries.flatMap<AttendeeTicketGroup>((sessionSummary) =>
-        sessionSummary.selectedTickets.map((selectedTicket) => {
+      selectedSessionSummaries.map((sessionSummary) => ({
+        key: sessionSummary.session.uniqueId,
+        sessionId: sessionSummary.session.uniqueId,
+        sessionName: sessionSummary.session.name,
+        attendeeCount: sessionSummary.attendeeCount,
+        requiresAttendeeInfo: sessionSummary.requiresAttendeeInfo,
+        hasQuestions: sessionSummary.hasQuestions,
+        tickets: sessionSummary.selectedTickets.map((selectedTicket) => {
           const slots = Array.from({ length: selectedTicket.quantity }, (_, index) => ({
             key: `${sessionSummary.session.uniqueId}:${selectedTicket.ticket.uniqueId}:${index + 1}`,
             attendeeLabel: `Attendee ${index + 1}`,
@@ -1615,7 +1671,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
           return {
             key: `${sessionSummary.session.uniqueId}:${selectedTicket.ticket.uniqueId}`,
+            sessionId: sessionSummary.session.uniqueId,
             sessionName: sessionSummary.session.name,
+            ticketId: selectedTicket.ticket.uniqueId,
             ticketName: selectedTicket.ticket.name,
             attendeeCount: selectedTicket.quantity,
             requiresAttendeeInfo: sessionSummary.requiresAttendeeInfo,
@@ -1623,8 +1681,34 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
             slots,
           }
         }),
-      ),
+      })),
     [selectedSessionSummaries],
+  )
+  const attendeeSlotEntries = useMemo<AttendeeSlotEntry[]>(
+    () =>
+      attendeeSessionGroups.flatMap((sessionGroup) =>
+        sessionGroup.tickets.flatMap((ticketGroup) =>
+          ticketGroup.slots.map((slot) => ({
+            key: slot.key,
+            sessionId: sessionGroup.sessionId,
+            sessionName: sessionGroup.sessionName,
+            ticketId: ticketGroup.ticketId,
+            ticketName: ticketGroup.ticketName,
+            attendeeLabel: slot.attendeeLabel,
+            requiresAttendeeInfo: sessionGroup.requiresAttendeeInfo,
+            hasQuestions: sessionGroup.hasQuestions,
+          })),
+        ),
+      ),
+    [attendeeSessionGroups],
+  )
+  const attendeeSlotEntryByKey = useMemo(
+    () =>
+      attendeeSlotEntries.reduce<Record<string, AttendeeSlotEntry>>((entries, slot) => {
+        entries[slot.key] = slot
+        return entries
+      }, {}),
+    [attendeeSlotEntries],
   )
   const paymentQuery = useQuery({
     queryKey: ['event-registration', event.uniqueId, 'payment'],
@@ -1670,10 +1754,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
           return
         }
 
-        next[slot.key] = {
-          sameAsBuyer: true,
-          ...buyerInfo,
-        }
+        next[slot.key] = EMPTY_BUYER_INFO
         hasChanges = true
       })
 
@@ -1683,36 +1764,51 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
       return hasChanges ? next : current
     })
-  }, [attendeeSlotEntries, buyerInfo])
+  }, [attendeeSlotEntries])
   useEffect(() => {
-    setAttendeeInfoBySlot((current) => {
+    const allowedSessionIds = new Set(attendeeSessionGroups.map((sessionGroup) => sessionGroup.sessionId))
+    const allowedTicketIds = new Set(attendeeSessionGroups.flatMap((sessionGroup) => sessionGroup.tickets.map((ticket) => ticket.ticketId)))
+
+    setSessionSameAsBuyerById((current) => {
+      const next: Record<string, boolean> = {}
       let hasChanges = false
-      const next = { ...current }
 
-      Object.entries(next).forEach(([slotKey, slot]) => {
-        if (!slot.sameAsBuyer) return
-
-        const normalized = {
-          sameAsBuyer: true,
-          ...buyerInfo,
-        }
-
-        if (
-          slot.firstName === normalized.firstName &&
-          slot.lastName === normalized.lastName &&
-          slot.email === normalized.email &&
-          slot.phone === normalized.phone
-        ) {
+      Object.entries(current).forEach(([sessionId, isSameAsBuyer]) => {
+        if (!allowedSessionIds.has(sessionId)) {
+          hasChanges = true
           return
         }
 
-        next[slotKey] = normalized
-        hasChanges = true
+        next[sessionId] = isSameAsBuyer
       })
+
+      if (Object.keys(current).length !== Object.keys(next).length) {
+        hasChanges = true
+      }
 
       return hasChanges ? next : current
     })
-  }, [buyerInfo])
+
+    setTicketSameAsBuyerById((current) => {
+      const next: Record<string, boolean> = {}
+      let hasChanges = false
+
+      Object.entries(current).forEach(([ticketId, isSameAsBuyer]) => {
+        if (!allowedTicketIds.has(ticketId)) {
+          hasChanges = true
+          return
+        }
+
+        next[ticketId] = isSameAsBuyer
+      })
+
+      if (Object.keys(current).length !== Object.keys(next).length) {
+        hasChanges = true
+      }
+
+      return hasChanges ? next : current
+    })
+  }, [attendeeSessionGroups])
   const purchaseTimerDurationMs = Math.max(currentEvent.purchaseTimeLimitMinutes, 1) * 60 * 1000
   const purchaseTimerRemainingMs = purchaseTimerStartedAt === null ? null : purchaseTimerStartedAt + purchaseTimerDurationMs - purchaseTimerNow
   const purchaseTimerVisible = purchaseTimerStartedAt !== null
@@ -1802,6 +1898,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
     const attendeeIssues = attendeeSlotEntries.find((slot) => {
       if (!slot.requiresAttendeeInfo) {
+        return false
+      }
+
+      if (isTicketSameAsBuyer(slot.sessionId, slot.ticketId)) {
         return false
       }
 
@@ -1934,6 +2034,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     selectedPaymentBreakdown?.label ??
     selectedPaymentBreakdown?.paymentMethod ??
     'Payment method not selected'
+  const isSessionSameAsBuyer = (sessionId: string) => Boolean(sessionSameAsBuyerById[sessionId])
+  const isTicketSameAsBuyer = (sessionId: string, ticketId: string) =>
+    isSessionSameAsBuyer(sessionId) || Boolean(ticketSameAsBuyerById[ticketId])
 
   function updateBuyerField(field: keyof BuyerAttendeeInfoState, value: string) {
     setBuyerInfo((current) => ({
@@ -1943,37 +2046,37 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   }
 
   function updateAttendeeField(slotKey: string, field: keyof BuyerAttendeeInfoState, value: string) {
+    const slot = attendeeSlotEntryByKey[slotKey]
+    if (!slot || isTicketSameAsBuyer(slot.sessionId, slot.ticketId)) return
+
     setAttendeeInfoBySlot((current) => {
-      const slot = current[slotKey]
-      if (!slot || slot.sameAsBuyer) return current
+      const slotState = current[slotKey]
+      if (!slotState) return current
 
       return {
         ...current,
         [slotKey]: {
-          ...slot,
+          ...slotState,
           [field]: value,
         },
       }
     })
   }
 
-  function toggleAttendeeSameAsBuyer(slotKey: string) {
-    setAttendeeInfoBySlot((current) => {
-      const slot = current[slotKey]
-      if (!slot) return current
+  function toggleSessionSameAsBuyer(sessionId: string) {
+    setSessionSameAsBuyerById((current) => ({
+      ...current,
+      [sessionId]: !current[sessionId],
+    }))
+  }
 
-      const nextSameAsBuyer = !slot.sameAsBuyer
+  function toggleTicketSameAsBuyer(sessionId: string, ticketId: string) {
+    if (isSessionSameAsBuyer(sessionId)) return
 
-      return {
-        ...current,
-        [slotKey]: nextSameAsBuyer
-          ? {
-              sameAsBuyer: true,
-              ...buyerInfo,
-            }
-          : slot,
-      }
-    })
+    setTicketSameAsBuyerById((current) => ({
+      ...current,
+      [ticketId]: !current[ticketId],
+    }))
   }
 
   function handleBackStep() {
@@ -2052,6 +2155,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   function handleRemoveAllTickets() {
     const resetIndex = sessionsStepIndex >= 0 ? sessionsStepIndex : 0
     setSelectedTicketQuantities({})
+    setSessionSameAsBuyerById({})
+    setTicketSameAsBuyerById({})
     setSelectedPaymentMethod(null)
     setExpandedPaymentMethod(null)
     setCardHolderName('')
@@ -2818,20 +2923,24 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                   </Stack>
                                 </SupportCard>
 
-                                <SupportCard title='Attendee details for selected tickets' subtitle='Use Same As Buyer when the buyer is also the attendee. Turn it off to enter a different attendee.' icon={<Users size={18} />}>
-                                  {attendeeTicketGroups.length > 0 ? (
+                                <SupportCard
+                                  title='Session Attendees'
+                                  subtitle='Each session is grouped once. Session toggles cover every attendee in the session, while ticket toggles only affect that ticket.'
+                                  icon={<Users size={18} />}
+                                >
+                                  {attendeeSessionGroups.length > 0 ? (
                                     <Stack gap={4}>
                                       <Box borderWidth='1px' borderColor='blue.200' borderRadius='18px' bg='blue.50' p={4}>
                                         <Flex justify='space-between' gap={4} align='start' flexWrap='wrap'>
                                           <Stack gap={1} minW={0}>
                                             <Text fontSize='sm' fontWeight='800' color='gray.900'>
-                                              Attendee details for selected tickets
+                                              Attendee details by session
                                             </Text>
                                             <Text fontSize='sm' color='gray.600' lineHeight='1.6'>
-                                              Use Same As Buyer when the buyer is also the attendee. Turn it off to enter a different attendee.
+                                              Turn on Same As Buyer at the session level to copy buyer data for every attendee in that session. Use ticket-level toggles when only one ticket should follow the buyer.
                                             </Text>
                                           </Stack>
-                                          <HStack gap={2} flexWrap='wrap'>
+                                          <HStack gap={2} flexWrap='wrap' justify='flex-end'>
                                             {requiresAttendeeInfo ? (
                                               <Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>
                                                 Attendee info required
@@ -2847,57 +2956,77 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                       </Box>
 
                                       <Stack gap={4}>
-                                        {attendeeTicketGroups.map((group) => (
-                                          <Box key={group.key} borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' p={4} boxShadow='0 10px 24px rgba(15, 23, 42, 0.04)'>
-                                            <Stack gap={4}>
-                                              <Flex justify='space-between' gap={4} align={{ base: 'start', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
-                                                <Stack gap={1} minW={0}>
-                                                  <Text fontSize='sm' fontWeight='800' color='gray.900' lineHeight='1.4'>
-                                                    {group.sessionName}
-                                                  </Text>
-                                                  <Text fontSize='sm' color='gray.600' lineHeight='1.4'>
-                                                    {group.ticketName}
-                                                  </Text>
-                                                </Stack>
-                                                <HStack gap={2} flexWrap='wrap' justify='flex-end'>
-                                                  <Badge colorPalette='gray' variant='subtle' borderRadius='full' px={3} py={1}>
-                                                    {group.attendeeCount} {group.attendeeCount === 1 ? 'attendee' : 'attendees'}
-                                                  </Badge>
-                                                  {group.requiresAttendeeInfo ? (
-                                                    <Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>
-                                                      Required
-                                                    </Badge>
-                                                  ) : null}
-                                                  {group.hasQuestions ? (
-                                                    <Badge colorPalette='orange' variant='subtle' borderRadius='full' px={3} py={1}>
-                                                      Questions
-                                                    </Badge>
-                                                  ) : null}
-                                                </HStack>
-                                              </Flex>
+                                        {attendeeSessionGroups.map((sessionGroup) => {
+                                          const sessionSameAsBuyer = isSessionSameAsBuyer(sessionGroup.sessionId)
 
+                                          return (
+                                            <Box
+                                              key={sessionGroup.key}
+                                              borderWidth='1px'
+                                              borderColor='gray.200'
+                                              borderRadius='20px'
+                                              bg='white'
+                                              p={4}
+                                              boxShadow='0 10px 24px rgba(15, 23, 42, 0.04)'
+                                            >
                                               <Stack gap={4}>
-                                                {group.slots.map((slot) => (
-                                                  <AttendeeSlotCard
-                                                    key={slot.key}
-                                                    slot={{
-                                                      key: slot.key,
-                                                      sessionName: group.sessionName,
-                                                      ticketName: group.ticketName,
-                                                      attendeeLabel: slot.attendeeLabel,
-                                                      requiresAttendeeInfo: group.requiresAttendeeInfo,
-                                                      hasQuestions: group.hasQuestions,
-                                                    }}
-                                                    buyerInfo={buyerInfo}
-                                                    attendeeInfo={attendeeInfoBySlot[slot.key] ?? { sameAsBuyer: true, ...buyerInfo }}
-                                                    onToggleSameAsBuyer={toggleAttendeeSameAsBuyer}
-                                                    onChangeField={updateAttendeeField}
-                                                  />
-                                                ))}
+                                                <Flex
+                                                  justify='space-between'
+                                                  gap={4}
+                                                  align={{ base: 'start', md: 'center' }}
+                                                  direction={{ base: 'column', md: 'row' }}
+                                                >
+                                                  <Stack gap={1} minW={0}>
+                                                    <Text fontSize='sm' fontWeight='800' color='gray.900' lineHeight='1.4'>
+                                                      {sessionGroup.sessionName}
+                                                    </Text>
+                                                    <Text fontSize='sm' color='gray.600' lineHeight='1.4'>
+                                                      {sessionGroup.attendeeCount} {sessionGroup.attendeeCount === 1 ? 'attendee' : 'attendees'} selected in this session.
+                                                    </Text>
+                                                  </Stack>
+
+                                                  <Button
+                                                    type='button'
+                                                    variant='outline'
+                                                    borderRadius='14px'
+                                                    minH='11'
+                                                    justifyContent='space-between'
+                                                    onClick={() => toggleSessionSameAsBuyer(sessionGroup.sessionId)}
+                                                    aria-pressed={sessionSameAsBuyer}
+                                                  >
+                                                    <Text as='span' fontWeight='700'>
+                                                      Same As Buyer
+                                                    </Text>
+                                                    <Badge
+                                                      colorPalette={sessionSameAsBuyer ? 'blue' : 'gray'}
+                                                      variant='subtle'
+                                                      borderRadius='full'
+                                                      px={3}
+                                                      py={1}
+                                                    >
+                                                      {sessionSameAsBuyer ? 'On' : 'Off'}
+                                                    </Badge>
+                                                  </Button>
+                                                </Flex>
+
+                                                <Stack gap={4}>
+                                                  {sessionGroup.tickets.map((ticketGroup) => (
+                                                    <AttendeeTicketCard
+                                                      key={ticketGroup.key}
+                                                      group={ticketGroup}
+                                                      buyerInfo={buyerInfo}
+                                                      attendeeInfoBySlot={attendeeInfoBySlot}
+                                                      sessionSameAsBuyer={sessionSameAsBuyer}
+                                                      ticketSameAsBuyer={Boolean(ticketSameAsBuyerById[ticketGroup.ticketId])}
+                                                      onToggleSameAsBuyer={toggleTicketSameAsBuyer}
+                                                      onChangeField={updateAttendeeField}
+                                                    />
+                                                  ))}
+                                                </Stack>
                                               </Stack>
-                                            </Stack>
-                                          </Box>
-                                        ))}
+                                            </Box>
+                                          )
+                                        })}
                                       </Stack>
                                     </Stack>
                                   ) : (
