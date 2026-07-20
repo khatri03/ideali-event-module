@@ -1379,7 +1379,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setActiveTab(tabs[nextIndex].id)
   }
 
-  function handlePurchaseReview() {
+  function getPurchaseReviewIssues() {
     const issues: string[] = []
 
     if (selectedTicketCount <= 0) {
@@ -1414,13 +1414,14 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       issues.push('Accept the registration terms and conditions.')
     }
 
+    return issues
+  }
+
+  function handlePurchaseReview() {
+    const issues = getPurchaseReviewIssues()
+
     setPurchaseReviewAttempted(true)
     setPurchaseReviewMessage(issues[0] ?? null)
-
-    if (issues.length > 0) {
-      return
-    }
-
     setIsPurchaseReviewOpen(true)
   }
 
@@ -1434,6 +1435,14 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   }
 
   function handleConfirmPurchase() {
+    const issues = getPurchaseReviewIssues()
+
+    if (issues.length > 0) {
+      setPurchaseReviewAttempted(true)
+      setPurchaseReviewMessage(issues[0] ?? null)
+      return
+    }
+
     setIsPurchaseReviewOpen(false)
     toaster.create({
       type: 'success',
@@ -2850,6 +2859,14 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                   ) : null}
                 </Box>
 
+                {purchaseReviewAttempted && purchaseReviewMessage ? (
+                  <Box borderWidth='1px' borderColor='red.200' bg='red.50' borderRadius='18px' p={4}>
+                    <Text fontSize='sm' color='red.700' fontWeight='600'>
+                      {purchaseReviewMessage}
+                    </Text>
+                  </Box>
+                ) : null}
+
                 <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' overflow='hidden'>
                   <Box px={4} py={3} bg='gray.50' borderBottomWidth='1px' borderBottomColor='gray.200'>
                     <Text fontSize='sm' fontWeight='700' color='gray.700'>
@@ -2929,6 +2946,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                   _hover={{ bg: hexToRgba(formAccent, 0.88) }}
                   _active={{ bg: hexToRgba(formAccent, 0.95) }}
                   onClick={handleConfirmPurchase}
+                  disabled={Boolean(purchaseReviewAttempted && purchaseReviewMessage)}
                 >
                   Confirm Purchase
                 </Button>
