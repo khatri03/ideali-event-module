@@ -25,6 +25,7 @@ import {
   Stack,
   Tabs,
   Text,
+  Tooltip,
 } from '@chakra-ui/react'
 import { toaster } from '@/lib/toaster'
 import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement } from '@stripe/react-stripe-js'
@@ -38,6 +39,7 @@ import {
   Clock3,
   ExternalLink,
   FileText,
+  AlertCircle,
   MapPin,
   MessageSquareText,
   Check,
@@ -2598,66 +2600,70 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                       onToggle={() => handleSessionToggle(session.uniqueId)}
                                       onOpenDescription={() => setActiveSessionDescription({ title: session.name, description: session.description ?? '' })}
                                     >
-                                      {selectedSessionSummary && (selectedSessionSummary.requiresAttendeeInfo || selectedSessionSummary.hasQuestions) ? (
-                                        <Box borderWidth='1px' borderColor={selectedSessionSummary.requiresAttendeeInfo ? 'blue.200' : 'orange.200'} borderRadius='18px' bg={selectedSessionSummary.requiresAttendeeInfo ? 'blue.50' : 'orange.50'} p={4}>
-                                          <Flex justify='space-between' gap={4} align='start' flexWrap='wrap'>
-                                            <Stack gap={1} minW={0}>
-                                              <Text fontSize='sm' fontWeight='800' color='gray.900'>
-                                                This selection needs extra information.
-                                              </Text>
-                                              <Text fontSize='sm' color='gray.600' lineHeight='1.6'>
-                                                Buyer/Attendee info will collect the attendee details for these tickets before payment.
-                                              </Text>
-                                            </Stack>
-                                            <HStack gap={2} flexWrap='wrap'>
-                                              {selectedSessionSummary.requiresAttendeeInfo ? (
-                                                <Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>
-                                                  Attendee info required
-                                                </Badge>
-                                              ) : null}
-                                              {selectedSessionSummary.hasQuestions ? (
-                                                <Badge colorPalette='orange' variant='subtle' borderRadius='full' px={3} py={1}>
-                                                  Questions required
-                                                </Badge>
-                                              ) : null}
-                                            </HStack>
-                                          </Flex>
-                                        </Box>
-                                      ) : null}
                                       {session.ticketTypes.length > 0 ? (
                                         <Stack gap={4}>
-                                          <Flex justify='flex-end' align={{ base: 'stretch', md: 'center' }} gap={3} direction={{ base: 'column', md: 'row' }}>
-                                            <Box position='relative' w='full' maxW={{ base: 'full', md: '280px' }}>
-                                              <Input
-                                                value={searchValue}
-                                                onChange={(event) => handleSessionTicketSearchChange(session.uniqueId, event.target.value)}
-                                                placeholder='Search tickets'
-                                                h='44px'
-                                                px={4}
-                                                pe={searchValue ? 11 : 4}
-                                                borderRadius='full'
-                                                borderColor='gray.300'
-                                                bg='white'
-                                                fontSize='sm'
-                                                _focusVisible={{ borderColor: 'gray.500', boxShadow: '0 0 0 1px var(--chakra-colors-gray-500)' }}
-                                              />
-                                              {searchValue ? (
-                                                <CloseButton
-                                                  aria-label='Clear ticket search'
-                                                  size='sm'
-                                                  position='absolute'
-                                                  top='50%'
-                                                  right='10px'
-                                                  transform='translateY(-50%)'
+                                          {selectedSessionSummary?.requiresAttendeeInfo ? (
+                                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={3} alignItems='center'>
+                                              <HStack gap={2} minW={0} align='center'>
+                                                <Tooltip.Root openDelay={250} closeDelay={100}>
+                                                  <Tooltip.Trigger asChild>
+                                                    <Badge
+                                                      colorPalette='blue'
+                                                      variant='subtle'
+                                                      borderRadius='full'
+                                                      px={3}
+                                                      py={1}
+                                                      fontSize='xs'
+                                                      fontWeight='800'
+                                                      letterSpacing='0.08em'
+                                                      textTransform='uppercase'
+                                                      cursor='help'
+                                                    >
+                                                      <HStack gap={1.5}>
+                                                        <AlertCircle size={14} />
+                                                        <Text as='span'>Requires Attendee Info</Text>
+                                                      </HStack>
+                                                    </Badge>
+                                                  </Tooltip.Trigger>
+                                                  <Tooltip.Positioner>
+                                                    <Tooltip.Content>
+                                                      Buying this session would require attendee info.
+                                                    </Tooltip.Content>
+                                                  </Tooltip.Positioner>
+                                                </Tooltip.Root>
+                                              </HStack>
+                                              <Box position='relative' w='full' maxW={{ base: 'full', md: '280px' }} justifySelf={{ base: 'stretch', md: 'end' }}>
+                                                <Input
+                                                  value={searchValue}
+                                                  onChange={(event) => handleSessionTicketSearchChange(session.uniqueId, event.target.value)}
+                                                  placeholder='Search tickets'
+                                                  h='44px'
+                                                  px={4}
+                                                  pe={searchValue ? 11 : 4}
                                                   borderRadius='full'
-                                                  color='gray.500'
-                                                  bg='gray.100'
-                                                  _hover={{ bg: 'gray.200', color: 'gray.700' }}
-                                                  onClick={() => handleSessionTicketSearchChange(session.uniqueId, '')}
+                                                  borderColor='gray.300'
+                                                  bg='white'
+                                                  fontSize='sm'
+                                                  _focusVisible={{ borderColor: 'gray.500', boxShadow: '0 0 0 1px var(--chakra-colors-gray-500)' }}
                                                 />
-                                              ) : null}
-                                            </Box>
-                                          </Flex>
+                                                {searchValue ? (
+                                                  <CloseButton
+                                                    aria-label='Clear ticket search'
+                                                    size='sm'
+                                                    position='absolute'
+                                                    top='50%'
+                                                    right='10px'
+                                                    transform='translateY(-50%)'
+                                                    borderRadius='full'
+                                                    color='gray.500'
+                                                    bg='gray.100'
+                                                    _hover={{ bg: 'gray.200', color: 'gray.700' }}
+                                                    onClick={() => handleSessionTicketSearchChange(session.uniqueId, '')}
+                                                  />
+                                                ) : null}
+                                              </Box>
+                                            </SimpleGrid>
+                                          ) : null}
                                           {filteredTickets.length > 0 ? (
                                             <SimpleGrid columns={{ base: 1, xl: 3 }} gap={4}>
                                               {filteredTickets.map((ticket) => (
