@@ -1772,35 +1772,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                   })}
                 </Tabs.List>
 
-                {selectedTicketCount > 0 ? (
-                  <Flex
-                    mb={4}
-                    align={{ base: 'center', md: 'center' }}
-                    justify='space-between'
-                    gap={3}
-                    wrap='wrap'
-                  >
-                    <Box minH='11' display='flex' alignItems='center'>
-                      {selectedTicketCount > 0 ? (
-                        <Button
-                          variant='ghost'
-                          color='red.600'
-                          fontSize='sm'
-                          fontWeight='700'
-                          minH='11'
-                          px={0}
-                          _hover={{ bg: 'transparent', color: 'red.700', textDecoration: 'underline' }}
-                          _active={{ bg: 'transparent', color: 'red.800' }}
-                          onClick={requestRemoveAllTickets}
-                        >
-                          Remove all
-                        </Button>
-                      ) : null}
-                    </Box>
-
-                  </Flex>
-                ) : null}
-
                 {tabs.map((tab) => (
                   <Tabs.Content key={tab.id} value={tab.id}>
                     <Stack gap={6}>
@@ -1822,26 +1793,51 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                               {sessionsLoading ? (
                                 <SessionsTabSkeleton />
                               ) : sessions.length > 0 ? (
-                                <Flex justify='flex-end' gap={2} wrap='wrap'>
-                                  <Button
-                                    h='38px'
-                                    px={4}
-                                    borderRadius='full'
-                                    borderWidth='1px'
-                                    borderColor='gray.900'
-                                    bg='gray.900'
-                                    color='white'
-                                    fontSize='sm'
-                                    fontWeight='700'
-                                    boxShadow='0 10px 24px rgba(15, 23, 42, 0.18)'
-                                    _hover={{ bg: 'gray.800', borderColor: 'gray.800' }}
-                                    _active={{ bg: 'gray.700', borderColor: 'gray.700' }}
-                                    transition='all 0.2s ease'
-                                    minW='140px'
-                                    onClick={areAllSessionsExpanded ? handleCollapseAllSessions : handleExpandAllSessions}
-                                  >
-                                    {areAllSessionsExpanded ? 'Collapse All' : 'Expand All'}
-                                  </Button>
+                                <Flex
+                                  align={{ base: 'stretch', md: 'center' }}
+                                  justify='space-between'
+                                  gap={3}
+                                  direction={{ base: 'column', md: 'row' }}
+                                >
+                                  <Box minH='11' display='flex' alignItems='center'>
+                                    {selectedTicketCount > 0 ? (
+                                      <Button
+                                        variant='ghost'
+                                        color='red.600'
+                                        fontSize='sm'
+                                        fontWeight='700'
+                                        minH='11'
+                                        px={0}
+                                        _hover={{ bg: 'transparent', color: 'red.700', textDecoration: 'underline' }}
+                                        _active={{ bg: 'transparent', color: 'red.800' }}
+                                        onClick={requestRemoveAllTickets}
+                                      >
+                                        Remove all
+                                      </Button>
+                                    ) : null}
+                                  </Box>
+
+                                  <Box display='flex' justifyContent={{ base: 'flex-start', md: 'flex-end' }}>
+                                    <Button
+                                      h='38px'
+                                      px={4}
+                                      borderRadius='full'
+                                      borderWidth='1px'
+                                      borderColor='gray.900'
+                                      bg='gray.900'
+                                      color='white'
+                                      fontSize='sm'
+                                      fontWeight='700'
+                                      boxShadow='0 10px 24px rgba(15, 23, 42, 0.18)'
+                                      _hover={{ bg: 'gray.800', borderColor: 'gray.800' }}
+                                      _active={{ bg: 'gray.700', borderColor: 'gray.700' }}
+                                      transition='all 0.2s ease'
+                                      minW='140px'
+                                      onClick={areAllSessionsExpanded ? handleCollapseAllSessions : handleExpandAllSessions}
+                                    >
+                                      {areAllSessionsExpanded ? 'Collapse All' : 'Expand All'}
+                                    </Button>
+                                  </Box>
                                 </Flex>
                               ) : null}
                               {sessions.map((session) => (
@@ -1977,7 +1973,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                     <Stack gap={2}>
                                       <HStack justify='space-between' gap={4} flexWrap='wrap'>
                                         <Text fontSize='sm' fontWeight='700' color='gray.700'>Select payment method</Text>
-                                        <Text fontSize='sm' color='gray.500'>Method order is sorted by total payable.</Text>
                                       </HStack>
 
                                     <Stack gap={3}>
@@ -2068,11 +2063,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                             <Text fontSize='sm' color='gray.600' maxW='full' overflow='hidden' textOverflow='ellipsis' whiteSpace='nowrap'>
                                                               {charge.title}
                                                             </Text>
-                                                            {charge.source === 'processor-fee' ? (
-                                                              <Text fontSize='xs' color='gray.500'>
-                                                                Price: {formatChargeRate(charge.valueType, charge.value, currentEvent.paymentAccountCurrency)}
-                                                              </Text>
-                                                            ) : null}
+                                                            <Text fontSize='xs' color='gray.500'>
+                                                              {charge.source === 'processor-fee' ? 'Price' : 'Rate'}: {formatChargeRate(charge.valueType, charge.value, currentEvent.paymentAccountCurrency)}
+                                                            </Text>
                                                           </Stack>
                                                           <Text fontSize='sm' color='gray.700' fontWeight='700' flexShrink={0}>
                                                             {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
@@ -2187,15 +2180,25 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                                 p='0'
                                                                 borderRadius='full'
                                                                 borderWidth='1px'
-                                                                borderColor='gray.300'
-                                                                bg='white'
-                                                                color='gray.700'
-                                                                onClick={() => handleTicketQuantityChange(item.ticket, getTicketQuantityAfterDecrement(item.ticket, item.quantity))}
+                                                                borderColor={item.quantity === 1 ? 'red.300' : 'gray.300'}
+                                                                bg={item.quantity === 1 ? 'red.50' : 'white'}
+                                                                color={item.quantity === 1 ? 'red.500' : 'gray.700'}
+                                                                _hover={item.quantity === 1 ? { bg: 'red.100', color: 'red.600' } : { bg: 'gray.50' }}
+                                                                _active={item.quantity === 1 ? { bg: 'red.200', color: 'red.700' } : { bg: 'gray.100' }}
+                                                                onClick={() =>
+                                                                  item.quantity === 1
+                                                                    ? requestRemoveTicket(item.ticket, item.ticketName)
+                                                                    : handleTicketQuantityChange(item.ticket, getTicketQuantityAfterDecrement(item.ticket, item.quantity))
+                                                                }
                                                                 disabled={item.quantity <= 0}
-                                                                aria-label={`Decrease ${item.ticketName}`}
-                                                                title={`Decrease ${item.ticketName}`}
+                                                                aria-label={item.quantity === 1 ? `Remove ${item.ticketName}` : `Decrease ${item.ticketName}`}
+                                                                title={item.quantity === 1 ? `Remove ${item.ticketName}` : `Decrease ${item.ticketName}`}
                                                               >
-                                                                <Text as='span' fontSize='md' fontWeight='800' lineHeight='1'>-</Text>
+                                                                {item.quantity === 1 ? (
+                                                                  <Trash2 size={13} strokeWidth={2.2} />
+                                                                ) : (
+                                                                  <Text as='span' fontSize='md' fontWeight='800' lineHeight='1'>-</Text>
+                                                                )}
                                                               </Button>
 
                                                               <Box flex='1' minW='68px' maxW='84px' position='relative'>
@@ -2261,20 +2264,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                             <Text fontWeight='700' color='gray.900'>
                                                               {formatAmount(item.lineTotal, currentEvent.paymentAccountCurrency)}
                                                             </Text>
-                                                            <Button
-                                                              minW='0'
-                                                              h='28px'
-                                                              px={2.5}
-                                                              variant='ghost'
-                                                              color='red.500'
-                                                              _hover={{ bg: 'red.50', color: 'red.600' }}
-                                                              _active={{ bg: 'red.100', color: 'red.700' }}
-                                                              aria-label={`Remove ${item.ticketName}`}
-                                                              title={`Remove ${item.ticketName}`}
-                                                              onClick={() => requestRemoveTicket(item.ticket, item.ticketName)}
-                                                            >
-                                                              <Trash2 size={13} strokeWidth={2.2} />
-                                                            </Button>
                                                           </HStack>
                                                         </Table.Cell>
                                                       </Table.Row>
@@ -2302,9 +2291,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                                   </Table.Cell>
                                                   <Table.Cell borderColor='gray.200' px={4} py={3}>
                                                     <Text fontWeight='700' color='gray.800'>
-                                                      {charge.source === 'processor-fee'
-                                                        ? formatChargeRate(charge.valueType, charge.value, currentEvent.paymentAccountCurrency)
-                                                        : ''}
+                                                      {formatChargeRate(charge.valueType, charge.value, currentEvent.paymentAccountCurrency)}
                                                     </Text>
                                                   </Table.Cell>
                                                   <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='center'>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { Controller, useFormContext, useWatch } from "react-hook-form"
-import { Box, Button, Dialog, Field, Flex, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, Dialog, Field, Flex, Table, Text } from "@chakra-ui/react"
 import { Check, Plus, Trash2 } from "lucide-react"
 import ReactSelect, { components, type MultiValue, type MultiValueRemoveProps, type OptionProps, type StylesConfig } from "react-select"
 import { useEventChargeRuleOptions } from "../hooks/useEventChargeRuleOptions"
@@ -12,6 +12,10 @@ interface ChargeRuleSelectOption {
   value: string
   label: string
   description: string
+  name: string
+  chargeKind: string
+  calculationType: string
+  valueAmount: number
   isActive: boolean
 }
 
@@ -52,6 +56,11 @@ function ChargeRuleMultiValueRemove(props: MultiValueRemoveProps<ChargeRuleSelec
       <Trash2 size={12} />
     </components.MultiValueRemove>
   )
+}
+
+function formatChargeValue(option: ChargeRuleSelectOption) {
+  const value = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(option.valueAmount)
+  return option.calculationType === "Percent" ? `${value}%` : value
 }
 
 export function EventChargeRulesSection() {
@@ -219,48 +228,129 @@ export function EventChargeRulesSection() {
       />
 
       {selectedOptions.length > 0 ? (
-        <Box mt={4} w="full" borderRadius="18px" border="1px solid" borderColor="border.subtle" bg="app.bg" px={4} py={4}>
-          <Text fontSize="sm" fontWeight="700" color="text.primary" mb={3}>
-            Mapped rules
-          </Text>
-          <Box maxH="240px" overflowY="auto" pr={1}>
-            {selectedOptions.map((option) => (
-              <Flex
-                key={option.value}
-                w="full"
-                align="center"
-                justify="space-between"
-                gap={4}
-                py={2.5}
-                borderBottom="1px solid"
-                borderColor="gray.100"
-                _last={{ borderBottom: "none" }}
-              >
-                <Box flex="1" minW={0}>
-                  <Text fontSize="sm" fontWeight="700" color="text.primary" lineClamp={1}>
-                    {option.label}
-                  </Text>
-                  <Text fontSize="xs" color="text.secondary" lineClamp={1}>
-                    {option.description}
-                  </Text>
-                </Box>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  colorPalette="red"
-                  borderRadius="full"
-                  h="36px"
-                  w="36px"
-                  minW="36px"
-                  p={0}
-                  onClick={() => setPendingRemoval(option)}
-                  aria-label={`Remove ${option.label}`}
-                  title={`Remove ${option.label}`}
-                >
-                  <Trash2 size={15} />
-                </Button>
-              </Flex>
-            ))}
+        <Box mt={4} w="full" borderRadius="18px" border="1px solid" borderColor="gray.200" bg="white" overflow="hidden">
+          <Flex
+            px={4}
+            py={4}
+            align={{ base: "stretch", md: "center" }}
+            justify="space-between"
+            direction={{ base: "column", md: "row" }}
+            gap={2}
+            borderBottom="1px solid"
+            borderColor="gray.200"
+            bg="gray.50"
+          >
+            <Box>
+              <Text fontSize="sm" fontWeight="700" color="gray.900">
+                Mapped charge rules
+              </Text>
+              <Text fontSize="xs" color="gray.600">
+                {selectedOptions.length} rule{selectedOptions.length === 1 ? "" : "s"} mapped to this event.
+              </Text>
+            </Box>
+          </Flex>
+
+          <Box overflowX="auto">
+            <Table.Root
+              variant="line"
+              size="sm"
+              css={{
+                borderCollapse: "collapse",
+                "& th, & td": {
+                  border: "1px solid",
+                  borderColor: "gray.200",
+                },
+              }}
+            >
+              <Table.Header>
+                <Table.Row bg="gray.50">
+                  <Table.ColumnHeader px={3} py={3} textAlign="center">
+                    Actions
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader px={4} py={3} textAlign="center">
+                    Name
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader px={4} py={3} textAlign="center">
+                    Display Text
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader px={4} py={3} textAlign="center">
+                    Charge Category
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader px={4} py={3} textAlign="center">
+                    Calculation Type
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader px={4} py={3} textAlign="center">
+                    Value
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader px={4} py={3} textAlign="center">
+                    Active
+                  </Table.ColumnHeader>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
+                {selectedOptions.map((option) => (
+                  <Table.Row key={option.value} _hover={{ bg: "gray.50" }}>
+                    <Table.Cell px={3} py={3} textAlign="center">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        colorPalette="red"
+                        borderRadius="full"
+                        h="36px"
+                        w="36px"
+                        minW="36px"
+                        p={0}
+                        onClick={() => setPendingRemoval(option)}
+                        aria-label={`Remove ${option.label}`}
+                        title={`Remove ${option.label}`}
+                      >
+                        <Trash2 size={15} />
+                      </Button>
+                    </Table.Cell>
+                    <Table.Cell px={4} py={3}>
+                      <Text fontSize="sm" fontWeight="700" color="gray.900" lineClamp={1}>
+                        {option.name}
+                      </Text>
+                    </Table.Cell>
+                    <Table.Cell px={4} py={3}>
+                      <Text fontSize="sm" color="gray.700" lineClamp={1}>
+                        {option.label}
+                      </Text>
+                    </Table.Cell>
+                    <Table.Cell px={4} py={3}>
+                      <Text fontSize="sm" color="gray.700">
+                        {option.chargeKind}
+                      </Text>
+                    </Table.Cell>
+                    <Table.Cell px={4} py={3}>
+                      <Text fontSize="sm" color="gray.700">
+                        {option.calculationType}
+                      </Text>
+                    </Table.Cell>
+                    <Table.Cell px={4} py={3}>
+                      <Text fontSize="sm" fontWeight="700" color="gray.900">
+                        {formatChargeValue(option)}
+                      </Text>
+                    </Table.Cell>
+                    <Table.Cell px={4} py={3} textAlign="center">
+                      <Badge
+                        colorPalette={option.isActive ? "green" : "gray"}
+                        variant="subtle"
+                        borderRadius="999px"
+                        px={3}
+                        py={1}
+                        fontSize="10px"
+                        fontWeight="800"
+                        textTransform="uppercase"
+                        letterSpacing="0.08em"
+                      >
+                        {option.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </Table.Cell>
+                  </Table.Row>
+                ))}
+              </Table.Body>
+            </Table.Root>
           </Box>
         </Box>
       ) : null}
