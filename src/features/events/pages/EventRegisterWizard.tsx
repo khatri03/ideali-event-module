@@ -1296,7 +1296,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     paymentBreakdowns.find((breakdown) => breakdown.paymentMethod === selectedPaymentMethod) ??
     paymentBreakdowns[0] ??
     null
-  const selectedCardPaymentMethod = selectedPaymentMethod ?? selectedPaymentBreakdown?.paymentMethod ?? null
   const isSelectedPaymentMethodCard = Boolean(selectedPaymentBreakdown && isCardPaymentMethod(selectedPaymentBreakdown.paymentMethod))
   const eventData = {
     ...event,
@@ -2192,147 +2191,125 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                     </Box>
                                   </Stack>
                                 ) : paymentBreakdowns.length > 0 ? (
-                                  <Stack gap={4}>
+                                  <>
+                                    <Stack gap={4}>
                                     <Stack gap={2}>
                                       <HStack justify='space-between' gap={4} flexWrap='wrap'>
                                         <Text fontSize='sm' fontWeight='700' color='gray.700'>Select payment method</Text>
                                       </HStack>
+                                    </Stack>
 
                                     <Stack gap={3}>
                                       {paymentBreakdowns.map((breakdown) => {
-                                          const isSelected = selectedPaymentBreakdown?.paymentMethod === breakdown.paymentMethod
-                                          const isExpanded = expandedPaymentMethod === breakdown.paymentMethod
+                                        const isSelected = selectedPaymentBreakdown?.paymentMethod === breakdown.paymentMethod
+                                        const isExpanded = expandedPaymentMethod === breakdown.paymentMethod
+                                        const showPaymentControls = isSelected && isCardPaymentMethod(breakdown.paymentMethod)
 
-                                          return (
-                                            <Box
-                                              key={breakdown.paymentMethod}
-                                              borderWidth='1px'
-                                              borderColor={isSelected ? formAccent : 'gray.200'}
-                                              borderRadius='18px'
-                                              bg={isSelected ? hexToRgba(formAccent, 0.08) : 'white'}
-                                              boxShadow={isSelected ? `0 0 0 1px ${formAccent}` : '0 10px 24px rgba(15, 23, 42, 0.04)'}
-                                              overflow='hidden'
+                                        return (
+                                          <Box
+                                            key={breakdown.paymentMethod}
+                                            borderWidth='1px'
+                                            borderColor={isSelected ? formAccent : 'gray.200'}
+                                            borderRadius='18px'
+                                            bg={isSelected ? hexToRgba(formAccent, 0.08) : 'white'}
+                                            boxShadow={isSelected ? `0 0 0 1px ${formAccent}` : '0 10px 24px rgba(15, 23, 42, 0.04)'}
+                                            overflow='hidden'
+                                          >
+                                            <Button
+                                              onClick={() => {
+                                                setSelectedPaymentMethod(breakdown.paymentMethod)
+                                                setExpandedPaymentMethod((current) =>
+                                                  current === breakdown.paymentMethod ? null : breakdown.paymentMethod,
+                                                )
+                                              }}
+                                              variant='ghost'
+                                              w='full'
+                                              h='auto'
+                                              px={4}
+                                              py={4}
+                                              justifyContent='space-between'
+                                              alignItems='center'
+                                              textAlign='left'
+                                              borderRadius={0}
+                                              _hover={{ bg: isSelected ? hexToRgba(formAccent, 0.12) : 'gray.50' }}
+                                              _active={{ bg: isSelected ? hexToRgba(formAccent, 0.16) : 'gray.100' }}
                                             >
-                                              <Button
-                                                onClick={() => {
-                                                  setSelectedPaymentMethod(breakdown.paymentMethod)
-                                                  setExpandedPaymentMethod((current) =>
-                                                    current === breakdown.paymentMethod ? null : breakdown.paymentMethod,
-                                                  )
-                                                }}
-                                                variant='ghost'
-                                                w='full'
-                                                h='auto'
-                                                px={4}
-                                                py={4}
-                                                justifyContent='space-between'
-                                                alignItems='center'
-                                                textAlign='left'
-                                                borderRadius={0}
-                                                _hover={{ bg: isSelected ? hexToRgba(formAccent, 0.12) : 'gray.50' }}
-                                                _active={{ bg: isSelected ? hexToRgba(formAccent, 0.16) : 'gray.100' }}
-                                              >
-                                                <HStack gap={3} minW={0} flex='1' justify='space-between' align='start'>
-                                                  <Stack gap={1} minW={0} flex='1'>
-                                                    <HStack gap={2} wrap='wrap' minW={0}>
-                                                      <Text fontWeight='800' color='gray.900'>{breakdown.label}</Text>
-                                                      {breakdown.isOrganizerOnly ? <Badge colorPalette='purple' variant='subtle' borderRadius='full' px={3} py={1}>Organizer only</Badge> : null}
-                                                    </HStack>
-                                                  </Stack>
-
-                                                  <HStack gap={2} flexShrink={0}>
-                                                    <Text fontSize='lg' fontWeight='800' color='gray.900'>
-                                                      {formatAmount(breakdown.grandTotal, currentEvent.paymentAccountCurrency)}
-                                                    </Text>
-                                                    <Box
-                                                      display='inline-flex'
-                                                      alignItems='center'
-                                                      justifyContent='center'
-                                                      w='28px'
-                                                      h='28px'
-                                                      borderRadius='full'
-                                                      borderWidth='1px'
-                                                      borderColor={isExpanded ? formAccent : 'gray.300'}
-                                                      bg={isExpanded ? hexToRgba(formAccent, 0.12) : 'gray.50'}
-                                                      color='gray.700'
-                                                      flexShrink={0}
-                                                    >
-                                                      <Box transform={isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'} transition='transform 0.2s ease'>
-                                                        <ChevronDown size={14} />
-                                                      </Box>
-                                                    </Box>
+                                              <HStack gap={3} minW={0} flex='1' justify='space-between' align='start'>
+                                                <Stack gap={1} minW={0} flex='1'>
+                                                  <HStack gap={2} wrap='wrap' minW={0}>
+                                                    <Text fontWeight='800' color='gray.900'>{breakdown.label}</Text>
+                                                    {breakdown.isOrganizerOnly ? <Badge colorPalette='purple' variant='subtle' borderRadius='full' px={3} py={1}>Organizer only</Badge> : null}
                                                   </HStack>
-                                                </HStack>
-                                              </Button>
-
-                                              <Separator borderColor='gray.200' />
-
-                                              <AnimatedPaymentMethodBody isOpen={isExpanded}>
-                                                <Stack gap={3} px={4} py={4}>
-                                                  <HStack justify='space-between' gap={3} minW={0}>
-                                                    <Text fontSize='sm' color='gray.600' fontWeight='600'>
-                                                      Item Total
-                                                    </Text>
-                                                    <Text fontSize='sm' color='gray.700' fontWeight='700' flexShrink={0}>
-                                                      {formatAmount(breakdown.subtotal, currentEvent.paymentAccountCurrency)}
-                                                    </Text>
-                                                  </HStack>
-
-                                                  {breakdown.charges.length > 0 ? (
-                                                    <Stack gap={1} minW={0}>
-                                                      {breakdown.charges.map((charge) => (
-                                                        <HStack key={`${breakdown.paymentMethod}-${charge.source}-${charge.title}`} justify='space-between' gap={3} minW={0}>
-                                                          <Stack gap={0.5} minW={0}>
-                                                            <Text fontSize='sm' color='gray.600' maxW='full' overflow='hidden' textOverflow='ellipsis' whiteSpace='nowrap'>
-                                                              {charge.title}
-                                                            </Text>
-                                                            <Text fontSize='xs' color='gray.500'>
-                                                              {charge.source === 'processor-fee' ? 'Price' : 'Rate'}: {formatChargeRate(charge.valueType, charge.value, currentEvent.paymentAccountCurrency)}
-                                                            </Text>
-                                                          </Stack>
-                                                          <Text fontSize='sm' color='gray.700' fontWeight='700' flexShrink={0}>
-                                                            {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
-                                                          </Text>
-                                                        </HStack>
-                                                      ))}
-                                                    </Stack>
-                                                  ) : (
-                                                    <Text fontSize='sm' color='gray.600'>No additional buyer charges</Text>
-                                                  )}
                                                 </Stack>
-                                              </AnimatedPaymentMethodBody>
-                                            </Box>
-                                          )
+
+                                                <HStack gap={2} flexShrink={0}>
+                                                  <Text fontSize='lg' fontWeight='800' color='gray.900'>
+                                                    {formatAmount(breakdown.grandTotal, currentEvent.paymentAccountCurrency)}
+                                                  </Text>
+                                                  <Box
+                                                    display='inline-flex'
+                                                    alignItems='center'
+                                                    justifyContent='center'
+                                                    w='28px'
+                                                    h='28px'
+                                                    borderRadius='full'
+                                                    borderWidth='1px'
+                                                    borderColor={isExpanded ? formAccent : 'gray.300'}
+                                                    bg={isExpanded ? hexToRgba(formAccent, 0.12) : 'gray.50'}
+                                                    color='gray.700'
+                                                    flexShrink={0}
+                                                  >
+                                                    <Box transform={isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'} transition='transform 0.2s ease'>
+                                                      <ChevronDown size={14} />
+                                                    </Box>
+                                                  </Box>
+                                                </HStack>
+                                              </HStack>
+                                            </Button>
+
+                                            <Separator borderColor='gray.200' />
+
+                                            <AnimatedPaymentMethodBody isOpen={isExpanded}>
+                                              <Stack gap={4} px={4} py={4}>
+                                                {showPaymentControls ? (
+                                                  <StripePaymentFields
+                                                    paymentMethod={breakdown.paymentMethod}
+                                                    paymentAccountUniqueId={currentEvent.paymentAccountUniqueId}
+                                                    paymentAccountCurrency={currentEvent.paymentAccountCurrency}
+                                                    cardHolderName={cardHolderName}
+                                                    onCardHolderNameChange={setCardHolderName}
+                                                    cardFieldStates={cardFieldStates}
+                                                    showValidationErrors={purchaseReviewAttempted}
+                                                    onCardFieldStateChange={(fieldId, nextState) =>
+                                                      setCardFieldStates((current) => ({
+                                                        ...current,
+                                                        [fieldId]: nextState,
+                                                      }))
+                                                    }
+                                                    onAvailabilityChange={setCardFieldAvailability}
+                                                  />
+                                                ) : (
+                                                  <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
+                                                    <Text fontSize='sm' color='gray.600'>
+                                                      This payment method has no additional input fields.
+                                                    </Text>
+                                                  </Box>
+                                                )}
+                                              </Stack>
+                                            </AnimatedPaymentMethodBody>
+                                          </Box>
+                                        )
                                       })}
                                     </Stack>
+                                    </Stack>
 
-                                    {selectedCardPaymentMethod ? (
-                                      <StripePaymentFields
-                                        paymentMethod={selectedCardPaymentMethod}
-                                        paymentAccountUniqueId={currentEvent.paymentAccountUniqueId}
-                                        paymentAccountCurrency={currentEvent.paymentAccountCurrency}
-                                        cardHolderName={cardHolderName}
-                                        onCardHolderNameChange={setCardHolderName}
-                                        cardFieldStates={cardFieldStates}
-                                        showValidationErrors={purchaseReviewAttempted}
-                                        onCardFieldStateChange={(fieldId, nextState) =>
-                                          setCardFieldStates((current) => ({
-                                            ...current,
-                                            [fieldId]: nextState,
-                                          }))
-                                        }
-                                        onAvailabilityChange={setCardFieldAvailability}
-                                      />
+                                    {isFinalStep && purchaseReviewAttempted && purchaseReviewMessage ? (
+                                      <Box borderWidth='1px' borderColor='red.200' bg='red.50' borderRadius='18px' p={4}>
+                                        <Text fontSize='sm' color='red.700' fontWeight='600'>
+                                          {purchaseReviewMessage}
+                                        </Text>
+                                      </Box>
                                     ) : null}
-                                  </Stack>
-
-                                  {isFinalStep && purchaseReviewAttempted && purchaseReviewMessage ? (
-                                    <Box borderWidth='1px' borderColor='red.200' bg='red.50' borderRadius='18px' p={4}>
-                                      <Text fontSize='sm' color='red.700' fontWeight='600'>
-                                        {purchaseReviewMessage}
-                                      </Text>
-                                    </Box>
-                                  ) : null}
 
                                     {selectedPaymentBreakdown ? (
                                       <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' overflow='hidden' boxShadow='0 10px 24px rgba(15, 23, 42, 0.04)'>
@@ -2568,7 +2545,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                         </Stack>
                                       </Box>
                                     ) : null}
-                                  </Stack>
+                                  </>
                                 ) : visiblePaymentMethods.length > 0 ? (
                                   <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'>
                                     <Text color='gray.600' fontSize='sm'>Payment methods are available, but the price breakdown could not be loaded yet.</Text>
