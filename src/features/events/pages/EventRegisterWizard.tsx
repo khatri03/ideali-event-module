@@ -1018,16 +1018,17 @@ function AttendeeSlotCard({
   return (
     <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' p={4} boxShadow='0 10px 24px rgba(15, 23, 42, 0.04)'>
       <Stack gap={4}>
-        <Flex justify='space-between' gap={4} align='start' wrap='wrap'>
-          <Stack gap={1} minW={0}>
-            <Text fontSize='sm' fontWeight='800' color='gray.900' lineHeight='1.4'>
-              {slot.attendeeLabel}
-            </Text>
-            <Text fontSize='sm' color='gray.600' lineHeight='1.4'>
-              {slot.sessionName}
-            </Text>
-          </Stack>
-        </Flex>
+        <Box bg='gray.100' px={4} py={3}>
+          <Flex justify='space-between' gap={4} align='start' wrap='wrap'>
+            <Stack gap={1} minW={0}>
+              <Text fontSize='sm' fontWeight='800' color='gray.900' lineHeight='1.4'>
+                {slot.attendeeLabel}
+              </Text>
+            </Stack>
+          </Flex>
+        </Box>
+
+        <Separator borderColor='gray.200' />
 
         <ContactDetailsFields
           values={values}
@@ -1062,45 +1063,49 @@ function AttendeeTicketCard({
   return (
     <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' p={4} boxShadow='0 10px 24px rgba(15, 23, 42, 0.04)'>
       <Stack gap={4}>
-        <Flex justify='space-between' gap={4} align={{ base: 'start', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
-          <Stack gap={1} minW={0}>
-            <HStack gap={2} align='baseline' flexWrap='wrap' minW={0}>
-              <Text fontSize='sm' fontWeight='800' color='gray.900' lineHeight='1.4' noOfLines={1}>
-                {group.ticketName}
-              </Text>
-              <Text fontSize='sm' color='gray.600' lineHeight='1.4' whiteSpace='nowrap'>
-                | {group.attendeeCount} {group.attendeeCount === 1 ? 'attendee' : 'attendees'}
-              </Text>
-            </HStack>
-            <HStack gap={2} flexWrap='wrap'>
-              {group.hasQuestions ? (
-                <Badge colorPalette='orange' variant='subtle' borderRadius='full' px={3} py={1}>
-                  Questions
-                </Badge>
-              ) : null}
-            </HStack>
-          </Stack>
+        <Box bg='gray.100' borderRadius='16px' px={4} py={3}>
+          <Flex justify='space-between' gap={4} align={{ base: 'start', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
+            <Stack gap={1} minW={0}>
+              <HStack gap={2} align='baseline' flexWrap='wrap' minW={0}>
+                <Text fontSize='sm' fontWeight='800' color='gray.900' lineHeight='1.4' noOfLines={1}>
+                  {group.ticketName}
+                </Text>
+                <Text fontSize='sm' color='gray.600' lineHeight='1.4' whiteSpace='nowrap'>
+                  | {group.attendeeCount} {group.attendeeCount === 1 ? 'attendee' : 'attendees'}
+                </Text>
+              </HStack>
+              <HStack gap={2} flexWrap='wrap'>
+                {group.hasQuestions ? (
+                  <Badge colorPalette='orange' variant='subtle' borderRadius='full' px={3} py={1}>
+                    Questions
+                  </Badge>
+                ) : null}
+              </HStack>
+            </Stack>
 
-          <HStack
-            gap={3}
-            align='center'
-            cursor='help'
-            title='Copy the buyer contact details into every attendee for this ticket.'
-          >
-            <Text fontSize='sm' fontWeight='700' color='gray.700'>
-              Same As Buyer
-            </Text>
-            <Switch.Root
-              checked={isSameAsBuyer}
-              disabled={sessionSameAsBuyer}
-              onCheckedChange={(details) => onToggleSameAsBuyer(group.sessionId, group.ticketId, details.checked === true)}
-              colorPalette='brand'
+            <HStack
+              gap={3}
+              align='center'
+              cursor='help'
+              title='Copy the buyer contact details into every attendee for this ticket.'
             >
-              <Switch.HiddenInput />
-              <Switch.Control />
-            </Switch.Root>
-          </HStack>
-        </Flex>
+              <Text fontSize='sm' fontWeight='700' color='gray.700'>
+                Same As Buyer
+              </Text>
+              <Switch.Root
+                checked={isSameAsBuyer}
+                disabled={sessionSameAsBuyer}
+                onCheckedChange={(details) => onToggleSameAsBuyer(group.sessionId, group.ticketId, details.checked === true)}
+                colorPalette='brand'
+              >
+                <Switch.HiddenInput />
+                <Switch.Control />
+              </Switch.Root>
+            </HStack>
+          </Flex>
+        </Box>
+
+        <Separator borderColor='gray.200' />
 
         <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
           {group.slots.map((slot) => (
@@ -1876,9 +1881,32 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     if (purchaseTimerExpired) return
     if (!isDescriptionStep && selectedTicketCount <= 0) return
     if (activeIndex < 0 || activeIndex >= tabs.length - 1) return
+
+    if (activeTab === 'buyer-attendee-info') {
+      const issues = getBuyerAttendeeInfoIssues()
+
+      if (issues.length > 0) {
+        applyPurchaseReviewIssues(issues)
+        return
+      }
+
+      clearBuyerAttendeeValidation()
+    }
+
     const nextIndex = activeIndex + 1
+    const nextTabId = tabs[nextIndex].id
     setHighestUnlockedIndex((current) => Math.max(current, nextIndex))
-    setActiveTab(tabs[nextIndex].id)
+    setActiveTab(nextTabId)
+
+    if (nextTabId === 'buyer-attendee-info') {
+      const issues = getBuyerAttendeeInfoIssues()
+
+      if (issues.length > 0) {
+        applyPurchaseReviewIssues(issues)
+      } else {
+        clearBuyerAttendeeValidation()
+      }
+    }
   }
 
   function getPurchaseReviewIssues() {
@@ -2046,6 +2074,45 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     [buyerInfo.email, buyerInfo.lastName],
   )
 
+  function getBuyerAttendeeInfoIssues() {
+    const issues: PurchaseReviewIssue[] = []
+
+    const buyerFields: Array<[keyof BuyerAttendeeInfoState, string]> = [
+      ['lastName', buyerInfo.lastName],
+      ['email', buyerInfo.email],
+    ]
+
+    if (buyerFields.some(([, value]) => !value.trim())) {
+      issues.push({ message: 'Complete the buyer details before continuing.', target: 'buyer-attendee-info' })
+    }
+
+    const attendeeIssues = attendeeSlotEntries.find((slot) => {
+      if (!slot.requiresAttendeeInfo) {
+        return false
+      }
+
+      if (isTicketSameAsBuyer(slot.sessionId, slot.ticketId)) {
+        return false
+      }
+
+      const info = attendeeInfoBySlot[slot.key]
+      if (!info) {
+        return true
+      }
+
+      return ['firstName', 'lastName', 'email'].some((field) => !(info[field as keyof BuyerAttendeeInfoState] ?? '').trim())
+    })
+
+    if (attendeeIssues) {
+      issues.push({
+        message: `${attendeeIssues.sessionName} needs attendee details for ${attendeeIssues.ticketName}.`,
+        target: 'buyer-attendee-info',
+      })
+    }
+
+    return issues
+  }
+
   function updateBuyerField(field: keyof BuyerAttendeeInfoState, value: string) {
     const nextValue = field === 'phone' ? formatPhoneNumberInput(value) : value
 
@@ -2120,6 +2187,16 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     if (!checked) {
       closeBuyerDetailsAlert()
     }
+  }
+
+  function clearBuyerAttendeeValidation() {
+    if (purchaseReviewScrollTarget !== 'buyer-attendee-info') {
+      return
+    }
+
+    setPurchaseReviewAttempted(false)
+    setPurchaseReviewMessage(null)
+    setPurchaseReviewScrollTarget(null)
   }
 
   function handleBackStep() {
