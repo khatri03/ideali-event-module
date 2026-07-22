@@ -86,6 +86,13 @@ export const APP_ROUTES = {
   venues: {
     list: "/organizer/venues/manage/list",
   },
+  customLists: {
+    base: "/organizer/membership/custom-list",
+    list: "/organizer/membership/custom-list/list",
+    create: "/organizer/membership/custom-list/new",
+    editRoute: "/organizer/membership/custom-list/:uniqueId",
+    edit: (uniqueId: string) => `/organizer/membership/custom-list/${uniqueId}`,
+  },
 } as const
 
 export const API_ROUTES = {
@@ -201,6 +208,14 @@ export const API_ROUTES = {
   organizerCustomFormControls: "/api/organizer/custom-form/controls",
   organizerCustomFormListItems: "/api/organizer/custom-form/list-items",
   organizerCustomFormPreview: (id: string) => `/api/organizer/custom-form/${id}/edit`,
+  customLists: "/api/organizer/membership/custom-list/list",
+  customListOptions: "/api/organizer/membership/custom-list/options",
+  customListMemberOptions: "/api/organizer/membership/custom-list/member-options",
+  customListCreate: "/api/organizer/membership/custom-list",
+  customListDetail: (uniqueId: string) => `/api/organizer/membership/custom-list/${uniqueId}`,
+  customListUpdate: (uniqueId: string) => `/api/organizer/membership/custom-list/${uniqueId}`,
+  customListDelete: (uniqueId: string) => `/api/organizer/membership/custom-list/${uniqueId}`,
+  customListMembers: (uniqueId: string) => `/api/organizer/membership/custom-list/${uniqueId}/members`,
 } as const
 
 export const API_AUTH_ROUTES = {
