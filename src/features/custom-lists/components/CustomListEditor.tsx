@@ -8,9 +8,9 @@ import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 import { customListFormSchema, type CustomListFormValues } from "../schemas/customList.schemas"
 import { useCustomList } from "../hooks/useCustomLists"
-import { useAddCustomListMembers, useRenameCustomList } from "../hooks/useCustomListMutations"
+import { useRenameCustomList } from "../hooks/useCustomListMutations"
+import { AddMembersDialog } from "./AddMembersDialog"
 import { CustomListMembersTable } from "./CustomListMembersTable"
-import { MemberPicker } from "./MemberPicker"
 import { RequiredFieldLabel } from "./RequiredFieldLabel"
 
 interface CustomListEditorProps {
@@ -19,12 +19,10 @@ interface CustomListEditorProps {
 
 export function CustomListEditor({ customListUniqueId }: CustomListEditorProps) {
   const navigate = useNavigate()
-  const [isAdding, setIsAdding] = useState(false)
-  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([])
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
 
   const detailQuery = useCustomList(customListUniqueId)
   const renameMutation = useRenameCustomList()
-  const addMutation = useAddCustomListMembers()
 
   const detail = detailQuery.data
 
@@ -37,26 +35,8 @@ export function CustomListEditor({ customListUniqueId }: CustomListEditorProps) 
     values: { name: detail?.name ?? "" },
   })
 
-  function handleToggleMember(memberUniqueId: string) {
-    setSelectedMemberIds((current) =>
-      current.includes(memberUniqueId)
-        ? current.filter((id) => id !== memberUniqueId)
-        : [...current, memberUniqueId],
-    )
-  }
-
   async function handleRename(values: CustomListFormValues) {
     await renameMutation.mutateAsync({ uniqueId: customListUniqueId, name: values.name })
-  }
-
-  async function handleAddMembers() {
-    if (selectedMemberIds.length === 0) {
-      return
-    }
-
-    await addMutation.mutateAsync({ uniqueId: customListUniqueId, memberUniqueIds: selectedMemberIds })
-    setSelectedMemberIds([])
-    setIsAdding(false)
   }
 
   if (detailQuery.isError) {
@@ -158,79 +138,34 @@ export function CustomListEditor({ customListUniqueId }: CustomListEditorProps) 
             </Text>
           </Box>
 
-          {isAdding ? null : (
-            <Button
-              variant="outline"
-              borderRadius="14px"
-              h="44px"
-              px={6}
-              w={{ base: "full", md: "auto" }}
-              cursor="pointer"
-              onClick={() => setIsAdding(true)}
-            >
-              <UserPlus size={16} />
-              Add members
-            </Button>
-          )}
+          <Button
+            borderRadius="14px"
+            h="44px"
+            px={6}
+            w={{ base: "full", md: "auto" }}
+            color="white"
+            cursor="pointer"
+            onClick={() => setIsAddDialogOpen(true)}
+            style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+          >
+            <UserPlus size={16} />
+            Add members
+          </Button>
         </Flex>
 
-        <Stack gap={5}>
-          {isAdding ? (
-            <Box borderRadius="18px" border="1px solid" borderColor="border.subtle" p={{ base: 3, md: 4 }}>
-              <MemberPicker
-                selectedMemberIds={selectedMemberIds}
-                onToggleMember={handleToggleMember}
-                onReplaceSelection={setSelectedMemberIds}
-                excludingCustomListUniqueId={customListUniqueId}
-                emptyMessage="Every matching member is already in this list."
-              />
-
-              {addMutation.error ? (
-                <Box mt={4} p={4} borderRadius="16px" border="1px solid" borderColor="red.200" bg="red.50">
-                  <Text fontSize="sm" fontWeight="700" color="red.700">
-                    {extractApiError(addMutation.error)}
-                  </Text>
-                </Box>
-              ) : null}
-
-              <Flex gap={3} flexWrap="wrap" mt={4}>
-                <Button
-                  variant="outline"
-                  borderRadius="14px"
-                  h="44px"
-                  px={6}
-                  cursor="pointer"
-                  onClick={() => {
-                    setIsAdding(false)
-                    setSelectedMemberIds([])
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  borderRadius="14px"
-                  h="44px"
-                  px={6}
-                  color="white"
-                  cursor={addMutation.isPending || selectedMemberIds.length === 0 ? "not-allowed" : "pointer"}
-                  disabled={addMutation.isPending || selectedMemberIds.length === 0}
-                  loading={addMutation.isPending}
-                  loadingText="Adding..."
-                  onClick={handleAddMembers}
-                  style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
-                >
-                  Add {selectedMemberIds.length || ""} member{selectedMemberIds.length === 1 ? "" : "s"}
-                </Button>
-              </Flex>
-            </Box>
-          ) : null}
-
-          <CustomListMembersTable
-            customListUniqueId={customListUniqueId}
-            customListName={detail?.name ?? "this list"}
-          />
-        </Stack>
+        <CustomListMembersTable
+          customListUniqueId={customListUniqueId}
+          customListName={detail?.name ?? "this list"}
+        />
       </Box>
+
+      {isAddDialogOpen ? (
+        <AddMembersDialog
+          customListUniqueId={customListUniqueId}
+          customListName={detail?.name ?? "this list"}
+          onClose={() => setIsAddDialogOpen(false)}
+        />
+      ) : null}
     </Stack>
   )
 }
