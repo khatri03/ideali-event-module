@@ -1,13 +1,19 @@
 import { useState } from "react"
-import { Box, Button, Checkbox, Flex, Input, Menu, Portal, SkeletonText, Table, Text } from "@chakra-ui/react"
-import { ArrowDown, ArrowUp, ChevronsUpDown, MoreHorizontal, RotateCcw, Search, Trash2 } from "lucide-react"
-import { useDebounce } from "@/hooks/useDebounce"
+import { Box, Button, Checkbox, Flex, Menu, Portal, SkeletonText, Table, Text } from "@chakra-ui/react"
+import { MoreHorizontal, Trash2 } from "lucide-react"
 import { extractApiError } from "@/utils/errors"
 import { useCustomListMembers } from "../hooks/useCustomLists"
+import { CustomListMemberFilterBar } from "./CustomListMemberFilterBar"
 import { MemberListPills } from "./MemberListPills"
+import { SortableColumnHeader } from "./SortableColumnHeader"
 import { RemoveMembersDialog } from "./RemoveMembersDialog"
+import { TableBodySkeleton } from "./TableBodySkeleton"
+import { STICKY_HEADER_CSS, TABLE_MAX_HEIGHT } from "../constants"
+import { TablePagination } from "./TablePagination"
+import { PAGE_SIZE_OPTIONS } from "../constants"
 import type {
   CustomListMember,
+  CustomListMemberFilters,
   CustomListMemberSortBy,
   CustomListRef,
   CustomListSortOrder,
@@ -19,63 +25,16 @@ interface PendingRemoval {
   listName: string
 }
 
-const MEMBER_PAGE_SIZE = 10
-const DEFAULT_SORT_BY: CustomListMemberSortBy = "fullName"
-const DEFAULT_SORT_ORDER: CustomListSortOrder = "asc"
+const DEFAULT_FILTERS: CustomListMemberFilters = {
+  searchTerm: "",
+  membershipTypeUniqueIds: [],
+  sortBy: "fullName",
+  sortOrder: "asc",
+}
 
 interface CustomListMembersTableProps {
   customListUniqueId: string
   customListName: string
-}
-
-interface MemberSortableHeaderProps {
-  label: string
-  column: CustomListMemberSortBy
-  activeSortBy: CustomListMemberSortBy
-  activeSortOrder: CustomListSortOrder
-  onSortChange: (sortBy: CustomListMemberSortBy) => void
-}
-
-function MemberSortableHeader({
-  label,
-  column,
-  activeSortBy,
-  activeSortOrder,
-  onSortChange,
-}: MemberSortableHeaderProps) {
-  const isActive = activeSortBy === column
-
-  return (
-    <Button
-      type="button"
-      variant="plain"
-      h="auto"
-      p={0}
-      w="full"
-      fontSize="inherit"
-      fontWeight="inherit"
-      color={isActive ? "brand.600" : "inherit"}
-      cursor="pointer"
-      aria-sort={isActive ? (activeSortOrder === "asc" ? "ascending" : "descending") : "none"}
-      title={`Sort by ${label}`}
-      onClick={() => onSortChange(column)}
-    >
-      <Flex align="center" justify="flex-start" gap={1} w="full">
-        {label}
-        {isActive ? (
-          activeSortOrder === "asc" ? (
-            <ArrowUp size={13} />
-          ) : (
-            <ArrowDown size={13} />
-          )
-        ) : (
-          <Box color="gray.400" display="flex">
-            <ChevronsUpDown size={13} />
-          </Box>
-        )}
-      </Flex>
-    </Button>
-  )
 }
 
 function formatAddedOn(value: string | null) {
@@ -90,32 +49,47 @@ function formatAddedOn(value: string | null) {
 }
 
 export function CustomListMembersTable({ customListUniqueId, customListName }: CustomListMembersTableProps) {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [sortBy, setSortBy] = useState<CustomListMemberSortBy>(DEFAULT_SORT_BY)
-  const [sortOrder, setSortOrder] = useState<CustomListSortOrder>(DEFAULT_SORT_ORDER)
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_OPTIONS[0])
+  const [draftSearchTerm, setDraftSearchTerm] = useState("")
+  const [draftMembershipTypeIds, setDraftMembershipTypeIds] = useState<string[]>([])
+  const [appliedFilters, setAppliedFilters] = useState<CustomListMemberFilters>(DEFAULT_FILTERS)
   const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null)
   const [selectedMembers, setSelectedMembers] = useState<CustomListMember[]>([])
-  const debouncedSearchTerm = useDebounce(searchTerm, 300)
 
-  const membersQuery = useCustomListMembers(
-    customListUniqueId,
-    { searchTerm: debouncedSearchTerm, sortBy, sortOrder },
-    page,
-    MEMBER_PAGE_SIZE,
-  )
+  const membersQuery = useCustomListMembers(customListUniqueId, appliedFilters, page, pageSize)
 
   const memberPage = membersQuery.data
   const members = memberPage?.items ?? []
   const totalPages = memberPage?.totalPages ?? 0
   const currentPage = memberPage?.page ?? page
+  const sortBy = appliedFilters.sortBy
+  const sortOrder = appliedFilters.sortOrder
 
-  function handleSearchTermChange(value: string) {
-    setSearchTerm(value)
+  const hasAppliedFilter =
+    appliedFilters.searchTerm.trim().length > 0 || appliedFilters.membershipTypeUniqueIds.length > 0
+
+  function handleApplyFilters() {
+    setAppliedFilters((current) => ({
+      ...current,
+      searchTerm: draftSearchTerm,
+      membershipTypeUniqueIds: draftMembershipTypeIds,
+    }))
     setPage(1)
   }
 
-  const isSorted = sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER
+  function handleClearFilters() {
+    setDraftSearchTerm("")
+    setDraftMembershipTypeIds([])
+    setAppliedFilters((current) => ({
+      ...DEFAULT_FILTERS,
+      sortBy: current.sortBy,
+      sortOrder: current.sortOrder,
+    }))
+    setPage(1)
+  }
+
+  const isSorted = sortBy !== DEFAULT_FILTERS.sortBy || sortOrder !== DEFAULT_FILTERS.sortOrder
   const hasSelection = selectedMembers.length > 0
   const selectedMemberIds = selectedMembers.map((member) => member.memberUniqueId)
   const visibleMemberIds = members.map((member) => member.memberUniqueId)
@@ -171,19 +145,44 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
   }
 
   function handleSortChange(nextSortBy: CustomListMemberSortBy) {
-    setSortOrder((currentOrder) => (sortBy === nextSortBy && currentOrder === "asc" ? "desc" : "asc"))
-    setSortBy(nextSortBy)
+    setAppliedFilters((current) => {
+      const nextSortOrder: CustomListSortOrder =
+        current.sortBy === nextSortBy && current.sortOrder === "asc" ? "desc" : "asc"
+
+      return { ...current, sortBy: nextSortBy, sortOrder: nextSortOrder }
+    })
+    setPage(1)
+  }
+
+  function handlePageSizeChange(nextPageSize: number) {
+    setPageSize(nextPageSize)
     setPage(1)
   }
 
   function handleClearSort() {
-    setSortBy(DEFAULT_SORT_BY)
-    setSortOrder(DEFAULT_SORT_ORDER)
+    setAppliedFilters((current) => ({
+      ...current,
+      sortBy: DEFAULT_FILTERS.sortBy,
+      sortOrder: DEFAULT_FILTERS.sortOrder,
+    }))
     setPage(1)
   }
 
   return (
     <>
+      <CustomListMemberFilterBar
+        draftSearchTerm={draftSearchTerm}
+        draftMembershipTypeIds={draftMembershipTypeIds}
+        hasAppliedFilter={hasAppliedFilter}
+        isSorted={isSorted}
+        isApplying={membersQuery.isFetching}
+        onSearchTermChange={setDraftSearchTerm}
+        onMembershipTypeIdsChange={setDraftMembershipTypeIds}
+        onApply={handleApplyFilters}
+        onClear={handleClearFilters}
+        onClearSort={handleClearSort}
+      />
+
       <Box borderRadius="16px" border="1px solid" borderColor="border.subtle" overflow="hidden">
         <Flex
           px={{ base: 3, md: 4 }}
@@ -234,43 +233,6 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
             </Text>
           )}
 
-          <Flex align="center" gap={2} w={{ base: "full", md: "auto" }} ml={{ base: 0, md: "auto" }}>
-            {isSorted ? (
-              <Button
-                variant="outline"
-                size="sm"
-                h="40px"
-                px={3}
-                borderRadius="12px"
-                bg="card.bg"
-                color="gray.600"
-                cursor="pointer"
-                flexShrink={0}
-                title="Reset sorting to the default order"
-                onClick={handleClearSort}
-              >
-                <RotateCcw size={14} />
-                Clear Sort
-              </Button>
-            ) : null}
-
-            <Flex position="relative" align="center" flex={1} w={{ base: "full", md: "300px" }}>
-              <Box position="absolute" left={3} color="gray.400" pointerEvents="none" display="flex">
-                <Search size={15} />
-              </Box>
-              <Input
-                value={searchTerm}
-                onChange={(event) => handleSearchTermChange(event.target.value)}
-                placeholder="Filter by name or email"
-                minH="10"
-                borderRadius="12px"
-                bg="card.bg"
-                pl={9}
-                pr={3}
-                fontSize="sm"
-              />
-            </Flex>
-          </Flex>
         </Flex>
 
         {membersQuery.isError ? (
@@ -284,11 +246,16 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
             <SkeletonText noOfLines={6} />
           </Box>
         ) : (
-          <Box overflowX="auto">
+          <Box overflow="auto" maxH={TABLE_MAX_HEIGHT}>
             <Table.Root
               variant="line"
               size="sm"
-              css={{ borderCollapse: "collapse", "& th, & td": { borderBottom: "1px solid", borderColor: "gray.200" } }}
+              css={{
+                borderCollapse: "separate",
+                borderSpacing: 0,
+                "& th, & td": { borderBottom: "1px solid", borderColor: "gray.200" },
+                ...STICKY_HEADER_CSS("card.bg"),
+              }}
             >
               <Table.Header>
                 <Table.Row bg="card.bg">
@@ -308,7 +275,7 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
                     Actions
                   </Table.ColumnHeader>
                   <Table.ColumnHeader px={4} py={3}>
-                    <MemberSortableHeader
+                    <SortableColumnHeader
                       label="Member"
                       column="fullName"
                       activeSortBy={sortBy}
@@ -317,7 +284,7 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
                     />
                   </Table.ColumnHeader>
                   <Table.ColumnHeader px={4} py={3}>
-                    <MemberSortableHeader
+                    <SortableColumnHeader
                       label="Email"
                       column="email"
                       activeSortBy={sortBy}
@@ -326,7 +293,7 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
                     />
                   </Table.ColumnHeader>
                   <Table.ColumnHeader px={4} py={3}>
-                    <MemberSortableHeader
+                    <SortableColumnHeader
                       label="Membership Type"
                       column="membershipTypeName"
                       activeSortBy={sortBy}
@@ -335,7 +302,7 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
                     />
                   </Table.ColumnHeader>
                   <Table.ColumnHeader px={4} py={3}>
-                    <MemberSortableHeader
+                    <SortableColumnHeader
                       label="Added"
                       column="addedOnUtc"
                       activeSortBy={sortBy}
@@ -348,13 +315,16 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
                   </Table.ColumnHeader>
                 </Table.Row>
               </Table.Header>
+              {membersQuery.isFetching ? (
+                <TableBodySkeleton columns={7} rows={Math.max(members.length, 3)} />
+              ) : (
               <Table.Body>
                 {members.length === 0 ? (
                   <Table.Row>
                     <Table.Cell colSpan={7} py={12}>
                       <Text fontSize="sm" color="text.secondary" textAlign="center">
-                        {debouncedSearchTerm.trim()
-                          ? "No members match this search."
+                        {hasAppliedFilter
+                          ? "No members match this filter."
                           : "This list has no members yet."}
                       </Text>
                     </Table.Cell>
@@ -455,50 +425,21 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
                   ))
                 )}
               </Table.Body>
+              )}
             </Table.Root>
           </Box>
         )}
 
-        <Flex
-          px={{ base: 3, md: 4 }}
-          py={3}
-          align={{ base: "stretch", md: "center" }}
-          justify="space-between"
-          direction={{ base: "column", md: "row" }}
-          gap={3}
-          borderTop="1px solid"
-          borderColor="border.subtle"
-          bg="app.bg"
-        >
-          <Text fontSize="xs" color="text.secondary">
-            Page {currentPage} of {Math.max(totalPages, 1)}
-          </Text>
-
-          {totalPages > 1 ? (
-            <Flex gap={2} justify="flex-end">
-              <Button
-                variant="outline"
-                size="sm"
-                borderRadius="10px"
-                cursor={currentPage <= 1 ? "not-allowed" : "pointer"}
-                disabled={currentPage <= 1}
-                onClick={() => setPage((current) => Math.max(1, current - 1))}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                borderRadius="10px"
-                cursor={currentPage >= totalPages ? "not-allowed" : "pointer"}
-                disabled={currentPage >= totalPages}
-                onClick={() => setPage((current) => Math.min(totalPages || 1, current + 1))}
-              >
-                Next
-              </Button>
-            </Flex>
-          ) : null}
-        </Flex>
+        <TablePagination
+          page={currentPage}
+          pageSize={pageSize}
+          totalPages={totalPages}
+          total={memberPage?.total ?? 0}
+          itemLabel="member"
+          size="sm"
+          onPageChange={setPage}
+          onPageSizeChange={handlePageSizeChange}
+        />
       </Box>
 
       {pendingRemoval ? (

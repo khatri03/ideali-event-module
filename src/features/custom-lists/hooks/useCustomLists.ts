@@ -8,6 +8,8 @@ import {
   fetchCustomLists,
   type CustomListFilters,
   type CustomListMemberFilters,
+  type CustomListMemberOptionSortBy,
+  type CustomListSortOrder,
 } from "@/api/customLists"
 
 export const CUSTOM_LIST_QUERY_KEY = ["organizer", "custom-lists"] as const
@@ -59,6 +61,8 @@ export function useCustomListMembers(
 export function useCustomListMemberOptions(
   searchTerm: string,
   membershipTypeUniqueIds: string[],
+  sortBy: CustomListMemberOptionSortBy,
+  sortOrder: CustomListSortOrder,
   pageNo: number,
   pageSize: number,
   excludingCustomListUniqueId?: string,
@@ -67,12 +71,14 @@ export function useCustomListMemberOptions(
     queryKey: [
       ...CUSTOM_LIST_QUERY_KEY,
       "member-options",
-      { searchTerm, membershipTypeUniqueIds, pageNo, pageSize, excludingCustomListUniqueId },
+      { searchTerm, membershipTypeUniqueIds, sortBy, sortOrder, pageNo, pageSize, excludingCustomListUniqueId },
     ],
     queryFn: () =>
       fetchCustomListMemberOptions(
         searchTerm,
         membershipTypeUniqueIds,
+        sortBy,
+        sortOrder,
         pageNo,
         pageSize,
         excludingCustomListUniqueId,

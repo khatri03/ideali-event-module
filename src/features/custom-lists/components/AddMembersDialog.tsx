@@ -3,6 +3,7 @@ import { Box, Button, CloseButton, Dialog, Flex, Text } from "@chakra-ui/react"
 import { UserPlus } from "lucide-react"
 import { extractApiError } from "@/utils/errors"
 import { useAddCustomListMembers } from "../hooks/useCustomListMutations"
+import { ConfirmDialog } from "./ConfirmDialog"
 import { MemberPicker } from "./MemberPicker"
 
 interface AddMembersDialogProps {
@@ -13,6 +14,7 @@ interface AddMembersDialogProps {
 
 export function AddMembersDialog({ customListUniqueId, customListName, onClose }: AddMembersDialogProps) {
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([])
+  const [isConfirming, setIsConfirming] = useState(false)
   const addMutation = useAddCustomListMembers()
 
   function handleToggleMember(memberUniqueId: string) {
@@ -23,12 +25,23 @@ export function AddMembersDialog({ customListUniqueId, customListName, onClose }
     )
   }
 
-  async function handleAddMembers() {
+  function handleRequestAdd() {
     if (selectedMemberIds.length === 0) {
       return
     }
 
-    await addMutation.mutateAsync({ uniqueId: customListUniqueId, memberUniqueIds: selectedMemberIds })
+    setIsConfirming(true)
+  }
+
+  async function handleConfirmAdd() {
+    try {
+      await addMutation.mutateAsync({ uniqueId: customListUniqueId, memberUniqueIds: selectedMemberIds })
+    } catch {
+      // Surfaced inside the confirmation dialog; keep it open so the selection is not lost.
+      return
+    }
+
+    setIsConfirming(false)
     onClose()
   }
 
@@ -78,13 +91,6 @@ export function AddMembersDialog({ customListUniqueId, customListName, onClose }
               emptyMessage="Every matching member is already in this list."
             />
 
-            {addMutation.error ? (
-              <Box mt={4} p={4} borderRadius="16px" border="1px solid" borderColor="red.200" bg="red.50">
-                <Text fontSize="sm" fontWeight="700" color="red.700">
-                  {extractApiError(addMutation.error)}
-                </Text>
-              </Box>
-            ) : null}
           </Dialog.Body>
 
           <Flex
@@ -127,7 +133,7 @@ export function AddMembersDialog({ customListUniqueId, customListName, onClose }
                 disabled={addMutation.isPending || selectedMemberIds.length === 0}
                 loading={addMutation.isPending}
                 loadingText="Adding..."
-                onClick={handleAddMembers}
+                onClick={handleRequestAdd}
                 style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
               >
                 <UserPlus size={16} />
@@ -137,6 +143,27 @@ export function AddMembersDialog({ customListUniqueId, customListName, onClose }
           </Flex>
         </Dialog.Content>
       </Dialog.Positioner>
+
+      {isConfirming ? (
+        <ConfirmDialog
+          tone="primary"
+          title={selectedMemberIds.length === 1 ? "Add member" : `Add ${selectedMemberIds.length} members`}
+          description={
+            <Text>
+              Add {selectedMemberIds.length} member{selectedMemberIds.length === 1 ? "" : "s"} to{" "}
+              <strong>{customListName}</strong>? You can remove them from the list afterwards.
+            </Text>
+          }
+          confirmLabel={
+            selectedMemberIds.length === 1 ? "Add member" : `Add ${selectedMemberIds.length} members`
+          }
+          loadingLabel="Adding..."
+          errorMessage={addMutation.error ? extractApiError(addMutation.error) : null}
+          isPending={addMutation.isPending}
+          onConfirm={handleConfirmAdd}
+          onClose={() => setIsConfirming(false)}
+        />
+      ) : null}
     </Dialog.Root>
   )
 }

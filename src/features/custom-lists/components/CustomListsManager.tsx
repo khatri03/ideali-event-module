@@ -5,18 +5,19 @@ import { Plus } from "lucide-react"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 import { useCustomLists } from "../hooks/useCustomLists"
+import { AddMembersDialog } from "./AddMembersDialog"
 import { CustomListFilterBar } from "./CustomListFilterBar"
 import { CustomListsTable } from "./CustomListsTable"
 import { CustomListsTableSkeleton } from "./CustomListsTable.skeleton"
 import { DeleteCustomListDialog } from "./DeleteCustomListDialog"
+import { TablePagination } from "./TablePagination"
+import { PAGE_SIZE_OPTIONS } from "../constants"
 import type {
   CustomListFilters,
   CustomListItem,
   CustomListSortBy,
   CustomListSortOrder,
 } from "@/api/customLists"
-
-const PAGE_SIZE = 10
 
 const DEFAULT_FILTERS: CustomListFilters = {
   searchTerm: "",
@@ -28,12 +29,14 @@ const DEFAULT_FILTERS: CustomListFilters = {
 export function CustomListsManager() {
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_OPTIONS[0])
   const [draftSearchTerm, setDraftSearchTerm] = useState("")
   const [draftCustomListIds, setDraftCustomListIds] = useState<string[]>([])
   const [appliedFilters, setAppliedFilters] = useState<CustomListFilters>(DEFAULT_FILTERS)
   const [deletingList, setDeletingList] = useState<CustomListItem | null>(null)
+  const [addingMembersToList, setAddingMembersToList] = useState<CustomListItem | null>(null)
 
-  const customListsQuery = useCustomLists(appliedFilters, page, PAGE_SIZE)
+  const customListsQuery = useCustomLists(appliedFilters, page, pageSize)
   const customListsPage = customListsQuery.data
   const customLists = customListsPage?.items ?? []
   const totalPages = customListsPage?.totalPages ?? 0
@@ -61,6 +64,11 @@ export function CustomListsManager() {
       sortBy: current.sortBy,
       sortOrder: current.sortOrder,
     }))
+    setPage(1)
+  }
+
+  function handlePageSizeChange(nextPageSize: number) {
+    setPageSize(nextPageSize)
     setPage(1)
   }
 
@@ -143,50 +151,33 @@ export function CustomListsManager() {
             customLists={customLists}
             sortBy={appliedFilters.sortBy}
             sortOrder={appliedFilters.sortOrder}
+            isFetching={customListsQuery.isFetching}
             onSortChange={handleSortChange}
             onCreate={() => navigate(APP_ROUTES.customLists.create)}
             onEdit={(customList) => navigate(APP_ROUTES.customLists.edit(customList.uniqueId))}
+            onAddMembers={setAddingMembersToList}
             onDelete={setDeletingList}
           />
 
-          <Flex
-            px={{ base: 4, md: 6 }}
-            py={4}
-            align={{ base: "stretch", md: "center" }}
-            justify="space-between"
-            direction={{ base: "column", md: "row" }}
-            gap={3}
-            borderTop="1px solid"
-            borderColor="border.subtle"
-          >
-            <Text fontSize="sm" color="gray.600">
-              {customListsPage?.total ?? 0} list{(customListsPage?.total ?? 0) === 1 ? "" : "s"} · page {currentPage} of{" "}
-              {Math.max(totalPages, 1)}
-            </Text>
-
-            {totalPages > 1 ? (
-              <Flex gap={2} align="center" wrap="wrap" justify="flex-end">
-                <Button
-                  variant="outline"
-                  cursor={currentPage <= 1 ? "not-allowed" : "pointer"}
-                  disabled={currentPage <= 1}
-                  onClick={() => setPage((current) => Math.max(1, current - 1))}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  cursor={currentPage >= totalPages ? "not-allowed" : "pointer"}
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setPage((current) => Math.min(totalPages || 1, current + 1))}
-                >
-                  Next
-                </Button>
-              </Flex>
-            ) : null}
-          </Flex>
+          <TablePagination
+            page={currentPage}
+            pageSize={pageSize}
+            totalPages={totalPages}
+            total={customListsPage?.total ?? 0}
+            itemLabel="list"
+            onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </Box>
       )}
+
+      {addingMembersToList ? (
+        <AddMembersDialog
+          customListUniqueId={addingMembersToList.uniqueId}
+          customListName={addingMembersToList.name}
+          onClose={() => setAddingMembersToList(null)}
+        />
+      ) : null}
 
       {deletingList ? (
         <DeleteCustomListDialog customList={deletingList} onClose={() => setDeletingList(null)} />

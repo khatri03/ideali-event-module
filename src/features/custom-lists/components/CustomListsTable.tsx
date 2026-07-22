@@ -1,68 +1,20 @@
-import { Box, Button, Flex, Menu, Portal, Table, Text } from "@chakra-ui/react"
-import { ArrowDown, ArrowUp, ChevronsUpDown, MoreHorizontal, PencilLine, Plus, Trash2 } from "lucide-react"
+import { Box, Button, Menu, Portal, Table, Text } from "@chakra-ui/react"
+import { MoreHorizontal, PencilLine, Plus, Trash2, UserPlus } from "lucide-react"
+import { SortableColumnHeader } from "./SortableColumnHeader"
+import { TableBodySkeleton } from "./TableBodySkeleton"
+import { STICKY_HEADER_CSS, TABLE_MAX_HEIGHT } from "../constants"
 import type { CustomListItem, CustomListSortBy, CustomListSortOrder } from "@/api/customLists"
 
 interface CustomListsTableProps {
   customLists: CustomListItem[]
   sortBy: CustomListSortBy
   sortOrder: CustomListSortOrder
+  isFetching: boolean
   onSortChange: (sortBy: CustomListSortBy) => void
   onCreate: () => void
   onEdit: (customList: CustomListItem) => void
+  onAddMembers: (customList: CustomListItem) => void
   onDelete: (customList: CustomListItem) => void
-}
-
-interface SortableHeaderProps {
-  label: string
-  column: CustomListSortBy
-  activeSortBy: CustomListSortBy
-  activeSortOrder: CustomListSortOrder
-  onSortChange: (sortBy: CustomListSortBy) => void
-  justify?: "flex-start" | "center"
-}
-
-function SortableHeader({
-  label,
-  column,
-  activeSortBy,
-  activeSortOrder,
-  onSortChange,
-  justify = "flex-start",
-}: SortableHeaderProps) {
-  const isActive = activeSortBy === column
-  const ariaSort = isActive ? (activeSortOrder === "asc" ? "ascending" : "descending") : "none"
-
-  return (
-    <Button
-      type="button"
-      variant="plain"
-      h="auto"
-      p={0}
-      w="full"
-      fontSize="inherit"
-      fontWeight="inherit"
-      color={isActive ? "brand.600" : "inherit"}
-      cursor="pointer"
-      aria-sort={ariaSort}
-      title={`Sort by ${label}`}
-      onClick={() => onSortChange(column)}
-    >
-      <Flex align="center" justify={justify} gap={1} w="full">
-        {label}
-        {isActive ? (
-          activeSortOrder === "asc" ? (
-            <ArrowUp size={13} />
-          ) : (
-            <ArrowDown size={13} />
-          )
-        ) : (
-          <Box color="gray.400" display="flex">
-            <ChevronsUpDown size={13} />
-          </Box>
-        )}
-      </Flex>
-    </Button>
-  )
 }
 
 function formatCreatedOn(value: string) {
@@ -80,19 +32,23 @@ export function CustomListsTable({
   customLists,
   sortBy,
   sortOrder,
+  isFetching,
   onSortChange,
   onCreate,
   onEdit,
+  onAddMembers,
   onDelete,
 }: CustomListsTableProps) {
   return (
-    <Box overflowX="auto">
+    <Box overflow="auto" maxH={TABLE_MAX_HEIGHT}>
       <Table.Root
         variant="line"
         size="sm"
         css={{
-          borderCollapse: "collapse",
+          borderCollapse: "separate",
+          borderSpacing: 0,
           "& th, & td": { border: "1px solid", borderColor: "gray.300" },
+          ...STICKY_HEADER_CSS("app.bg"),
         }}
       >
         <Table.Header>
@@ -101,7 +57,7 @@ export function CustomListsTable({
               Actions
             </Table.ColumnHeader>
             <Table.ColumnHeader px={6} py={3}>
-              <SortableHeader
+              <SortableColumnHeader
                 label="List Name"
                 column="name"
                 activeSortBy={sortBy}
@@ -110,7 +66,7 @@ export function CustomListsTable({
               />
             </Table.ColumnHeader>
             <Table.ColumnHeader px={4} py={3}>
-              <SortableHeader
+              <SortableColumnHeader
                 label="Members"
                 column="memberCount"
                 activeSortBy={sortBy}
@@ -120,7 +76,7 @@ export function CustomListsTable({
               />
             </Table.ColumnHeader>
             <Table.ColumnHeader px={4} py={3}>
-              <SortableHeader
+              <SortableColumnHeader
                 label="Created"
                 column="createdOnUtc"
                 activeSortBy={sortBy}
@@ -131,6 +87,9 @@ export function CustomListsTable({
             </Table.ColumnHeader>
           </Table.Row>
         </Table.Header>
+        {isFetching ? (
+          <TableBodySkeleton columns={4} rows={Math.max(customLists.length, 3)} />
+        ) : (
         <Table.Body>
           {customLists.length === 0 ? (
             <Table.Row>
@@ -208,6 +167,20 @@ export function CustomListsTable({
                             Edit list
                           </Menu.Item>
                           <Menu.Item
+                            value={`add-members-${customList.uniqueId}`}
+                            onClick={() => onAddMembers(customList)}
+                            borderRadius="10px"
+                            fontSize="sm"
+                            fontWeight="600"
+                            color="gray.700"
+                            px={3}
+                            py={2}
+                            cursor="pointer"
+                          >
+                            <UserPlus size={14} />
+                            Add members
+                          </Menu.Item>
+                          <Menu.Item
                             value={`delete-${customList.uniqueId}`}
                             onClick={() => onDelete(customList)}
                             borderRadius="10px"
@@ -257,6 +230,7 @@ export function CustomListsTable({
             ))
           )}
         </Table.Body>
+        )}
       </Table.Root>
     </Box>
   )
