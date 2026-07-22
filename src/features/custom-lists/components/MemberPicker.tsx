@@ -5,8 +5,14 @@ import { Filter, Search } from "lucide-react"
 import { useDebounce } from "@/hooks/useDebounce"
 import { extractApiError } from "@/utils/errors"
 import { useCustomListMemberOptions, useMembershipTypeOptions } from "../hooks/useCustomLists"
+import { SortableColumnHeader } from "./SortableColumnHeader"
+import { TableBodySkeleton } from "./TableBodySkeleton"
+import { TablePagination } from "./TablePagination"
+import { PAGE_SIZE_OPTIONS, PICKER_TABLE_MAX_HEIGHT, STICKY_HEADER_CSS } from "../constants"
+import type { CustomListMemberOptionSortBy, CustomListSortOrder } from "@/api/customLists"
 
-const MEMBER_PAGE_SIZE = 10
+const DEFAULT_SORT_BY: CustomListMemberOptionSortBy = "fullName"
+const DEFAULT_SORT_ORDER: CustomListSortOrder = "asc"
 
 interface MembershipTypeSelectOption {
   value: string
@@ -32,14 +38,19 @@ export function MemberPicker({
   const [draftMembershipTypeIds, setDraftMembershipTypeIds] = useState<string[]>([])
   const [appliedMembershipTypeIds, setAppliedMembershipTypeIds] = useState<string[]>([])
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_OPTIONS[0])
+  const [sortBy, setSortBy] = useState<CustomListMemberOptionSortBy>(DEFAULT_SORT_BY)
+  const [sortOrder, setSortOrder] = useState<CustomListSortOrder>(DEFAULT_SORT_ORDER)
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
 
   const membershipTypesQuery = useMembershipTypeOptions()
   const memberOptionsQuery = useCustomListMemberOptions(
     debouncedSearchTerm,
     appliedMembershipTypeIds,
+    sortBy,
+    sortOrder,
     page,
-    MEMBER_PAGE_SIZE,
+    pageSize,
     excludingCustomListUniqueId,
   )
 
@@ -87,6 +98,17 @@ export function MemberPicker({
 
   function handleSearchTermChange(value: string) {
     setSearchTerm(value)
+    setPage(1)
+  }
+
+  function handlePageSizeChange(nextPageSize: number) {
+    setPageSize(nextPageSize)
+    setPage(1)
+  }
+
+  function handleSortChange(nextSortBy: CustomListMemberOptionSortBy) {
+    setSortOrder((currentOrder) => (sortBy === nextSortBy && currentOrder === "asc" ? "desc" : "asc"))
+    setSortBy(nextSortBy)
     setPage(1)
   }
 
@@ -226,11 +248,16 @@ export function MemberPicker({
               <SkeletonText noOfLines={6} />
             </Box>
           ) : (
-            <Box overflowX="auto">
+            <Box overflow="auto" maxH={PICKER_TABLE_MAX_HEIGHT}>
               <Table.Root
                 variant="line"
                 size="sm"
-                css={{ borderCollapse: "collapse", "& th, & td": { borderBottom: "1px solid", borderColor: "gray.200" } }}
+                css={{
+                  borderCollapse: "separate",
+                  borderSpacing: 0,
+                  "& th, & td": { borderBottom: "1px solid", borderColor: "gray.200" },
+                  ...STICKY_HEADER_CSS("card.bg"),
+                }}
               >
                 <Table.Header>
                   <Table.Row bg="card.bg">
@@ -247,16 +274,37 @@ export function MemberPicker({
                       </Checkbox.Root>
                     </Table.ColumnHeader>
                     <Table.ColumnHeader px={4} py={3}>
-                      Member
+                      <SortableColumnHeader
+                        label="Member"
+                        column="fullName"
+                        activeSortBy={sortBy}
+                        activeSortOrder={sortOrder}
+                        onSortChange={handleSortChange}
+                      />
                     </Table.ColumnHeader>
                     <Table.ColumnHeader px={4} py={3}>
-                      Email
+                      <SortableColumnHeader
+                        label="Email"
+                        column="email"
+                        activeSortBy={sortBy}
+                        activeSortOrder={sortOrder}
+                        onSortChange={handleSortChange}
+                      />
                     </Table.ColumnHeader>
                     <Table.ColumnHeader px={4} py={3}>
-                      Membership Type
+                      <SortableColumnHeader
+                        label="Membership Type"
+                        column="membershipTypeName"
+                        activeSortBy={sortBy}
+                        activeSortOrder={sortOrder}
+                        onSortChange={handleSortChange}
+                      />
                     </Table.ColumnHeader>
                   </Table.Row>
                 </Table.Header>
+                {memberOptionsQuery.isFetching ? (
+                  <TableBodySkeleton columns={4} rows={Math.max(members.length, 3)} />
+                ) : (
                 <Table.Body>
                   {members.length === 0 ? (
                     <Table.Row>
@@ -304,50 +352,21 @@ export function MemberPicker({
                     ))
                   )}
                 </Table.Body>
+                )}
               </Table.Root>
             </Box>
           )}
 
-          <Flex
-            px={{ base: 3, md: 4 }}
-            py={3}
-            align={{ base: "stretch", md: "center" }}
-            justify="space-between"
-            direction={{ base: "column", md: "row" }}
-            gap={3}
-            borderTop="1px solid"
-            borderColor="border.subtle"
-            bg="app.bg"
-          >
-            <Text fontSize="xs" color="text.secondary">
-              Page {currentPage} of {Math.max(totalPages, 1)}
-            </Text>
-
-            {totalPages > 1 ? (
-              <Flex gap={2} justify="flex-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  borderRadius="10px"
-                  cursor={currentPage <= 1 ? "not-allowed" : "pointer"}
-                  disabled={currentPage <= 1}
-                  onClick={() => setPage((current) => Math.max(1, current - 1))}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  borderRadius="10px"
-                  cursor={currentPage >= totalPages ? "not-allowed" : "pointer"}
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setPage((current) => Math.min(totalPages || 1, current + 1))}
-                >
-                  Next
-                </Button>
-              </Flex>
-            ) : null}
-          </Flex>
+          <TablePagination
+            page={currentPage}
+            pageSize={pageSize}
+            totalPages={totalPages}
+            total={memberPage?.total ?? 0}
+            itemLabel="member"
+            size="sm"
+            onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </Box>
       )}
     </Stack>

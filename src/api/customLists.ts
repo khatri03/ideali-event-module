@@ -130,6 +130,7 @@ export type CustomListMemberSortBy = "fullName" | "email" | "membershipTypeName"
 
 export interface CustomListMemberFilters {
   searchTerm: string
+  membershipTypeUniqueIds: string[]
   sortBy: CustomListMemberSortBy
   sortOrder: CustomListSortOrder
 }
@@ -301,6 +302,10 @@ export async function fetchCustomListMembers(
     params.set("searchTerm", filters.searchTerm.trim())
   }
 
+  filters.membershipTypeUniqueIds.forEach((membershipTypeUniqueId) =>
+    params.append("membershipTypeUniqueIds", membershipTypeUniqueId),
+  )
+
   const response = await client.get<unknown>(API_ROUTES.customListMembers(uniqueId), { params })
   const parsed = customListMemberPageSchema.parse(parseServicePayload(response.data))
   const items = (parsed.PageData ?? parsed.pageData ?? []).map(normalizeCustomListMember)
@@ -314,9 +319,13 @@ export async function fetchCustomListMembers(
   }
 }
 
+export type CustomListMemberOptionSortBy = "fullName" | "email" | "membershipTypeName"
+
 export async function fetchCustomListMemberOptions(
   searchTerm: string,
   membershipTypeUniqueIds: string[],
+  sortBy: CustomListMemberOptionSortBy,
+  sortOrder: CustomListSortOrder,
   pageNo: number,
   pageSize: number,
   excludingCustomListUniqueId?: string,
@@ -324,6 +333,8 @@ export async function fetchCustomListMemberOptions(
   const params = new URLSearchParams()
   params.set("pageNo", String(pageNo))
   params.set("pageSize", String(pageSize))
+  params.set("sortBy", sortBy)
+  params.set("sortOrder", sortOrder)
 
   if (searchTerm.trim()) {
     params.set("searchTerm", searchTerm.trim())

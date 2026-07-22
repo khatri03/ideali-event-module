@@ -1,6 +1,8 @@
 import type { ReactNode } from "react"
 import { Box, Button, CloseButton, Dialog, Flex, Text } from "@chakra-ui/react"
-import { AlertTriangle } from "lucide-react"
+import { AlertTriangle, UserPlus } from "lucide-react"
+
+type ConfirmTone = "destructive" | "primary"
 
 interface ConfirmDialogProps {
   title: string
@@ -9,6 +11,8 @@ interface ConfirmDialogProps {
   loadingLabel?: string
   errorMessage?: string | null
   isPending: boolean
+  /** "destructive" (default) warns in red; "primary" is for additive actions. */
+  tone?: ConfirmTone
   onConfirm: () => void
   onClose: () => void
 }
@@ -20,9 +24,11 @@ export function ConfirmDialog({
   loadingLabel = "Working...",
   errorMessage,
   isPending,
+  tone = "destructive",
   onConfirm,
   onClose,
 }: ConfirmDialogProps) {
+  const isDestructive = tone === "destructive"
   return (
     <Dialog.Root
       open
@@ -50,13 +56,13 @@ export function ConfirmDialog({
                   w="44px"
                   h="44px"
                   borderRadius="14px"
-                  bg="red.50"
-                  color="red.600"
+                  bg={isDestructive ? "red.50" : "brand.50"}
+                  color={isDestructive ? "red.600" : "brand.600"}
                   align="center"
                   justify="center"
                   flexShrink={0}
                 >
-                  <AlertTriangle size={20} />
+                  {isDestructive ? <AlertTriangle size={20} /> : <UserPlus size={20} />}
                 </Flex>
                 <Dialog.Title fontSize="lg" fontWeight="800" color="gray.900">
                   {title}
@@ -97,7 +103,8 @@ export function ConfirmDialog({
               </Button>
 
               <Button
-                colorPalette="red"
+                colorPalette={isDestructive ? "red" : "brand"}
+                color={isDestructive ? undefined : "white"}
                 borderRadius="14px"
                 h="44px"
                 px={6}
@@ -107,6 +114,11 @@ export function ConfirmDialog({
                 loading={isPending}
                 loadingText={loadingLabel}
                 onClick={onConfirm}
+                style={
+                  isDestructive
+                    ? undefined
+                    : { background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }
+                }
               >
                 {confirmLabel}
               </Button>
