@@ -12,6 +12,12 @@ import { AdminFeePlansPage } from "./features/admin-fee-plans"
 import { ChargeRulesPage } from "./features/charge-rules"
 import { VenueManagementPage } from "./features/venues"
 import { CustomListCreatePage, CustomListEditPage, CustomListsPage } from "./features/custom-lists"
+import {
+  AlertInboxPage,
+  MemberAlertComposePage,
+  MemberAlertDetailPage,
+  MemberAlertsPage,
+} from "./features/member-alerts"
 import { SeatingLayoutDesignerPage, SeatingLayoutsPage } from "./features/seating-layouts"
 import {
   EventBannerStepPage,
@@ -121,6 +127,10 @@ export default function App() {
           <Route path={APP_ROUTES.customLists.list} element={<CustomListsPage />} />
           <Route path={APP_ROUTES.customLists.create} element={<CustomListCreatePage />} />
           <Route path={APP_ROUTES.customLists.editRoute} element={<CustomListEditPage />} />
+          <Route path={APP_ROUTES.memberAlerts.list} element={<MemberAlertsPage />} />
+          <Route path={APP_ROUTES.memberAlerts.create} element={<MemberAlertComposePage />} />
+          <Route path={APP_ROUTES.memberAlerts.detailRoute} element={<MemberAlertDetailPage />} />
+          <Route path={APP_ROUTES.alertInbox} element={<AlertInboxPage />} />
           <Route path={APP_ROUTES.team} element={<Settings />} />
           <Route path={APP_ROUTES.analytics} element={<Settings />} />
           <Route path={APP_ROUTES.help} element={<Settings />} />

@@ -5,6 +5,7 @@ export const mockUser: AuthUser = {
   name: "Jordan Blake",
   email: "jordan@ideali.io",
   role: "Admin",
+  roles: ["Admin"],
 }
 
 export const mockEvents: AppEvent[] = [
