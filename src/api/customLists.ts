@@ -30,6 +30,17 @@ const customListOptionSchema = z.object({
   uniqueId: z.string().optional(),
   Name: z.string().optional(),
   name: z.string().optional(),
+  MemberCount: z.number().int().optional(),
+  memberCount: z.number().int().optional(),
+})
+
+const membershipTypeOptionSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  Name: z.string().optional(),
+  name: z.string().optional(),
+  ActiveMemberCount: z.number().int().optional(),
+  activeMemberCount: z.number().int().optional(),
 })
 
 const customListMemberSchema = z.object({
@@ -99,9 +110,20 @@ export interface CustomListItem {
   createdOnUtc: string
 }
 
-export interface CustomListOption {
+/** Minimal list reference — used by the "Also In" tags, which never show a count. */
+export interface CustomListRef {
   uniqueId: string
   name: string
+}
+
+export interface CustomListOption extends CustomListRef {
+  memberCount: number
+}
+
+export interface CustomListMembershipTypeOption {
+  uniqueId: string
+  name: string
+  activeMemberCount: number
 }
 
 export type CustomListMemberSortBy = "fullName" | "email" | "membershipTypeName" | "addedOnUtc"
@@ -118,7 +140,7 @@ export interface CustomListMember {
   email: string | null
   membershipTypeName: string | null
   addedOnUtc: string | null
-  otherLists: CustomListOption[]
+  otherLists: CustomListRef[]
 }
 
 export interface CustomListMemberOptionPage {
@@ -228,12 +250,26 @@ export async function fetchCustomLists(
 
 export async function fetchCustomListOptions(): Promise<CustomListOption[]> {
   const response = await client.get<unknown>(API_ROUTES.customListOptions)
-  const parsed = z.array(customListSchema).parse(parseServicePayload(response.data))
+  const parsed = z.array(customListOptionSchema).parse(parseServicePayload(response.data))
 
   return parsed
     .map((item) => ({
       uniqueId: item.UniqueId ?? item.uniqueId ?? "",
       name: item.Name ?? item.name ?? "",
+      memberCount: item.MemberCount ?? item.memberCount ?? 0,
+    }))
+    .filter((option) => option.uniqueId && option.name)
+}
+
+export async function fetchCustomListMembershipTypeOptions(): Promise<CustomListMembershipTypeOption[]> {
+  const response = await client.get<unknown>(API_ROUTES.customListMembershipTypeOptions)
+  const parsed = z.array(membershipTypeOptionSchema).parse(parseServicePayload(response.data))
+
+  return parsed
+    .map((item) => ({
+      uniqueId: item.UniqueId ?? item.uniqueId ?? "",
+      name: item.Name ?? item.name ?? "",
+      activeMemberCount: item.ActiveMemberCount ?? item.activeMemberCount ?? 0,
     }))
     .filter((option) => option.uniqueId && option.name)
 }

@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import { Box, Button, Field, Flex, Input } from "@chakra-ui/react"
 import ReactSelect from "react-select"
-import { Filter, Search } from "lucide-react"
+import { Filter, RotateCcw, Search } from "lucide-react"
 import { useCustomListOptions } from "../hooks/useCustomLists"
 
 interface CustomListSelectOption {
@@ -13,27 +13,35 @@ interface CustomListFilterBarProps {
   draftSearchTerm: string
   draftCustomListIds: string[]
   hasAppliedFilter: boolean
+  isSorted: boolean
   isApplying: boolean
   onSearchTermChange: (value: string) => void
   onCustomListIdsChange: (values: string[]) => void
   onApply: () => void
   onClear: () => void
+  onClearSort: () => void
 }
 
 export function CustomListFilterBar({
   draftSearchTerm,
   draftCustomListIds,
   hasAppliedFilter,
+  isSorted,
   isApplying,
   onSearchTermChange,
   onCustomListIdsChange,
   onApply,
   onClear,
+  onClearSort,
 }: CustomListFilterBarProps) {
   const optionsQuery = useCustomListOptions()
 
   const listOptions = useMemo<CustomListSelectOption[]>(
-    () => (optionsQuery.data ?? []).map((option) => ({ value: option.uniqueId, label: option.name })),
+    () =>
+      (optionsQuery.data ?? []).map((option) => ({
+        value: option.uniqueId,
+        label: `${option.name} (${option.memberCount})`,
+      })),
     [optionsQuery.data],
   )
   const selectedListOptions = useMemo(
@@ -121,10 +129,27 @@ export function CustomListFilterBar({
             borderRadius="14px"
             cursor={canClear ? "pointer" : "not-allowed"}
             disabled={!canClear}
+            title="Clear the list filter and name search"
             onClick={onClear}
           >
             Clear
           </Button>
+
+          {isSorted ? (
+            <Button
+              variant="outline"
+              minH="11"
+              px={5}
+              borderRadius="14px"
+              color="gray.600"
+              cursor="pointer"
+              title="Reset sorting to the default order"
+              onClick={onClearSort}
+            >
+              <RotateCcw size={15} />
+              Clear Sort
+            </Button>
+          ) : null}
         </Flex>
       </Flex>
     </Box>

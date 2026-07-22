@@ -53,7 +53,11 @@ export function MemberPicker({
   const currentPage = memberPage?.page ?? page
 
   const membershipTypeOptions = useMemo<MembershipTypeSelectOption[]>(
-    () => (membershipTypesQuery.data ?? []).map((option) => ({ value: option.value, label: option.text })),
+    () =>
+      (membershipTypesQuery.data ?? []).map((option) => ({
+        value: option.uniqueId,
+        label: `${option.name} (${option.activeMemberCount})`,
+      })),
     [membershipTypesQuery.data],
   )
   const draftMembershipTypeOptions = useMemo(

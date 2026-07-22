@@ -3,12 +3,12 @@ import {
   fetchCustomList,
   fetchCustomListMemberOptions,
   fetchCustomListMembers,
+  fetchCustomListMembershipTypeOptions,
   fetchCustomListOptions,
   fetchCustomLists,
   type CustomListFilters,
   type CustomListMemberFilters,
 } from "@/api/customLists"
-import { fetchMembershipTypeOptions } from "@/api/memberships"
 
 export const CUSTOM_LIST_QUERY_KEY = ["organizer", "custom-lists"] as const
 
@@ -86,8 +86,8 @@ export function useCustomListMemberOptions(
 
 export function useMembershipTypeOptions() {
   return useQuery({
-    queryKey: ["organizer", "membership-type-options"],
-    queryFn: fetchMembershipTypeOptions,
+    queryKey: [...CUSTOM_LIST_QUERY_KEY, "membership-type-options"],
+    queryFn: fetchCustomListMembershipTypeOptions,
     retry: false,
     refetchOnWindowFocus: false,
   })
