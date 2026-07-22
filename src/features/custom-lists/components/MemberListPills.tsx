@@ -1,12 +1,12 @@
 import { useState } from "react"
 import { Flex, Tag, Text } from "@chakra-ui/react"
-import type { CustomListOption } from "@/api/customLists"
+import type { CustomListRef } from "@/api/customLists"
 
 const VISIBLE_PILL_COUNT = 2
 
 interface MemberListPillsProps {
-  lists: CustomListOption[]
-  onRemoveFromList: (list: CustomListOption) => void
+  lists: CustomListRef[]
+  onRemoveFromList: (list: CustomListRef) => void
 }
 
 export function MemberListPills({ lists, onRemoveFromList }: MemberListPillsProps) {

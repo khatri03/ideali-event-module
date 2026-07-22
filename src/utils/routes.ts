@@ -210,6 +210,7 @@ export const API_ROUTES = {
   organizerCustomFormPreview: (id: string) => `/api/organizer/custom-form/${id}/edit`,
   customLists: "/api/organizer/membership/custom-list/list",
   customListOptions: "/api/organizer/membership/custom-list/options",
+  customListMembershipTypeOptions: "/api/organizer/membership/custom-list/membership-type-options",
   customListMemberOptions: "/api/organizer/membership/custom-list/member-options",
   customListCreate: "/api/organizer/membership/custom-list",
   customListDetail: (uniqueId: string) => `/api/organizer/membership/custom-list/${uniqueId}`,

@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Box, Button, Checkbox, Flex, Input, Menu, Portal, SkeletonText, Table, Text } from "@chakra-ui/react"
-import { ArrowDown, ArrowUp, ChevronsUpDown, MoreHorizontal, Search, Trash2 } from "lucide-react"
+import { ArrowDown, ArrowUp, ChevronsUpDown, MoreHorizontal, RotateCcw, Search, Trash2 } from "lucide-react"
 import { useDebounce } from "@/hooks/useDebounce"
 import { extractApiError } from "@/utils/errors"
 import { useCustomListMembers } from "../hooks/useCustomLists"
@@ -9,7 +9,7 @@ import { RemoveMembersDialog } from "./RemoveMembersDialog"
 import type {
   CustomListMember,
   CustomListMemberSortBy,
-  CustomListOption,
+  CustomListRef,
   CustomListSortOrder,
 } from "@/api/customLists"
 
@@ -20,6 +20,8 @@ interface PendingRemoval {
 }
 
 const MEMBER_PAGE_SIZE = 10
+const DEFAULT_SORT_BY: CustomListMemberSortBy = "fullName"
+const DEFAULT_SORT_ORDER: CustomListSortOrder = "asc"
 
 interface CustomListMembersTableProps {
   customListUniqueId: string
@@ -89,8 +91,8 @@ function formatAddedOn(value: string | null) {
 
 export function CustomListMembersTable({ customListUniqueId, customListName }: CustomListMembersTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
-  const [sortBy, setSortBy] = useState<CustomListMemberSortBy>("fullName")
-  const [sortOrder, setSortOrder] = useState<CustomListSortOrder>("asc")
+  const [sortBy, setSortBy] = useState<CustomListMemberSortBy>(DEFAULT_SORT_BY)
+  const [sortOrder, setSortOrder] = useState<CustomListSortOrder>(DEFAULT_SORT_ORDER)
   const [page, setPage] = useState(1)
   const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null)
   const [selectedMembers, setSelectedMembers] = useState<CustomListMember[]>([])
@@ -113,6 +115,7 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
     setPage(1)
   }
 
+  const isSorted = sortBy !== DEFAULT_SORT_BY || sortOrder !== DEFAULT_SORT_ORDER
   const hasSelection = selectedMembers.length > 0
   const selectedMemberIds = selectedMembers.map((member) => member.memberUniqueId)
   const visibleMemberIds = members.map((member) => member.memberUniqueId)
@@ -123,7 +126,7 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
     setPendingRemoval({ members: [member], listUniqueId: customListUniqueId, listName: customListName })
   }
 
-  function handleRemoveFromOtherList(member: CustomListMember, list: CustomListOption) {
+  function handleRemoveFromOtherList(member: CustomListMember, list: CustomListRef) {
     setPendingRemoval({ members: [member], listUniqueId: list.uniqueId, listName: list.name })
   }
 
@@ -170,6 +173,12 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
   function handleSortChange(nextSortBy: CustomListMemberSortBy) {
     setSortOrder((currentOrder) => (sortBy === nextSortBy && currentOrder === "asc" ? "desc" : "asc"))
     setSortBy(nextSortBy)
+    setPage(1)
+  }
+
+  function handleClearSort() {
+    setSortBy(DEFAULT_SORT_BY)
+    setSortOrder(DEFAULT_SORT_ORDER)
     setPage(1)
   }
 
@@ -225,21 +234,42 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
             </Text>
           )}
 
-          <Flex position="relative" align="center" w={{ base: "full", md: "300px" }} ml={{ base: 0, md: "auto" }}>
-            <Box position="absolute" left={3} color="gray.400" pointerEvents="none" display="flex">
-              <Search size={15} />
-            </Box>
-            <Input
-              value={searchTerm}
-              onChange={(event) => handleSearchTermChange(event.target.value)}
-              placeholder="Filter by name or email"
-              minH="10"
-              borderRadius="12px"
-              bg="card.bg"
-              pl={9}
-              pr={3}
-              fontSize="sm"
-            />
+          <Flex align="center" gap={2} w={{ base: "full", md: "auto" }} ml={{ base: 0, md: "auto" }}>
+            {isSorted ? (
+              <Button
+                variant="outline"
+                size="sm"
+                h="40px"
+                px={3}
+                borderRadius="12px"
+                bg="card.bg"
+                color="gray.600"
+                cursor="pointer"
+                flexShrink={0}
+                title="Reset sorting to the default order"
+                onClick={handleClearSort}
+              >
+                <RotateCcw size={14} />
+                Clear Sort
+              </Button>
+            ) : null}
+
+            <Flex position="relative" align="center" flex={1} w={{ base: "full", md: "300px" }}>
+              <Box position="absolute" left={3} color="gray.400" pointerEvents="none" display="flex">
+                <Search size={15} />
+              </Box>
+              <Input
+                value={searchTerm}
+                onChange={(event) => handleSearchTermChange(event.target.value)}
+                placeholder="Filter by name or email"
+                minH="10"
+                borderRadius="12px"
+                bg="card.bg"
+                pl={9}
+                pr={3}
+                fontSize="sm"
+              />
+            </Flex>
           </Flex>
         </Flex>
 

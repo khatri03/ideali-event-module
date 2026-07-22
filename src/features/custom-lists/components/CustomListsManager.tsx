@@ -41,6 +41,8 @@ export function CustomListsManager() {
 
   const hasAppliedFilter =
     appliedFilters.searchTerm.trim().length > 0 || appliedFilters.customListUniqueIds.length > 0
+  const isSorted =
+    appliedFilters.sortBy !== DEFAULT_FILTERS.sortBy || appliedFilters.sortOrder !== DEFAULT_FILTERS.sortOrder
 
   function handleApplyFilters() {
     setAppliedFilters((current) => ({
@@ -58,6 +60,15 @@ export function CustomListsManager() {
       ...DEFAULT_FILTERS,
       sortBy: current.sortBy,
       sortOrder: current.sortOrder,
+    }))
+    setPage(1)
+  }
+
+  function handleClearSort() {
+    setAppliedFilters((current) => ({
+      ...current,
+      sortBy: DEFAULT_FILTERS.sortBy,
+      sortOrder: DEFAULT_FILTERS.sortOrder,
     }))
     setPage(1)
   }
@@ -100,11 +111,13 @@ export function CustomListsManager() {
         draftSearchTerm={draftSearchTerm}
         draftCustomListIds={draftCustomListIds}
         hasAppliedFilter={hasAppliedFilter}
+        isSorted={isSorted}
         isApplying={customListsQuery.isFetching}
         onSearchTermChange={setDraftSearchTerm}
         onCustomListIdsChange={setDraftCustomListIds}
         onApply={handleApplyFilters}
         onClear={handleClearFilters}
+        onClearSort={handleClearSort}
       />
 
       {customListsQuery.isError ? (
