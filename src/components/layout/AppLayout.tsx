@@ -6,6 +6,7 @@ import { TopBar } from "./TopBar"
 import { useAuthSession } from "@/hooks/useAuthSession"
 import { auth, sessionDataToUser } from "@/lib/auth"
 import { APP_ROUTES } from "@/utils/routes"
+import { useAlertRealtime } from "@/features/member-alerts"
 
 function AppLayoutSkeleton() {
   return (
@@ -39,6 +40,9 @@ export function AppLayout() {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
   const sessionQuery = useAuthSession()
   const currentUser = auth.getUser() ?? (sessionQuery.data ? sessionDataToUser(sessionQuery.data) : null)
+
+  // Opens the alert hub once the user is signed in; no-op until then.
+  useAlertRealtime()
 
   if (sessionQuery.isLoading && !currentUser) {
     return <AppLayoutSkeleton />

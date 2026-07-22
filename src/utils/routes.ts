@@ -93,6 +93,14 @@ export const APP_ROUTES = {
     editRoute: "/organizer/membership/custom-list/:uniqueId",
     edit: (uniqueId: string) => `/organizer/membership/custom-list/${uniqueId}`,
   },
+  memberAlerts: {
+    base: "/organizer/membership/alert",
+    list: "/organizer/membership/alert/list",
+    create: "/organizer/membership/alert/new",
+    detailRoute: "/organizer/membership/alert/:uniqueId",
+    detail: (uniqueId: string) => `/organizer/membership/alert/${uniqueId}`,
+  },
+  alertInbox: "/alerts",
 } as const
 
 export const API_ROUTES = {
@@ -217,6 +225,18 @@ export const API_ROUTES = {
   customListUpdate: (uniqueId: string) => `/api/organizer/membership/custom-list/${uniqueId}`,
   customListDelete: (uniqueId: string) => `/api/organizer/membership/custom-list/${uniqueId}`,
   customListMembers: (uniqueId: string) => `/api/organizer/membership/custom-list/${uniqueId}/members`,
+
+  memberAlerts: "/api/organizer/membership/alert/list",
+  memberAlertDetail: (uniqueId: string) => `/api/organizer/membership/alert/${uniqueId}`,
+  memberAlertRecipients: (uniqueId: string) => `/api/organizer/membership/alert/${uniqueId}/recipients`,
+  memberAlertRecipientOptions: "/api/organizer/membership/alert/recipient-options",
+  memberAlertCreate: "/api/organizer/membership/alert",
+  memberAlertResend: (uniqueId: string) => `/api/organizer/membership/alert/${uniqueId}/resend`,
+  memberAlertDelete: (uniqueId: string) => `/api/organizer/membership/alert/${uniqueId}`,
+
+  alertInbox: "/api/alert-inbox/list",
+  alertInboxUnreadCount: "/api/alert-inbox/unread-count",
+  alertInboxMarkRead: (recipientUniqueId: string) => `/api/alert-inbox/${recipientUniqueId}/read`,
 } as const
 
 export const API_AUTH_ROUTES = {

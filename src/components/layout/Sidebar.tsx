@@ -13,6 +13,8 @@ import {
   MapPin,
   ListChecks,
   ShieldCheck,
+  Megaphone,
+  Bell,
 } from "lucide-react"
 import { mockUser } from "../../data/mock"
 import { logoutUser } from "@/api/auth"
@@ -52,6 +54,17 @@ const managementNav: NavItem[] = [
     path: APP_ROUTES.customLists.list,
     matchPath: APP_ROUTES.customLists.base,
   },
+  {
+    label: "Member Alerts",
+    icon: <Megaphone size={17} />,
+    path: APP_ROUTES.memberAlerts.list,
+    matchPath: APP_ROUTES.memberAlerts.base,
+  },
+]
+
+// Shown only to users holding the Member role — their own notification inbox.
+const memberNav: NavItem[] = [
+  { label: "Notifications", icon: <Bell size={17} />, path: APP_ROUTES.alertInbox },
 ]
 
 function NavSection({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => void }) {
@@ -343,7 +356,8 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
   const isMobile = variant === "mobile"
   const [isSettingsManualOpen, setIsSettingsManualOpen] = useState(false)
   const [isAdminManualOpen, setIsAdminManualOpen] = useState(false)
-  const isAdmin = currentUser.role === "Admin"
+  const isAdmin = auth.hasRole("Admin")
+  const isMember = auth.hasRole("Member")
   const isSettingsRouteActive = pathname === APP_ROUTES.settings
   const isChargeRulesRouteActive = pathname === APP_ROUTES.chargeRules.list
   const isSettingsOpen = isSettingsManualOpen || isSettingsRouteActive || isChargeRulesRouteActive
@@ -428,6 +442,7 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
       <Box flex={1} px={2} position="relative" zIndex={1}>
         <NavSection items={mainNav} onNavigate={onNavigate} />
         <NavSection items={managementNav} onNavigate={onNavigate} />
+        {isMember ? <NavSection items={memberNav} onNavigate={onNavigate} /> : null}
         <SettingsSection
           pathname={pathname}
           isOpen={isSettingsOpen}
