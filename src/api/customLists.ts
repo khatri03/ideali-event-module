@@ -25,6 +25,13 @@ const customListSchema = z.object({
   createdOnUtc: z.string().optional(),
 })
 
+const customListOptionSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  Name: z.string().optional(),
+  name: z.string().optional(),
+})
+
 const customListMemberSchema = z.object({
   MemberUniqueId: z.string().optional(),
   memberUniqueId: z.string().optional(),
@@ -34,6 +41,10 @@ const customListMemberSchema = z.object({
   email: z.string().nullable().optional(),
   MembershipTypeName: z.string().nullable().optional(),
   membershipTypeName: z.string().nullable().optional(),
+  AddedOnUtc: z.string().nullable().optional(),
+  addedOnUtc: z.string().nullable().optional(),
+  OtherLists: z.array(customListOptionSchema).nullable().optional(),
+  otherLists: z.array(customListOptionSchema).nullable().optional(),
 })
 
 const customListMemberPageSchema = z.object({
@@ -54,8 +65,8 @@ const customListDetailSchema = z.object({
   uniqueId: z.string().optional(),
   Name: z.string().optional(),
   name: z.string().optional(),
-  Members: z.array(customListMemberSchema).optional(),
-  members: z.array(customListMemberSchema).optional(),
+  MemberCount: z.number().int().optional(),
+  memberCount: z.number().int().optional(),
 })
 
 const customListPageSchema = z.object({
@@ -93,11 +104,21 @@ export interface CustomListOption {
   name: string
 }
 
+export type CustomListMemberSortBy = "fullName" | "email" | "membershipTypeName" | "addedOnUtc"
+
+export interface CustomListMemberFilters {
+  searchTerm: string
+  sortBy: CustomListMemberSortBy
+  sortOrder: CustomListSortOrder
+}
+
 export interface CustomListMember {
   memberUniqueId: string
   fullName: string
   email: string | null
   membershipTypeName: string | null
+  addedOnUtc: string | null
+  otherLists: CustomListOption[]
 }
 
 export interface CustomListMemberOptionPage {
@@ -111,7 +132,7 @@ export interface CustomListMemberOptionPage {
 export interface CustomListDetail {
   uniqueId: string
   name: string
-  members: CustomListMember[]
+  memberCount: number
 }
 
 export interface CustomListPage {
@@ -165,6 +186,13 @@ function normalizeCustomListMember(item: z.infer<typeof customListMemberSchema>)
     fullName: item.FullName ?? item.fullName ?? "",
     email: item.Email ?? item.email ?? null,
     membershipTypeName: item.MembershipTypeName ?? item.membershipTypeName ?? null,
+    addedOnUtc: item.AddedOnUtc ?? item.addedOnUtc ?? null,
+    otherLists: (item.OtherLists ?? item.otherLists ?? [])
+      .map((option) => ({
+        uniqueId: option.UniqueId ?? option.uniqueId ?? "",
+        name: option.Name ?? option.name ?? "",
+      }))
+      .filter((option) => option.uniqueId && option.name),
   }
 }
 
@@ -217,7 +245,36 @@ export async function fetchCustomList(uniqueId: string): Promise<CustomListDetai
   return {
     uniqueId: parsed.UniqueId ?? parsed.uniqueId ?? "",
     name: parsed.Name ?? parsed.name ?? "",
-    members: (parsed.Members ?? parsed.members ?? []).map(normalizeCustomListMember),
+    memberCount: parsed.MemberCount ?? parsed.memberCount ?? 0,
+  }
+}
+
+export async function fetchCustomListMembers(
+  uniqueId: string,
+  filters: CustomListMemberFilters,
+  pageNo: number,
+  pageSize: number,
+): Promise<CustomListMemberOptionPage> {
+  const params = new URLSearchParams()
+  params.set("pageNo", String(pageNo))
+  params.set("pageSize", String(pageSize))
+  params.set("sortBy", filters.sortBy)
+  params.set("sortOrder", filters.sortOrder)
+
+  if (filters.searchTerm.trim()) {
+    params.set("searchTerm", filters.searchTerm.trim())
+  }
+
+  const response = await client.get<unknown>(API_ROUTES.customListMembers(uniqueId), { params })
+  const parsed = customListMemberPageSchema.parse(parseServicePayload(response.data))
+  const items = (parsed.PageData ?? parsed.pageData ?? []).map(normalizeCustomListMember)
+
+  return {
+    items,
+    total: parsed.TotalRecordsCount ?? parsed.totalRecordsCount ?? items.length,
+    page: parsed.PageNo ?? parsed.pageNo ?? pageNo,
+    pageSize: parsed.PageSize ?? parsed.pageSize ?? pageSize,
+    totalPages: parsed.PageCount ?? parsed.pageCount ?? 0,
   }
 }
 

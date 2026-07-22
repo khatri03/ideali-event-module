@@ -3,16 +3,13 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useNavigate } from "react-router-dom"
 import { Box, Button, Field, Flex, Heading, Input, SkeletonText, Stack, Text } from "@chakra-ui/react"
-import { ArrowLeft, Trash2, UserPlus } from "lucide-react"
+import { ArrowLeft, UserPlus } from "lucide-react"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 import { customListFormSchema, type CustomListFormValues } from "../schemas/customList.schemas"
 import { useCustomList } from "../hooks/useCustomLists"
-import {
-  useAddCustomListMembers,
-  useRemoveCustomListMembers,
-  useRenameCustomList,
-} from "../hooks/useCustomListMutations"
+import { useAddCustomListMembers, useRenameCustomList } from "../hooks/useCustomListMutations"
+import { CustomListMembersTable } from "./CustomListMembersTable"
 import { MemberPicker } from "./MemberPicker"
 import { RequiredFieldLabel } from "./RequiredFieldLabel"
 
@@ -28,10 +25,8 @@ export function CustomListEditor({ customListUniqueId }: CustomListEditorProps) 
   const detailQuery = useCustomList(customListUniqueId)
   const renameMutation = useRenameCustomList()
   const addMutation = useAddCustomListMembers()
-  const removeMutation = useRemoveCustomListMembers()
 
   const detail = detailQuery.data
-  const members = detail?.members ?? []
 
   const {
     register,
@@ -62,10 +57,6 @@ export function CustomListEditor({ customListUniqueId }: CustomListEditorProps) 
     await addMutation.mutateAsync({ uniqueId: customListUniqueId, memberUniqueIds: selectedMemberIds })
     setSelectedMemberIds([])
     setIsAdding(false)
-  }
-
-  async function handleRemoveMember(memberUniqueId: string) {
-    await removeMutation.mutateAsync({ uniqueId: customListUniqueId, memberUniqueIds: [memberUniqueId] })
   }
 
   if (detailQuery.isError) {
@@ -123,7 +114,7 @@ export function CustomListEditor({ customListUniqueId }: CustomListEditorProps) 
                 h="44px"
                 px={6}
                 w={{ base: "full", md: "auto" }}
-                cursor="pointer"
+                cursor={renameMutation.isPending || !isDirty ? "not-allowed" : "pointer"}
                 disabled={renameMutation.isPending || !isDirty}
                 loading={renameMutation.isPending}
                 loadingText="Saving..."
@@ -151,13 +142,19 @@ export function CustomListEditor({ customListUniqueId }: CustomListEditorProps) 
         boxShadow="card"
         p={{ base: 4, md: 6 }}
       >
-        <Flex align={{ base: "stretch", md: "center" }} justify="space-between" gap={3} direction={{ base: "column", md: "row" }} mb={5}>
+        <Flex
+          align={{ base: "stretch", md: "center" }}
+          justify="space-between"
+          gap={3}
+          direction={{ base: "column", md: "row" }}
+          mb={5}
+        >
           <Box>
             <Text fontSize="lg" fontWeight="700" color="text.primary">
               Members
             </Text>
             <Text fontSize="sm" color="text.secondary">
-              {members.length} member{members.length === 1 ? "" : "s"} in this list
+              Sort any column, search, or remove a member from this list.
             </Text>
           </Box>
 
@@ -188,6 +185,14 @@ export function CustomListEditor({ customListUniqueId }: CustomListEditorProps) 
                 emptyMessage="Every matching member is already in this list."
               />
 
+              {addMutation.error ? (
+                <Box mt={4} p={4} borderRadius="16px" border="1px solid" borderColor="red.200" bg="red.50">
+                  <Text fontSize="sm" fontWeight="700" color="red.700">
+                    {extractApiError(addMutation.error)}
+                  </Text>
+                </Box>
+              ) : null}
+
               <Flex gap={3} flexWrap="wrap" mt={4}>
                 <Button
                   variant="outline"
@@ -207,7 +212,7 @@ export function CustomListEditor({ customListUniqueId }: CustomListEditorProps) 
                   h="44px"
                   px={6}
                   color="white"
-                  cursor="pointer"
+                  cursor={addMutation.isPending || selectedMemberIds.length === 0 ? "not-allowed" : "pointer"}
                   disabled={addMutation.isPending || selectedMemberIds.length === 0}
                   loading={addMutation.isPending}
                   loadingText="Adding..."
@@ -220,59 +225,10 @@ export function CustomListEditor({ customListUniqueId }: CustomListEditorProps) 
             </Box>
           ) : null}
 
-          {detailQuery.isLoading && !detail ? (
-            <SkeletonText noOfLines={6} />
-          ) : members.length === 0 ? (
-            <Box py={10} textAlign="center">
-              <Text fontSize="sm" color="text.secondary">
-                This list has no members yet.
-              </Text>
-            </Box>
-          ) : (
-            <Stack gap={2}>
-              {members.map((member) => (
-                <Flex
-                  key={member.memberUniqueId}
-                  align="center"
-                  justify="space-between"
-                  gap={3}
-                  borderRadius="14px"
-                  border="1px solid"
-                  borderColor="border.subtle"
-                  px={4}
-                  py={3}
-                >
-                  <Box minW={0}>
-                    <Text fontSize="sm" fontWeight="600" color="text.primary" lineClamp={1}>
-                      {member.fullName}
-                    </Text>
-                    {member.email ? (
-                      <Text fontSize="xs" color="text.secondary" lineClamp={1}>
-                        {member.email}
-                      </Text>
-                    ) : null}
-                  </Box>
-
-                  <Button
-                    variant="outline"
-                    colorPalette="red"
-                    aria-label={`Remove ${member.fullName}`}
-                    title={`Remove ${member.fullName}`}
-                    borderRadius="full"
-                    h="36px"
-                    w="36px"
-                    minW="36px"
-                    p={0}
-                    cursor="pointer"
-                    disabled={removeMutation.isPending}
-                    onClick={() => handleRemoveMember(member.memberUniqueId)}
-                  >
-                    <Trash2 size={15} />
-                  </Button>
-                </Flex>
-              ))}
-            </Stack>
-          )}
+          <CustomListMembersTable
+            customListUniqueId={customListUniqueId}
+            customListName={detail?.name ?? "this list"}
+          />
         </Stack>
       </Box>
     </Stack>

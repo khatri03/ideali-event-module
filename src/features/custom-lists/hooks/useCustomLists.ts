@@ -2,9 +2,11 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import {
   fetchCustomList,
   fetchCustomListMemberOptions,
+  fetchCustomListMembers,
   fetchCustomListOptions,
   fetchCustomLists,
   type CustomListFilters,
+  type CustomListMemberFilters,
 } from "@/api/customLists"
 import { fetchMembershipTypeOptions } from "@/api/memberships"
 
@@ -34,6 +36,21 @@ export function useCustomList(uniqueId: string | null) {
     queryKey: [...CUSTOM_LIST_QUERY_KEY, "detail", uniqueId],
     queryFn: () => fetchCustomList(uniqueId as string),
     enabled: Boolean(uniqueId),
+    retry: false,
+    refetchOnWindowFocus: false,
+  })
+}
+
+export function useCustomListMembers(
+  uniqueId: string,
+  filters: CustomListMemberFilters,
+  pageNo: number,
+  pageSize: number,
+) {
+  return useQuery({
+    queryKey: [...CUSTOM_LIST_QUERY_KEY, "members", uniqueId, { filters, pageNo, pageSize }],
+    queryFn: () => fetchCustomListMembers(uniqueId, filters, pageNo, pageSize),
+    placeholderData: keepPreviousData,
     retry: false,
     refetchOnWindowFocus: false,
   })
