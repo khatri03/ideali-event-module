@@ -11,6 +11,7 @@ import { Settings } from "./pages/Settings"
 import { AdminFeePlansPage } from "./features/admin-fee-plans"
 import { ChargeRulesPage } from "./features/charge-rules"
 import { VenueManagementPage } from "./features/venues"
+import { CustomListCreatePage, CustomListEditPage, CustomListsPage } from "./features/custom-lists"
 import { SeatingLayoutDesignerPage, SeatingLayoutsPage } from "./features/seating-layouts"
 import {
   EventBannerStepPage,
@@ -117,6 +118,9 @@ export default function App() {
           <Route path={APP_ROUTES.adminRevenuePlans} element={<AdminFeePlansPage />} />
           <Route path={APP_ROUTES.adminFeePlansLegacy} element={<Navigate to={APP_ROUTES.adminRevenuePlans} replace />} />
           <Route path={APP_ROUTES.venues.list} element={<VenueManagementPage />} />
+          <Route path={APP_ROUTES.customLists.list} element={<CustomListsPage />} />
+          <Route path={APP_ROUTES.customLists.create} element={<CustomListCreatePage />} />
+          <Route path={APP_ROUTES.customLists.editRoute} element={<CustomListEditPage />} />
           <Route path={APP_ROUTES.team} element={<Settings />} />
           <Route path={APP_ROUTES.analytics} element={<Settings />} />
           <Route path={APP_ROUTES.help} element={<Settings />} />

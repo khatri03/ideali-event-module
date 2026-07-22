@@ -11,6 +11,7 @@ import {
   Zap,
   LayoutGrid,
   MapPin,
+  ListChecks,
   ShieldCheck,
 } from "lucide-react"
 import { mockUser } from "../../data/mock"
@@ -26,6 +27,8 @@ interface NavItem {
   label: string
   icon: React.ReactNode
   path: string
+  /** Base path used for the active check when the section has child routes (create/edit). Defaults to `path`. */
+  matchPath?: string
   badge?: string
 }
 
@@ -43,6 +46,12 @@ const mainNav: NavItem[] = [
 const managementNav: NavItem[] = [
   { label: "Seating Layouts", icon: <LayoutGrid size={17} />, path: APP_ROUTES.seatingLayouts.list },
   { label: "Venues", icon: <MapPin size={17} />, path: APP_ROUTES.venues.list },
+  {
+    label: "Custom Lists",
+    icon: <ListChecks size={17} />,
+    path: APP_ROUTES.customLists.list,
+    matchPath: APP_ROUTES.customLists.base,
+  },
 ]
 
 function NavSection({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => void }) {
@@ -51,7 +60,8 @@ function NavSection({ items, onNavigate }: { items: NavItem[]; onNavigate?: () =
   return (
     <VStack gap={0.5} align="stretch" mb={6}>
       {items.map((item) => {
-        const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`)
+        const matchPath = item.matchPath ?? item.path
+        const isActive = pathname === matchPath || pathname.startsWith(`${matchPath}/`)
         return (
           <NavLink key={item.path} to={item.path} style={{ textDecoration: "none" }} onClick={onNavigate}>
             <Flex
