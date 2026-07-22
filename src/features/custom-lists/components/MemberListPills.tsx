@@ -32,17 +32,24 @@ export function MemberListPills({ lists, onRemoveFromList }: MemberListPillsProp
           variant="surface"
           colorPalette="gray"
           borderRadius="full"
-          maxW="180px"
+          maxW="200px"
+          minH="28px"
+          ps={3}
+          pe={1.5}
+          py={1}
+          gap={1.5}
         >
           <Tag.Label lineClamp={1} title={list.name} fontWeight="600">
             {list.name}
           </Tag.Label>
-          <Tag.EndElement>
+          <Tag.EndElement ms={0}>
             <Tag.CloseTrigger
               aria-label={`Remove from ${list.name}`}
               title={`Remove from ${list.name}`}
               cursor="pointer"
-              _hover={{ color: "red.600" }}
+              boxSize="18px"
+              borderRadius="full"
+              _hover={{ bg: "red.100", color: "red.600" }}
               onClick={() => onRemoveFromList(list)}
             />
           </Tag.EndElement>
@@ -55,6 +62,9 @@ export function MemberListPills({ lists, onRemoveFromList }: MemberListPillsProp
           variant="solid"
           colorPalette="gray"
           borderRadius="full"
+          minH="28px"
+          px={3}
+          py={1}
           cursor="pointer"
           onClick={() => setIsExpanded(true)}
           title={lists
@@ -72,6 +82,9 @@ export function MemberListPills({ lists, onRemoveFromList }: MemberListPillsProp
           variant="solid"
           colorPalette="gray"
           borderRadius="full"
+          minH="28px"
+          px={3}
+          py={1}
           cursor="pointer"
           onClick={() => setIsExpanded(false)}
         >

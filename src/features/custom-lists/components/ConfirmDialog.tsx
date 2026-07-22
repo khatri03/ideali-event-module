@@ -28,15 +28,19 @@ export function ConfirmDialog({
       open
       role="alertdialog"
       onOpenChange={(details) => (details.open ? null : onClose())}
-      size={{ base: "full", md: "md" }}
+      size="md"
     >
       <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
-      <Dialog.Positioner>
+      <Dialog.Positioner p={4}>
         <Dialog.Content
           bg="white"
-          borderRadius={{ base: 0, md: "24px" }}
-          maxW={{ base: "100vw", md: "520px" }}
-          m={{ base: 0, md: "auto" }}
+          borderRadius="24px"
+          w="full"
+          maxW="520px"
+          h="auto"
+          maxH="calc(100dvh - 2rem)"
+          alignSelf="center"
+          mx="auto"
           overflow="hidden"
         >
           <Box px={6} pt={6} pb={4}>

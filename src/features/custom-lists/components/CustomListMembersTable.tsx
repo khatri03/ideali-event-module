@@ -1,11 +1,11 @@
 import { useState } from "react"
-import { Box, Button, Flex, Input, Menu, Portal, SkeletonText, Table, Text } from "@chakra-ui/react"
+import { Box, Button, Checkbox, Flex, Input, Menu, Portal, SkeletonText, Table, Text } from "@chakra-ui/react"
 import { ArrowDown, ArrowUp, ChevronsUpDown, MoreHorizontal, Search, Trash2 } from "lucide-react"
 import { useDebounce } from "@/hooks/useDebounce"
 import { extractApiError } from "@/utils/errors"
 import { useCustomListMembers } from "../hooks/useCustomLists"
 import { MemberListPills } from "./MemberListPills"
-import { RemoveMemberDialog } from "./RemoveMemberDialog"
+import { RemoveMembersDialog } from "./RemoveMembersDialog"
 import type {
   CustomListMember,
   CustomListMemberSortBy,
@@ -14,7 +14,7 @@ import type {
 } from "@/api/customLists"
 
 interface PendingRemoval {
-  member: CustomListMember
+  members: CustomListMember[]
   listUniqueId: string
   listName: string
 }
@@ -93,6 +93,7 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
   const [sortOrder, setSortOrder] = useState<CustomListSortOrder>("asc")
   const [page, setPage] = useState(1)
   const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null)
+  const [selectedMembers, setSelectedMembers] = useState<CustomListMember[]>([])
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
 
   const membersQuery = useCustomListMembers(
@@ -112,12 +113,58 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
     setPage(1)
   }
 
+  const hasSelection = selectedMembers.length > 0
+  const selectedMemberIds = selectedMembers.map((member) => member.memberUniqueId)
+  const visibleMemberIds = members.map((member) => member.memberUniqueId)
+  const areAllVisibleSelected =
+    visibleMemberIds.length > 0 && visibleMemberIds.every((memberId) => selectedMemberIds.includes(memberId))
+
   function handleRemoveFromCurrentList(member: CustomListMember) {
-    setPendingRemoval({ member, listUniqueId: customListUniqueId, listName: customListName })
+    setPendingRemoval({ members: [member], listUniqueId: customListUniqueId, listName: customListName })
   }
 
   function handleRemoveFromOtherList(member: CustomListMember, list: CustomListOption) {
-    setPendingRemoval({ member, listUniqueId: list.uniqueId, listName: list.name })
+    setPendingRemoval({ members: [member], listUniqueId: list.uniqueId, listName: list.name })
+  }
+
+  function handleRemoveSelected() {
+    if (selectedMembers.length === 0) {
+      return
+    }
+
+    setPendingRemoval({
+      members: selectedMembers,
+      listUniqueId: customListUniqueId,
+      listName: customListName,
+    })
+  }
+
+  function handleToggleMember(member: CustomListMember) {
+    setSelectedMembers((current) =>
+      current.some((selected) => selected.memberUniqueId === member.memberUniqueId)
+        ? current.filter((selected) => selected.memberUniqueId !== member.memberUniqueId)
+        : [...current, member],
+    )
+  }
+
+  function handleToggleAllVisible() {
+    setSelectedMembers((current) => {
+      if (areAllVisibleSelected) {
+        return current.filter((selected) => !visibleMemberIds.includes(selected.memberUniqueId))
+      }
+
+      const additions = members.filter(
+        (member) => !current.some((selected) => selected.memberUniqueId === member.memberUniqueId),
+      )
+
+      return [...current, ...additions]
+    })
+  }
+
+  function handleRemoved(removedMemberIds: string[]) {
+    setSelectedMembers((current) =>
+      current.filter((selected) => !removedMemberIds.includes(selected.memberUniqueId)),
+    )
   }
 
   function handleSortChange(nextSortBy: CustomListMemberSortBy) {
@@ -132,17 +179,51 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
         <Flex
           px={{ base: 3, md: 4 }}
           py={3}
+          minH="64px"
           align={{ base: "stretch", md: "center" }}
           justify="space-between"
           direction={{ base: "column", md: "row" }}
           gap={3}
           borderBottom="1px solid"
-          borderColor="border.subtle"
-          bg="app.bg"
+          borderColor={hasSelection ? "brand.100" : "border.subtle"}
+          bg={hasSelection ? "brand.50" : "app.bg"}
+          transition="background-color 0.15s ease, border-color 0.15s ease"
         >
-          <Text fontSize="sm" fontWeight="700" color="text.primary">
-            {memberPage?.total ?? 0} member{(memberPage?.total ?? 0) === 1 ? "" : "s"}
-          </Text>
+          {hasSelection ? (
+            <Flex align="center" gap={2} flexWrap="wrap">
+              <Text fontSize="sm" fontWeight="800" color="brand.600">
+                {selectedMembers.length} selected
+              </Text>
+              <Button
+                variant="plain"
+                size="sm"
+                h="32px"
+                px={2}
+                color="gray.600"
+                cursor="pointer"
+                _hover={{ bg: "brand.100" }}
+                onClick={() => setSelectedMembers([])}
+              >
+                Clear
+              </Button>
+              <Button
+                colorPalette="red"
+                size="sm"
+                h="32px"
+                borderRadius="10px"
+                px={3}
+                cursor="pointer"
+                onClick={handleRemoveSelected}
+              >
+                <Trash2 size={14} />
+                Remove from list
+              </Button>
+            </Flex>
+          ) : (
+            <Text fontSize="sm" fontWeight="700" color="text.primary">
+              {memberPage?.total ?? 0} member{(memberPage?.total ?? 0) === 1 ? "" : "s"}
+            </Text>
+          )}
 
           <Flex position="relative" align="center" w={{ base: "full", md: "300px" }} ml={{ base: 0, md: "auto" }}>
             <Box position="absolute" left={3} color="gray.400" pointerEvents="none" display="flex">
@@ -181,6 +262,18 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
             >
               <Table.Header>
                 <Table.Row bg="card.bg">
+                  <Table.ColumnHeader px={4} py={3} w="52px">
+                    <Checkbox.Root
+                      checked={areAllVisibleSelected}
+                      onCheckedChange={handleToggleAllVisible}
+                      disabled={members.length === 0}
+                      cursor={members.length === 0 ? "not-allowed" : "pointer"}
+                      aria-label="Select all members on this page"
+                    >
+                      <Checkbox.HiddenInput />
+                      <Checkbox.Control />
+                    </Checkbox.Root>
+                  </Table.ColumnHeader>
                   <Table.ColumnHeader px={4} py={3} textAlign="center" w="90px">
                     Actions
                   </Table.ColumnHeader>
@@ -228,7 +321,7 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
               <Table.Body>
                 {members.length === 0 ? (
                   <Table.Row>
-                    <Table.Cell colSpan={6} py={12}>
+                    <Table.Cell colSpan={7} py={12}>
                       <Text fontSize="sm" color="text.secondary" textAlign="center">
                         {debouncedSearchTerm.trim()
                           ? "No members match this search."
@@ -238,7 +331,22 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
                   </Table.Row>
                 ) : (
                   members.map((member) => (
-                    <Table.Row key={member.memberUniqueId} _hover={{ bg: "app.bg" }}>
+                    <Table.Row
+                      key={member.memberUniqueId}
+                      _hover={{ bg: "app.bg" }}
+                      bg={selectedMemberIds.includes(member.memberUniqueId) ? "brand.50" : undefined}
+                    >
+                      <Table.Cell px={4} py={3}>
+                        <Checkbox.Root
+                          checked={selectedMemberIds.includes(member.memberUniqueId)}
+                          onCheckedChange={() => handleToggleMember(member)}
+                          cursor="pointer"
+                          aria-label={`Select ${member.fullName}`}
+                        >
+                          <Checkbox.HiddenInput />
+                          <Checkbox.Control />
+                        </Checkbox.Root>
+                      </Table.Cell>
                       <Table.Cell px={4} py={3} textAlign="center">
                         <Menu.Root>
                           <Menu.Trigger asChild>
@@ -364,10 +472,11 @@ export function CustomListMembersTable({ customListUniqueId, customListName }: C
       </Box>
 
       {pendingRemoval ? (
-        <RemoveMemberDialog
+        <RemoveMembersDialog
           customListUniqueId={pendingRemoval.listUniqueId}
           customListName={pendingRemoval.listName}
-          member={pendingRemoval.member}
+          members={pendingRemoval.members}
+          onRemoved={handleRemoved}
           onClose={() => setPendingRemoval(null)}
         />
       ) : null}
