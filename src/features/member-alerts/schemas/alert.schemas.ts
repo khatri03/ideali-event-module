@@ -37,24 +37,19 @@ export const alertFormSchema = z
       }
     }),
     priority: z.enum(["Urgent", "Important", "Normal", "Low"]),
-    instant: z.boolean(),
-    email: z.boolean(),
+    channel: z.enum(["Instant", "Email"]),
     scheduleForLater: z.boolean(),
     scheduledAtUtc: z.string().nullable(),
-    membershipTypeUniqueIds: z.array(z.string()),
-    membershipStatuses: z.array(z.string()),
+    membershipTypeUniqueId: z.string(),
+    membershipStatus: z.string(),
     customListUniqueIds: z.array(z.string()),
-  })
-  .refine((values) => values.instant || values.email, {
-    message: "Choose at least one delivery channel.",
-    path: ["instant"],
   })
   .refine(
     (values) =>
       values.targetMode !== "membership-types" ||
       values.memberSearchTerm.length > 0 ||
-      values.membershipTypeUniqueIds.length > 0 ||
-      values.membershipStatuses.length > 0,
+      values.membershipTypeUniqueId.length > 0 ||
+      values.membershipStatus.length > 0,
     {
       message: "Search by name or email, or select a membership type or status.",
       path: ["memberSearchTerm"],
@@ -85,7 +80,7 @@ export const alertFormSchema = z
 
 export type AlertFormValues = z.infer<typeof alertFormSchema>
 
-/** Instant=1, Email=2 — the backend flags enum. */
-export function toChannelMask(instant: boolean, email: boolean): number {
-  return (instant ? 1 : 0) | (email ? 2 : 0)
+/** Instant=1, Email=2 â€” the backend flags enum. */
+export function toChannelMask(channel: "Instant" | "Email"): number {
+  return channel === "Instant" ? 1 : 2
 }
