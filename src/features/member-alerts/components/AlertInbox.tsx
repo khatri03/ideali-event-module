@@ -10,6 +10,7 @@ import {
 } from "@chakra-ui/react"
 import { CheckCheck, Inbox } from "lucide-react"
 import { extractApiError } from "@/utils/errors"
+import { htmlToPlainText } from "@/utils/html"
 import type { InboxAlert } from "@/api/alerts"
 import { useInbox } from "../hooks/useAlerts"
 import { useMarkAlertRead } from "../hooks/useAlertMutations"
@@ -96,7 +97,9 @@ export function AlertInbox() {
                 </Flex>
                 <Text fontSize="xs" color="text.secondary" flexShrink={0}>{formatDateTime(alert.sentAtUtc)}</Text>
               </Flex>
-              <Text fontSize="sm" color="gray.700" mt={2} whiteSpace="pre-wrap">{alert.body}</Text>
+              <Text fontSize="sm" color="gray.700" mt={2} whiteSpace="pre-wrap">
+                {htmlToPlainText(alert.body)}
+              </Text>
               <Flex justify="space-between" align="center" mt={3}>
                 <Text fontSize="xs" color="text.secondary">From {alert.sentBy}</Text>
                 {alert.isRead ? (

@@ -3,8 +3,8 @@ import { Controller, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useNavigate } from "react-router-dom"
 import {
-  Box,
   Badge,
+  Box,
   Button,
   Checkbox,
   Field,
@@ -16,7 +16,6 @@ import {
   Tabs,
   Stack,
   Text,
-  Textarea,
 } from "@chakra-ui/react"
 import ReactSelect, { type MultiValue } from "react-select"
 import { ArrowLeft, Send } from "lucide-react"
@@ -27,6 +26,7 @@ import { useCreateAlert } from "../hooks/useAlertMutations"
 import { useAlertCustomListOptions, useAlertMembershipTypeOptions } from "../hooks/useAlerts"
 import { PRIORITY_OPTIONS } from "../constants"
 import { RecipientPicker } from "./RecipientPicker"
+import { AlertMessageEditor } from "./AlertMessageEditor"
 
 type RecipientSourceTab = "individuals" | "membership-types" | "custom-lists"
 
@@ -261,13 +261,19 @@ export function AlertComposer() {
                 <Field.Label fontWeight="700">
                   Message <Text as="span" color="red.500">*</Text>
                 </Field.Label>
-                <Textarea
-                  {...register("body")}
-                  borderRadius="14px"
-                  px={4}
-                  py={3}
-                  rows={6}
-                  placeholder="What do you want to tell them?"
+                <Text fontSize="xs" color="text.secondary" mb={2}>
+                  Compose the alert with basic formatting.
+                </Text>
+                <Controller
+                  control={control}
+                  name="body"
+                  render={({ field }) => (
+                    <AlertMessageEditor
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="What do you want to tell them?"
+                    />
+                  )}
                 />
                 {errors.body ? <Field.ErrorText>{errors.body.message}</Field.ErrorText> : null}
               </Field.Root>

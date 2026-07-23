@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { htmlToPlainText } from "@/utils/html"
 
 /** Mirrors the backend validation in AlertService exactly; message strings kept byte-identical. */
 export const alertFormSchema = z
@@ -9,11 +10,31 @@ export const alertFormSchema = z
       .trim()
       .min(2, "Title must be at least 2 characters.")
       .max(200, "Title must be 200 characters or fewer."),
-    body: z
-      .string()
-      .trim()
-      .min(2, "Message must be at least 2 characters.")
-      .max(10000, "Message must be 10000 characters or fewer."),
+    body: z.string().superRefine((value, ctx) => {
+      const visibleText = htmlToPlainText(value)
+
+      if (!visibleText) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Message is required.",
+        })
+        return
+      }
+
+      if (visibleText.length < 2) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Message must be at least 2 characters.",
+        })
+      }
+
+      if (visibleText.length > 10000) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Message must be 10000 characters or fewer.",
+        })
+      }
+    }),
     priority: z.enum(["Urgent", "Important", "Normal", "Low"]),
     instant: z.boolean(),
     email: z.boolean(),
