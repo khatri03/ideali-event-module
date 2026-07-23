@@ -18,12 +18,24 @@ export const alertFormSchema = z
     email: z.boolean(),
     scheduleForLater: z.boolean(),
     scheduledAtUtc: z.string().nullable(),
-    recipientUniqueIds: z.array(z.string()).min(1, "Select at least one recipient."),
+    recipientUniqueIds: z.array(z.string()),
+    membershipTypeUniqueIds: z.array(z.string()),
+    customListUniqueIds: z.array(z.string()),
   })
   .refine((values) => values.instant || values.email, {
     message: "Choose at least one delivery channel.",
     path: ["instant"],
   })
+  .refine(
+    (values) =>
+      values.recipientUniqueIds.length > 0 ||
+      values.membershipTypeUniqueIds.length > 0 ||
+      values.customListUniqueIds.length > 0,
+    {
+      message: "Add at least one recipient, membership type, or custom list.",
+      path: ["recipientUniqueIds"],
+    },
+  )
   .refine((values) => !values.scheduleForLater || Boolean(values.scheduledAtUtc), {
     message: "Pick a date and time to schedule.",
     path: ["scheduledAtUtc"],
