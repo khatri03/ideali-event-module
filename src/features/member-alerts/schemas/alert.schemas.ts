@@ -4,7 +4,7 @@ import { htmlToPlainText } from "@/utils/html"
 /** Mirrors the backend validation in AlertService exactly; message strings kept byte-identical. */
 export const alertFormSchema = z
   .object({
-    targetMode: z.enum(["individuals", "membership-types", "custom-lists"]),
+    targetMode: z.enum(["membership-types", "custom-lists"]),
     title: z
       .string()
       .trim()
@@ -40,7 +40,6 @@ export const alertFormSchema = z
     email: z.boolean(),
     scheduleForLater: z.boolean(),
     scheduledAtUtc: z.string().nullable(),
-    recipientUniqueIds: z.array(z.string()),
     membershipTypeUniqueIds: z.array(z.string()),
     customListUniqueIds: z.array(z.string()),
   })
@@ -48,14 +47,6 @@ export const alertFormSchema = z
     message: "Choose at least one delivery channel.",
     path: ["instant"],
   })
-  .refine(
-    (values) =>
-      values.targetMode !== "individuals" || values.recipientUniqueIds.length > 0,
-    {
-      message: "Add at least one recipient.",
-      path: ["recipientUniqueIds"],
-    },
-  )
   .refine(
     (values) =>
       values.targetMode !== "membership-types" || values.membershipTypeUniqueIds.length > 0,

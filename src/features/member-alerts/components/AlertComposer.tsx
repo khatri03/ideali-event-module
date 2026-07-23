@@ -19,33 +19,27 @@ import {
 } from "@chakra-ui/react"
 import ReactSelect, { type MultiValue } from "react-select"
 import { ArrowLeft, Send } from "lucide-react"
-import type { AlertRecipientOption } from "@/api/alerts"
 import { APP_ROUTES } from "@/utils/routes"
 import { alertFormSchema, toChannelMask, type AlertFormValues } from "../schemas/alert.schemas"
 import { useCreateAlert } from "../hooks/useAlertMutations"
 import { useAlertCustomListOptions, useAlertMembershipTypeOptions } from "../hooks/useAlerts"
 import { PRIORITY_OPTIONS } from "../constants"
-import { RecipientPicker } from "./RecipientPicker"
 import { AlertMessageEditor } from "./AlertMessageEditor"
 
-type RecipientSourceTab = "individuals" | "membership-types" | "custom-lists"
+type AudienceTab = "membership-types" | "custom-lists"
 
-const RECIPIENT_SOURCE_TABS: { value: RecipientSourceTab; label: string }[] = [
-  { value: "individuals", label: "Individual Members" },
-  { value: "membership-types", label: "Membership Types" },
+const AUDIENCE_TABS: { value: AudienceTab; label: string }[] = [
+  { value: "membership-types", label: "Members" },
   { value: "custom-lists", label: "Custom Lists" },
 ]
-
-function formatCountLabel(count: number, singular: string, plural = `${singular}s`) {
-  return `${count} ${count === 1 ? singular : plural}`
-}
 
 export function AlertComposer() {
   const navigate = useNavigate()
   const createMutation = useCreateAlert()
-  const [recipients, setRecipients] = useState<AlertRecipientOption[]>([])
   const membershipTypesQuery = useAlertMembershipTypeOptions()
   const customListsQuery = useAlertCustomListOptions()
+  const [membershipTypeIds, setMembershipTypeIds] = useState<string[]>([])
+  const [customListIds, setCustomListIds] = useState<string[]>([])
 
   const {
     register,
@@ -63,8 +57,7 @@ export function AlertComposer() {
       email: false,
       scheduleForLater: false,
       scheduledAtUtc: null,
-      targetMode: "individuals",
-      recipientUniqueIds: [],
+      targetMode: "membership-types",
       membershipTypeUniqueIds: [],
       customListUniqueIds: [],
     },
@@ -72,8 +65,6 @@ export function AlertComposer() {
 
   const scheduleForLater = useWatch({ control, name: "scheduleForLater" })
   const activeTargetMode = useWatch({ control, name: "targetMode" })
-  const membershipTypeIds = useWatch({ control, name: "membershipTypeUniqueIds" })
-  const customListIds = useWatch({ control, name: "customListUniqueIds" })
 
   const selectedMembershipTypeMap = useMemo(
     () => new Map((membershipTypesQuery.data ?? []).map((option) => [option.uniqueId, option] as const)),
@@ -101,8 +92,8 @@ export function AlertComposer() {
     [customListsQuery.data],
   )
 
-  const selectedMembershipTypes = membershipTypeOptions.filter((option) => (membershipTypeIds ?? []).includes(option.value))
-  const selectedCustomLists = customListOptions.filter((option) => (customListIds ?? []).includes(option.value))
+  const selectedMembershipTypes = membershipTypeOptions.filter((option) => membershipTypeIds.includes(option.value))
+  const selectedCustomLists = customListOptions.filter((option) => customListIds.includes(option.value))
 
   const selectedMembershipTypeTotal = selectedMembershipTypes.reduce((total, option) => {
     const selected = selectedMembershipTypeMap.get(option.value)
@@ -112,22 +103,10 @@ export function AlertComposer() {
     const selected = selectedCustomListMap.get(option.value)
     return total + (selected?.memberCount ?? 0)
   }, 0)
+
   const audienceMeta = {
-    individuals: {
-      label: "Individual Members",
-      count: recipients.length,
-      detail:
-        recipients.length > 0
-          ? `${recipients.length} direct recipient${recipients.length === 1 ? "" : "s"}`
-          : "No direct recipients yet",
-      colorPalette: "blue" as const,
-      buttonLabel:
-        recipients.length > 0
-          ? `Send to ${formatCountLabel(recipients.length, "individual member")}`
-          : "Send to individual members",
-    },
     "membership-types": {
-      label: "Membership Types",
+      label: "Members",
       count: selectedMembershipTypes.length,
       detail:
         selectedMembershipTypes.length > 0
@@ -150,53 +129,31 @@ export function AlertComposer() {
     },
   }[activeTargetMode]
 
-  function handleRecipientsChange(next: AlertRecipientOption[]) {
-    setRecipients(next)
-    setValue("recipientUniqueIds", next.map((recipient) => recipient.uniqueId), {
-      shouldValidate: true,
-    })
-  }
-
-  function handleRecipientRemove(uniqueId: string) {
-    const nextRecipients = recipients.filter((recipient) => recipient.uniqueId !== uniqueId)
-    handleRecipientsChange(nextRecipients)
-  }
-
   function handleMembershipTypeChange(next: MultiValue<{ value: string; label: string }>) {
-    setValue(
-      "membershipTypeUniqueIds",
-      next.map((option) => option.value),
-      { shouldValidate: true },
-    )
+    const nextIds = next.map((option) => option.value)
+    setMembershipTypeIds(nextIds)
+    setValue("membershipTypeUniqueIds", nextIds, { shouldValidate: true })
   }
 
   function handleCustomListChange(next: MultiValue<{ value: string; label: string }>) {
-    setValue(
-      "customListUniqueIds",
-      next.map((option) => option.value),
-      { shouldValidate: true },
-    )
+    const nextIds = next.map((option) => option.value)
+    setCustomListIds(nextIds)
+    setValue("customListUniqueIds", nextIds, { shouldValidate: true })
   }
 
   function handleMembershipTypeRemove(uniqueId: string) {
-    setValue(
-      "membershipTypeUniqueIds",
-      (membershipTypeIds ?? []).filter((value) => value !== uniqueId),
-      { shouldValidate: true },
-    )
+    const nextIds = membershipTypeIds.filter((value) => value !== uniqueId)
+    setMembershipTypeIds(nextIds)
+    setValue("membershipTypeUniqueIds", nextIds, { shouldValidate: true })
   }
 
   function handleCustomListRemove(uniqueId: string) {
-    setValue(
-      "customListUniqueIds",
-      (customListIds ?? []).filter((value) => value !== uniqueId),
-      { shouldValidate: true },
-    )
+    const nextIds = customListIds.filter((value) => value !== uniqueId)
+    setCustomListIds(nextIds)
+    setValue("customListUniqueIds", nextIds, { shouldValidate: true })
   }
 
   async function handleSend(values: AlertFormValues) {
-    const recipientUniqueIds =
-      values.targetMode === "individuals" ? values.recipientUniqueIds : []
     const membershipTypeUniqueIds =
       values.targetMode === "membership-types" ? values.membershipTypeUniqueIds : []
     const customListUniqueIds =
@@ -211,7 +168,7 @@ export function AlertComposer() {
         values.scheduleForLater && values.scheduledAtUtc
           ? new Date(values.scheduledAtUtc).toISOString()
           : null,
-      recipientUniqueIds,
+      recipientUniqueIds: [],
       membershipTypeUniqueIds,
       customListUniqueIds,
     })
@@ -389,7 +346,7 @@ export function AlertComposer() {
                     Audience preview
                   </Text>
                   <Heading fontSize={{ base: "md", md: "lg" }} color="gray.900" mt={1}>
-                    Choose exactly one audience type
+                    Choose one audience type
                   </Heading>
                   <Text fontSize="sm" color="text.secondary" mt={1}>
                     {audienceMeta.detail}
@@ -411,7 +368,7 @@ export function AlertComposer() {
               <Tabs.Root
                 value={activeTargetMode}
                 onValueChange={(details) =>
-                  setValue("targetMode", details.value as RecipientSourceTab, { shouldValidate: true })
+                  setValue("targetMode", details.value as AudienceTab, { shouldValidate: true })
                 }
                 activationMode="manual"
               >
@@ -423,7 +380,7 @@ export function AlertComposer() {
                   borderColor="border.subtle"
                   mb={4}
                 >
-                  {RECIPIENT_SOURCE_TABS.map((tab) => (
+                  {AUDIENCE_TABS.map((tab) => (
                     <Tabs.Trigger
                       key={tab.value}
                       value={tab.value}
@@ -459,64 +416,6 @@ export function AlertComposer() {
                     </Tabs.Trigger>
                   ))}
                 </Tabs.List>
-
-                <Tabs.Content value="individuals">
-                  <Stack gap={4}>
-                    <Field.Root invalid={Boolean(errors.recipientUniqueIds)}>
-                      <Field.Label fontWeight="700">
-                        Recipients <Text as="span" color="red.500">*</Text>
-                      </Field.Label>
-                      <Text fontSize="xs" color="text.secondary" mb={2}>
-                        Add individual members by name or email. Search starts after three characters.
-                      </Text>
-                      <Box w="full">
-                        <RecipientPicker value={recipients} onChange={handleRecipientsChange} />
-                      </Box>
-                      {errors.recipientUniqueIds ? (
-                        <Field.ErrorText>{errors.recipientUniqueIds.message}</Field.ErrorText>
-                      ) : null}
-                    </Field.Root>
-                    {recipients.length > 0 ? (
-                      <Box borderRadius="16px" border="1px solid" borderColor="border.subtle" bg="gray.50" p={4}>
-                        <Flex gap={2} flexWrap="wrap">
-                          {recipients.map((recipient) => (
-                            <Tag.Root
-                              key={recipient.uniqueId}
-                              size="md"
-                              variant="surface"
-                              colorPalette="blue"
-                              borderRadius="full"
-                              minH="28px"
-                              ps={3}
-                              pe={1.5}
-                              py={1}
-                              gap={1.5}
-                            >
-                              <Tag.Label
-                                lineClamp={1}
-                                title={recipient.email ? `${recipient.name} (${recipient.email})` : recipient.name}
-                                fontWeight="600"
-                              >
-                                {recipient.name}
-                              </Tag.Label>
-                              <Tag.EndElement ms={0}>
-                                <Tag.CloseTrigger
-                                  aria-label={`Remove ${recipient.name}`}
-                                  title={`Remove ${recipient.name}`}
-                                  cursor="pointer"
-                                  boxSize="18px"
-                                  borderRadius="full"
-                                  _hover={{ bg: "red.100", color: "red.600" }}
-                                  onClick={() => handleRecipientRemove(recipient.uniqueId)}
-                                />
-                              </Tag.EndElement>
-                            </Tag.Root>
-                          ))}
-                        </Flex>
-                      </Box>
-                    ) : null}
-                  </Stack>
-                </Tabs.Content>
 
                 <Tabs.Content value="membership-types">
                   <Stack gap={4}>
