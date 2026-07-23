@@ -233,9 +233,11 @@ export const API_ROUTES = {
   memberAlertRecipientOptions: "/api/organizer/membership/alert/recipient-options",
   memberAlertMembershipTypeOptions: "/api/organizer/membership/alert/membership-type-options",
   memberAlertCustomListOptions: "/api/organizer/membership/alert/custom-list-options",
+  memberAlertCustomListPreview: "/api/organizer/membership/alert/custom-list-preview",
   memberAlertCreate: "/api/organizer/membership/alert",
   memberAlertResend: (uniqueId: string) => `/api/organizer/membership/alert/${uniqueId}/resend`,
   memberAlertDelete: (uniqueId: string) => `/api/organizer/membership/alert/${uniqueId}`,
+  membershipTypeMembers: "/api/organizer/membership/type/members",
 
   alertInbox: "/api/alert-inbox/list",
   alertInboxUnreadCount: "/api/alert-inbox/unread-count",

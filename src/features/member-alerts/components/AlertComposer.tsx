@@ -3,7 +3,6 @@ import { Controller, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useNavigate } from "react-router-dom"
 import {
-  Badge,
   Box,
   Button,
   Checkbox,
@@ -12,15 +11,15 @@ import {
   Heading,
   Input,
   NativeSelect,
-  Tag,
-  Tabs,
-  Stack,
   SimpleGrid,
+  Stack,
+  Tabs,
   Text,
 } from "@chakra-ui/react"
 import ReactSelect, { type MultiValue, type SingleValue } from "react-select"
 import { ArrowLeft, Send } from "lucide-react"
 import { APP_ROUTES } from "@/utils/routes"
+import type { AlertCustomListPreviewFilters } from "@/api/alerts"
 import { alertFormSchema, toChannelMask, type AlertFormValues } from "../schemas/alert.schemas"
 import { useCreateAlert } from "../hooks/useAlertMutations"
 import {
@@ -30,11 +29,13 @@ import {
 } from "../hooks/useAlerts"
 import { PRIORITY_OPTIONS } from "../constants"
 import { AlertMessageEditor } from "./AlertMessageEditor"
+import { AlertAudiencePreview } from "./AlertAudiencePreview"
+import { AlertCustomListsPreview } from "./AlertCustomListsPreview"
 
-type AudienceTab = "membership-types" | "custom-lists"
+type AudienceTab = "members" | "custom-lists"
 
 const AUDIENCE_TABS: { value: AudienceTab; label: string }[] = [
-  { value: "membership-types", label: "Members" },
+  { value: "members", label: "Members" },
   { value: "custom-lists", label: "Custom Lists" },
 ]
 
@@ -44,7 +45,18 @@ export function AlertComposer() {
   const membershipTypesQuery = useAlertMembershipTypeOptions()
   const membershipStatusesQuery = useAlertMembershipStatusOptions()
   const customListsQuery = useAlertCustomListOptions()
-  const [customListIds, setCustomListIds] = useState<string[]>([])
+  const [appliedMemberPreviewFilters, setAppliedMemberPreviewFilters] = useState({
+    searchTerm: "",
+    membershipTypeUniqueId: "",
+    membershipStatus: "",
+  })
+  const [appliedCustomListPreviewFilters, setAppliedCustomListPreviewFilters] =
+    useState<AlertCustomListPreviewFilters>({
+      searchTerm: "",
+      membershipTypeUniqueIds: [],
+      membershipStatuses: [],
+      customListUniqueIds: [],
+    })
 
   const {
     register,
@@ -55,14 +67,14 @@ export function AlertComposer() {
   } = useForm<AlertFormValues>({
     resolver: zodResolver(alertFormSchema),
     defaultValues: {
+      targetMode: "members",
+      memberSearchTerm: "",
       title: "",
       body: "",
       priority: "Normal",
       channel: "Instant",
       scheduleForLater: false,
       scheduledAtUtc: null,
-      targetMode: "membership-types",
-      memberSearchTerm: "",
       membershipTypeUniqueId: "",
       membershipStatus: "",
       customListUniqueIds: [],
@@ -74,10 +86,7 @@ export function AlertComposer() {
   const memberSearchTerm = useWatch({ control, name: "memberSearchTerm" })
   const selectedMembershipTypeUniqueId = useWatch({ control, name: "membershipTypeUniqueId" })
   const selectedMembershipStatusValue = useWatch({ control, name: "membershipStatus" })
-  const selectedCustomListMap = useMemo(
-    () => new Map((customListsQuery.data ?? []).map((option) => [option.uniqueId, option] as const)),
-    [customListsQuery.data],
-  )
+  const customListUniqueIds = useWatch({ control, name: "customListUniqueIds" })
 
   const membershipTypeOptions = useMemo(
     () =>
@@ -108,70 +117,8 @@ export function AlertComposer() {
     membershipTypeOptions.find((option) => option.value === selectedMembershipTypeUniqueId) ?? null
   const selectedMembershipStatus =
     membershipStatusOptions.find((option) => option.value === selectedMembershipStatusValue) ?? null
-  const selectedCustomLists = customListOptions.filter((option) => customListIds.includes(option.value))
-  const selectedCustomListTotal = selectedCustomLists.reduce((total, option) => {
-    const selected = selectedCustomListMap.get(option.value)
-    return total + (selected?.memberCount ?? 0)
-  }, 0)
-  const memberFilterSummaryParts = [
-    memberSearchTerm.trim().length > 0 ? "name/email search" : null,
-    selectedMembershipType
-      ? `membership type: ${selectedMembershipType.label}`
-      : null,
-    selectedMembershipStatus
-      ? `membership status: ${selectedMembershipStatus.label}`
-      : null,
-  ].filter((part): part is string => part !== null)
-
-  const audienceMeta = {
-    "membership-types": {
-      label: "Members",
-      count: memberFilterSummaryParts.length,
-      detail:
-        memberFilterSummaryParts.length > 0
-          ? `${memberFilterSummaryParts.join(", ")} selected`
-          : "Choose a search term, membership type, or status",
-      colorPalette: "purple" as const,
-      buttonLabel: "Send to filtered members",
-    },
-    "custom-lists": {
-      label: "Custom Lists",
-      count: selectedCustomLists.length,
-      detail:
-        selectedCustomLists.length > 0
-          ? `~${selectedCustomListTotal} member${selectedCustomListTotal === 1 ? "" : "s"}`
-          : "No custom lists selected yet",
-      colorPalette: "green" as const,
-      buttonLabel:
-        selectedCustomListTotal > 0 ? `Send to ~${selectedCustomListTotal} members` : "Send to list members",
-    },
-  }[activeTargetMode]
-
-  function handleCustomListChange(next: MultiValue<{ value: string; label: string }>) {
-    const nextIds = next.map((option) => option.value)
-    setCustomListIds(nextIds)
-    setValue("customListUniqueIds", nextIds, { shouldValidate: true })
-  }
-
-  function handleCustomListRemove(uniqueId: string) {
-    const nextIds = customListIds.filter((value) => value !== uniqueId)
-    setCustomListIds(nextIds)
-    setValue("customListUniqueIds", nextIds, { shouldValidate: true })
-  }
 
   async function handleSend(values: AlertFormValues) {
-    const membershipTypeUniqueIds =
-      values.targetMode === "membership-types" && values.membershipTypeUniqueId
-        ? [values.membershipTypeUniqueId]
-        : []
-    const memberSearchTerm = values.targetMode === "membership-types" ? values.memberSearchTerm.trim() : ""
-    const membershipStatuses =
-      values.targetMode === "membership-types" && values.membershipStatus
-        ? [values.membershipStatus]
-        : []
-    const customListUniqueIds =
-      values.targetMode === "custom-lists" ? values.customListUniqueIds : []
-
     await createMutation.mutateAsync({
       title: values.title.trim(),
       body: values.body.trim(),
@@ -182,12 +129,33 @@ export function AlertComposer() {
           ? new Date(values.scheduledAtUtc).toISOString()
           : null,
       recipientUniqueIds: [],
-      memberSearchTerm,
-      membershipTypeUniqueIds,
-      membershipStatuses,
-      customListUniqueIds,
+      memberSearchTerm: values.memberSearchTerm.trim(),
+      membershipTypeUniqueIds: values.membershipTypeUniqueId ? [values.membershipTypeUniqueId] : [],
+      membershipStatuses: values.membershipStatus ? [values.membershipStatus] : [],
+      customListUniqueIds: values.targetMode === "custom-lists" ? values.customListUniqueIds : [],
     })
     navigate(APP_ROUTES.memberAlerts.list)
+  }
+
+  function handleApplyMembers() {
+    setAppliedMemberPreviewFilters({
+      searchTerm: memberSearchTerm,
+      membershipTypeUniqueId: selectedMembershipType?.value ?? "",
+      membershipStatus: selectedMembershipStatus?.value ?? "",
+    })
+  }
+
+  function handleApplyCustomLists() {
+    setAppliedCustomListPreviewFilters({
+      searchTerm: memberSearchTerm,
+      membershipTypeUniqueIds: selectedMembershipType?.value ? [selectedMembershipType.value] : [],
+      membershipStatuses: selectedMembershipStatus?.value ? [selectedMembershipStatus.value] : [],
+      customListUniqueIds,
+    })
+  }
+
+  function handleAudienceChange(details: { value: AudienceTab }) {
+    setValue("targetMode", details.value, { shouldValidate: true })
   }
 
   return (
@@ -250,6 +218,7 @@ export function AlertComposer() {
                     <NativeSelect.Indicator />
                   </NativeSelect.Root>
                 </Field.Root>
+
                 <Field.Root invalid={Boolean(errors.scheduledAtUtc)}>
                   <Controller
                     control={control}
@@ -277,9 +246,7 @@ export function AlertComposer() {
                       disabled={!scheduleForLater}
                       cursor={scheduleForLater ? "pointer" : "not-allowed"}
                     />
-                    {errors.scheduledAtUtc ? (
-                      <Field.ErrorText>{errors.scheduledAtUtc.message}</Field.ErrorText>
-                    ) : null}
+                    {errors.scheduledAtUtc ? <Field.ErrorText>{errors.scheduledAtUtc.message}</Field.ErrorText> : null}
                   </Box>
                 </Field.Root>
               </SimpleGrid>
@@ -316,13 +283,12 @@ export function AlertComposer() {
           </Box>
 
           <Box borderRadius="18px" border="1px solid" borderColor="border.subtle" bg="card.bg" p={{ base: 4, md: 5 }}>
-            <Stack gap={4}>
-              <Flex
-                align={{ base: "flex-start", md: "center" }}
-                justify="space-between"
-                gap={3}
-                direction={{ base: "column", md: "row" }}
-              >
+            <Tabs.Root
+              value={activeTargetMode}
+              onValueChange={handleAudienceChange}
+              activationMode="manual"
+            >
+              <Stack gap={5}>
                 <Box>
                   <Text
                     fontSize="xs"
@@ -331,35 +297,16 @@ export function AlertComposer() {
                     textTransform="uppercase"
                     color="text.secondary"
                   >
-                    Audience preview
+                    Audience
                   </Text>
                   <Heading fontSize={{ base: "md", md: "lg" }} color="gray.900" mt={1}>
-                    Choose member filters
+                    Choose recipients
                   </Heading>
                   <Text fontSize="sm" color="text.secondary" mt={1}>
-                    {audienceMeta.detail}
+                    Select the audience source, then press Apply to refresh the preview.
                   </Text>
                 </Box>
-                <Badge
-                  variant="subtle"
-                  colorPalette={audienceMeta.colorPalette}
-                  borderRadius="full"
-                  px={3}
-                  py={1}
-                  fontWeight="800"
-                  alignSelf={{ base: "flex-start", md: "center" }}
-                >
-                  {audienceMeta.count} selected
-                </Badge>
-              </Flex>
 
-              <Tabs.Root
-                value={activeTargetMode}
-                onValueChange={(details) =>
-                  setValue("targetMode", details.value as AudienceTab, { shouldValidate: true })
-                }
-                activationMode="manual"
-              >
                 <Tabs.List
                   display="flex"
                   flexDirection={{ base: "column", md: "row" }}
@@ -405,22 +352,20 @@ export function AlertComposer() {
                   ))}
                 </Tabs.List>
 
-                <Tabs.Content value="membership-types">
+                <Tabs.Content value="members">
                   <Stack gap={4}>
                     <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
-                      <Field.Root
-                        invalid={Boolean(errors.memberSearchTerm || errors.membershipTypeUniqueId || errors.membershipStatus)}
-                      >
+                      <Field.Root invalid={Boolean(errors.memberSearchTerm)}>
                         <Field.Label fontWeight="700">Search by name or email</Field.Label>
                         <Text fontSize="xs" color="text.secondary" mb={2}>
-                          Use this to target members by contact name or email address.
+                          Narrow the preview with a member name or email fragment.
                         </Text>
                         <Input
                           {...register("memberSearchTerm")}
                           minH="11"
                           borderRadius="14px"
                           px={4}
-                          placeholder="Search members by name or email"
+                          placeholder="Search members"
                         />
                         {errors.memberSearchTerm ? (
                           <Field.ErrorText>{errors.memberSearchTerm.message}</Field.ErrorText>
@@ -491,6 +436,32 @@ export function AlertComposer() {
                         ) : null}
                       </Field.Root>
                     </SimpleGrid>
+
+                    <Flex justify="flex-end">
+                      <Button
+                        variant="solid"
+                        borderRadius="14px"
+                        minH="11"
+                        px={5}
+                        color="white"
+                        cursor="pointer"
+                        onClick={handleApplyMembers}
+                        style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+                      >
+                        Apply
+                      </Button>
+                    </Flex>
+
+                    <AlertAudiencePreview
+                      key={[
+                        appliedMemberPreviewFilters.searchTerm.trim(),
+                        appliedMemberPreviewFilters.membershipTypeUniqueId,
+                        appliedMemberPreviewFilters.membershipStatus,
+                      ].join("|")}
+                      searchTerm={appliedMemberPreviewFilters.searchTerm}
+                      membershipTypeUniqueId={appliedMemberPreviewFilters.membershipTypeUniqueId}
+                      membershipStatus={appliedMemberPreviewFilters.membershipStatus}
+                    />
                   </Stack>
                 </Tabs.Content>
 
@@ -499,66 +470,144 @@ export function AlertComposer() {
                     <Field.Root invalid={Boolean(errors.customListUniqueIds)}>
                       <Field.Label fontWeight="700">Custom lists</Field.Label>
                       <Text fontSize="xs" color="text.secondary" mb={2}>
-                        Send only to members in the selected list or lists.
+                        Select one or more custom lists, then optionally narrow them with the same refiners.
                       </Text>
-                      <Box w="full">
-                        <ReactSelect
-                          isMulti
-                          options={customListOptions}
-                          value={selectedCustomLists}
-                          onChange={handleCustomListChange}
-                          placeholder={customListsQuery.isLoading ? "Loading..." : "Select custom list(s)"}
-                          isLoading={customListsQuery.isLoading}
-                          closeMenuOnSelect={false}
-                          isClearable
-                        />
-                      </Box>
+                      <Controller
+                        control={control}
+                        name="customListUniqueIds"
+                        render={({ field }) => (
+                          <Box w="full">
+                            <ReactSelect
+                              isMulti
+                              options={customListOptions}
+                              value={customListOptions.filter((option) => field.value.includes(option.value))}
+                              onChange={(values: MultiValue<{ value: string; label: string }>) =>
+                                field.onChange(values.map((option) => option.value))
+                              }
+                              placeholder={customListsQuery.isLoading ? "Loading..." : "Select custom list(s)"}
+                              isLoading={customListsQuery.isLoading}
+                              closeMenuOnSelect={false}
+                              isClearable
+                            />
+                          </Box>
+                        )}
+                      />
                       {errors.customListUniqueIds ? (
                         <Field.ErrorText>{errors.customListUniqueIds.message}</Field.ErrorText>
                       ) : null}
                     </Field.Root>
-                    {selectedCustomLists.length > 0 ? (
-                      <Box borderRadius="16px" border="1px solid" borderColor="border.subtle" bg="gray.50" p={4}>
-                        <Flex gap={2} flexWrap="wrap">
-                          {selectedCustomLists.map((option) => {
-                            const item = selectedCustomListMap.get(option.value)
-                            return (
-                              <Tag.Root
-                                key={option.value}
-                                size="md"
-                                variant="surface"
-                                colorPalette="green"
-                                borderRadius="full"
-                                minH="28px"
-                                ps={3}
-                                pe={1.5}
-                                py={1}
-                                gap={1.5}
-                              >
-                                <Tag.Label lineClamp={1} title={option.label} fontWeight="600">
-                                  {item ? `${item.name} (${item.memberCount})` : option.label}
-                                </Tag.Label>
-                                <Tag.EndElement ms={0}>
-                                  <Tag.CloseTrigger
-                                    aria-label={`Remove ${option.label}`}
-                                    title={`Remove ${option.label}`}
-                                    cursor="pointer"
-                                    boxSize="18px"
-                                    borderRadius="full"
-                                    _hover={{ bg: "red.100", color: "red.600" }}
-                                    onClick={() => handleCustomListRemove(option.value)}
-                                  />
-                                </Tag.EndElement>
-                              </Tag.Root>
-                            )
-                          })}
-                        </Flex>
-                      </Box>
-                    ) : null}
+
+                    <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+                      <Field.Root invalid={Boolean(errors.memberSearchTerm)}>
+                        <Field.Label fontWeight="700">Search by name or email</Field.Label>
+                        <Text fontSize="xs" color="text.secondary" mb={2}>
+                          Narrow the preview with a member name or email fragment.
+                        </Text>
+                        <Input
+                          {...register("memberSearchTerm")}
+                          minH="11"
+                          borderRadius="14px"
+                          px={4}
+                          placeholder="Search members"
+                        />
+                        {errors.memberSearchTerm ? (
+                          <Field.ErrorText>{errors.memberSearchTerm.message}</Field.ErrorText>
+                        ) : null}
+                      </Field.Root>
+
+                      <Field.Root invalid={Boolean(errors.membershipTypeUniqueId)}>
+                        <Field.Label fontWeight="700">Membership type</Field.Label>
+                        <Text fontSize="xs" color="text.secondary" mb={2}>
+                          Choose one membership type.
+                        </Text>
+                        <Controller
+                          control={control}
+                          name="membershipTypeUniqueId"
+                          render={({ field }) => (
+                            <Box w="full">
+                              <ReactSelect
+                                isMulti={false}
+                                options={membershipTypeOptions}
+                                value={
+                                  membershipTypeOptions.find((option) => option.value === field.value) ?? null
+                                }
+                                onChange={(option: SingleValue<{ value: string; label: string }>) =>
+                                  field.onChange(option?.value ?? "")
+                                }
+                                placeholder={membershipTypesQuery.isLoading ? "Loading..." : "Select membership type"}
+                                isLoading={membershipTypesQuery.isLoading}
+                                isClearable
+                              />
+                            </Box>
+                          )}
+                        />
+                        {errors.membershipTypeUniqueId ? (
+                          <Field.ErrorText>{errors.membershipTypeUniqueId.message}</Field.ErrorText>
+                        ) : null}
+                      </Field.Root>
+
+                      <Field.Root invalid={Boolean(errors.membershipStatus)}>
+                        <Field.Label fontWeight="700">Membership status</Field.Label>
+                        <Text fontSize="xs" color="text.secondary" mb={2}>
+                          Choose one membership status.
+                        </Text>
+                        <Controller
+                          control={control}
+                          name="membershipStatus"
+                          render={({ field }) => (
+                            <Box w="full">
+                              <ReactSelect
+                                isMulti={false}
+                                options={membershipStatusOptions}
+                                value={
+                                  membershipStatusOptions.find((option) => option.value === field.value) ?? null
+                                }
+                                onChange={(option: SingleValue<{ value: string; label: string }>) =>
+                                  field.onChange(option?.value ?? "")
+                                }
+                                placeholder={
+                                  membershipStatusesQuery.isLoading ? "Loading..." : "Select membership status"
+                                }
+                                isLoading={membershipStatusesQuery.isLoading}
+                                isClearable
+                              />
+                            </Box>
+                          )}
+                        />
+                        {errors.membershipStatus ? (
+                          <Field.ErrorText>{errors.membershipStatus.message}</Field.ErrorText>
+                        ) : null}
+                      </Field.Root>
+                    </SimpleGrid>
+
+                    <Flex justify="flex-end">
+                      <Button
+                        variant="solid"
+                        borderRadius="14px"
+                        minH="11"
+                        px={5}
+                        color="white"
+                        cursor="pointer"
+                        onClick={handleApplyCustomLists}
+                        style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+                      >
+                        Apply
+                      </Button>
+                    </Flex>
+
+                    <AlertCustomListsPreview
+                      key={[
+                        appliedCustomListPreviewFilters.searchTerm.trim(),
+                        appliedCustomListPreviewFilters.membershipTypeUniqueIds.join(","),
+                        appliedCustomListPreviewFilters.membershipStatuses.join(","),
+                        appliedCustomListPreviewFilters.customListUniqueIds.join(","),
+                      ].join("|")}
+                      filters={appliedCustomListPreviewFilters}
+                    />
                   </Stack>
                 </Tabs.Content>
-              </Tabs.Root>
-            </Stack>
+              </Stack>
+            </Tabs.Root>
           </Box>
 
           <Flex justify="flex-end" pt={2}>
@@ -576,7 +625,7 @@ export function AlertComposer() {
               style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
             >
               <Send size={16} />
-              {scheduleForLater ? "Schedule alert" : audienceMeta.buttonLabel}
+              {scheduleForLater ? "Schedule alert" : "Send alert"}
             </Button>
           </Flex>
         </Stack>

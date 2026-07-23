@@ -4,7 +4,7 @@ import { htmlToPlainText } from "@/utils/html"
 /** Mirrors the backend validation in AlertService exactly; message strings kept byte-identical. */
 export const alertFormSchema = z
   .object({
-    targetMode: z.enum(["membership-types", "custom-lists"]),
+    targetMode: z.enum(["members", "custom-lists"]),
     memberSearchTerm: z.string().trim(),
     title: z
       .string()
@@ -46,7 +46,7 @@ export const alertFormSchema = z
   })
   .refine(
     (values) =>
-      values.targetMode !== "membership-types" ||
+      values.targetMode !== "members" ||
       values.memberSearchTerm.length > 0 ||
       values.membershipTypeUniqueId.length > 0 ||
       values.membershipStatus.length > 0,

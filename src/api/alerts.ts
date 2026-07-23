@@ -143,6 +143,36 @@ const inboxSchema = z.object({
   sentBy: dual(z.string()),
 })
 
+const memberPreviewSchema = z.object({
+  UniqueId: dual(z.string()),
+  uniqueId: dual(z.string()),
+  MemberFullName: dual(z.string()),
+  memberFullName: dual(z.string()),
+  ActiveMembershipName: dual(z.string()),
+  activeMembershipName: dual(z.string()),
+  MembershipStatus: dual(z.string()),
+  membershipStatus: dual(z.string()),
+  Email: dual(z.string().nullable()),
+  email: dual(z.string().nullable()),
+  MembershipExpiryUtc: dual(z.string().nullable()),
+  membershipExpiryUtc: dual(z.string().nullable()),
+})
+
+const customListPreviewSchema = z.object({
+  MemberUniqueId: dual(z.string()),
+  memberUniqueId: dual(z.string()),
+  FullName: dual(z.string()),
+  fullName: dual(z.string()),
+  Email: dual(z.string().nullable()),
+  email: dual(z.string().nullable()),
+  MembershipTypeName: dual(z.string().nullable()),
+  membershipTypeName: dual(z.string().nullable()),
+  MembershipStatus: dual(z.string().nullable()),
+  membershipStatus: dual(z.string().nullable()),
+  AddedOnUtc: dual(z.string()),
+  addedOnUtc: dual(z.string()),
+})
+
 export interface AlertListItem {
   uniqueId: string
   title: string
@@ -223,6 +253,37 @@ export interface AlertGroupOption {
   uniqueId: string
   name: string
   memberCount: number
+}
+
+export interface AlertMemberPreviewFilters {
+  searchTerm: string
+  membershipTypeUniqueIds: string[]
+  membershipStatuses: string[]
+}
+
+export interface AlertMemberPreview {
+  uniqueId: string
+  memberFullName: string
+  activeMembershipName: string
+  membershipStatus: string
+  email: string | null
+  membershipExpiryUtc: string | null
+}
+
+export interface AlertCustomListPreviewItem {
+  memberUniqueId: string
+  fullName: string
+  email: string | null
+  membershipTypeName: string | null
+  membershipStatus: string | null
+  addedOnUtc: string
+}
+
+export interface AlertCustomListPreviewFilters {
+  searchTerm: string
+  membershipTypeUniqueIds: string[]
+  membershipStatuses: string[]
+  customListUniqueIds: string[]
 }
 
 export interface CreateAlertPayload {
@@ -430,6 +491,28 @@ function normalizeGroupOptions(payload: unknown): AlertGroupOption[] {
     .filter((option) => option.uniqueId && option.name)
 }
 
+function normalizeMemberPreview(item: z.infer<typeof memberPreviewSchema>): AlertMemberPreview {
+  return {
+    uniqueId: pick(item.UniqueId, item.uniqueId, ""),
+    memberFullName: pick(item.MemberFullName, item.memberFullName, ""),
+    activeMembershipName: pick(item.ActiveMembershipName, item.activeMembershipName, ""),
+    membershipStatus: pick(item.MembershipStatus, item.membershipStatus, ""),
+    email: pick(item.Email, item.email, null),
+    membershipExpiryUtc: pick(item.MembershipExpiryUtc, item.membershipExpiryUtc, null),
+  }
+}
+
+function normalizeCustomListPreview(item: z.infer<typeof customListPreviewSchema>): AlertCustomListPreviewItem {
+  return {
+    memberUniqueId: pick(item.MemberUniqueId, item.memberUniqueId, ""),
+    fullName: pick(item.FullName, item.fullName, ""),
+    email: pick(item.Email, item.email, null),
+    membershipTypeName: pick(item.MembershipTypeName, item.membershipTypeName, null),
+    membershipStatus: pick(item.MembershipStatus, item.membershipStatus, null),
+    addedOnUtc: pick(item.AddedOnUtc, item.addedOnUtc, ""),
+  }
+}
+
 export async function fetchMembershipTypeOptions(): Promise<AlertGroupOption[]> {
   const response = await client.get<unknown>(API_ROUTES.memberAlertMembershipTypeOptions)
   return normalizeGroupOptions(response.data)
@@ -438,6 +521,53 @@ export async function fetchMembershipTypeOptions(): Promise<AlertGroupOption[]> 
 export async function fetchCustomListOptions(): Promise<AlertGroupOption[]> {
   const response = await client.get<unknown>(API_ROUTES.memberAlertCustomListOptions)
   return normalizeGroupOptions(response.data)
+}
+
+export async function fetchAlertMemberPreview(
+  filters: AlertMemberPreviewFilters,
+  pageNo: number,
+  pageSize: number,
+): Promise<Page<AlertMemberPreview>> {
+  const params = new URLSearchParams()
+  params.set("pageNo", String(pageNo))
+  params.set("pageSize", String(pageSize))
+  params.set("sortBy", "memberFullName")
+  params.set("sortOrder", "asc")
+
+  const trimmedSearchTerm = filters.searchTerm.trim()
+  if (trimmedSearchTerm) {
+    params.set("searchTerm", trimmedSearchTerm)
+  }
+
+  filters.membershipTypeUniqueIds.forEach((uniqueId) => params.append("membershipTypeUniqueIds", uniqueId))
+  filters.membershipStatuses.forEach((membershipStatus) => params.append("membershipStatuses", membershipStatus))
+
+  const response = await client.get<unknown>(API_ROUTES.membershipTypeMembers, { params })
+  const parsed = pageSchema(memberPreviewSchema).parse(parseServicePayload(response.data))
+  return toPage(parsed, normalizeMemberPreview, pageNo, pageSize)
+}
+
+export async function fetchAlertCustomListPreview(
+  filters: AlertCustomListPreviewFilters,
+  pageNo: number,
+  pageSize: number,
+): Promise<Page<AlertCustomListPreviewItem>> {
+  const params = new URLSearchParams()
+  params.set("pageNo", String(pageNo))
+  params.set("pageSize", String(pageSize))
+
+  const trimmedSearchTerm = filters.searchTerm.trim()
+  if (trimmedSearchTerm) {
+    params.set("searchTerm", trimmedSearchTerm)
+  }
+
+  filters.membershipTypeUniqueIds.forEach((uniqueId) => params.append("membershipTypeUniqueIds", uniqueId))
+  filters.membershipStatuses.forEach((membershipStatus) => params.append("membershipStatuses", membershipStatus))
+  filters.customListUniqueIds.forEach((uniqueId) => params.append("customListUniqueIds", uniqueId))
+
+  const response = await client.get<unknown>(API_ROUTES.memberAlertCustomListPreview, { params })
+  const parsed = pageSchema(customListPreviewSchema).parse(parseServicePayload(response.data))
+  return toPage(parsed, normalizeCustomListPreview, pageNo, pageSize)
 }
 
 export async function createAlert(payload: CreateAlertPayload): Promise<string> {
