@@ -266,21 +266,21 @@ export function AlertComposer() {
                       </Checkbox.Root>
                     )}
                   />
-                  {scheduleForLater ? (
-                    <Box mt={3}>
-                      <Input
-                        {...register("scheduledAtUtc")}
-                        type="datetime-local"
-                        minH="11"
-                        borderRadius="14px"
-                        px={4}
-                        maxW={{ base: "full", md: "320px" }}
-                      />
-                      {errors.scheduledAtUtc ? (
-                        <Field.ErrorText>{errors.scheduledAtUtc.message}</Field.ErrorText>
-                      ) : null}
-                    </Box>
-                  ) : null}
+                  <Box mt={3}>
+                    <Input
+                      {...register("scheduledAtUtc")}
+                      type="datetime-local"
+                      minH="11"
+                      borderRadius="14px"
+                      px={4}
+                      maxW={{ base: "full", md: "320px" }}
+                      disabled={!scheduleForLater}
+                      cursor={scheduleForLater ? "pointer" : "not-allowed"}
+                    />
+                    {errors.scheduledAtUtc ? (
+                      <Field.ErrorText>{errors.scheduledAtUtc.message}</Field.ErrorText>
+                    ) : null}
+                  </Box>
                 </Field.Root>
               </SimpleGrid>
 
