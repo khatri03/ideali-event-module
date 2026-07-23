@@ -31,7 +31,7 @@ import { AlertMessageEditor } from "./AlertMessageEditor"
 type RecipientSourceTab = "individuals" | "membership-types" | "custom-lists"
 
 const RECIPIENT_SOURCE_TABS: { value: RecipientSourceTab; label: string }[] = [
-  { value: "individuals", label: "Individuals" },
+  { value: "individuals", label: "Individual Members" },
   { value: "membership-types", label: "Membership Types" },
   { value: "custom-lists", label: "Custom Lists" },
 ]
@@ -114,7 +114,7 @@ export function AlertComposer() {
   }, 0)
   const audienceMeta = {
     individuals: {
-      label: "Individuals",
+      label: "Individual Members",
       count: recipients.length,
       detail:
         recipients.length > 0
@@ -122,7 +122,9 @@ export function AlertComposer() {
           : "No direct recipients yet",
       colorPalette: "blue" as const,
       buttonLabel:
-        recipients.length > 0 ? `Send to ${formatCountLabel(recipients.length, "individual")}` : "Send to individuals",
+        recipients.length > 0
+          ? `Send to ${formatCountLabel(recipients.length, "individual member")}`
+          : "Send to individual members",
     },
     "membership-types": {
       label: "Membership Types",
