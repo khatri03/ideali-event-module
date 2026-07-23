@@ -58,7 +58,6 @@ export function useAlertMemberPreview(
     queryKey: [
       ...ALERT_QUERY_KEY,
       "member-preview",
-      filters.searchTerm,
       filters.membershipTypeUniqueIds,
       filters.membershipStatuses,
       page,
@@ -80,7 +79,6 @@ export function useAlertCustomListPreview(
     queryKey: [
       ...ALERT_QUERY_KEY,
       "custom-list-preview",
-      filters.searchTerm,
       filters.membershipTypeUniqueIds,
       filters.membershipStatuses,
       filters.customListUniqueIds,

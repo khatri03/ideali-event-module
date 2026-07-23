@@ -5,7 +5,6 @@ import { htmlToPlainText } from "@/utils/html"
 export const alertFormSchema = z
   .object({
     targetMode: z.enum(["members", "custom-lists"]),
-    memberSearchTerm: z.string().trim(),
     title: z
       .string()
       .trim()
@@ -47,12 +46,11 @@ export const alertFormSchema = z
   .refine(
     (values) =>
       values.targetMode !== "members" ||
-      values.memberSearchTerm.length > 0 ||
       values.membershipTypeUniqueId.length > 0 ||
       values.membershipStatus.length > 0,
     {
-      message: "Search by name or email, or select a membership type or status.",
-      path: ["memberSearchTerm"],
+      message: "Select a membership type or status.",
+      path: ["membershipTypeUniqueId"],
     },
   )
   .refine(

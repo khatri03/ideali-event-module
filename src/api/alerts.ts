@@ -256,7 +256,6 @@ export interface AlertGroupOption {
 }
 
 export interface AlertMemberPreviewFilters {
-  searchTerm: string
   membershipTypeUniqueIds: string[]
   membershipStatuses: string[]
 }
@@ -280,7 +279,6 @@ export interface AlertCustomListPreviewItem {
 }
 
 export interface AlertCustomListPreviewFilters {
-  searchTerm: string
   membershipTypeUniqueIds: string[]
   membershipStatuses: string[]
   customListUniqueIds: string[]
@@ -293,7 +291,6 @@ export interface CreateAlertPayload {
   channels: number
   scheduledAtUtc: string | null
   recipientUniqueIds: string[]
-  memberSearchTerm: string
   membershipTypeUniqueIds: string[]
   membershipStatuses: string[]
   customListUniqueIds: string[]
@@ -534,11 +531,6 @@ export async function fetchAlertMemberPreview(
   params.set("sortBy", "memberFullName")
   params.set("sortOrder", "asc")
 
-  const trimmedSearchTerm = filters.searchTerm.trim()
-  if (trimmedSearchTerm) {
-    params.set("searchTerm", trimmedSearchTerm)
-  }
-
   filters.membershipTypeUniqueIds.forEach((uniqueId) => params.append("membershipTypeUniqueIds", uniqueId))
   filters.membershipStatuses.forEach((membershipStatus) => params.append("membershipStatuses", membershipStatus))
 
@@ -555,11 +547,6 @@ export async function fetchAlertCustomListPreview(
   const params = new URLSearchParams()
   params.set("pageNo", String(pageNo))
   params.set("pageSize", String(pageSize))
-
-  const trimmedSearchTerm = filters.searchTerm.trim()
-  if (trimmedSearchTerm) {
-    params.set("searchTerm", trimmedSearchTerm)
-  }
 
   filters.membershipTypeUniqueIds.forEach((uniqueId) => params.append("membershipTypeUniqueIds", uniqueId))
   filters.membershipStatuses.forEach((membershipStatus) => params.append("membershipStatuses", membershipStatus))
