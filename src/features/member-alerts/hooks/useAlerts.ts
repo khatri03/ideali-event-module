@@ -9,6 +9,7 @@ import {
   fetchUnreadCount,
   type AlertFilters,
 } from "@/api/alerts"
+import { fetchMembershipStatusOptions } from "@/api/memberships"
 
 export const ALERT_QUERY_KEY = ["organizer", "member-alerts"] as const
 export const ALERT_INBOX_QUERY_KEY = ["alert-inbox"] as const
@@ -69,5 +70,12 @@ export function useAlertCustomListOptions() {
   return useQuery({
     queryKey: [...ALERT_QUERY_KEY, "custom-list-options"],
     queryFn: fetchCustomListOptions,
+  })
+}
+
+export function useAlertMembershipStatusOptions() {
+  return useQuery({
+    queryKey: [...ALERT_QUERY_KEY, "membership-status-options"],
+    queryFn: fetchMembershipStatusOptions,
   })
 }

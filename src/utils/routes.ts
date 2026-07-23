@@ -166,6 +166,7 @@ export const API_ROUTES = {
   adminPaymentMerchants: "/api/admin/list-items/payment-merchants",
   organizerEvents: "/api/organizer/events/list",
   membershipTypeOptions: "/api/organizer/membership/type/options",
+  membershipStatusOptions: "/api/organizer/membership/type/status-options",
   seatsIoWorkspace: "/api/organizer/seatsio/workspace",
   seatsIoSeatingLayouts: "/api/organizer/seatsio/seating-layouts",
   seatsIoSeatingLayout: (chartUniqueId: string) => `/api/organizer/seatsio/seating-layouts/${chartUniqueId}`,
