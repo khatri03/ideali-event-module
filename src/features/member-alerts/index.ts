@@ -3,4 +3,4 @@ export { default as MemberAlertComposePage } from "./pages/MemberAlertComposePag
 export { default as MemberAlertDetailPage } from "./pages/MemberAlertDetailPage"
 export { default as AlertInboxPage } from "./pages/AlertInboxPage"
 export { useAlertRealtime } from "./hooks/useAlertRealtime"
-export { useUnreadCount } from "./hooks/useAlerts"
+export { useAlertMemberPreview, useUnreadCount } from "./hooks/useAlerts"

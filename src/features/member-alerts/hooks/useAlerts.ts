@@ -1,13 +1,17 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import {
+  fetchAlertCustomListPreview,
+  fetchCustomListOptions,
+  fetchAlertMemberPreview,
   fetchAlert,
   fetchAlertRecipients,
   fetchAlerts,
-  fetchCustomListOptions,
   fetchInbox,
   fetchMembershipTypeOptions,
   fetchUnreadCount,
   type AlertFilters,
+  type AlertCustomListPreviewFilters,
+  type AlertMemberPreviewFilters,
 } from "@/api/alerts"
 import { fetchMembershipStatusOptions } from "@/api/memberships"
 
@@ -40,6 +44,51 @@ export function useAlertRecipients(
     queryKey: [...ALERT_QUERY_KEY, "recipients", uniqueId, searchTerm, page, pageSize],
     queryFn: () => fetchAlertRecipients(uniqueId, searchTerm, page, pageSize),
     enabled: Boolean(uniqueId),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useAlertMemberPreview(
+  filters: AlertMemberPreviewFilters,
+  page: number,
+  pageSize: number,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [
+      ...ALERT_QUERY_KEY,
+      "member-preview",
+      filters.searchTerm,
+      filters.membershipTypeUniqueIds,
+      filters.membershipStatuses,
+      page,
+      pageSize,
+    ],
+    queryFn: () => fetchAlertMemberPreview(filters, page, pageSize),
+    enabled,
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useAlertCustomListPreview(
+  filters: AlertCustomListPreviewFilters,
+  page: number,
+  pageSize: number,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [
+      ...ALERT_QUERY_KEY,
+      "custom-list-preview",
+      filters.searchTerm,
+      filters.membershipTypeUniqueIds,
+      filters.membershipStatuses,
+      filters.customListUniqueIds,
+      page,
+      pageSize,
+    ],
+    queryFn: () => fetchAlertCustomListPreview(filters, page, pageSize),
+    enabled,
     placeholderData: keepPreviousData,
   })
 }
