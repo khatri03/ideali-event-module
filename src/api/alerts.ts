@@ -232,6 +232,7 @@ export interface CreateAlertPayload {
   channels: number
   scheduledAtUtc: string | null
   recipientUniqueIds: string[]
+  memberSearchTerm: string
   membershipTypeUniqueIds: string[]
   membershipStatuses: string[]
   customListUniqueIds: string[]
