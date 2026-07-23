@@ -26,6 +26,7 @@ import {
   formatDateTime,
 } from "../constants"
 import { ConfirmAlertDialog } from "./ConfirmAlertDialog"
+import { AlertMessageViewer } from "./AlertMessageViewer"
 
 const DELIVERY_COLOR: Record<string, string> = {
   Sent: "green",
@@ -123,9 +124,7 @@ export function AlertDetailView({ uniqueId }: AlertDetailViewProps) {
               {detail ? <Badge colorPalette={STATUS_COLOR[detail.status] ?? "gray"}>{detail.status}</Badge> : null}
               {detail ? <Badge variant="surface" colorPalette="gray">{channelLabel(detail.channels)}</Badge> : null}
             </Flex>
-            <Text fontSize="sm" color="gray.700" whiteSpace="pre-wrap">
-              {detail?.body}
-            </Text>
+            <AlertMessageViewer value={detail?.body ?? ""} />
             <Flex gap={6} flexWrap="wrap" pt={2}>
               <Box>
                 <Text fontSize="xs" color="text.secondary">Recipients</Text>
