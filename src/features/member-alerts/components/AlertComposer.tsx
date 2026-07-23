@@ -18,7 +18,7 @@ import {
   SimpleGrid,
   Text,
 } from "@chakra-ui/react"
-import ReactSelect, { type MultiValue } from "react-select"
+import ReactSelect, { type MultiValue, type SingleValue } from "react-select"
 import { ArrowLeft, Send } from "lucide-react"
 import { APP_ROUTES } from "@/utils/routes"
 import { alertFormSchema, toChannelMask, type AlertFormValues } from "../schemas/alert.schemas"
@@ -44,8 +44,6 @@ export function AlertComposer() {
   const membershipTypesQuery = useAlertMembershipTypeOptions()
   const membershipStatusesQuery = useAlertMembershipStatusOptions()
   const customListsQuery = useAlertCustomListOptions()
-  const [membershipTypeIds, setMembershipTypeIds] = useState<string[]>([])
-  const [membershipStatusValues, setMembershipStatusValues] = useState<string[]>([])
   const [customListIds, setCustomListIds] = useState<string[]>([])
 
   const {
@@ -60,14 +58,13 @@ export function AlertComposer() {
       title: "",
       body: "",
       priority: "Normal",
-      instant: true,
-      email: false,
+      channel: "Instant",
       scheduleForLater: false,
       scheduledAtUtc: null,
       targetMode: "membership-types",
       memberSearchTerm: "",
-      membershipTypeUniqueIds: [],
-      membershipStatuses: [],
+      membershipTypeUniqueId: "",
+      membershipStatus: "",
       customListUniqueIds: [],
     },
   })
@@ -75,15 +72,8 @@ export function AlertComposer() {
   const scheduleForLater = useWatch({ control, name: "scheduleForLater" })
   const activeTargetMode = useWatch({ control, name: "targetMode" })
   const memberSearchTerm = useWatch({ control, name: "memberSearchTerm" })
-
-  const selectedMembershipTypeMap = useMemo(
-    () => new Map((membershipTypesQuery.data ?? []).map((option) => [option.uniqueId, option] as const)),
-    [membershipTypesQuery.data],
-  )
-  const selectedMembershipStatusMap = useMemo(
-    () => new Map((membershipStatusesQuery.data ?? []).map((option) => [option.value, option] as const)),
-    [membershipStatusesQuery.data],
-  )
+  const selectedMembershipTypeUniqueId = useWatch({ control, name: "membershipTypeUniqueId" })
+  const selectedMembershipStatusValue = useWatch({ control, name: "membershipStatus" })
   const selectedCustomListMap = useMemo(
     () => new Map((customListsQuery.data ?? []).map((option) => [option.uniqueId, option] as const)),
     [customListsQuery.data],
@@ -114,10 +104,10 @@ export function AlertComposer() {
     [customListsQuery.data],
   )
 
-  const selectedMembershipTypes = membershipTypeOptions.filter((option) => membershipTypeIds.includes(option.value))
-  const selectedMembershipStatuses = membershipStatusOptions.filter((option) =>
-    membershipStatusValues.includes(option.value),
-  )
+  const selectedMembershipType =
+    membershipTypeOptions.find((option) => option.value === selectedMembershipTypeUniqueId) ?? null
+  const selectedMembershipStatus =
+    membershipStatusOptions.find((option) => option.value === selectedMembershipStatusValue) ?? null
   const selectedCustomLists = customListOptions.filter((option) => customListIds.includes(option.value))
   const selectedCustomListTotal = selectedCustomLists.reduce((total, option) => {
     const selected = selectedCustomListMap.get(option.value)
@@ -125,22 +115,22 @@ export function AlertComposer() {
   }, 0)
   const memberFilterSummaryParts = [
     memberSearchTerm.trim().length > 0 ? "name/email search" : null,
-    selectedMembershipTypes.length > 0
-      ? `${selectedMembershipTypes.length} membership type${selectedMembershipTypes.length === 1 ? "" : "s"}`
+    selectedMembershipType
+      ? `membership type: ${selectedMembershipType.label}`
       : null,
-    selectedMembershipStatuses.length > 0
-      ? `${selectedMembershipStatuses.length} membership status${selectedMembershipStatuses.length === 1 ? "" : "es"}`
+    selectedMembershipStatus
+      ? `membership status: ${selectedMembershipStatus.label}`
       : null,
   ].filter((part): part is string => part !== null)
 
   const audienceMeta = {
     "membership-types": {
       label: "Members",
-      count: selectedMembershipTypes.length + selectedMembershipStatuses.length,
+      count: memberFilterSummaryParts.length,
       detail:
         memberFilterSummaryParts.length > 0
           ? `${memberFilterSummaryParts.join(", ")} selected`
-          : "Choose membership types and/or statuses",
+          : "Choose a search term, membership type, or status",
       colorPalette: "purple" as const,
       buttonLabel: "Send to filtered members",
     },
@@ -157,34 +147,10 @@ export function AlertComposer() {
     },
   }[activeTargetMode]
 
-  function handleMembershipTypeChange(next: MultiValue<{ value: string; label: string }>) {
-    const nextIds = next.map((option) => option.value)
-    setMembershipTypeIds(nextIds)
-    setValue("membershipTypeUniqueIds", nextIds, { shouldValidate: true })
-  }
-
-  function handleMembershipStatusChange(next: MultiValue<{ value: string; label: string }>) {
-    const nextValues = next.map((option) => option.value)
-    setMembershipStatusValues(nextValues)
-    setValue("membershipStatuses", nextValues, { shouldValidate: true })
-  }
-
   function handleCustomListChange(next: MultiValue<{ value: string; label: string }>) {
     const nextIds = next.map((option) => option.value)
     setCustomListIds(nextIds)
     setValue("customListUniqueIds", nextIds, { shouldValidate: true })
-  }
-
-  function handleMembershipTypeRemove(uniqueId: string) {
-    const nextIds = membershipTypeIds.filter((value) => value !== uniqueId)
-    setMembershipTypeIds(nextIds)
-    setValue("membershipTypeUniqueIds", nextIds, { shouldValidate: true })
-  }
-
-  function handleMembershipStatusRemove(value: string) {
-    const nextValues = membershipStatusValues.filter((item) => item !== value)
-    setMembershipStatusValues(nextValues)
-    setValue("membershipStatuses", nextValues, { shouldValidate: true })
   }
 
   function handleCustomListRemove(uniqueId: string) {
@@ -195,9 +161,14 @@ export function AlertComposer() {
 
   async function handleSend(values: AlertFormValues) {
     const membershipTypeUniqueIds =
-      values.targetMode === "membership-types" ? values.membershipTypeUniqueIds : []
+      values.targetMode === "membership-types" && values.membershipTypeUniqueId
+        ? [values.membershipTypeUniqueId]
+        : []
     const memberSearchTerm = values.targetMode === "membership-types" ? values.memberSearchTerm.trim() : ""
-    const membershipStatuses = values.targetMode === "membership-types" ? values.membershipStatuses : []
+    const membershipStatuses =
+      values.targetMode === "membership-types" && values.membershipStatus
+        ? [values.membershipStatus]
+        : []
     const customListUniqueIds =
       values.targetMode === "custom-lists" ? values.customListUniqueIds : []
 
@@ -205,7 +176,7 @@ export function AlertComposer() {
       title: values.title.trim(),
       body: values.body.trim(),
       priority: values.priority,
-      channels: toChannelMask(values.instant, values.email),
+      channels: toChannelMask(values.channel),
       scheduledAtUtc:
         values.scheduleForLater && values.scheduledAtUtc
           ? new Date(values.scheduledAtUtc).toISOString()
@@ -252,6 +223,67 @@ export function AlertComposer() {
         <Stack gap={5}>
           <Box borderRadius="18px" border="1px solid" borderColor="border.subtle" bg="card.bg" p={{ base: 4, md: 5 }}>
             <Stack gap={5}>
+              <SimpleGrid columns={{ base: 1, md: 3 }} gap={5}>
+                <Field.Root>
+                  <Field.Label fontWeight="700">Priority</Field.Label>
+                  <NativeSelect.Root>
+                    <NativeSelect.Field {...register("priority")} borderRadius="14px" minH="11" ps={4} pe={8}>
+                      {PRIORITY_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </NativeSelect.Field>
+                    <NativeSelect.Indicator />
+                  </NativeSelect.Root>
+                </Field.Root>
+
+                <Field.Root>
+                  <Field.Label fontWeight="700">
+                    Channel <Text as="span" color="red.500">*</Text>
+                  </Field.Label>
+                  <NativeSelect.Root>
+                    <NativeSelect.Field {...register("channel")} borderRadius="14px" minH="11" ps={4} pe={8}>
+                      <option value="Instant">Instant</option>
+                      <option value="Email">Email</option>
+                    </NativeSelect.Field>
+                    <NativeSelect.Indicator />
+                  </NativeSelect.Root>
+                </Field.Root>
+                <Field.Root invalid={Boolean(errors.scheduledAtUtc)}>
+                  <Controller
+                    control={control}
+                    name="scheduleForLater"
+                    render={({ field }) => (
+                      <Checkbox.Root
+                        checked={field.value}
+                        onCheckedChange={(details) => field.onChange(details.checked === true)}
+                        cursor="pointer"
+                      >
+                        <Checkbox.HiddenInput />
+                        <Checkbox.Control />
+                        <Checkbox.Label fontWeight="700">Schedule for later</Checkbox.Label>
+                      </Checkbox.Root>
+                    )}
+                  />
+                  {scheduleForLater ? (
+                    <Box mt={3}>
+                      <Input
+                        {...register("scheduledAtUtc")}
+                        type="datetime-local"
+                        minH="11"
+                        borderRadius="14px"
+                        px={4}
+                        maxW={{ base: "full", md: "320px" }}
+                      />
+                      {errors.scheduledAtUtc ? (
+                        <Field.ErrorText>{errors.scheduledAtUtc.message}</Field.ErrorText>
+                      ) : null}
+                    </Box>
+                  ) : null}
+                </Field.Root>
+              </SimpleGrid>
+
               <Field.Root invalid={Boolean(errors.title)}>
                 <Field.Label fontWeight="700">
                   Title <Text as="span" color="red.500">*</Text>
@@ -279,94 +311,6 @@ export function AlertComposer() {
                   )}
                 />
                 {errors.body ? <Field.ErrorText>{errors.body.message}</Field.ErrorText> : null}
-              </Field.Root>
-
-              <Flex gap={5} direction={{ base: "column", md: "row" }}>
-                <Field.Root flex={1}>
-                  <Field.Label fontWeight="700">Priority</Field.Label>
-                  <NativeSelect.Root>
-                    <NativeSelect.Field {...register("priority")} borderRadius="14px" minH="11" ps={4} pe={8}>
-                      {PRIORITY_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </NativeSelect.Field>
-                    <NativeSelect.Indicator />
-                  </NativeSelect.Root>
-                </Field.Root>
-
-                <Field.Root flex={1} invalid={Boolean(errors.instant)}>
-                  <Field.Label fontWeight="700">
-                    Channels <Text as="span" color="red.500">*</Text>
-                  </Field.Label>
-                  <Flex gap={5} align="center" minH="11">
-                    <Controller
-                      control={control}
-                      name="instant"
-                      render={({ field }) => (
-                        <Checkbox.Root
-                          checked={field.value}
-                          onCheckedChange={(details) => field.onChange(details.checked === true)}
-                          cursor="pointer"
-                        >
-                          <Checkbox.HiddenInput />
-                          <Checkbox.Control />
-                          <Checkbox.Label>Instant</Checkbox.Label>
-                        </Checkbox.Root>
-                      )}
-                    />
-                    <Controller
-                      control={control}
-                      name="email"
-                      render={({ field }) => (
-                        <Checkbox.Root
-                          checked={field.value}
-                          onCheckedChange={(details) => field.onChange(details.checked === true)}
-                          cursor="pointer"
-                        >
-                          <Checkbox.HiddenInput />
-                          <Checkbox.Control />
-                          <Checkbox.Label>Email</Checkbox.Label>
-                        </Checkbox.Root>
-                      )}
-                    />
-                  </Flex>
-                  {errors.instant ? <Field.ErrorText>{errors.instant.message}</Field.ErrorText> : null}
-                </Field.Root>
-              </Flex>
-
-              <Field.Root invalid={Boolean(errors.scheduledAtUtc)}>
-                <Controller
-                  control={control}
-                  name="scheduleForLater"
-                  render={({ field }) => (
-                    <Checkbox.Root
-                      checked={field.value}
-                      onCheckedChange={(details) => field.onChange(details.checked === true)}
-                      cursor="pointer"
-                    >
-                      <Checkbox.HiddenInput />
-                      <Checkbox.Control />
-                      <Checkbox.Label fontWeight="700">Schedule for later</Checkbox.Label>
-                    </Checkbox.Root>
-                  )}
-                />
-                {scheduleForLater ? (
-                  <Box mt={3}>
-                    <Input
-                      {...register("scheduledAtUtc")}
-                      type="datetime-local"
-                      minH="11"
-                      borderRadius="14px"
-                      px={4}
-                      maxW={{ base: "full", md: "320px" }}
-                    />
-                    {errors.scheduledAtUtc ? (
-                      <Field.ErrorText>{errors.scheduledAtUtc.message}</Field.ErrorText>
-                    ) : null}
-                  </Box>
-                ) : null}
               </Field.Root>
             </Stack>
           </Box>
@@ -463,152 +407,90 @@ export function AlertComposer() {
 
                 <Tabs.Content value="membership-types">
                   <Stack gap={4}>
-                    <Field.Root
-                      invalid={Boolean(
-                        errors.memberSearchTerm || errors.membershipTypeUniqueIds || errors.membershipStatuses,
-                      )}
-                    >
-                      <Field.Label fontWeight="700">Search by name or email</Field.Label>
-                      <Text fontSize="xs" color="text.secondary" mb={2}>
-                        Use this to target members by contact name or email address.
-                      </Text>
-                      <Input
-                        {...register("memberSearchTerm")}
-                        minH="11"
-                        borderRadius="14px"
-                        px={4}
-                        placeholder="Search members by name or email"
-                      />
-                      {errors.memberSearchTerm ? (
-                        <Field.ErrorText>{errors.memberSearchTerm.message}</Field.ErrorText>
-                      ) : null}
-                    </Field.Root>
-
-                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                      <Field.Root invalid={Boolean(errors.membershipTypeUniqueIds || errors.membershipStatuses)}>
-                        <Field.Label fontWeight="700">Membership types</Field.Label>
+                    <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+                      <Field.Root
+                        invalid={Boolean(errors.memberSearchTerm || errors.membershipTypeUniqueId || errors.membershipStatus)}
+                      >
+                        <Field.Label fontWeight="700">Search by name or email</Field.Label>
                         <Text fontSize="xs" color="text.secondary" mb={2}>
-                          Combine with membership status to narrow the audience.
+                          Use this to target members by contact name or email address.
                         </Text>
-                        <Box w="full">
-                          <ReactSelect
-                            isMulti
-                            options={membershipTypeOptions}
-                            value={selectedMembershipTypes}
-                            onChange={handleMembershipTypeChange}
-                            placeholder={membershipTypesQuery.isLoading ? "Loading..." : "Select membership type(s)"}
-                            isLoading={membershipTypesQuery.isLoading}
-                            closeMenuOnSelect={false}
-                            isClearable
-                          />
-                        </Box>
-                        {errors.membershipTypeUniqueIds ? (
-                          <Field.ErrorText>{errors.membershipTypeUniqueIds.message}</Field.ErrorText>
+                        <Input
+                          {...register("memberSearchTerm")}
+                          minH="11"
+                          borderRadius="14px"
+                          px={4}
+                          placeholder="Search members by name or email"
+                        />
+                        {errors.memberSearchTerm ? (
+                          <Field.ErrorText>{errors.memberSearchTerm.message}</Field.ErrorText>
                         ) : null}
                       </Field.Root>
 
-                      <Field.Root invalid={Boolean(errors.membershipTypeUniqueIds || errors.membershipStatuses)}>
-                        <Field.Label fontWeight="700">Membership statuses</Field.Label>
+                      <Field.Root invalid={Boolean(errors.membershipTypeUniqueId)}>
+                        <Field.Label fontWeight="700">Membership type</Field.Label>
                         <Text fontSize="xs" color="text.secondary" mb={2}>
-                          Select one or more statuses. This is a multi-select filter.
+                          Choose one membership type.
                         </Text>
-                        <Box w="full">
-                          <ReactSelect
-                            isMulti
-                            options={membershipStatusOptions}
-                            value={selectedMembershipStatuses}
-                            onChange={handleMembershipStatusChange}
-                            placeholder={
-                              membershipStatusesQuery.isLoading ? "Loading..." : "Select membership status(es)"
-                            }
-                            isLoading={membershipStatusesQuery.isLoading}
-                            closeMenuOnSelect={false}
-                            isClearable
-                          />
-                        </Box>
-                        {errors.membershipStatuses ? (
-                          <Field.ErrorText>{errors.membershipStatuses.message}</Field.ErrorText>
+                        <Controller
+                          control={control}
+                          name="membershipTypeUniqueId"
+                          render={({ field }) => (
+                            <Box w="full">
+                              <ReactSelect
+                                isMulti={false}
+                                options={membershipTypeOptions}
+                                value={
+                                  membershipTypeOptions.find((option) => option.value === field.value) ?? null
+                                }
+                                onChange={(option: SingleValue<{ value: string; label: string }>) =>
+                                  field.onChange(option?.value ?? "")
+                                }
+                                placeholder={membershipTypesQuery.isLoading ? "Loading..." : "Select membership type"}
+                                isLoading={membershipTypesQuery.isLoading}
+                                isClearable
+                              />
+                            </Box>
+                          )}
+                        />
+                        {errors.membershipTypeUniqueId ? (
+                          <Field.ErrorText>{errors.membershipTypeUniqueId.message}</Field.ErrorText>
+                        ) : null}
+                      </Field.Root>
+
+                      <Field.Root invalid={Boolean(errors.membershipStatus)}>
+                        <Field.Label fontWeight="700">Membership status</Field.Label>
+                        <Text fontSize="xs" color="text.secondary" mb={2}>
+                          Choose one membership status.
+                        </Text>
+                        <Controller
+                          control={control}
+                          name="membershipStatus"
+                          render={({ field }) => (
+                            <Box w="full">
+                              <ReactSelect
+                                isMulti={false}
+                                options={membershipStatusOptions}
+                                value={
+                                  membershipStatusOptions.find((option) => option.value === field.value) ?? null
+                                }
+                                onChange={(option: SingleValue<{ value: string; label: string }>) =>
+                                  field.onChange(option?.value ?? "")
+                                }
+                                placeholder={
+                                  membershipStatusesQuery.isLoading ? "Loading..." : "Select membership status"
+                                }
+                                isLoading={membershipStatusesQuery.isLoading}
+                                isClearable
+                              />
+                            </Box>
+                          )}
+                        />
+                        {errors.membershipStatus ? (
+                          <Field.ErrorText>{errors.membershipStatus.message}</Field.ErrorText>
                         ) : null}
                       </Field.Root>
                     </SimpleGrid>
-
-                    {selectedMembershipTypes.length > 0 ? (
-                      <Box borderRadius="16px" border="1px solid" borderColor="border.subtle" bg="gray.50" p={4}>
-                        <Flex gap={2} flexWrap="wrap">
-                          {selectedMembershipTypes.map((option) => {
-                            const item = selectedMembershipTypeMap.get(option.value)
-                            return (
-                              <Tag.Root
-                                key={option.value}
-                                size="md"
-                                variant="surface"
-                                colorPalette="purple"
-                                borderRadius="full"
-                                minH="28px"
-                                ps={3}
-                                pe={1.5}
-                                py={1}
-                                gap={1.5}
-                              >
-                                <Tag.Label lineClamp={1} title={option.label} fontWeight="600">
-                                  {item ? `${item.name} (${item.memberCount})` : option.label}
-                                </Tag.Label>
-                                <Tag.EndElement ms={0}>
-                                  <Tag.CloseTrigger
-                                    aria-label={`Remove ${option.label}`}
-                                    title={`Remove ${option.label}`}
-                                    cursor="pointer"
-                                    boxSize="18px"
-                                    borderRadius="full"
-                                    _hover={{ bg: "red.100", color: "red.600" }}
-                                    onClick={() => handleMembershipTypeRemove(option.value)}
-                                  />
-                                </Tag.EndElement>
-                              </Tag.Root>
-                            )
-                          })}
-                        </Flex>
-                      </Box>
-                    ) : null}
-
-                    {selectedMembershipStatuses.length > 0 ? (
-                      <Box borderRadius="16px" border="1px solid" borderColor="border.subtle" bg="gray.50" p={4}>
-                        <Flex gap={2} flexWrap="wrap">
-                          {selectedMembershipStatuses.map((option) => {
-                            const item = selectedMembershipStatusMap.get(option.value)
-                            return (
-                              <Tag.Root
-                                key={option.value}
-                                size="md"
-                                variant="surface"
-                                colorPalette="blue"
-                                borderRadius="full"
-                                minH="28px"
-                                ps={3}
-                                pe={1.5}
-                                py={1}
-                                gap={1.5}
-                              >
-                                <Tag.Label lineClamp={1} title={option.label} fontWeight="600">
-                                  {item ? item.text : option.label}
-                                </Tag.Label>
-                                <Tag.EndElement ms={0}>
-                                  <Tag.CloseTrigger
-                                    aria-label={`Remove ${option.label}`}
-                                    title={`Remove ${option.label}`}
-                                    cursor="pointer"
-                                    boxSize="18px"
-                                    borderRadius="full"
-                                    _hover={{ bg: "red.100", color: "red.600" }}
-                                    onClick={() => handleMembershipStatusRemove(option.value)}
-                                  />
-                                </Tag.EndElement>
-                              </Tag.Root>
-                            )
-                          })}
-                        </Flex>
-                      </Box>
-                    ) : null}
                   </Stack>
                 </Tabs.Content>
 
