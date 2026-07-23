@@ -6,25 +6,19 @@ import { useAlertMemberPreview } from "../hooks/useAlerts"
 const PREVIEW_PAGE_SIZE = 10
 
 interface AlertAudiencePreviewProps {
-  searchTerm: string
   membershipTypeUniqueId: string
   membershipStatus: string
 }
 
 export function AlertAudiencePreview({
-  searchTerm,
   membershipTypeUniqueId,
   membershipStatus,
 }: AlertAudiencePreviewProps) {
   const [page, setPage] = useState(1)
-  const hasFilters =
-    searchTerm.trim().length > 0 ||
-    membershipTypeUniqueId.trim().length > 0 ||
-    membershipStatus.trim().length > 0
+  const hasFilters = membershipTypeUniqueId.trim().length > 0 || membershipStatus.trim().length > 0
 
   const previewQuery = useAlertMemberPreview(
     {
-      searchTerm: searchTerm.trim(),
       membershipTypeUniqueIds: membershipTypeUniqueId ? [membershipTypeUniqueId] : [],
       membershipStatuses: membershipStatus ? [membershipStatus] : [],
     },
@@ -90,7 +84,7 @@ export function AlertAudiencePreview({
           bg="app.bg"
         >
           <Text fontSize="sm" fontWeight="600" color="text.primary">
-            Select a membership type, status, or search term, then press Apply.
+            Select a membership type or status, then press Apply.
           </Text>
           <Text mt={1} fontSize="xs" color="text.secondary">
             We only fetch the filtered page, not the entire member table.
