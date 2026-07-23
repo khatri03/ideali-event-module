@@ -41,6 +41,7 @@ export const alertFormSchema = z
     scheduleForLater: z.boolean(),
     scheduledAtUtc: z.string().nullable(),
     membershipTypeUniqueIds: z.array(z.string()),
+    membershipStatuses: z.array(z.string()),
     customListUniqueIds: z.array(z.string()),
   })
   .refine((values) => values.instant || values.email, {
@@ -49,9 +50,11 @@ export const alertFormSchema = z
   })
   .refine(
     (values) =>
-      values.targetMode !== "membership-types" || values.membershipTypeUniqueIds.length > 0,
+      values.targetMode !== "membership-types" ||
+      values.membershipTypeUniqueIds.length > 0 ||
+      values.membershipStatuses.length > 0,
     {
-      message: "Select at least one membership type.",
+      message: "Select at least one membership type or membership status.",
       path: ["membershipTypeUniqueIds"],
     },
   )

@@ -233,6 +233,7 @@ export interface CreateAlertPayload {
   scheduledAtUtc: string | null
   recipientUniqueIds: string[]
   membershipTypeUniqueIds: string[]
+  membershipStatuses: string[]
   customListUniqueIds: string[]
 }
 

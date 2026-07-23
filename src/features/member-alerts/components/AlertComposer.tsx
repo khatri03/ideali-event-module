@@ -15,6 +15,7 @@ import {
   Tag,
   Tabs,
   Stack,
+  SimpleGrid,
   Text,
 } from "@chakra-ui/react"
 import ReactSelect, { type MultiValue } from "react-select"
@@ -22,7 +23,11 @@ import { ArrowLeft, Send } from "lucide-react"
 import { APP_ROUTES } from "@/utils/routes"
 import { alertFormSchema, toChannelMask, type AlertFormValues } from "../schemas/alert.schemas"
 import { useCreateAlert } from "../hooks/useAlertMutations"
-import { useAlertCustomListOptions, useAlertMembershipTypeOptions } from "../hooks/useAlerts"
+import {
+  useAlertCustomListOptions,
+  useAlertMembershipStatusOptions,
+  useAlertMembershipTypeOptions,
+} from "../hooks/useAlerts"
 import { PRIORITY_OPTIONS } from "../constants"
 import { AlertMessageEditor } from "./AlertMessageEditor"
 
@@ -37,8 +42,10 @@ export function AlertComposer() {
   const navigate = useNavigate()
   const createMutation = useCreateAlert()
   const membershipTypesQuery = useAlertMembershipTypeOptions()
+  const membershipStatusesQuery = useAlertMembershipStatusOptions()
   const customListsQuery = useAlertCustomListOptions()
   const [membershipTypeIds, setMembershipTypeIds] = useState<string[]>([])
+  const [membershipStatusValues, setMembershipStatusValues] = useState<string[]>([])
   const [customListIds, setCustomListIds] = useState<string[]>([])
 
   const {
@@ -59,6 +66,7 @@ export function AlertComposer() {
       scheduledAtUtc: null,
       targetMode: "membership-types",
       membershipTypeUniqueIds: [],
+      membershipStatuses: [],
       customListUniqueIds: [],
     },
   })
@@ -69,6 +77,10 @@ export function AlertComposer() {
   const selectedMembershipTypeMap = useMemo(
     () => new Map((membershipTypesQuery.data ?? []).map((option) => [option.uniqueId, option] as const)),
     [membershipTypesQuery.data],
+  )
+  const selectedMembershipStatusMap = useMemo(
+    () => new Map((membershipStatusesQuery.data ?? []).map((option) => [option.value, option] as const)),
+    [membershipStatusesQuery.data],
   )
   const selectedCustomListMap = useMemo(
     () => new Map((customListsQuery.data ?? []).map((option) => [option.uniqueId, option] as const)),
@@ -83,6 +95,14 @@ export function AlertComposer() {
       })),
     [membershipTypesQuery.data],
   )
+  const membershipStatusOptions = useMemo(
+    () =>
+      (membershipStatusesQuery.data ?? []).map((option) => ({
+        value: option.value,
+        label: option.text,
+      })),
+    [membershipStatusesQuery.data],
+  )
   const customListOptions = useMemo(
     () =>
       (customListsQuery.data ?? []).map((option) => ({
@@ -93,28 +113,33 @@ export function AlertComposer() {
   )
 
   const selectedMembershipTypes = membershipTypeOptions.filter((option) => membershipTypeIds.includes(option.value))
+  const selectedMembershipStatuses = membershipStatusOptions.filter((option) =>
+    membershipStatusValues.includes(option.value),
+  )
   const selectedCustomLists = customListOptions.filter((option) => customListIds.includes(option.value))
-
-  const selectedMembershipTypeTotal = selectedMembershipTypes.reduce((total, option) => {
-    const selected = selectedMembershipTypeMap.get(option.value)
-    return total + (selected?.memberCount ?? 0)
-  }, 0)
   const selectedCustomListTotal = selectedCustomLists.reduce((total, option) => {
     const selected = selectedCustomListMap.get(option.value)
     return total + (selected?.memberCount ?? 0)
   }, 0)
+  const memberFilterSummaryParts = [
+    selectedMembershipTypes.length > 0
+      ? `${selectedMembershipTypes.length} membership type${selectedMembershipTypes.length === 1 ? "" : "s"}`
+      : null,
+    selectedMembershipStatuses.length > 0
+      ? `${selectedMembershipStatuses.length} membership status${selectedMembershipStatuses.length === 1 ? "" : "es"}`
+      : null,
+  ].filter((part): part is string => part !== null)
 
   const audienceMeta = {
     "membership-types": {
       label: "Members",
-      count: selectedMembershipTypes.length,
+      count: selectedMembershipTypes.length + selectedMembershipStatuses.length,
       detail:
-        selectedMembershipTypes.length > 0
-          ? `~${selectedMembershipTypeTotal} member${selectedMembershipTypeTotal === 1 ? "" : "s"}`
-          : "No membership types selected yet",
+        memberFilterSummaryParts.length > 0
+          ? `${memberFilterSummaryParts.join(", ")} selected`
+          : "Choose membership types and/or statuses",
       colorPalette: "purple" as const,
-      buttonLabel:
-        selectedMembershipTypeTotal > 0 ? `Send to ~${selectedMembershipTypeTotal} members` : "Send to members",
+      buttonLabel: "Send to filtered members",
     },
     "custom-lists": {
       label: "Custom Lists",
@@ -135,6 +160,12 @@ export function AlertComposer() {
     setValue("membershipTypeUniqueIds", nextIds, { shouldValidate: true })
   }
 
+  function handleMembershipStatusChange(next: MultiValue<{ value: string; label: string }>) {
+    const nextValues = next.map((option) => option.value)
+    setMembershipStatusValues(nextValues)
+    setValue("membershipStatuses", nextValues, { shouldValidate: true })
+  }
+
   function handleCustomListChange(next: MultiValue<{ value: string; label: string }>) {
     const nextIds = next.map((option) => option.value)
     setCustomListIds(nextIds)
@@ -147,6 +178,12 @@ export function AlertComposer() {
     setValue("membershipTypeUniqueIds", nextIds, { shouldValidate: true })
   }
 
+  function handleMembershipStatusRemove(value: string) {
+    const nextValues = membershipStatusValues.filter((item) => item !== value)
+    setMembershipStatusValues(nextValues)
+    setValue("membershipStatuses", nextValues, { shouldValidate: true })
+  }
+
   function handleCustomListRemove(uniqueId: string) {
     const nextIds = customListIds.filter((value) => value !== uniqueId)
     setCustomListIds(nextIds)
@@ -156,6 +193,7 @@ export function AlertComposer() {
   async function handleSend(values: AlertFormValues) {
     const membershipTypeUniqueIds =
       values.targetMode === "membership-types" ? values.membershipTypeUniqueIds : []
+    const membershipStatuses = values.targetMode === "membership-types" ? values.membershipStatuses : []
     const customListUniqueIds =
       values.targetMode === "custom-lists" ? values.customListUniqueIds : []
 
@@ -170,6 +208,7 @@ export function AlertComposer() {
           : null,
       recipientUniqueIds: [],
       membershipTypeUniqueIds,
+      membershipStatuses,
       customListUniqueIds,
     })
     navigate(APP_ROUTES.memberAlerts.list)
@@ -346,7 +385,7 @@ export function AlertComposer() {
                     Audience preview
                   </Text>
                   <Heading fontSize={{ base: "md", md: "lg" }} color="gray.900" mt={1}>
-                    Choose one audience type
+                    Choose member filters
                   </Heading>
                   <Text fontSize="sm" color="text.secondary" mt={1}>
                     {audienceMeta.detail}
@@ -419,27 +458,54 @@ export function AlertComposer() {
 
                 <Tabs.Content value="membership-types">
                   <Stack gap={4}>
-                    <Field.Root invalid={Boolean(errors.membershipTypeUniqueIds)}>
-                      <Field.Label fontWeight="700">Membership types</Field.Label>
-                      <Text fontSize="xs" color="text.secondary" mb={2}>
-                        Send only to members in the selected type or types.
-                      </Text>
-                      <Box w="full">
-                        <ReactSelect
-                          isMulti
-                          options={membershipTypeOptions}
-                          value={selectedMembershipTypes}
-                          onChange={handleMembershipTypeChange}
-                          placeholder={membershipTypesQuery.isLoading ? "Loading..." : "Select membership type(s)"}
-                          isLoading={membershipTypesQuery.isLoading}
-                          closeMenuOnSelect={false}
-                          isClearable
-                        />
-                      </Box>
-                      {errors.membershipTypeUniqueIds ? (
-                        <Field.ErrorText>{errors.membershipTypeUniqueIds.message}</Field.ErrorText>
-                      ) : null}
-                    </Field.Root>
+                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                      <Field.Root invalid={Boolean(errors.membershipTypeUniqueIds || errors.membershipStatuses)}>
+                        <Field.Label fontWeight="700">Membership types</Field.Label>
+                        <Text fontSize="xs" color="text.secondary" mb={2}>
+                          Combine with membership status to narrow the audience.
+                        </Text>
+                        <Box w="full">
+                          <ReactSelect
+                            isMulti
+                            options={membershipTypeOptions}
+                            value={selectedMembershipTypes}
+                            onChange={handleMembershipTypeChange}
+                            placeholder={membershipTypesQuery.isLoading ? "Loading..." : "Select membership type(s)"}
+                            isLoading={membershipTypesQuery.isLoading}
+                            closeMenuOnSelect={false}
+                            isClearable
+                          />
+                        </Box>
+                        {errors.membershipTypeUniqueIds ? (
+                          <Field.ErrorText>{errors.membershipTypeUniqueIds.message}</Field.ErrorText>
+                        ) : null}
+                      </Field.Root>
+
+                      <Field.Root invalid={Boolean(errors.membershipTypeUniqueIds || errors.membershipStatuses)}>
+                        <Field.Label fontWeight="700">Membership statuses</Field.Label>
+                        <Text fontSize="xs" color="text.secondary" mb={2}>
+                          Select one or more statuses. This is a multi-select filter.
+                        </Text>
+                        <Box w="full">
+                          <ReactSelect
+                            isMulti
+                            options={membershipStatusOptions}
+                            value={selectedMembershipStatuses}
+                            onChange={handleMembershipStatusChange}
+                            placeholder={
+                              membershipStatusesQuery.isLoading ? "Loading..." : "Select membership status(es)"
+                            }
+                            isLoading={membershipStatusesQuery.isLoading}
+                            closeMenuOnSelect={false}
+                            isClearable
+                          />
+                        </Box>
+                        {errors.membershipStatuses ? (
+                          <Field.ErrorText>{errors.membershipStatuses.message}</Field.ErrorText>
+                        ) : null}
+                      </Field.Root>
+                    </SimpleGrid>
+
                     {selectedMembershipTypes.length > 0 ? (
                       <Box borderRadius="16px" border="1px solid" borderColor="border.subtle" bg="gray.50" p={4}>
                         <Flex gap={2} flexWrap="wrap">
@@ -470,6 +536,45 @@ export function AlertComposer() {
                                     borderRadius="full"
                                     _hover={{ bg: "red.100", color: "red.600" }}
                                     onClick={() => handleMembershipTypeRemove(option.value)}
+                                  />
+                                </Tag.EndElement>
+                              </Tag.Root>
+                            )
+                          })}
+                        </Flex>
+                      </Box>
+                    ) : null}
+
+                    {selectedMembershipStatuses.length > 0 ? (
+                      <Box borderRadius="16px" border="1px solid" borderColor="border.subtle" bg="gray.50" p={4}>
+                        <Flex gap={2} flexWrap="wrap">
+                          {selectedMembershipStatuses.map((option) => {
+                            const item = selectedMembershipStatusMap.get(option.value)
+                            return (
+                              <Tag.Root
+                                key={option.value}
+                                size="md"
+                                variant="surface"
+                                colorPalette="blue"
+                                borderRadius="full"
+                                minH="28px"
+                                ps={3}
+                                pe={1.5}
+                                py={1}
+                                gap={1.5}
+                              >
+                                <Tag.Label lineClamp={1} title={option.label} fontWeight="600">
+                                  {item ? item.text : option.label}
+                                </Tag.Label>
+                                <Tag.EndElement ms={0}>
+                                  <Tag.CloseTrigger
+                                    aria-label={`Remove ${option.label}`}
+                                    title={`Remove ${option.label}`}
+                                    cursor="pointer"
+                                    boxSize="18px"
+                                    borderRadius="full"
+                                    _hover={{ bg: "red.100", color: "red.600" }}
+                                    onClick={() => handleMembershipStatusRemove(option.value)}
                                   />
                                 </Tag.EndElement>
                               </Tag.Root>
