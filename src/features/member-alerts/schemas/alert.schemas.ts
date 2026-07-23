@@ -3,6 +3,7 @@ import { z } from "zod"
 /** Mirrors the backend validation in AlertService exactly; message strings kept byte-identical. */
 export const alertFormSchema = z
   .object({
+    targetMode: z.enum(["individuals", "membership-types", "custom-lists"]),
     title: z
       .string()
       .trim()
@@ -28,12 +29,26 @@ export const alertFormSchema = z
   })
   .refine(
     (values) =>
-      values.recipientUniqueIds.length > 0 ||
-      values.membershipTypeUniqueIds.length > 0 ||
-      values.customListUniqueIds.length > 0,
+      values.targetMode !== "individuals" || values.recipientUniqueIds.length > 0,
     {
-      message: "Add at least one recipient, membership type, or custom list.",
+      message: "Add at least one recipient.",
       path: ["recipientUniqueIds"],
+    },
+  )
+  .refine(
+    (values) =>
+      values.targetMode !== "membership-types" || values.membershipTypeUniqueIds.length > 0,
+    {
+      message: "Select at least one membership type.",
+      path: ["membershipTypeUniqueIds"],
+    },
+  )
+  .refine(
+    (values) =>
+      values.targetMode !== "custom-lists" || values.customListUniqueIds.length > 0,
+    {
+      message: "Select at least one custom list.",
+      path: ["customListUniqueIds"],
     },
   )
   .refine((values) => !values.scheduleForLater || Boolean(values.scheduledAtUtc), {

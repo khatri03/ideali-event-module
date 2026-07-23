@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useNavigate } from "react-router-dom"
 import {
   Box,
+  Badge,
   Button,
   Checkbox,
   Field,
@@ -43,7 +44,6 @@ export function AlertComposer() {
   const navigate = useNavigate()
   const createMutation = useCreateAlert()
   const [recipients, setRecipients] = useState<AlertRecipientOption[]>([])
-  const [activeRecipientTab, setActiveRecipientTab] = useState<RecipientSourceTab>("individuals")
   const membershipTypesQuery = useAlertMembershipTypeOptions()
   const customListsQuery = useAlertCustomListOptions()
 
@@ -63,6 +63,7 @@ export function AlertComposer() {
       email: false,
       scheduleForLater: false,
       scheduledAtUtc: null,
+      targetMode: "individuals",
       recipientUniqueIds: [],
       membershipTypeUniqueIds: [],
       customListUniqueIds: [],
@@ -70,6 +71,7 @@ export function AlertComposer() {
   })
 
   const scheduleForLater = useWatch({ control, name: "scheduleForLater" })
+  const activeTargetMode = useWatch({ control, name: "targetMode" })
   const membershipTypeIds = useWatch({ control, name: "membershipTypeUniqueIds" })
   const customListIds = useWatch({ control, name: "customListUniqueIds" })
 
@@ -99,12 +101,8 @@ export function AlertComposer() {
     [customListsQuery.data],
   )
 
-  const selectedMembershipTypes = membershipTypeOptions.filter((option) =>
-    (membershipTypeIds ?? []).includes(option.value),
-  )
-  const selectedCustomLists = customListOptions.filter((option) =>
-    (customListIds ?? []).includes(option.value),
-  )
+  const selectedMembershipTypes = membershipTypeOptions.filter((option) => (membershipTypeIds ?? []).includes(option.value))
+  const selectedCustomLists = customListOptions.filter((option) => (customListIds ?? []).includes(option.value))
 
   const selectedMembershipTypeTotal = selectedMembershipTypes.reduce((total, option) => {
     const selected = selectedMembershipTypeMap.get(option.value)
@@ -114,8 +112,41 @@ export function AlertComposer() {
     const selected = selectedCustomListMap.get(option.value)
     return total + (selected?.memberCount ?? 0)
   }, 0)
-  const estimatedRecipientTotal = recipients.length + selectedMembershipTypeTotal + selectedCustomListTotal
-  const recipientSummary = `Sending to: ${formatCountLabel(recipients.length, "member")} - ${formatCountLabel(selectedMembershipTypes.length, "membership type")} (~${selectedMembershipTypeTotal}) - ${formatCountLabel(selectedCustomLists.length, "list")} (~${selectedCustomListTotal}) - ~${estimatedRecipientTotal} recipients`
+  const audienceMeta = {
+    individuals: {
+      label: "Individuals",
+      count: recipients.length,
+      detail:
+        recipients.length > 0
+          ? `${recipients.length} direct recipient${recipients.length === 1 ? "" : "s"}`
+          : "No direct recipients yet",
+      colorPalette: "blue" as const,
+      buttonLabel:
+        recipients.length > 0 ? `Send to ${formatCountLabel(recipients.length, "individual")}` : "Send to individuals",
+    },
+    "membership-types": {
+      label: "Membership Types",
+      count: selectedMembershipTypes.length,
+      detail:
+        selectedMembershipTypes.length > 0
+          ? `~${selectedMembershipTypeTotal} member${selectedMembershipTypeTotal === 1 ? "" : "s"}`
+          : "No membership types selected yet",
+      colorPalette: "purple" as const,
+      buttonLabel:
+        selectedMembershipTypeTotal > 0 ? `Send to ~${selectedMembershipTypeTotal} members` : "Send to members",
+    },
+    "custom-lists": {
+      label: "Custom Lists",
+      count: selectedCustomLists.length,
+      detail:
+        selectedCustomLists.length > 0
+          ? `~${selectedCustomListTotal} member${selectedCustomListTotal === 1 ? "" : "s"}`
+          : "No custom lists selected yet",
+      colorPalette: "green" as const,
+      buttonLabel:
+        selectedCustomListTotal > 0 ? `Send to ~${selectedCustomListTotal} members` : "Send to list members",
+    },
+  }[activeTargetMode]
 
   function handleRecipientsChange(next: AlertRecipientOption[]) {
     setRecipients(next)
@@ -162,6 +193,13 @@ export function AlertComposer() {
   }
 
   async function handleSend(values: AlertFormValues) {
+    const recipientUniqueIds =
+      values.targetMode === "individuals" ? values.recipientUniqueIds : []
+    const membershipTypeUniqueIds =
+      values.targetMode === "membership-types" ? values.membershipTypeUniqueIds : []
+    const customListUniqueIds =
+      values.targetMode === "custom-lists" ? values.customListUniqueIds : []
+
     await createMutation.mutateAsync({
       title: values.title.trim(),
       body: values.body.trim(),
@@ -171,9 +209,9 @@ export function AlertComposer() {
         values.scheduleForLater && values.scheduledAtUtc
           ? new Date(values.scheduledAtUtc).toISOString()
           : null,
-      recipientUniqueIds: values.recipientUniqueIds,
-      membershipTypeUniqueIds: values.membershipTypeUniqueIds,
-      customListUniqueIds: values.customListUniqueIds,
+      recipientUniqueIds,
+      membershipTypeUniqueIds,
+      customListUniqueIds,
     })
     navigate(APP_ROUTES.memberAlerts.list)
   }
@@ -326,179 +364,97 @@ export function AlertComposer() {
 
           <Box borderRadius="18px" border="1px solid" borderColor="border.subtle" bg="card.bg" p={{ base: 4, md: 5 }}>
             <Stack gap={4}>
-              <Box borderRadius="16px" border="1px solid" borderColor="border.subtle" bg="gray.50" p={{ base: 4, md: 5 }}>
-                <Stack gap={3}>
-                  <Flex
-                    align={{ base: "flex-start", md: "center" }}
-                    justify="space-between"
-                    gap={3}
-                    direction={{ base: "column", md: "row" }}
+              <Flex
+                align={{ base: "flex-start", md: "center" }}
+                justify="space-between"
+                gap={3}
+                direction={{ base: "column", md: "row" }}
+              >
+                <Box>
+                  <Text
+                    fontSize="xs"
+                    fontWeight="800"
+                    letterSpacing="0.14em"
+                    textTransform="uppercase"
+                    color="text.secondary"
                   >
-                    <Text fontSize="sm" fontWeight="800" color="gray.900">
-                      {recipientSummary}
-                    </Text>
-                  </Flex>
-
-                  <Flex gap={2} flexWrap="wrap">
-                    {recipients.map((recipient) => (
-                      <Tag.Root
-                        key={recipient.uniqueId}
-                        size="md"
-                        variant="surface"
-                        colorPalette="blue"
-                        borderRadius="full"
-                        minH="28px"
-                        ps={3}
-                        pe={1.5}
-                        py={1}
-                        gap={1.5}
-                      >
-                        <Tag.Label
-                          lineClamp={1}
-                          title={recipient.email ? `${recipient.name} (${recipient.email})` : recipient.name}
-                          fontWeight="600"
-                        >
-                          {recipient.name}
-                        </Tag.Label>
-                        <Tag.EndElement ms={0}>
-                          <Tag.CloseTrigger
-                            aria-label={`Remove ${recipient.name}`}
-                            title={`Remove ${recipient.name}`}
-                            cursor="pointer"
-                            boxSize="18px"
-                            borderRadius="full"
-                            _hover={{ bg: "red.100", color: "red.600" }}
-                            onClick={() => handleRecipientRemove(recipient.uniqueId)}
-                          />
-                        </Tag.EndElement>
-                      </Tag.Root>
-                    ))}
-
-                    {selectedMembershipTypes.map((option) => {
-                      const item = selectedMembershipTypeMap.get(option.value)
-                      return (
-                        <Tag.Root
-                          key={option.value}
-                          size="md"
-                          variant="surface"
-                          colorPalette="purple"
-                          borderRadius="full"
-                          minH="28px"
-                          ps={3}
-                          pe={1.5}
-                          py={1}
-                          gap={1.5}
-                        >
-                          <Tag.Label lineClamp={1} title={option.label} fontWeight="600">
-                            {item ? `${item.name} (${item.memberCount})` : option.label}
-                          </Tag.Label>
-                          <Tag.EndElement ms={0}>
-                            <Tag.CloseTrigger
-                              aria-label={`Remove ${option.label}`}
-                              title={`Remove ${option.label}`}
-                              cursor="pointer"
-                              boxSize="18px"
-                              borderRadius="full"
-                              _hover={{ bg: "red.100", color: "red.600" }}
-                              onClick={() => handleMembershipTypeRemove(option.value)}
-                            />
-                          </Tag.EndElement>
-                        </Tag.Root>
-                      )
-                    })}
-
-                    {selectedCustomLists.map((option) => {
-                      const item = selectedCustomListMap.get(option.value)
-                      return (
-                        <Tag.Root
-                          key={option.value}
-                          size="md"
-                          variant="surface"
-                          colorPalette="green"
-                          borderRadius="full"
-                          minH="28px"
-                          ps={3}
-                          pe={1.5}
-                          py={1}
-                          gap={1.5}
-                        >
-                          <Tag.Label lineClamp={1} title={option.label} fontWeight="600">
-                            {item ? `${item.name} (${item.memberCount})` : option.label}
-                          </Tag.Label>
-                          <Tag.EndElement ms={0}>
-                            <Tag.CloseTrigger
-                              aria-label={`Remove ${option.label}`}
-                              title={`Remove ${option.label}`}
-                              cursor="pointer"
-                              boxSize="18px"
-                              borderRadius="full"
-                              _hover={{ bg: "red.100", color: "red.600" }}
-                              onClick={() => handleCustomListRemove(option.value)}
-                            />
-                          </Tag.EndElement>
-                        </Tag.Root>
-                      )
-                    })}
-                  </Flex>
-
-                  {errors.recipientUniqueIds ? (
-                    <Text fontSize="sm" color="red.500" fontWeight="600">
-                      {errors.recipientUniqueIds.message}
-                    </Text>
-                  ) : null}
-                </Stack>
-              </Box>
-
-              <Box borderRadius="16px" border="1px solid" borderColor="border.subtle" bg="gray.50" p={{ base: 4, md: 5 }}>
-                <Tabs.Root
-                  value={activeRecipientTab}
-                  onValueChange={(details) => setActiveRecipientTab(details.value as RecipientSourceTab)}
-                  activationMode="manual"
+                    Audience preview
+                  </Text>
+                  <Heading fontSize={{ base: "md", md: "lg" }} color="gray.900" mt={1}>
+                    Choose exactly one audience type
+                  </Heading>
+                  <Text fontSize="sm" color="text.secondary" mt={1}>
+                    {audienceMeta.detail}
+                  </Text>
+                </Box>
+                <Badge
+                  variant="subtle"
+                  colorPalette={audienceMeta.colorPalette}
+                  borderRadius="full"
+                  px={3}
+                  py={1}
+                  fontWeight="800"
+                  alignSelf={{ base: "flex-start", md: "center" }}
                 >
-                  <Tabs.List
-                    display="flex"
-                    flexDirection={{ base: "column", md: "row" }}
-                    gap={0}
-                    borderBottom="1px solid"
-                    borderColor="border.subtle"
-                    mb={4}
-                  >
-                    {RECIPIENT_SOURCE_TABS.map((tab) => (
-                      <Tabs.Trigger
-                        key={tab.value}
-                        value={tab.value}
-                        flex={1}
-                        minH="11"
-                        justifyContent="center"
-                        textAlign="center"
-                        borderTopRadius="14px"
-                        borderBottomRadius={0}
-                        borderWidth="1px"
-                        borderColor="border.subtle"
-                        borderBottomColor="border.subtle"
-                        bg="gray.50"
-                        mb="-1px"
-                        px={4}
-                        py={3}
-                        cursor="pointer"
-                        fontWeight="700"
-                        whiteSpace="nowrap"
-                        _selected={{
-                          bg: "card.bg",
-                          color: "gray.900",
-                          borderColor: "border.subtle",
-                          borderBottomWidth: "0",
-                          borderBottomColor: "card.bg",
-                        }}
-                        _hover={{ bg: "gray.100" }}
-                      >
-                        {tab.label}
-                      </Tabs.Trigger>
-                    ))}
-                  </Tabs.List>
+                  {audienceMeta.count} selected
+                </Badge>
+              </Flex>
 
-                  <Tabs.Content value="individuals">
-                    <Field.Root>
+              <Tabs.Root
+                value={activeTargetMode}
+                onValueChange={(details) =>
+                  setValue("targetMode", details.value as RecipientSourceTab, { shouldValidate: true })
+                }
+                activationMode="manual"
+              >
+                <Tabs.List
+                  display="flex"
+                  flexDirection={{ base: "column", md: "row" }}
+                  gap={0}
+                  borderBottom="1px solid"
+                  borderColor="border.subtle"
+                  mb={4}
+                >
+                  {RECIPIENT_SOURCE_TABS.map((tab) => (
+                    <Tabs.Trigger
+                      key={tab.value}
+                      value={tab.value}
+                      flex={1}
+                      minH="11"
+                      justifyContent="center"
+                      textAlign="center"
+                      borderTopRadius="14px"
+                      borderBottomRadius={0}
+                      borderWidth="1px"
+                      borderColor="border.subtle"
+                      borderBottomColor="border.subtle"
+                      bg="white"
+                      mb="-1px"
+                      px={4}
+                      py={3}
+                      cursor="pointer"
+                      fontWeight="700"
+                      whiteSpace="nowrap"
+                      color="text.secondary"
+                      transition="all 0.18s ease"
+                      _selected={{
+                        bg: "card.bg",
+                        color: "gray.900",
+                        borderColor: "border.subtle",
+                        borderBottomWidth: "0",
+                        borderBottomColor: "card.bg",
+                        boxShadow: "0 -1px 0 0 var(--chakra-colors-border-subtle)",
+                      }}
+                      _hover={{ bg: "gray.100" }}
+                    >
+                      {tab.label}
+                    </Tabs.Trigger>
+                  ))}
+                </Tabs.List>
+
+                <Tabs.Content value="individuals">
+                  <Stack gap={4}>
+                    <Field.Root invalid={Boolean(errors.recipientUniqueIds)}>
                       <Field.Label fontWeight="700">
                         Recipients <Text as="span" color="red.500">*</Text>
                       </Field.Label>
@@ -508,14 +464,58 @@ export function AlertComposer() {
                       <Box w="full">
                         <RecipientPicker value={recipients} onChange={handleRecipientsChange} />
                       </Box>
+                      {errors.recipientUniqueIds ? (
+                        <Field.ErrorText>{errors.recipientUniqueIds.message}</Field.ErrorText>
+                      ) : null}
                     </Field.Root>
-                  </Tabs.Content>
+                    {recipients.length > 0 ? (
+                      <Box borderRadius="16px" border="1px solid" borderColor="border.subtle" bg="gray.50" p={4}>
+                        <Flex gap={2} flexWrap="wrap">
+                          {recipients.map((recipient) => (
+                            <Tag.Root
+                              key={recipient.uniqueId}
+                              size="md"
+                              variant="surface"
+                              colorPalette="blue"
+                              borderRadius="full"
+                              minH="28px"
+                              ps={3}
+                              pe={1.5}
+                              py={1}
+                              gap={1.5}
+                            >
+                              <Tag.Label
+                                lineClamp={1}
+                                title={recipient.email ? `${recipient.name} (${recipient.email})` : recipient.name}
+                                fontWeight="600"
+                              >
+                                {recipient.name}
+                              </Tag.Label>
+                              <Tag.EndElement ms={0}>
+                                <Tag.CloseTrigger
+                                  aria-label={`Remove ${recipient.name}`}
+                                  title={`Remove ${recipient.name}`}
+                                  cursor="pointer"
+                                  boxSize="18px"
+                                  borderRadius="full"
+                                  _hover={{ bg: "red.100", color: "red.600" }}
+                                  onClick={() => handleRecipientRemove(recipient.uniqueId)}
+                                />
+                              </Tag.EndElement>
+                            </Tag.Root>
+                          ))}
+                        </Flex>
+                      </Box>
+                    ) : null}
+                  </Stack>
+                </Tabs.Content>
 
-                  <Tabs.Content value="membership-types">
-                    <Field.Root>
+                <Tabs.Content value="membership-types">
+                  <Stack gap={4}>
+                    <Field.Root invalid={Boolean(errors.membershipTypeUniqueIds)}>
                       <Field.Label fontWeight="700">Membership types</Field.Label>
                       <Text fontSize="xs" color="text.secondary" mb={2}>
-                        All active members of the selected types are included when you send.
+                        Send only to members in the selected type or types.
                       </Text>
                       <Box w="full">
                         <ReactSelect
@@ -523,20 +523,63 @@ export function AlertComposer() {
                           options={membershipTypeOptions}
                           value={selectedMembershipTypes}
                           onChange={handleMembershipTypeChange}
-                          placeholder={membershipTypesQuery.isLoading ? "Loading..." : "All active members of a type"}
+                          placeholder={membershipTypesQuery.isLoading ? "Loading..." : "Select membership type(s)"}
                           isLoading={membershipTypesQuery.isLoading}
                           closeMenuOnSelect={false}
                           isClearable
                         />
                       </Box>
+                      {errors.membershipTypeUniqueIds ? (
+                        <Field.ErrorText>{errors.membershipTypeUniqueIds.message}</Field.ErrorText>
+                      ) : null}
                     </Field.Root>
-                  </Tabs.Content>
+                    {selectedMembershipTypes.length > 0 ? (
+                      <Box borderRadius="16px" border="1px solid" borderColor="border.subtle" bg="gray.50" p={4}>
+                        <Flex gap={2} flexWrap="wrap">
+                          {selectedMembershipTypes.map((option) => {
+                            const item = selectedMembershipTypeMap.get(option.value)
+                            return (
+                              <Tag.Root
+                                key={option.value}
+                                size="md"
+                                variant="surface"
+                                colorPalette="purple"
+                                borderRadius="full"
+                                minH="28px"
+                                ps={3}
+                                pe={1.5}
+                                py={1}
+                                gap={1.5}
+                              >
+                                <Tag.Label lineClamp={1} title={option.label} fontWeight="600">
+                                  {item ? `${item.name} (${item.memberCount})` : option.label}
+                                </Tag.Label>
+                                <Tag.EndElement ms={0}>
+                                  <Tag.CloseTrigger
+                                    aria-label={`Remove ${option.label}`}
+                                    title={`Remove ${option.label}`}
+                                    cursor="pointer"
+                                    boxSize="18px"
+                                    borderRadius="full"
+                                    _hover={{ bg: "red.100", color: "red.600" }}
+                                    onClick={() => handleMembershipTypeRemove(option.value)}
+                                  />
+                                </Tag.EndElement>
+                              </Tag.Root>
+                            )
+                          })}
+                        </Flex>
+                      </Box>
+                    ) : null}
+                  </Stack>
+                </Tabs.Content>
 
-                  <Tabs.Content value="custom-lists">
-                    <Field.Root>
+                <Tabs.Content value="custom-lists">
+                  <Stack gap={4}>
+                    <Field.Root invalid={Boolean(errors.customListUniqueIds)}>
                       <Field.Label fontWeight="700">Custom lists</Field.Label>
                       <Text fontSize="xs" color="text.secondary" mb={2}>
-                        Every member on a selected list will receive the alert.
+                        Send only to members in the selected list or lists.
                       </Text>
                       <Box w="full">
                         <ReactSelect
@@ -544,16 +587,57 @@ export function AlertComposer() {
                           options={customListOptions}
                           value={selectedCustomLists}
                           onChange={handleCustomListChange}
-                          placeholder={customListsQuery.isLoading ? "Loading..." : "Every member of a list"}
+                          placeholder={customListsQuery.isLoading ? "Loading..." : "Select custom list(s)"}
                           isLoading={customListsQuery.isLoading}
                           closeMenuOnSelect={false}
                           isClearable
                         />
                       </Box>
+                      {errors.customListUniqueIds ? (
+                        <Field.ErrorText>{errors.customListUniqueIds.message}</Field.ErrorText>
+                      ) : null}
                     </Field.Root>
-                  </Tabs.Content>
-                </Tabs.Root>
-              </Box>
+                    {selectedCustomLists.length > 0 ? (
+                      <Box borderRadius="16px" border="1px solid" borderColor="border.subtle" bg="gray.50" p={4}>
+                        <Flex gap={2} flexWrap="wrap">
+                          {selectedCustomLists.map((option) => {
+                            const item = selectedCustomListMap.get(option.value)
+                            return (
+                              <Tag.Root
+                                key={option.value}
+                                size="md"
+                                variant="surface"
+                                colorPalette="green"
+                                borderRadius="full"
+                                minH="28px"
+                                ps={3}
+                                pe={1.5}
+                                py={1}
+                                gap={1.5}
+                              >
+                                <Tag.Label lineClamp={1} title={option.label} fontWeight="600">
+                                  {item ? `${item.name} (${item.memberCount})` : option.label}
+                                </Tag.Label>
+                                <Tag.EndElement ms={0}>
+                                  <Tag.CloseTrigger
+                                    aria-label={`Remove ${option.label}`}
+                                    title={`Remove ${option.label}`}
+                                    cursor="pointer"
+                                    boxSize="18px"
+                                    borderRadius="full"
+                                    _hover={{ bg: "red.100", color: "red.600" }}
+                                    onClick={() => handleCustomListRemove(option.value)}
+                                  />
+                                </Tag.EndElement>
+                              </Tag.Root>
+                            )
+                          })}
+                        </Flex>
+                      </Box>
+                    ) : null}
+                  </Stack>
+                </Tabs.Content>
+              </Tabs.Root>
             </Stack>
           </Box>
 
@@ -572,7 +656,7 @@ export function AlertComposer() {
               style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
             >
               <Send size={16} />
-              {scheduleForLater ? "Schedule alert" : "Send alert"}
+              {scheduleForLater ? "Schedule alert" : audienceMeta.buttonLabel}
             </Button>
           </Flex>
         </Stack>
