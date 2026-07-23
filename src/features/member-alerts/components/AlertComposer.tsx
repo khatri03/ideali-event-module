@@ -65,6 +65,7 @@ export function AlertComposer() {
       scheduleForLater: false,
       scheduledAtUtc: null,
       targetMode: "membership-types",
+      memberSearchTerm: "",
       membershipTypeUniqueIds: [],
       membershipStatuses: [],
       customListUniqueIds: [],
@@ -73,6 +74,7 @@ export function AlertComposer() {
 
   const scheduleForLater = useWatch({ control, name: "scheduleForLater" })
   const activeTargetMode = useWatch({ control, name: "targetMode" })
+  const memberSearchTerm = useWatch({ control, name: "memberSearchTerm" })
 
   const selectedMembershipTypeMap = useMemo(
     () => new Map((membershipTypesQuery.data ?? []).map((option) => [option.uniqueId, option] as const)),
@@ -122,6 +124,7 @@ export function AlertComposer() {
     return total + (selected?.memberCount ?? 0)
   }, 0)
   const memberFilterSummaryParts = [
+    memberSearchTerm.trim().length > 0 ? "name/email search" : null,
     selectedMembershipTypes.length > 0
       ? `${selectedMembershipTypes.length} membership type${selectedMembershipTypes.length === 1 ? "" : "s"}`
       : null,
@@ -193,6 +196,7 @@ export function AlertComposer() {
   async function handleSend(values: AlertFormValues) {
     const membershipTypeUniqueIds =
       values.targetMode === "membership-types" ? values.membershipTypeUniqueIds : []
+    const memberSearchTerm = values.targetMode === "membership-types" ? values.memberSearchTerm.trim() : ""
     const membershipStatuses = values.targetMode === "membership-types" ? values.membershipStatuses : []
     const customListUniqueIds =
       values.targetMode === "custom-lists" ? values.customListUniqueIds : []
@@ -207,6 +211,7 @@ export function AlertComposer() {
           ? new Date(values.scheduledAtUtc).toISOString()
           : null,
       recipientUniqueIds: [],
+      memberSearchTerm,
       membershipTypeUniqueIds,
       membershipStatuses,
       customListUniqueIds,
@@ -458,6 +463,27 @@ export function AlertComposer() {
 
                 <Tabs.Content value="membership-types">
                   <Stack gap={4}>
+                    <Field.Root
+                      invalid={Boolean(
+                        errors.memberSearchTerm || errors.membershipTypeUniqueIds || errors.membershipStatuses,
+                      )}
+                    >
+                      <Field.Label fontWeight="700">Search by name or email</Field.Label>
+                      <Text fontSize="xs" color="text.secondary" mb={2}>
+                        Use this to target members by contact name or email address.
+                      </Text>
+                      <Input
+                        {...register("memberSearchTerm")}
+                        minH="11"
+                        borderRadius="14px"
+                        px={4}
+                        placeholder="Search members by name or email"
+                      />
+                      {errors.memberSearchTerm ? (
+                        <Field.ErrorText>{errors.memberSearchTerm.message}</Field.ErrorText>
+                      ) : null}
+                    </Field.Root>
+
                     <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                       <Field.Root invalid={Boolean(errors.membershipTypeUniqueIds || errors.membershipStatuses)}>
                         <Field.Label fontWeight="700">Membership types</Field.Label>
