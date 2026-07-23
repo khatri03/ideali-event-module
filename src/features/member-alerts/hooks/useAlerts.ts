@@ -3,7 +3,9 @@ import {
   fetchAlert,
   fetchAlertRecipients,
   fetchAlerts,
+  fetchCustomListOptions,
   fetchInbox,
+  fetchMembershipTypeOptions,
   fetchUnreadCount,
   type AlertFilters,
 } from "@/api/alerts"
@@ -53,5 +55,19 @@ export function useUnreadCount() {
   return useQuery({
     queryKey: [...ALERT_INBOX_QUERY_KEY, "unread-count"],
     queryFn: fetchUnreadCount,
+  })
+}
+
+export function useAlertMembershipTypeOptions() {
+  return useQuery({
+    queryKey: [...ALERT_QUERY_KEY, "membership-type-options"],
+    queryFn: fetchMembershipTypeOptions,
+  })
+}
+
+export function useAlertCustomListOptions() {
+  return useQuery({
+    queryKey: [...ALERT_QUERY_KEY, "custom-list-options"],
+    queryFn: fetchCustomListOptions,
   })
 }

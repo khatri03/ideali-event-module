@@ -219,6 +219,12 @@ export interface Page<T> {
   totalPages: number
 }
 
+export interface AlertGroupOption {
+  uniqueId: string
+  name: string
+  memberCount: number
+}
+
 export interface CreateAlertPayload {
   title: string
   body: string
@@ -226,6 +232,8 @@ export interface CreateAlertPayload {
   channels: number
   scheduledAtUtc: string | null
   recipientUniqueIds: string[]
+  membershipTypeUniqueIds: string[]
+  customListUniqueIds: string[]
 }
 
 function readResponseData(payload: unknown): unknown {
@@ -398,6 +406,36 @@ export async function fetchAlertRecipientOptions(searchTerm: string): Promise<Al
       email: pick(option.Email, option.email, null),
     }))
     .filter((option) => option.uniqueId && option.name)
+}
+
+const groupOptionSchema = z.object({
+  UniqueId: dual(z.string()),
+  uniqueId: dual(z.string()),
+  Name: dual(z.string()),
+  name: dual(z.string()),
+  MemberCount: dual(z.number().int()),
+  memberCount: dual(z.number().int()),
+})
+
+function normalizeGroupOptions(payload: unknown): AlertGroupOption[] {
+  const parsed = z.array(groupOptionSchema).parse(parseServicePayload(payload))
+  return parsed
+    .map((option) => ({
+      uniqueId: pick(option.UniqueId, option.uniqueId, ""),
+      name: pick(option.Name, option.name, ""),
+      memberCount: pick(option.MemberCount, option.memberCount, 0),
+    }))
+    .filter((option) => option.uniqueId && option.name)
+}
+
+export async function fetchMembershipTypeOptions(): Promise<AlertGroupOption[]> {
+  const response = await client.get<unknown>(API_ROUTES.memberAlertMembershipTypeOptions)
+  return normalizeGroupOptions(response.data)
+}
+
+export async function fetchCustomListOptions(): Promise<AlertGroupOption[]> {
+  const response = await client.get<unknown>(API_ROUTES.memberAlertCustomListOptions)
+  return normalizeGroupOptions(response.data)
 }
 
 export async function createAlert(payload: CreateAlertPayload): Promise<string> {

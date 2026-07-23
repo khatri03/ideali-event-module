@@ -230,6 +230,8 @@ export const API_ROUTES = {
   memberAlertDetail: (uniqueId: string) => `/api/organizer/membership/alert/${uniqueId}`,
   memberAlertRecipients: (uniqueId: string) => `/api/organizer/membership/alert/${uniqueId}/recipients`,
   memberAlertRecipientOptions: "/api/organizer/membership/alert/recipient-options",
+  memberAlertMembershipTypeOptions: "/api/organizer/membership/alert/membership-type-options",
+  memberAlertCustomListOptions: "/api/organizer/membership/alert/custom-list-options",
   memberAlertCreate: "/api/organizer/membership/alert",
   memberAlertResend: (uniqueId: string) => `/api/organizer/membership/alert/${uniqueId}/resend`,
   memberAlertDelete: (uniqueId: string) => `/api/organizer/membership/alert/${uniqueId}`,
