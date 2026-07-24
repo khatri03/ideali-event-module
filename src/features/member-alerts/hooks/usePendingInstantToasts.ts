@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react"
 import { claimPendingInstantToasts } from "@/api/alerts"
-import { auth } from "@/lib/auth"
 import { toaster } from "@/lib/toaster"
 
 /**
@@ -8,12 +7,15 @@ import { toaster } from "@/lib/toaster"
  * dedupes via InstantDeliveredAtUtc, so the claim is exactly-once across reloads and devices — a member
  * who was online at send time gets the live toast instead and has nothing pending here. Mounted once,
  * high in the tree, alongside {@link useAlertRealtime}. Best-effort: a failure never blocks the app.
+ *
+ * `enabled` must track auth readiness reactively: the session resolves after mount on a hard refresh, so a
+ * one-shot check would run before the user exists and never claim. Gating on the flag runs it once ready.
  */
-export function usePendingInstantToasts() {
+export function usePendingInstantToasts(enabled: boolean) {
   const claimedRef = useRef(false)
 
   useEffect(() => {
-    if (claimedRef.current || !auth.isAuthenticated()) {
+    if (claimedRef.current || !enabled) {
       return
     }
     claimedRef.current = true
@@ -34,5 +36,5 @@ export function usePendingInstantToasts() {
         // Allow a later mount to retry; the server call is idempotent, so a retry cannot double-toast.
         claimedRef.current = false
       })
-  }, [])
+  }, [enabled])
 }

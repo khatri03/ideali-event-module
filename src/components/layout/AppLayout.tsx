@@ -41,10 +41,13 @@ export function AppLayout() {
   const sessionQuery = useAuthSession()
   const currentUser = auth.getUser() ?? (sessionQuery.data ? sessionDataToUser(sessionQuery.data) : null)
 
+  // Reactive so the hub connects and the catch-up claim runs the moment the async session resolves —
+  // not just when auth already happens to be set at mount (e.g. a hard refresh).
+  const isAuthenticated = Boolean(currentUser)
   // Opens the alert hub once the user is signed in; no-op until then.
-  useAlertRealtime()
+  useAlertRealtime(isAuthenticated)
   // Catches up on instant alerts missed while offline with one summary toast.
-  usePendingInstantToasts()
+  usePendingInstantToasts(isAuthenticated)
 
   if (sessionQuery.isLoading && !currentUser) {
     return <AppLayoutSkeleton />
