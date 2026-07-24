@@ -6,6 +6,7 @@ import type { AlertPriority, InboxAlert } from "@/api/alerts"
 import { useInbox, useUnseenCount } from "../hooks/useAlerts"
 import { useMarkAlertRead, useMarkAllSeen } from "../hooks/useAlertMutations"
 import { PRIORITY_COLOR, formatDateTime } from "../constants"
+import { PriorityPill } from "./PriorityPill"
 
 const FEED_SIZE = 10
 
@@ -33,10 +34,11 @@ export function NotificationBell() {
   }
 
   function handleItemClick(alert: InboxAlert) {
+    // Optimistically clear bold; the detail view also marks it read on open.
     if (!alert.isRead) {
       markRead.mutate(alert.uniqueId)
     }
-    navigate(APP_ROUTES.alertInbox)
+    navigate(APP_ROUTES.alertInboxDetail(alert.uniqueId))
   }
 
   return (
@@ -133,6 +135,12 @@ export function NotificationBell() {
                       onClick={() => handleItemClick(alert)}
                     >
                       <Flex direction="column" gap={1} flex={1} minW={0}>
+                        <Flex align="center" justify="space-between" gap={2}>
+                          <Text fontSize="xs" color="text.secondary">
+                            {formatDateTime(alert.sentAtUtc)}
+                          </Text>
+                          <PriorityPill priority={alert.priority} />
+                        </Flex>
                         <Flex align="center" gap={2} minW={0}>
                           {!alert.isRead && <Box w="8px" h="8px" borderRadius="full" bg="brand.500" flexShrink={0} />}
                           <Text
@@ -145,13 +153,7 @@ export function NotificationBell() {
                           >
                             {alert.title}
                           </Text>
-                          <Badge colorPalette={PRIORITY_COLOR[alert.priority]} borderRadius="full" fontSize="9px" flexShrink={0}>
-                            {alert.priority}
-                          </Badge>
                         </Flex>
-                        <Text fontSize="xs" color="text.secondary">
-                          {formatDateTime(alert.sentAtUtc)}
-                        </Text>
                       </Flex>
                     </Menu.Item>
                   )

@@ -18,6 +18,7 @@ import {
   MemberAlertComposePage,
   MemberAlertDetailPage,
   MemberAlertsPage,
+  MemberNotificationDetailPage,
 } from "./features/member-alerts"
 import { SeatingLayoutDesignerPage, SeatingLayoutsPage } from "./features/seating-layouts"
 import {
@@ -136,6 +137,7 @@ export default function App() {
           <Route path={APP_ROUTES.memberAlerts.create} element={<MemberAlertComposePage />} />
           <Route path={APP_ROUTES.memberAlerts.detailRoute} element={<MemberAlertDetailPage />} />
           <Route path={APP_ROUTES.alertInbox} element={<AlertInboxPage />} />
+          <Route path={APP_ROUTES.alertInboxDetailRoute} element={<MemberNotificationDetailPage />} />
           <Route path={APP_ROUTES.team} element={<Settings />} />
           <Route path={APP_ROUTES.analytics} element={<Settings />} />
           <Route path={APP_ROUTES.help} element={<Settings />} />
