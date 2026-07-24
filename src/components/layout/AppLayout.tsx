@@ -55,7 +55,7 @@ export function AppLayout() {
   return (
     <Flex minH="100dvh" overflow="hidden" bg="app.bg">
       <Box display={{ base: "none", lg: "block" }}>
-        <Sidebar />
+        <Sidebar currentUser={currentUser} />
       </Box>
       <Flex flex={1} direction="column" overflow="hidden" minW={0}>
         <TopBar onOpenMobileNav={() => setIsMobileNavOpen(true)} />
@@ -74,7 +74,7 @@ export function AppLayout() {
           <Drawer.Backdrop />
           <Drawer.Positioner>
             <Drawer.Content p={0} border="none" bg="transparent" maxW="full">
-              <Sidebar variant="mobile" onNavigate={() => setIsMobileNavOpen(false)} />
+              <Sidebar currentUser={currentUser} variant="mobile" onNavigate={() => setIsMobileNavOpen(false)} />
             </Drawer.Content>
           </Drawer.Positioner>
         </Portal>

@@ -4,6 +4,9 @@ export const APP_ROUTES = {
   events: "/events",
   calendar: "/calendar",
   settings: "/organizer/payment-processor-fee/list",
+  member: {
+    dashboard: "/member/dashboard",
+  },
   chargeRules: {
     list: "/organizer/charge-rule/list",
   },
