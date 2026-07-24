@@ -30,6 +30,7 @@ interface NavItem {
   label: string
   icon: ReactNode
   path: string
+  roles: string[]
   /** Base path used for the active check when the section has child routes (create/edit). Defaults to `path`. */
   matchPath?: string
   badge?: string
@@ -42,34 +43,58 @@ interface SidebarProps {
 }
 
 const mainNav: NavItem[] = [
-  { label: "Dashboard", icon: <LayoutDashboard size={17} />, path: APP_ROUTES.dashboard },
-  { label: "Events", icon: <Zap size={17} />, path: APP_ROUTES.events, badge: "12" },
-  { label: "Sessions", icon: <CalendarRange size={17} />, path: APP_ROUTES.sessionWizard.list },
+  {
+    label: "Dashboard",
+    icon: <LayoutDashboard size={17} />,
+    path: APP_ROUTES.dashboard,
+    roles: ["Organizer", "Admin"],
+  },
+  { label: "Events", icon: <Zap size={17} />, path: APP_ROUTES.events, badge: "12", roles: ["Organizer", "Admin"] },
+  { label: "Sessions", icon: <CalendarRange size={17} />, path: APP_ROUTES.sessionWizard.list, roles: ["Organizer", "Admin"] },
 ]
 
 const managementNav: NavItem[] = [
-  { label: "Seating Layouts", icon: <LayoutGrid size={17} />, path: APP_ROUTES.seatingLayouts.list },
-  { label: "Venues", icon: <MapPin size={17} />, path: APP_ROUTES.venues.list },
+  { label: "Seating Layouts", icon: <LayoutGrid size={17} />, path: APP_ROUTES.seatingLayouts.list, roles: ["Organizer", "Admin"] },
+  { label: "Venues", icon: <MapPin size={17} />, path: APP_ROUTES.venues.list, roles: ["Organizer", "Admin"] },
   {
     label: "Custom Lists",
     icon: <ListChecks size={17} />,
     path: APP_ROUTES.customLists.list,
     matchPath: APP_ROUTES.customLists.base,
+    roles: ["Organizer", "Admin"],
   },
   {
     label: "Member Alerts",
     icon: <Megaphone size={17} />,
     path: APP_ROUTES.memberAlerts.list,
     matchPath: APP_ROUTES.memberAlerts.base,
+    roles: ["Organizer", "Admin"],
   },
 ]
 
-function NavSection({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => void }) {
+function hasAnyRole(roles: string[], allowedRoles: string[]) {
+  return allowedRoles.some((allowedRole) => roles.some((role) => role.toLowerCase() === allowedRole.toLowerCase()))
+}
+
+function NavSection({
+  items,
+  currentRoles,
+  onNavigate,
+}: {
+  items: NavItem[]
+  currentRoles: string[]
+  onNavigate?: () => void
+}) {
   const { pathname } = useLocation()
+  const visibleItems = items.filter((item) => hasAnyRole(currentRoles, item.roles))
+
+  if (visibleItems.length === 0) {
+    return null
+  }
 
   return (
     <VStack gap={0.5} align="stretch" mb={6}>
-      {items.map((item) => {
+      {visibleItems.map((item) => {
         const matchPath = item.matchPath ?? item.path
         const isActive = pathname === matchPath || pathname.startsWith(`${matchPath}/`)
         return (
@@ -139,12 +164,18 @@ function SettingsSection({
   pathname,
   onToggle,
   onNavigate,
+  isVisible,
 }: {
   isOpen: boolean
   pathname: string
   onToggle: () => void
   onNavigate?: () => void
+  isVisible: boolean
 }) {
+  if (!isVisible) {
+    return null
+  }
+
   const isSettingsActive = pathname === APP_ROUTES.settings
   const isChargeRulesActive = pathname === APP_ROUTES.chargeRules.list
 
@@ -266,12 +297,18 @@ function AdminSection({
   pathname,
   onToggle,
   onNavigate,
+  isVisible,
 }: {
   isOpen: boolean
   pathname: string
   onToggle: () => void
   onNavigate?: () => void
+  isVisible: boolean
 }) {
+  if (!isVisible) {
+    return null
+  }
+
   return (
     <Box mb={6}>
       <Flex
@@ -355,12 +392,18 @@ function MemberSection({
   pathname,
   onToggle,
   onNavigate,
+  isVisible,
 }: {
   isOpen: boolean
   pathname: string
   onToggle: () => void
   onNavigate?: () => void
+  isVisible: boolean
 }) {
+  if (!isVisible) {
+    return null
+  }
+
   const isDashboardActive =
     pathname === APP_ROUTES.member.dashboard || pathname.startsWith(`${APP_ROUTES.member.dashboard}/`)
 
@@ -449,8 +492,9 @@ export function Sidebar({ currentUser, variant = "desktop", onNavigate }: Sideba
   const [isSettingsManualOpen, setIsSettingsManualOpen] = useState(false)
   const [isAdminManualOpen, setIsAdminManualOpen] = useState(false)
   const [isMemberManualOpen, setIsMemberManualOpen] = useState(false)
-  const isAdmin = currentUser.roles.some((role) => role.toLowerCase() === "admin")
-  const isMember = currentUser.roles.some((role) => role.toLowerCase() === "member")
+  const hasOrganizerAccess = hasAnyRole(currentUser.roles, ["Organizer", "Admin"])
+  const isAdmin = hasAnyRole(currentUser.roles, ["Admin"])
+  const isMember = hasAnyRole(currentUser.roles, ["Member"])
   const isSettingsRouteActive = pathname === APP_ROUTES.settings
   const isChargeRulesRouteActive = pathname === APP_ROUTES.chargeRules.list
   const isSettingsOpen = isSettingsManualOpen || isSettingsRouteActive || isChargeRulesRouteActive
@@ -536,13 +580,14 @@ export function Sidebar({ currentUser, variant = "desktop", onNavigate }: Sideba
 
       {/* Nav */}
       <Box flex={1} px={2} position="relative" zIndex={1}>
-        <NavSection items={mainNav} onNavigate={onNavigate} />
-        <NavSection items={managementNav} onNavigate={onNavigate} />
+        <NavSection items={mainNav} currentRoles={currentUser.roles} onNavigate={onNavigate} />
+        <NavSection items={managementNav} currentRoles={currentUser.roles} onNavigate={onNavigate} />
         <SettingsSection
           pathname={pathname}
           isOpen={isSettingsOpen}
           onToggle={() => setIsSettingsManualOpen((current) => !current)}
           onNavigate={onNavigate}
+          isVisible={hasOrganizerAccess}
         />
         {isAdmin ? (
           <AdminSection
@@ -550,6 +595,7 @@ export function Sidebar({ currentUser, variant = "desktop", onNavigate }: Sideba
             isOpen={isAdminOpen}
             onToggle={() => setIsAdminManualOpen((current) => !current)}
             onNavigate={onNavigate}
+            isVisible={isAdmin}
           />
         ) : null}
         {isMember ? (
@@ -558,6 +604,7 @@ export function Sidebar({ currentUser, variant = "desktop", onNavigate }: Sideba
             isOpen={isMemberOpen}
             onToggle={() => setIsMemberManualOpen((current) => !current)}
             onNavigate={onNavigate}
+            isVisible={isMember}
           />
         ) : null}
       </Box>
