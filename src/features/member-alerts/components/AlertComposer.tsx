@@ -31,6 +31,7 @@ import { PRIORITY_OPTIONS } from "../constants"
 import { AlertMessageEditor } from "./AlertMessageEditor"
 import { AlertAudiencePreview } from "./AlertAudiencePreview"
 import { AlertCustomListsPreview } from "./AlertCustomListsPreview"
+import { ConfirmAlertDialog } from "./ConfirmAlertDialog"
 
 type AudienceTab = "members" | "custom-lists"
 
@@ -55,6 +56,8 @@ export function AlertComposer() {
       membershipStatuses: [],
       customListUniqueIds: [],
     })
+  // Holds the validated form values while the send/schedule confirmation dialog is open.
+  const [pendingValues, setPendingValues] = useState<AlertFormValues | null>(null)
 
   const {
     register,
@@ -114,6 +117,22 @@ export function AlertComposer() {
   const selectedMembershipStatus =
     membershipStatusOptions.find((option) => option.value === selectedMembershipStatusValue) ?? null
 
+  // Submit only validates and opens the confirmation dialog; the actual send happens on confirm.
+  function handleRequestSend(values: AlertFormValues) {
+    setPendingValues(values)
+  }
+
+  async function handleConfirmSend() {
+    if (!pendingValues) {
+      return
+    }
+    try {
+      await handleSend(pendingValues)
+    } catch {
+      // The failure is surfaced by the mutation's toast; keep the dialog open to retry or cancel.
+    }
+  }
+
   async function handleSend(values: AlertFormValues) {
     await createMutation.mutateAsync({
       title: values.title.trim(),
@@ -169,7 +188,7 @@ export function AlertComposer() {
 
       <Box
         as="form"
-        onSubmit={handleSubmit(handleSend)}
+        onSubmit={handleSubmit(handleRequestSend)}
         borderRadius="20px"
         border="1px solid"
         borderColor="border.subtle"
@@ -606,6 +625,26 @@ export function AlertComposer() {
           </Flex>
         </Stack>
       </Box>
+
+      {pendingValues ? (
+        <ConfirmAlertDialog
+          title={pendingValues.scheduleForLater ? "Schedule this alert?" : "Send this alert?"}
+          message={
+            pendingValues.scheduleForLater
+              ? "The alert will be queued and delivered to the selected audience at the scheduled time."
+              : "The alert will be delivered to the selected audience right away. This can't be undone."
+          }
+          confirmLabel={pendingValues.scheduleForLater ? "Schedule alert" : "Send alert"}
+          tone="brand"
+          isLoading={createMutation.isPending}
+          onConfirm={handleConfirmSend}
+          onClose={() => {
+            if (!createMutation.isPending) {
+              setPendingValues(null)
+            }
+          }}
+        />
+      ) : null}
     </Stack>
   )
 }
