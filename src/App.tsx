@@ -12,6 +12,7 @@ import { AdminFeePlansPage } from "./features/admin-fee-plans"
 import { ChargeRulesPage } from "./features/charge-rules"
 import { VenueManagementPage } from "./features/venues"
 import { CustomListCreatePage, CustomListEditPage, CustomListsPage } from "./features/custom-lists"
+import { MemberDashboardPage } from "./features/member-dashboard"
 import {
   AlertInboxPage,
   MemberAlertComposePage,
@@ -112,6 +113,10 @@ export default function App() {
           <Route path={APP_ROUTES.sessionWizard.slugs.review} element={<SessionWizardStepPage />} />
         </Route>
         <Route path={APP_ROUTES.eventRegisterRoute} element={<EventRegisterPage />} />
+
+        <Route path={APP_ROUTES.member.dashboard} element={<AppLayout />}>
+          <Route index element={<MemberDashboardPage />} />
+        </Route>
 
         {/* App */}
         <Route element={<AppLayout />}>
