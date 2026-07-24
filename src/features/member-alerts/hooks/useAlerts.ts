@@ -9,6 +9,7 @@ import {
   fetchInbox,
   fetchMembershipTypeOptions,
   fetchUnreadCount,
+  fetchUnseenCount,
   type AlertFilters,
   type AlertCustomListPreviewFilters,
   type AlertMemberPreviewFilters,
@@ -103,6 +104,21 @@ export function useUnreadCount() {
   return useQuery({
     queryKey: [...ALERT_INBOX_QUERY_KEY, "unread-count"],
     queryFn: fetchUnreadCount,
+  })
+}
+
+export const ALERT_UNSEEN_COUNT_QUERY_KEY = [...ALERT_INBOX_QUERY_KEY, "unseen-count"] as const
+
+/**
+ * Bell badge count. Polls so it stays correct without a SignalR backplane: a member on another instance,
+ * or one whose live push was missed, still converges within the interval. Refetches on window focus too.
+ */
+export function useUnseenCount() {
+  return useQuery({
+    queryKey: ALERT_UNSEEN_COUNT_QUERY_KEY,
+    queryFn: fetchUnseenCount,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   })
 }
 

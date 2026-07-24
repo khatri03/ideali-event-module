@@ -6,7 +6,7 @@ import { TopBar } from "./TopBar"
 import { useAuthSession } from "@/hooks/useAuthSession"
 import { auth, sessionDataToUser } from "@/lib/auth"
 import { APP_ROUTES } from "@/utils/routes"
-import { useAlertRealtime } from "@/features/member-alerts"
+import { useAlertRealtime, usePendingInstantToasts } from "@/features/member-alerts"
 
 function AppLayoutSkeleton() {
   return (
@@ -43,6 +43,8 @@ export function AppLayout() {
 
   // Opens the alert hub once the user is signed in; no-op until then.
   useAlertRealtime()
+  // Catches up on instant alerts missed while offline with one summary toast.
+  usePendingInstantToasts()
 
   if (sessionQuery.isLoading && !currentUser) {
     return <AppLayoutSkeleton />

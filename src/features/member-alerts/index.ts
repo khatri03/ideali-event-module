@@ -3,4 +3,6 @@ export { default as MemberAlertComposePage } from "./pages/MemberAlertComposePag
 export { default as MemberAlertDetailPage } from "./pages/MemberAlertDetailPage"
 export { default as AlertInboxPage } from "./pages/AlertInboxPage"
 export { useAlertRealtime } from "./hooks/useAlertRealtime"
-export { useAlertMemberPreview, useUnreadCount } from "./hooks/useAlerts"
+export { usePendingInstantToasts } from "./hooks/usePendingInstantToasts"
+export { useAlertMemberPreview, useUnreadCount, useUnseenCount } from "./hooks/useAlerts"
+export { NotificationBell } from "./components/NotificationBell"

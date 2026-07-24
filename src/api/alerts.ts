@@ -30,6 +30,8 @@ export type AlertSortBy = "title" | "status" | "priority" | "recipientCount" | "
 export type AlertSortOrder = "asc" | "desc"
 
 const dual = <T extends z.ZodTypeAny>(schema: T) => schema.optional()
+const integer = () => z.coerce.number().int()
+const channelValueSchema = z.union([z.number(), z.string()])
 
 const alertSchema = z.object({
   UniqueId: dual(z.string()),
@@ -38,20 +40,20 @@ const alertSchema = z.object({
   title: dual(z.string()),
   Priority: dual(z.string()),
   priority: dual(z.string()),
-  Channels: dual(z.number().int()),
-  channels: dual(z.number().int()),
+  Channels: dual(channelValueSchema),
+  channels: dual(channelValueSchema),
   Status: dual(z.string()),
   status: dual(z.string()),
   ScheduledAtUtc: dual(z.string().nullable()),
   scheduledAtUtc: dual(z.string().nullable()),
   SentAtUtc: dual(z.string().nullable()),
   sentAtUtc: dual(z.string().nullable()),
-  RecipientCount: dual(z.number().int()),
-  recipientCount: dual(z.number().int()),
-  ReadCount: dual(z.number().int()),
-  readCount: dual(z.number().int()),
-  FailedCount: dual(z.number().int()),
-  failedCount: dual(z.number().int()),
+  RecipientCount: dual(integer()),
+  recipientCount: dual(integer()),
+  ReadCount: dual(integer()),
+  readCount: dual(integer()),
+  FailedCount: dual(integer()),
+  failedCount: dual(integer()),
   CreatedBy: dual(z.string()),
   createdBy: dual(z.string()),
   CreatedOnUtc: dual(z.string()),
@@ -62,14 +64,14 @@ const alertSchema = z.object({
 
 const pageSchema = <T extends z.ZodTypeAny>(item: T) =>
   z.object({
-    PageNo: dual(z.number().int()),
-    pageNo: dual(z.number().int()),
-    PageSize: dual(z.number().int()),
-    pageSize: dual(z.number().int()),
-    PageCount: dual(z.number().int()),
-    pageCount: dual(z.number().int()),
-    TotalRecordsCount: dual(z.number().int()),
-    totalRecordsCount: dual(z.number().int()),
+    PageNo: dual(integer()),
+    pageNo: dual(integer()),
+    PageSize: dual(integer()),
+    pageSize: dual(integer()),
+    PageCount: dual(integer()),
+    pageCount: dual(integer()),
+    TotalRecordsCount: dual(integer()),
+    totalRecordsCount: dual(integer()),
     PageData: z.array(item).optional(),
     pageData: z.array(item).optional(),
   })
@@ -93,8 +95,8 @@ const emailEventSchema = z.object({
 const deliverySchema = z.object({
   Channel: dual(z.string()),
   channel: dual(z.string()),
-  AttemptNo: dual(z.number().int()),
-  attemptNo: dual(z.number().int()),
+  AttemptNo: dual(integer()),
+  attemptNo: dual(integer()),
   Status: dual(z.string()),
   status: dual(z.string()),
   ToEmail: dual(z.string().nullable()),
@@ -133,6 +135,10 @@ const inboxSchema = z.object({
   body: dual(z.string()),
   Priority: dual(z.string()),
   priority: dual(z.string()),
+  IsSeen: dual(z.boolean()),
+  isSeen: dual(z.boolean()),
+  SeenAtUtc: dual(z.string().nullable()),
+  seenAtUtc: dual(z.string().nullable()),
   IsRead: dual(z.boolean()),
   isRead: dual(z.boolean()),
   ReadAtUtc: dual(z.string().nullable()),
@@ -228,6 +234,8 @@ export interface InboxAlert {
   title: string
   body: string
   priority: AlertPriority
+  isSeen: boolean
+  seenAtUtc: string | null
   isRead: boolean
   readAtUtc: string | null
   sentAtUtc: string | null
@@ -325,12 +333,33 @@ function pick<T>(upper: T | undefined, lower: T | undefined, fallback: T): T {
   return upper ?? lower ?? fallback
 }
 
+function normalizeChannelMask(value: number | string | undefined): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    if (trimmed === "Instant") {
+      return 1
+    }
+    if (trimmed === "Email") {
+      return 2
+    }
+
+    const parsed = Number(trimmed)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
+  return 0
+}
+
 function normalizeAlert(item: z.infer<typeof alertSchema>): AlertListItem {
   return {
     uniqueId: pick(item.UniqueId, item.uniqueId, ""),
     title: pick(item.Title, item.title, ""),
     priority: pick(item.Priority, item.priority, "Normal") as AlertPriority,
-    channels: pick(item.Channels, item.channels, 0),
+    channels: normalizeChannelMask(pick(item.Channels, item.channels, 0)),
     status: pick(item.Status, item.status, "Draft") as AlertStatus,
     scheduledAtUtc: pick(item.ScheduledAtUtc, item.scheduledAtUtc, null),
     sentAtUtc: pick(item.SentAtUtc, item.sentAtUtc, null),
@@ -348,6 +377,8 @@ function normalizeInbox(item: z.infer<typeof inboxSchema>): InboxAlert {
     title: pick(item.Title, item.title, ""),
     body: pick(item.Body, item.body, ""),
     priority: pick(item.Priority, item.priority, "Normal") as AlertPriority,
+    isSeen: pick(item.IsSeen, item.isSeen, false),
+    seenAtUtc: pick(item.SeenAtUtc, item.seenAtUtc, null),
     isRead: pick(item.IsRead, item.isRead, false),
     readAtUtc: pick(item.ReadAtUtc, item.readAtUtc, null),
     sentAtUtc: pick(item.SentAtUtc, item.sentAtUtc, null),
@@ -473,8 +504,8 @@ const groupOptionSchema = z.object({
   uniqueId: dual(z.string()),
   Name: dual(z.string()),
   name: dual(z.string()),
-  MemberCount: dual(z.number().int()),
-  memberCount: dual(z.number().int()),
+  MemberCount: dual(integer()),
+  memberCount: dual(integer()),
 })
 
 function normalizeGroupOptions(payload: unknown): AlertGroupOption[] {
@@ -591,6 +622,31 @@ export async function fetchInbox(
 
 export async function fetchUnreadCount(): Promise<number> {
   const response = await client.get<unknown>(API_ROUTES.alertInboxUnreadCount)
+  const data = parseServicePayload(response.data)
+  return typeof data === "number" ? data : 0
+}
+
+/** Unseen alerts for the caller — the bell badge count. Cleared in bulk by {@link markAllSeen}. */
+export async function fetchUnseenCount(): Promise<number> {
+  const response = await client.get<unknown>(API_ROUTES.alertInboxUnseenCount)
+  const data = parseServicePayload(response.data)
+  return typeof data === "number" ? data : 0
+}
+
+/** Marks every unseen alert seen (opening the bell). Returns how many changed. Leaves per-item read state alone. */
+export async function markAllSeen(): Promise<number> {
+  const response = await client.post<unknown>(API_ROUTES.alertInboxMarkAllSeen)
+  const data = parseServicePayload(response.data)
+  return typeof data === "number" ? data : 0
+}
+
+/**
+ * Claims instant alerts that arrived while the caller was offline and returns how many there were. The
+ * server stamps them delivered in the same call, so this is safe to call on every load — a second call
+ * returns 0. The count feeds a single catch-up toast.
+ */
+export async function claimPendingInstantToasts(): Promise<number> {
+  const response = await client.post<unknown>(API_ROUTES.alertInboxClaimInstantToasts)
   const data = parseServicePayload(response.data)
   return typeof data === "number" ? data : 0
 }

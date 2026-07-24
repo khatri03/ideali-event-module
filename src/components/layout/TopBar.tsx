@@ -1,5 +1,5 @@
-import { Box, Flex, Text, Input, InputGroup, IconButton, Badge, Menu, Portal } from "@chakra-ui/react"
-import { Menu as MenuIcon, Search, Bell, Settings, LogOut, User } from "lucide-react"
+import { Box, Flex, Text, Input, InputGroup, IconButton, Menu, Portal } from "@chakra-ui/react"
+import { Menu as MenuIcon, Search, Settings, LogOut, User } from "lucide-react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { ColorModeToggle } from "../common/ColorModeToggle"
 import { auth } from "@/lib/auth"
@@ -7,6 +7,7 @@ import { logoutUser } from "@/api/auth"
 import { queryClient } from "@/lib/queryClient"
 import { mockUser } from "../../data/mock"
 import { APP_ROUTES } from "@/utils/routes"
+import { NotificationBell } from "@/features/member-alerts"
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   [APP_ROUTES.dashboard]: { title: "Dashboard", subtitle: "Welcome back!" },
@@ -108,31 +109,7 @@ export function TopBar({ onOpenMobileNav }: TopBarProps) {
         </InputGroup>
 
         {/* Notifications */}
-        <Box position="relative">
-          <IconButton
-            aria-label="Notifications"
-            variant="ghost"
-            size="sm"
-            borderRadius="12px"
-            color="gray.500"
-            display={{ base: "none", md: "inline-flex" }}
-            _hover={{ bg: "gray.100", _dark: { bg: "navy.700" }, color: "brand.500" }}
-          >
-            <Bell size={18} />
-          </IconButton>
-          <Badge
-            position="absolute"
-            top="4px"
-            right="4px"
-            w="8px"
-            h="8px"
-            p={0}
-            borderRadius="full"
-            bg="red.500"
-            border="2px solid"
-            borderColor="topbar.bg"
-          />
-        </Box>
+        <NotificationBell />
 
         {/* Settings */}
         <IconButton
