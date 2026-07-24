@@ -1,5 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { createAlert, deleteAlert, markAlertRead, resendAlert, type CreateAlertPayload } from "@/api/alerts"
+import {
+  createAlert,
+  deleteAlert,
+  markAlertRead,
+  markAllSeen,
+  resendAlert,
+  type CreateAlertPayload,
+} from "@/api/alerts"
 import { extractApiError } from "@/utils/errors"
 import { toaster } from "@/lib/toaster"
 import { ALERT_INBOX_QUERY_KEY, ALERT_QUERY_KEY } from "./useAlerts"
@@ -63,6 +70,21 @@ export function useMarkAlertRead() {
 
   return useMutation({
     mutationFn: (recipientUniqueId: string) => markAlertRead(recipientUniqueId),
+    onError: (error) => {
+      toaster.create({ type: "error", title: extractApiError(error) })
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ALERT_INBOX_QUERY_KEY })
+    },
+  })
+}
+
+/** Opening the bell marks everything seen — clears the badge but leaves items bold until individually opened. */
+export function useMarkAllSeen() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => markAllSeen(),
     onError: (error) => {
       toaster.create({ type: "error", title: extractApiError(error) })
     },

@@ -244,6 +244,9 @@ export const API_ROUTES = {
 
   alertInbox: "/api/alert-inbox/list",
   alertInboxUnreadCount: "/api/alert-inbox/unread-count",
+  alertInboxUnseenCount: "/api/alert-inbox/unseen-count",
+  alertInboxMarkAllSeen: "/api/alert-inbox/seen",
+  alertInboxClaimInstantToasts: "/api/alert-inbox/instant-toasts/claim",
   alertInboxMarkRead: (recipientUniqueId: string) => `/api/alert-inbox/${recipientUniqueId}/read`,
 } as const
 
