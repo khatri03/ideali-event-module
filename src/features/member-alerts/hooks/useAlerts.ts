@@ -7,6 +7,7 @@ import {
   fetchAlertRecipients,
   fetchAlerts,
   fetchInbox,
+  fetchInboxItem,
   fetchMembershipTypeOptions,
   fetchUnreadCount,
   fetchUnseenCount,
@@ -89,6 +90,14 @@ export function useAlertCustomListPreview(
     queryFn: () => fetchAlertCustomListPreview(filters, page, pageSize),
     enabled,
     placeholderData: keepPreviousData,
+  })
+}
+
+export function useInboxItem(recipientUniqueId: string) {
+  return useQuery({
+    queryKey: [...ALERT_INBOX_QUERY_KEY, "item", recipientUniqueId],
+    queryFn: () => fetchInboxItem(recipientUniqueId),
+    enabled: Boolean(recipientUniqueId),
   })
 }
 

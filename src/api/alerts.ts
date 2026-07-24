@@ -620,6 +620,13 @@ export async function fetchInbox(
   return toPage(parsed, normalizeInbox, pageNo, pageSize)
 }
 
+/** A single notification the caller received, for the focused detail view. Scoped server-side to the caller. */
+export async function fetchInboxItem(recipientUniqueId: string): Promise<InboxAlert> {
+  const response = await client.get<unknown>(API_ROUTES.alertInboxItem(recipientUniqueId))
+  const parsed = inboxSchema.parse(parseServicePayload(response.data))
+  return normalizeInbox(parsed)
+}
+
 export async function fetchUnreadCount(): Promise<number> {
   const response = await client.get<unknown>(API_ROUTES.alertInboxUnreadCount)
   const data = parseServicePayload(response.data)

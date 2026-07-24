@@ -104,6 +104,8 @@ export const APP_ROUTES = {
     detail: (uniqueId: string) => `/organizer/membership/alert/${uniqueId}`,
   },
   alertInbox: "/alerts",
+  alertInboxDetailRoute: "/alerts/:recipientUniqueId",
+  alertInboxDetail: (recipientUniqueId: string) => `/alerts/${recipientUniqueId}`,
 } as const
 
 export const API_ROUTES = {
@@ -243,6 +245,7 @@ export const API_ROUTES = {
   membershipTypeMembers: "/api/organizer/membership/type/members",
 
   alertInbox: "/api/alert-inbox/list",
+  alertInboxItem: (recipientUniqueId: string) => `/api/alert-inbox/${recipientUniqueId}`,
   alertInboxUnreadCount: "/api/alert-inbox/unread-count",
   alertInboxUnseenCount: "/api/alert-inbox/unseen-count",
   alertInboxMarkAllSeen: "/api/alert-inbox/seen",
