@@ -30,6 +30,7 @@ export function usePendingInstantToasts(enabled: boolean) {
           title: "New notifications",
           description:
             count === 1 ? "You have 1 new notification." : `You have ${count} new notifications.`,
+          meta: { onClick: "open-bell" },
         })
       })
       .catch(() => {
