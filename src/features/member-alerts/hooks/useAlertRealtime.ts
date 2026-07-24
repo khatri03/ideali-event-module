@@ -43,7 +43,12 @@ export function useAlertRealtime(enabled: boolean) {
       pendingCountRef.current = 0
       timerRef.current = null
       if (count > 0) {
-        toaster.create({ type: "info", title: "New notifications", description: summaryText(count) })
+        toaster.create({
+          type: "info",
+          title: "New notifications",
+          description: summaryText(count),
+          meta: { onClick: "open-bell" },
+        })
       }
     }
 

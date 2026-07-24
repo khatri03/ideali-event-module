@@ -39,17 +39,37 @@ interface AlertDetailViewProps {
   uniqueId: string
 }
 
-function deliverySummary(deliveries: AlertDelivery[]): string {
-  if (deliveries.length === 0) {
-    return "—"
+interface ChannelDelivery {
+  channel: string
+  status: string
+  attemptCount: number
+  opened: boolean
+  failureReason: string | null
+}
+
+/**
+ * Collapses the raw attempt log to one row per channel: a resend appends a fresh attempt, so a recipient
+ * can hold several "Instant: Sent" rows. We show the latest status plus an attempt count rather than a
+ * chip per attempt, which reads as an accidental duplicate.
+ */
+function collapseDeliveries(deliveries: AlertDelivery[]): ChannelDelivery[] {
+  const byChannel = new Map<string, AlertDelivery[]>()
+  for (const delivery of deliveries) {
+    const attempts = byChannel.get(delivery.channel) ?? []
+    attempts.push(delivery)
+    byChannel.set(delivery.channel, attempts)
   }
-  return deliveries
-    .map((delivery) => {
-      const opened = delivery.emailEvents.some((event) => event.eventType === "Opened")
-      const suffix = opened ? ", opened" : ""
-      return `${delivery.channel}: ${delivery.status}${suffix}`
-    })
-    .join(" · ")
+
+  return Array.from(byChannel.entries()).map(([channel, attempts]) => {
+    const latest = attempts.reduce((current, next) => (next.attemptNo > current.attemptNo ? next : current))
+    return {
+      channel,
+      status: latest.status,
+      attemptCount: attempts.length,
+      opened: attempts.some((attempt) => attempt.emailEvents.some((event) => event.eventType === "Opened")),
+      failureReason: latest.failureReason,
+    }
+  })
 }
 
 export function AlertDetailView({ uniqueId }: AlertDetailViewProps) {
@@ -211,17 +231,18 @@ export function AlertDetailView({ uniqueId }: AlertDetailViewProps) {
                       <Table.Cell px={4} py={3}>
                         <Flex gap={1} flexWrap="wrap">
                           {recipient.deliveries.length === 0 ? (
-                            <Text fontSize="sm" color="text.secondary">{deliverySummary(recipient.deliveries)}</Text>
+                            <Text fontSize="sm" color="text.secondary">—</Text>
                           ) : (
-                            recipient.deliveries.map((delivery) => (
+                            collapseDeliveries(recipient.deliveries).map((delivery) => (
                               <Badge
-                                key={`${delivery.channel}-${delivery.attemptNo}`}
+                                key={delivery.channel}
                                 colorPalette={DELIVERY_COLOR[delivery.status] ?? "gray"}
                                 variant="surface"
                                 title={delivery.failureReason ?? undefined}
                               >
                                 {delivery.channel}: {delivery.status}
-                                {delivery.emailEvents.some((event) => event.eventType === "Opened") ? " · opened" : ""}
+                                {delivery.attemptCount > 1 ? ` ×${delivery.attemptCount}` : ""}
+                                {delivery.opened ? " · opened" : ""}
                               </Badge>
                             ))
                           )}

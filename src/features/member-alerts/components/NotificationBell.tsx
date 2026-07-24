@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react"
 import { Badge, Box, Flex, IconButton, Menu, Portal, SkeletonText, Stack, Text } from "@chakra-ui/react"
 import { Bell, Inbox } from "lucide-react"
 import { useNavigate } from "react-router-dom"
@@ -6,6 +7,7 @@ import type { AlertPriority, InboxAlert } from "@/api/alerts"
 import { useInbox, useUnseenCount } from "../hooks/useAlerts"
 import { useMarkAlertRead, useMarkAllSeen } from "../hooks/useAlertMutations"
 import { PRIORITY_COLOR, formatDateTime } from "../constants"
+import { subscribeToNotificationBell } from "../notificationBellBus"
 import { PriorityPill } from "./PriorityPill"
 
 const FEED_SIZE = 10
@@ -21,17 +23,28 @@ export function NotificationBell() {
   const feedQuery = useInbox(false, 1, FEED_SIZE)
   const markAllSeen = useMarkAllSeen()
   const markRead = useMarkAlertRead()
+  const [open, setOpen] = useState(false)
 
   const unseenCount = unseenQuery.data ?? 0
   const alerts = feedQuery.data?.items ?? []
   const bellLabel = unseenCount > 0 ? `Notifications, ${unseenCount} unseen` : "Notifications"
 
-  function handleOpenChange(open: boolean) {
-    // Opening the bell acknowledges the badge in bulk; items stay bold until individually opened.
-    if (open && unseenCount > 0 && !markAllSeen.isPending) {
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen)
+    // Opening the bell (by click or from the toast) acknowledges the badge in bulk; items stay bold
+    // until individually opened.
+    if (nextOpen && unseenCount > 0 && !markAllSeen.isPending) {
       markAllSeen.mutate()
     }
   }
+
+  // The instant-alert toast opens the dropdown via the bus. A ref keeps the subscription stable while
+  // still calling the latest handler (fresh unseen count), so it never resubscribes or goes stale.
+  const openHandlerRef = useRef(handleOpenChange)
+  useEffect(() => {
+    openHandlerRef.current = handleOpenChange
+  })
+  useEffect(() => subscribeToNotificationBell(() => openHandlerRef.current(true)), [])
 
   function handleItemClick(alert: InboxAlert) {
     // Optimistically clear bold; the detail view also marks it read on open.
@@ -42,7 +55,11 @@ export function NotificationBell() {
   }
 
   return (
-    <Menu.Root positioning={{ placement: "bottom-end" }} onOpenChange={(event) => handleOpenChange(event.open)}>
+    <Menu.Root
+      open={open}
+      positioning={{ placement: "bottom-end" }}
+      onOpenChange={(event) => handleOpenChange(event.open)}
+    >
       <Menu.Trigger asChild>
         <Box position="relative" display="inline-flex">
           <IconButton
