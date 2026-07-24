@@ -22,15 +22,19 @@ function summaryText(count: number) {
  * {@link useUnseenCount} polls the badge and {@link usePendingInstantToasts} claims missed toasts on load,
  * so a member on another instance, or one whose connection dropped, still converges. Here we additionally
  * re-claim on reconnect and coalesce bursts into a single toast. Mounted once, high in the tree.
+ *
+ * `enabled` must track auth readiness reactively: the session loads asynchronously after a hard refresh,
+ * so gating on a one-shot `auth.isAuthenticated()` at mount would miss the moment it becomes true and the
+ * hub would never connect. Passing the flag as a dependency reconnects as soon as the user resolves.
  */
-export function useAlertRealtime() {
+export function useAlertRealtime(enabled: boolean) {
   const queryClient = useQueryClient()
   const connectionRef = useRef<HubConnection | null>(null)
   const pendingCountRef = useRef(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    if (!auth.isAuthenticated()) {
+    if (!enabled || !auth.isAuthenticated()) {
       return
     }
 
@@ -77,8 +81,12 @@ export function useAlertRealtime() {
         .catch(() => undefined)
     })
 
-    connection.start().catch(() => {
+    connection.start().catch((error) => {
       // A failed hub connection must never break the app; the poll + login claim keep the inbox correct.
+      // Surface the reason in dev so a silently-unauthenticated hub is diagnosable.
+      if (import.meta.env.DEV) {
+        console.error("Alert hub failed to connect", error)
+      }
     })
 
     return () => {
@@ -91,7 +99,7 @@ export function useAlertRealtime() {
       }
       connectionRef.current = null
     }
-  }, [queryClient])
+  }, [queryClient, enabled])
 
   return connectionRef
 }
