@@ -12,7 +12,7 @@ import {
   Table,
   Text,
 } from "@chakra-ui/react"
-import { ArrowLeft, RefreshCw, Search } from "lucide-react"
+import { ArrowLeft, Pencil, RefreshCw, Search } from "lucide-react"
 import { useDebounce } from "@/hooks/useDebounce"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
@@ -27,6 +27,7 @@ import {
 } from "../constants"
 import { ConfirmAlertDialog } from "./ConfirmAlertDialog"
 import { AlertMessageViewer } from "./AlertMessageViewer"
+import { ScheduleCountdown } from "./ScheduleCountdown"
 
 const DELIVERY_COLOR: Record<string, string> = {
   Sent: "green",
@@ -36,10 +37,11 @@ const DELIVERY_COLOR: Record<string, string> = {
 }
 
 /**
- * "Delivered" is deliberately excluded: it fires for nearly every successful send, and `Status: Sent`
- * already implies it, so surfacing it as its own badge would just be noise next to the delivery badge.
+ * `Status: Sent` only means Brevo accepted the send, not that it reached an inbox - "Delivered" is the
+ * actual delivery confirmation, so it gets its own badge rather than being folded into delivery status.
  */
 const EVENT_COLOR: Record<string, string> = {
+  Delivered: "teal",
   Opened: "cyan",
   Clicked: "purple",
   Bounced: "red",
@@ -139,18 +141,33 @@ export function AlertDetailView({ uniqueId }: AlertDetailViewProps) {
           <ArrowLeft size={16} />
           Back to alerts
         </Button>
-        <Button
-          borderRadius="14px"
-          minH="11"
-          px={5}
-          color="white"
-          cursor="pointer"
-          onClick={() => setConfirmResend(true)}
-          style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
-        >
-          <RefreshCw size={15} />
-          Resend
-        </Button>
+        <Flex gap={3} flexWrap="wrap">
+          {detail?.status === "Scheduled" ? (
+            <Button
+              variant="outline"
+              borderRadius="14px"
+              minH="11"
+              px={5}
+              cursor="pointer"
+              onClick={() => navigate(APP_ROUTES.memberAlerts.edit(uniqueId))}
+            >
+              <Pencil size={15} />
+              Edit
+            </Button>
+          ) : null}
+          <Button
+            borderRadius="14px"
+            minH="11"
+            px={5}
+            color="white"
+            cursor="pointer"
+            onClick={() => setConfirmResend(true)}
+            style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+          >
+            <RefreshCw size={15} />
+            Resend
+          </Button>
+        </Flex>
       </Flex>
 
       <Box borderRadius="20px" border="1px solid" borderColor="border.subtle" bg="card.bg" boxShadow="card" p={{ base: 4, md: 6 }}>
@@ -180,6 +197,18 @@ export function AlertDetailView({ uniqueId }: AlertDetailViewProps) {
                 <Text fontSize="xs" color="text.secondary">Failed</Text>
                 <Text fontSize="sm" fontWeight="700">{detail?.failedCount ?? 0}</Text>
               </Box>
+              {detail?.scheduledAtUtc ? (
+                <Box>
+                  <Text fontSize="xs" color="text.secondary">Scheduled for</Text>
+                  {detail.status === "Scheduled" ? (
+                    <ScheduleCountdown targetDateTime={detail.scheduledAtUtc} />
+                  ) : (
+                    // Already past the schedule point (sent/sending/failed/cancelled) - a countdown
+                    // would be misleading, so this stays a plain historical fact.
+                    <Text fontSize="sm" fontWeight="700">{formatDateTime(detail.scheduledAtUtc)}</Text>
+                  )}
+                </Box>
+              ) : null}
               <Box>
                 <Text fontSize="xs" color="text.secondary">Sent</Text>
                 <Text fontSize="sm" fontWeight="700">{formatDateTime(detail?.sentAtUtc ?? null)}</Text>

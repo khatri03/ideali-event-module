@@ -16,6 +16,7 @@ import { MemberDashboardPage } from "./features/member-dashboard"
 import {
   AlertInboxPage,
   MemberAlertComposePage,
+  MemberAlertEditPage,
   MemberAlertDetailPage,
   MemberAlertsPage,
   MemberNotificationDetailPage,
@@ -135,6 +136,7 @@ export default function App() {
           <Route path={APP_ROUTES.customLists.editRoute} element={<CustomListEditPage />} />
           <Route path={APP_ROUTES.memberAlerts.list} element={<MemberAlertsPage />} />
           <Route path={APP_ROUTES.memberAlerts.create} element={<MemberAlertComposePage />} />
+          <Route path={APP_ROUTES.memberAlerts.editRoute} element={<MemberAlertEditPage />} />
           <Route path={APP_ROUTES.memberAlerts.detailRoute} element={<MemberAlertDetailPage />} />
           <Route path={APP_ROUTES.alertInbox} element={<AlertInboxPage />} />
           <Route path={APP_ROUTES.alertInboxDetailRoute} element={<MemberNotificationDetailPage />} />

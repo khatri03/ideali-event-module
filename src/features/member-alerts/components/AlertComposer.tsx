@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useNavigate } from "react-router-dom"
@@ -12,6 +12,7 @@ import {
   Input,
   NativeSelect,
   SimpleGrid,
+  SkeletonText,
   Stack,
   Tabs,
   Text,
@@ -21,13 +22,16 @@ import { ArrowLeft, Send } from "lucide-react"
 import { APP_ROUTES } from "@/utils/routes"
 import type { AlertCustomListPreviewFilters } from "@/api/alerts"
 import { alertFormSchema, toChannelMask, type AlertFormValues } from "../schemas/alert.schemas"
-import { useCreateAlert } from "../hooks/useAlertMutations"
+import { useCreateAlert, useUpdateAlert } from "../hooks/useAlertMutations"
 import {
+  useAlert,
   useAlertCustomListOptions,
   useAlertMembershipStatusOptions,
   useAlertMembershipTypeOptions,
 } from "../hooks/useAlerts"
-import { PRIORITY_OPTIONS } from "../constants"
+import { PRIORITY_OPTIONS, toLocalDateTimeInputValue } from "../constants"
+import { CurrentUtcClock } from "./CurrentUtcClock"
+import { ScheduleCountdown } from "./ScheduleCountdown"
 import { AlertMessageEditor } from "./AlertMessageEditor"
 import { AlertAudiencePreview } from "./AlertAudiencePreview"
 import { AlertCustomListsPreview } from "./AlertCustomListsPreview"
@@ -40,22 +44,29 @@ const AUDIENCE_TABS: { value: AudienceTab; label: string }[] = [
   { value: "custom-lists", label: "Custom Lists" },
 ]
 
-export function AlertComposer() {
+interface AlertComposerProps {
+  /** Present only when editing an existing Scheduled alert; absent for a brand new one. */
+  uniqueId?: string
+}
+
+export function AlertComposer({ uniqueId }: AlertComposerProps) {
   const navigate = useNavigate()
+  const isEditMode = Boolean(uniqueId)
+  const alertQuery = useAlert(uniqueId ?? "")
   const createMutation = useCreateAlert()
+  const updateMutation = useUpdateAlert()
+  const activeMutation = isEditMode ? updateMutation : createMutation
   const membershipTypesQuery = useAlertMembershipTypeOptions()
   const membershipStatusesQuery = useAlertMembershipStatusOptions()
   const customListsQuery = useAlertCustomListOptions()
-  const [appliedMemberPreviewFilters, setAppliedMemberPreviewFilters] = useState({
-    membershipTypeUniqueId: "",
-    membershipStatus: "",
-  })
-  const [appliedCustomListPreviewFilters, setAppliedCustomListPreviewFilters] =
-    useState<AlertCustomListPreviewFilters>({
-      membershipTypeUniqueIds: [],
-      membershipStatuses: [],
-      customListUniqueIds: [],
-    })
+  // null means "no explicit Apply click yet" - falls back to the loaded alert's audience in edit mode
+  // (or empty, in create mode) rather than needing an effect to seed these from the async fetch.
+  const [memberPreviewOverride, setMemberPreviewOverride] = useState<{
+    membershipTypeUniqueId: string
+    membershipStatus: string
+  } | null>(null)
+  const [customListPreviewOverride, setCustomListPreviewOverride] =
+    useState<AlertCustomListPreviewFilters | null>(null)
   // Holds the validated form values while the send/schedule confirmation dialog is open.
   const [pendingValues, setPendingValues] = useState<AlertFormValues | null>(null)
 
@@ -64,6 +75,7 @@ export function AlertComposer() {
     handleSubmit,
     control,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<AlertFormValues>({
     resolver: zodResolver(alertFormSchema),
@@ -81,7 +93,51 @@ export function AlertComposer() {
     },
   })
 
+  // Populates the form once the existing alert loads — defaultValues only apply at mount, and the fetch
+  // is necessarily async, so this is what actually prefills edit mode.
+  useEffect(() => {
+    const detail = alertQuery.data
+    if (!detail) {
+      return
+    }
+
+    const channel: "" | "Instant" | "Email" =
+      detail.channels === 1 ? "Instant" : detail.channels === 2 ? "Email" : ""
+    const membershipTypeUniqueId = detail.audienceMembershipTypeUniqueIds[0] ?? ""
+    const membershipStatus = detail.audienceMembershipStatuses[0] ?? ""
+    const customListUniqueIds = detail.audienceCustomListUniqueIds
+
+    reset({
+      targetMode: customListUniqueIds.length > 0 ? "custom-lists" : "members",
+      title: detail.title,
+      body: detail.body,
+      priority: detail.priority,
+      channel,
+      scheduleForLater: Boolean(detail.scheduledAtUtc),
+      scheduledAtUtc: detail.scheduledAtUtc ? toLocalDateTimeInputValue(detail.scheduledAtUtc) : null,
+      membershipTypeUniqueId,
+      membershipStatus,
+      customListUniqueIds,
+    })
+    // alertQuery.data changes identity on every refetch even when the content is the same; keying off the
+    // alert's uniqueId instead keeps this from clobbering in-progress edits after a background refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alertQuery.data?.uniqueId, reset])
+
+  // Derived rather than synced via an effect: falls back to the loaded alert's audience (edit mode) or
+  // empty (create mode) until the organizer explicitly presses Apply, which sets the override above.
+  const appliedMemberPreviewFilters = memberPreviewOverride ?? {
+    membershipTypeUniqueId: alertQuery.data?.audienceMembershipTypeUniqueIds[0] ?? "",
+    membershipStatus: alertQuery.data?.audienceMembershipStatuses[0] ?? "",
+  }
+  const appliedCustomListPreviewFilters: AlertCustomListPreviewFilters = customListPreviewOverride ?? {
+    membershipTypeUniqueIds: alertQuery.data?.audienceMembershipTypeUniqueIds ?? [],
+    membershipStatuses: alertQuery.data?.audienceMembershipStatuses ?? [],
+    customListUniqueIds: alertQuery.data?.audienceCustomListUniqueIds ?? [],
+  }
+
   const scheduleForLater = useWatch({ control, name: "scheduleForLater" })
+  const scheduledAtUtcValue = useWatch({ control, name: "scheduledAtUtc" })
   const activeTargetMode = useWatch({ control, name: "targetMode" })
   const selectedMembershipTypeUniqueId = useWatch({ control, name: "membershipTypeUniqueId" })
   const selectedMembershipStatusValue = useWatch({ control, name: "membershipStatus" })
@@ -134,7 +190,7 @@ export function AlertComposer() {
   }
 
   async function handleSend(values: AlertFormValues) {
-    await createMutation.mutateAsync({
+    const payload = {
       title: values.title.trim(),
       body: values.body.trim(),
       priority: values.priority,
@@ -147,19 +203,26 @@ export function AlertComposer() {
       membershipTypeUniqueIds: values.membershipTypeUniqueId ? [values.membershipTypeUniqueId] : [],
       membershipStatuses: values.membershipStatus ? [values.membershipStatus] : [],
       customListUniqueIds: values.targetMode === "custom-lists" ? values.customListUniqueIds : [],
-    })
-    navigate(APP_ROUTES.memberAlerts.list)
+    }
+
+    if (isEditMode && uniqueId) {
+      await updateMutation.mutateAsync({ uniqueId, payload })
+      navigate(APP_ROUTES.memberAlerts.detail(uniqueId))
+    } else {
+      await createMutation.mutateAsync(payload)
+      navigate(APP_ROUTES.memberAlerts.list)
+    }
   }
 
   function handleApplyMembers() {
-    setAppliedMemberPreviewFilters({
+    setMemberPreviewOverride({
       membershipTypeUniqueId: selectedMembershipType?.value ?? "",
       membershipStatus: selectedMembershipStatus?.value ?? "",
     })
   }
 
   function handleApplyCustomLists() {
-    setAppliedCustomListPreviewFilters({
+    setCustomListPreviewOverride({
       membershipTypeUniqueIds: selectedMembershipType?.value ? [selectedMembershipType.value] : [],
       membershipStatuses: selectedMembershipStatus?.value ? [selectedMembershipStatus.value] : [],
       customListUniqueIds,
@@ -168,6 +231,47 @@ export function AlertComposer() {
 
   function handleAudienceChange(details: { value: AudienceTab }) {
     setValue("targetMode", details.value, { shouldValidate: true })
+  }
+
+  if (isEditMode && alertQuery.isLoading) {
+    return (
+      <Box borderRadius="20px" border="1px solid" borderColor="border.subtle" bg="card.bg" boxShadow="card" p={6}>
+        <SkeletonText noOfLines={6} />
+      </Box>
+    )
+  }
+
+  if (isEditMode && alertQuery.isError) {
+    return (
+      <Box p={4} borderRadius="16px" border="1px solid" borderColor="red.200" bg="red.50">
+        <Text fontSize="sm" fontWeight="700" color="red.700">Failed to load this alert.</Text>
+      </Box>
+    )
+  }
+
+  if (isEditMode && alertQuery.data && alertQuery.data.status !== "Scheduled") {
+    return (
+      <Stack gap={4}>
+        <Box p={4} borderRadius="16px" border="1px solid" borderColor="border.subtle" bg="card.bg">
+          <Text fontSize="sm" fontWeight="700" color="gray.900">This alert can no longer be edited.</Text>
+          <Text fontSize="sm" color="text.secondary" mt={1}>
+            Only a scheduled alert that has not gone out yet can be changed.
+          </Text>
+        </Box>
+        <Button
+          variant="outline"
+          borderRadius="14px"
+          minH="11"
+          px={4}
+          w="fit-content"
+          cursor="pointer"
+          onClick={() => navigate(APP_ROUTES.memberAlerts.detail(uniqueId ?? ""))}
+        >
+          <ArrowLeft size={16} />
+          Back to alert
+        </Button>
+      </Stack>
+    )
   }
 
   return (
@@ -196,9 +300,18 @@ export function AlertComposer() {
         boxShadow="card"
         p={{ base: 4, md: 6 }}
       >
-        <Heading fontSize={{ base: "xl", md: "2xl" }} fontWeight="800" color="gray.900" mb={5}>
-          New alert
-        </Heading>
+        <Flex
+          direction={{ base: "column", md: "row" }}
+          align={{ base: "flex-start", md: "center" }}
+          justify="space-between"
+          gap={1}
+          mb={5}
+        >
+          <Heading fontSize={{ base: "xl", md: "2xl" }} fontWeight="800" color="gray.900">
+            {isEditMode ? "Edit alert" : "New alert"}
+          </Heading>
+          <CurrentUtcClock />
+        </Flex>
 
         <Stack gap={5}>
           <Box
@@ -258,17 +371,25 @@ export function AlertComposer() {
                     )}
                   />
                   <Box mt={3}>
-                    <Input
-                      {...register("scheduledAtUtc")}
-                      type="datetime-local"
-                      minH="11"
-                      borderRadius="14px"
-                      px={4}
-                      maxW={{ base: "full", md: "320px" }}
-                      disabled={!scheduleForLater}
-                      cursor={scheduleForLater ? "pointer" : "not-allowed"}
-                    />
-                    {errors.scheduledAtUtc ? <Field.ErrorText>{errors.scheduledAtUtc.message}</Field.ErrorText> : null}
+                    <Box>
+                      <Input
+                        {...register("scheduledAtUtc")}
+                        type="datetime-local"
+                        minH="11"
+                        borderRadius="14px"
+                        px={4}
+                        maxW={{ base: "full", md: "320px" }}
+                        disabled={!scheduleForLater}
+                        cursor={scheduleForLater ? "pointer" : "not-allowed"}
+                      />
+                      {errors.scheduledAtUtc ? (
+                        <Field.ErrorText>{errors.scheduledAtUtc.message}</Field.ErrorText>
+                      ) : scheduleForLater && scheduledAtUtcValue ? (
+                        <Box mt={2}>
+                          <ScheduleCountdown targetDateTime={scheduledAtUtcValue} />
+                        </Box>
+                      ) : null}
+                    </Box>
                   </Box>
                 </Field.Root>
               </SimpleGrid>
@@ -616,13 +737,13 @@ export function AlertComposer() {
               w={{ base: "full", md: "auto" }}
               color="white"
               cursor="pointer"
-              loading={createMutation.isPending}
-              loadingText={scheduleForLater ? "Scheduling..." : "Sending..."}
-              disabled={createMutation.isPending}
+              loading={activeMutation.isPending}
+              loadingText={isEditMode ? "Saving..." : scheduleForLater ? "Scheduling..." : "Sending..."}
+              disabled={activeMutation.isPending}
               style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
             >
               <Send size={16} />
-              {scheduleForLater ? "Schedule alert" : "Send alert"}
+              {isEditMode ? "Save changes" : scheduleForLater ? "Schedule alert" : "Send alert"}
             </Button>
           </Flex>
         </Stack>
@@ -630,18 +751,20 @@ export function AlertComposer() {
 
       {pendingValues ? (
         <ConfirmAlertDialog
-          title={pendingValues.scheduleForLater ? "Schedule this alert?" : "Send this alert?"}
+          title={isEditMode ? "Save changes?" : pendingValues.scheduleForLater ? "Schedule this alert?" : "Send this alert?"}
           message={
-            pendingValues.scheduleForLater
-              ? "The alert will be queued and delivered to the selected audience at the scheduled time."
-              : "The alert will be delivered to the selected audience right away. This can't be undone."
+            isEditMode
+              ? "The alert will be updated with these changes for the selected audience."
+              : pendingValues.scheduleForLater
+                ? "The alert will be queued and delivered to the selected audience at the scheduled time."
+                : "The alert will be delivered to the selected audience right away. This can't be undone."
           }
-          confirmLabel={pendingValues.scheduleForLater ? "Schedule alert" : "Send alert"}
+          confirmLabel={isEditMode ? "Save changes" : pendingValues.scheduleForLater ? "Schedule alert" : "Send alert"}
           tone="brand"
-          isLoading={createMutation.isPending}
+          isLoading={activeMutation.isPending}
           onConfirm={handleConfirmSend}
           onClose={() => {
-            if (!createMutation.isPending) {
+            if (!activeMutation.isPending) {
               setPendingValues(null)
             }
           }}

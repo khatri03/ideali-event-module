@@ -102,6 +102,8 @@ export const APP_ROUTES = {
     create: "/organizer/membership/alert/new",
     detailRoute: "/organizer/membership/alert/:uniqueId",
     detail: (uniqueId: string) => `/organizer/membership/alert/${uniqueId}`,
+    editRoute: "/organizer/membership/alert/:uniqueId/edit",
+    edit: (uniqueId: string) => `/organizer/membership/alert/${uniqueId}/edit`,
   },
   alertInbox: "/alerts",
   alertInboxDetailRoute: "/alerts/:recipientUniqueId",

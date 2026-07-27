@@ -60,6 +60,14 @@ const alertSchema = z.object({
   createdOnUtc: dual(z.string()),
   Body: dual(z.string()),
   body: dual(z.string()),
+  AudienceRecipientUniqueIds: dual(z.array(z.string())),
+  audienceRecipientUniqueIds: dual(z.array(z.string())),
+  AudienceMembershipTypeUniqueIds: dual(z.array(z.string())),
+  audienceMembershipTypeUniqueIds: dual(z.array(z.string())),
+  AudienceMembershipStatuses: dual(z.array(z.string())),
+  audienceMembershipStatuses: dual(z.array(z.string())),
+  AudienceCustomListUniqueIds: dual(z.array(z.string())),
+  audienceCustomListUniqueIds: dual(z.array(z.string())),
 })
 
 const pageSchema = <T extends z.ZodTypeAny>(item: T) =>
@@ -196,6 +204,11 @@ export interface AlertListItem {
 
 export interface AlertDetail extends AlertListItem {
   body: string
+  /** Audience criteria as originally configured, so edit can re-open the picker as it was. */
+  audienceRecipientUniqueIds: string[]
+  audienceMembershipTypeUniqueIds: string[]
+  audienceMembershipStatuses: string[]
+  audienceCustomListUniqueIds: string[]
 }
 
 export interface AlertRecipientOption {
@@ -456,6 +469,11 @@ export async function fetchAlert(uniqueId: string): Promise<AlertDetail> {
   return {
     ...normalizeAlert(item),
     body: pick(item.Body, item.body, ""),
+    audienceRecipientUniqueIds: pick(item.AudienceRecipientUniqueIds, item.audienceRecipientUniqueIds, []),
+    audienceMembershipTypeUniqueIds:
+      pick(item.AudienceMembershipTypeUniqueIds, item.audienceMembershipTypeUniqueIds, []),
+    audienceMembershipStatuses: pick(item.AudienceMembershipStatuses, item.audienceMembershipStatuses, []),
+    audienceCustomListUniqueIds: pick(item.AudienceCustomListUniqueIds, item.audienceCustomListUniqueIds, []),
   }
 }
 
@@ -593,6 +611,11 @@ export async function createAlert(payload: CreateAlertPayload): Promise<string> 
   assertSuccess(response.data, "Failed to create alert.")
   const data = parseServicePayload(response.data)
   return typeof data === "string" ? data : ""
+}
+
+export async function updateAlert(uniqueId: string, payload: CreateAlertPayload): Promise<void> {
+  const response = await client.put<unknown>(API_ROUTES.memberAlertDetail(uniqueId), payload)
+  assertSuccess(response.data, "Failed to update alert.")
 }
 
 export async function resendAlert(uniqueId: string): Promise<void> {
