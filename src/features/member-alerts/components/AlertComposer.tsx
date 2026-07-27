@@ -72,7 +72,7 @@ export function AlertComposer() {
       title: "",
       body: "",
       priority: "Normal",
-      channel: "Instant",
+      channel: "",
       scheduleForLater: false,
       scheduledAtUtc: null,
       membershipTypeUniqueId: "",
@@ -226,17 +226,19 @@ export function AlertComposer() {
                   </NativeSelect.Root>
                 </Field.Root>
 
-                <Field.Root>
+                <Field.Root invalid={Boolean(errors.channel)}>
                   <Field.Label fontWeight="700">
                     Channel <Text as="span" color="red.500">*</Text>
                   </Field.Label>
                   <NativeSelect.Root>
                     <NativeSelect.Field {...register("channel")} borderRadius="14px" minH="11" ps={4} pe={8}>
+                      <option value="" disabled>Select a channel</option>
                       <option value="Instant">Instant</option>
                       <option value="Email">Email</option>
                     </NativeSelect.Field>
                     <NativeSelect.Indicator />
                   </NativeSelect.Root>
+                  {errors.channel ? <Field.ErrorText>{errors.channel.message}</Field.ErrorText> : null}
                 </Field.Root>
 
                 <Field.Root invalid={Boolean(errors.scheduledAtUtc)}>

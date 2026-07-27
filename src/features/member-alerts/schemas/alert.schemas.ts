@@ -36,7 +36,11 @@ export const alertFormSchema = z
       }
     }),
     priority: z.enum(["Urgent", "Important", "Normal", "Low"]),
-    channel: z.enum(["Instant", "Email"]),
+    // Explicit `: boolean` return stops TS 5.5 from auto-inferring a type-guard here, which would
+    // narrow "channel" to exclude "" everywhere — including the unselected default before submit.
+    channel: z.enum(["", "Instant", "Email"]).refine((value): boolean => value !== "", {
+      message: "Select a channel.",
+    }),
     scheduleForLater: z.boolean(),
     scheduledAtUtc: z.string().nullable(),
     membershipTypeUniqueId: z.string(),
@@ -78,7 +82,7 @@ export const alertFormSchema = z
 
 export type AlertFormValues = z.infer<typeof alertFormSchema>
 
-/** Instant=1, Email=2 â€” the backend flags enum. */
-export function toChannelMask(channel: "Instant" | "Email"): number {
+/** Instant=1, Email=2 â€” the backend flags enum. Called only after schema validation, so channel is never "". */
+export function toChannelMask(channel: "" | "Instant" | "Email"): number {
   return channel === "Instant" ? 1 : 2
 }
