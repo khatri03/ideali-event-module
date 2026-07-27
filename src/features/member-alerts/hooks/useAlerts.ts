@@ -120,11 +120,11 @@ export const ALERT_UNSEEN_COUNT_QUERY_KEY = [...ALERT_INBOX_QUERY_KEY, "unseen-c
 
 /**
  * Bell badge count. SignalR is the primary path — a live push invalidates this query for an instant
- * update. Window-focus refetch covers a tab that was backgrounded. The slow interval is only a backstop
- * for the no-backplane multi-instance case (a push born on another instance never reaches this client);
- * it is deliberately infrequent so it does not undercut SignalR or hammer the endpoint. Once the
- * production topology is fixed, either drop the interval (single instance / sticky) or drop SignalR and
- * poll faster (scale-out without a backplane).
+ * update. Window-focus refetch (the query client default) covers a tab that was backgrounded. The slow
+ * interval is only a backstop for the no-backplane multi-instance case (a push born on another instance
+ * never reaches this client); it is deliberately infrequent so it does not undercut SignalR or hammer the
+ * endpoint. Once the production topology is fixed, either drop the interval (single instance / sticky) or
+ * drop SignalR and poll faster (scale-out without a backplane).
  */
 const UNSEEN_COUNT_BACKSTOP_MS = 120_000
 
@@ -133,7 +133,6 @@ export function useUnseenCount() {
     queryKey: ALERT_UNSEEN_COUNT_QUERY_KEY,
     queryFn: fetchUnseenCount,
     refetchInterval: UNSEEN_COUNT_BACKSTOP_MS,
-    refetchOnWindowFocus: true,
   })
 }
 
