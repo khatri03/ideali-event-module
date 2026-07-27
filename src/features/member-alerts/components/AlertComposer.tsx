@@ -30,6 +30,7 @@ import {
   useAlertMembershipTypeOptions,
 } from "../hooks/useAlerts"
 import { PRIORITY_OPTIONS, toLocalDateTimeInputValue } from "../constants"
+import { toaster } from "@/lib/toaster"
 import { CurrentUtcClock } from "./CurrentUtcClock"
 import { ScheduleCountdown } from "./ScheduleCountdown"
 import { AlertMessageEditor } from "./AlertMessageEditor"
@@ -178,6 +179,20 @@ export function AlertComposer({ uniqueId }: AlertComposerProps) {
     setPendingValues(values)
   }
 
+  // Zod validation failures otherwise fail silently: the only feedback is an inline Field.ErrorText,
+  // which can sit inside the scrollable form section and go unnoticed (no toast, no spinner, no nav).
+  function handleInvalidSubmit(fieldErrors: typeof errors) {
+    const firstErrorName = Object.keys(fieldErrors)[0]
+    const firstErrorMessage = Object.values(fieldErrors)[0]?.message
+    document
+      .querySelector(`[name="${firstErrorName}"]`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" })
+    toaster.create({
+      type: "error",
+      title: firstErrorMessage ?? "Fix the highlighted fields before saving.",
+    })
+  }
+
   async function handleConfirmSend() {
     if (!pendingValues) {
       return
@@ -292,7 +307,7 @@ export function AlertComposer({ uniqueId }: AlertComposerProps) {
 
       <Box
         as="form"
-        onSubmit={handleSubmit(handleRequestSend)}
+        onSubmit={handleSubmit(handleRequestSend, handleInvalidSubmit)}
         borderRadius="20px"
         border="1px solid"
         borderColor="border.subtle"
