@@ -1,5 +1,6 @@
 export { default as MemberAlertsPage } from "./pages/MemberAlertsPage"
 export { default as MemberAlertComposePage } from "./pages/MemberAlertComposePage"
+export { default as MemberAlertEditPage } from "./pages/MemberAlertEditPage"
 export { default as MemberAlertDetailPage } from "./pages/MemberAlertDetailPage"
 export { default as AlertInboxPage } from "./pages/AlertInboxPage"
 export { default as MemberNotificationDetailPage } from "./pages/MemberNotificationDetailPage"

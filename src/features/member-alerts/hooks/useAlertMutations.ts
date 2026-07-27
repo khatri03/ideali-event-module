@@ -5,6 +5,7 @@ import {
   markAlertRead,
   markAllSeen,
   resendAlert,
+  updateAlert,
   type CreateAlertPayload,
 } from "@/api/alerts"
 import { extractApiError } from "@/utils/errors"
@@ -21,6 +22,24 @@ export function useCreateAlert() {
         type: "success",
         title: payload.scheduledAtUtc ? "Alert scheduled." : "Alert sent.",
       })
+    },
+    onError: (error) => {
+      toaster.create({ type: "error", title: extractApiError(error) })
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ALERT_QUERY_KEY })
+    },
+  })
+}
+
+export function useUpdateAlert() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ uniqueId, payload }: { uniqueId: string; payload: CreateAlertPayload }) =>
+      updateAlert(uniqueId, payload),
+    onSuccess: () => {
+      toaster.create({ type: "success", title: "Alert updated." })
     },
     onError: (error) => {
       toaster.create({ type: "error", title: extractApiError(error) })
