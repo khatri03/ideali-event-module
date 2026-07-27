@@ -16,7 +16,7 @@ import { ArrowLeft, RefreshCw, Search } from "lucide-react"
 import { useDebounce } from "@/hooks/useDebounce"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
-import type { AlertDelivery } from "@/api/alerts"
+import type { AlertDelivery, AlertEmailEvent } from "@/api/alerts"
 import { useAlert, useAlertRecipients } from "../hooks/useAlerts"
 import { useResendAlert } from "../hooks/useAlertMutations"
 import {
@@ -35,6 +35,19 @@ const DELIVERY_COLOR: Record<string, string> = {
   Pending: "blue",
 }
 
+/**
+ * "Delivered" is deliberately excluded: it fires for nearly every successful send, and `Status: Sent`
+ * already implies it, so surfacing it as its own badge would just be noise next to the delivery badge.
+ */
+const EVENT_COLOR: Record<string, string> = {
+  Opened: "cyan",
+  Clicked: "purple",
+  Bounced: "red",
+  Blocked: "orange",
+  Spam: "red",
+  Unsubscribed: "orange",
+}
+
 interface AlertDetailViewProps {
   uniqueId: string
 }
@@ -43,7 +56,8 @@ interface ChannelDelivery {
   channel: string
   status: string
   attemptCount: number
-  opened: boolean
+  latestEvent: AlertEmailEvent | null
+  eventHistory: AlertEmailEvent[]
   failureReason: string | null
 }
 
@@ -62,11 +76,19 @@ function collapseDeliveries(deliveries: AlertDelivery[]): ChannelDelivery[] {
 
   return Array.from(byChannel.entries()).map(([channel, attempts]) => {
     const latest = attempts.reduce((current, next) => (next.attemptNo > current.attemptNo ? next : current))
+
+    const eventHistory = attempts
+      .flatMap((attempt) => attempt.emailEvents)
+      .sort((a, b) => b.occurredAtUtc.localeCompare(a.occurredAtUtc))
+
+    const latestEvent = eventHistory.find((event) => event.eventType in EVENT_COLOR) ?? null
+
     return {
       channel,
       status: latest.status,
       attemptCount: attempts.length,
-      opened: attempts.some((attempt) => attempt.emailEvents.some((event) => event.eventType === "Opened")),
+      latestEvent,
+      eventHistory,
       failureReason: latest.failureReason,
     }
   })
@@ -234,16 +256,27 @@ export function AlertDetailView({ uniqueId }: AlertDetailViewProps) {
                             <Text fontSize="sm" color="text.secondary">—</Text>
                           ) : (
                             collapseDeliveries(recipient.deliveries).map((delivery) => (
-                              <Badge
-                                key={delivery.channel}
-                                colorPalette={DELIVERY_COLOR[delivery.status] ?? "gray"}
-                                variant="surface"
-                                title={delivery.failureReason ?? undefined}
-                              >
-                                {delivery.channel}: {delivery.status}
-                                {delivery.attemptCount > 1 ? ` ×${delivery.attemptCount}` : ""}
-                                {delivery.opened ? " · opened" : ""}
-                              </Badge>
+                              <Flex key={delivery.channel} gap={1} flexWrap="wrap">
+                                <Badge
+                                  colorPalette={DELIVERY_COLOR[delivery.status] ?? "gray"}
+                                  variant="surface"
+                                  title={delivery.failureReason ?? undefined}
+                                >
+                                  {delivery.channel}: {delivery.status}
+                                  {delivery.attemptCount > 1 ? ` ×${delivery.attemptCount}` : ""}
+                                </Badge>
+                                {delivery.latestEvent ? (
+                                  <Badge
+                                    colorPalette={EVENT_COLOR[delivery.latestEvent.eventType] ?? "gray"}
+                                    variant="surface"
+                                    title={delivery.eventHistory
+                                      .map((event) => `${event.eventType} — ${formatDateTime(event.occurredAtUtc)}`)
+                                      .join("\n")}
+                                  >
+                                    {delivery.latestEvent.eventType}
+                                  </Badge>
+                                ) : null}
+                              </Flex>
                             ))
                           )}
                         </Flex>
