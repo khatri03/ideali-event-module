@@ -105,6 +105,21 @@ export const APP_ROUTES = {
     editRoute: "/organizer/membership/alert/:uniqueId/edit",
     edit: (uniqueId: string) => `/organizer/membership/alert/${uniqueId}/edit`,
   },
+  documentCategories: {
+    base: "/organizer/membership/document-category",
+    list: "/organizer/membership/document-category/list",
+    create: "/organizer/membership/document-category/new",
+    detailRoute: "/organizer/membership/document-category/:uniqueId",
+    detail: (uniqueId: string) => `/organizer/membership/document-category/${uniqueId}`,
+    editRoute: "/organizer/membership/document-category/:uniqueId/edit",
+    edit: (uniqueId: string) => `/organizer/membership/document-category/${uniqueId}/edit`,
+  },
+  memberDocuments: {
+    base: "/member-documents",
+    list: "/member-documents/categories",
+    detailRoute: "/member-documents/categories/:uniqueId",
+    detail: (uniqueId: string) => `/member-documents/categories/${uniqueId}`,
+  },
   alertInbox: "/alerts",
   alertInboxDetailRoute: "/alerts/:recipientUniqueId",
   alertInboxDetail: (recipientUniqueId: string) => `/alerts/${recipientUniqueId}`,
@@ -245,6 +260,24 @@ export const API_ROUTES = {
   memberAlertResend: (uniqueId: string) => `/api/organizer/membership/alert/${uniqueId}/resend`,
   memberAlertDelete: (uniqueId: string) => `/api/organizer/membership/alert/${uniqueId}`,
   membershipTypeMembers: "/api/organizer/membership/type/members",
+
+  documentCategories: "/api/organizer/membership/document-category/list",
+  documentCategoryMembershipTypeOptions: "/api/organizer/membership/document-category/membership-type-options",
+  documentCategoryCreate: "/api/organizer/membership/document-category",
+  documentCategoryDetail: (uniqueId: string) => `/api/organizer/membership/document-category/${uniqueId}`,
+  documentCategoryDocuments: (uniqueId: string) =>
+    `/api/organizer/membership/document-category/${uniqueId}/documents`,
+  documentCategoryDocumentDownload: (documentUniqueId: string) =>
+    `/api/organizer/membership/document-category/documents/${documentUniqueId}/download`,
+
+  memberDocumentCategories: "/api/member-documents/categories",
+  memberDocumentCategoryDetail: (uniqueId: string) => `/api/member-documents/categories/${uniqueId}`,
+  memberDocumentCategoryDocuments: (uniqueId: string) =>
+    `/api/member-documents/categories/${uniqueId}/documents`,
+  memberDocumentView: (documentUniqueId: string) =>
+    `/api/member-documents/documents/${documentUniqueId}`,
+  memberDocumentDownload: (documentUniqueId: string) =>
+    `/api/member-documents/documents/${documentUniqueId}/download`,
 
   alertInbox: "/api/alert-inbox/list",
   alertInboxItem: (recipientUniqueId: string) => `/api/alert-inbox/${recipientUniqueId}`,

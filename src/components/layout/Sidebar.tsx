@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Megaphone,
   Users,
+  FolderOpen,
 } from "lucide-react"
 import { logoutUser } from "@/api/auth"
 import { auth } from "@/lib/auth"
@@ -68,6 +69,13 @@ const managementNav: NavItem[] = [
     icon: <Megaphone size={17} />,
     path: APP_ROUTES.memberAlerts.list,
     matchPath: APP_ROUTES.memberAlerts.base,
+    roles: ["Organizer", "Admin"],
+  },
+  {
+    label: "Documents",
+    icon: <FolderOpen size={17} />,
+    path: APP_ROUTES.documentCategories.list,
+    matchPath: APP_ROUTES.documentCategories.base,
     roles: ["Organizer", "Admin"],
   },
 ]
@@ -404,8 +412,10 @@ function MemberSection({
     return null
   }
 
-  const isDashboardActive =
-    pathname === APP_ROUTES.member.dashboard || pathname.startsWith(`${APP_ROUTES.member.dashboard}/`)
+  const memberLinks = [
+    { label: "Dashboard", path: APP_ROUTES.member.dashboard },
+    { label: "Documents", path: APP_ROUTES.memberDocuments.list },
+  ]
 
   return (
     <Box mb={6}>
@@ -445,40 +455,46 @@ function MemberSection({
 
       {isOpen ? (
         <VStack gap={0.5} align="stretch" mt={1.5}>
-          <NavLink to={APP_ROUTES.member.dashboard} style={{ textDecoration: "none" }} onClick={onNavigate}>
-            <Flex
-              align="center"
-              gap={3}
-              pl={10}
-              pr={3}
-              py={2.5}
-              borderRadius="12px"
-              mx={2}
-              transition="all 0.18s ease"
-              bg={isDashboardActive ? "rgba(255,255,255,0.92)" : "transparent"}
-              cursor="pointer"
-              _hover={isDashboardActive ? {} : { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }}
-              boxShadow={isDashboardActive ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
-            >
-              <Box
-                w="6px"
-                h="6px"
-                borderRadius="full"
-                bg={isDashboardActive ? "#7551FF" : "rgba(255,255,255,0.6)"}
-                flexShrink={0}
-              />
-              <Text
-                fontSize="sm"
-                fontWeight={isDashboardActive ? "700" : "500"}
-                color={isDashboardActive ? "#422AFB" : "rgba(255,255,255,0.85)"}
-                transition="color 0.18s"
-                flex={1}
-                letterSpacing={isDashboardActive ? "-0.01em" : "0"}
-              >
-                Dashboard
-              </Text>
-            </Flex>
-          </NavLink>
+          {memberLinks.map((link) => {
+            const isActive = pathname === link.path || pathname.startsWith(`${link.path}/`)
+
+            return (
+              <NavLink key={link.path} to={link.path} style={{ textDecoration: "none" }} onClick={onNavigate}>
+                <Flex
+                  align="center"
+                  gap={3}
+                  pl={10}
+                  pr={3}
+                  py={2.5}
+                  borderRadius="12px"
+                  mx={2}
+                  transition="all 0.18s ease"
+                  bg={isActive ? "rgba(255,255,255,0.92)" : "transparent"}
+                  cursor="pointer"
+                  _hover={isActive ? {} : { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }}
+                  boxShadow={isActive ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
+                >
+                  <Box
+                    w="6px"
+                    h="6px"
+                    borderRadius="full"
+                    bg={isActive ? "#7551FF" : "rgba(255,255,255,0.6)"}
+                    flexShrink={0}
+                  />
+                  <Text
+                    fontSize="sm"
+                    fontWeight={isActive ? "700" : "500"}
+                    color={isActive ? "#422AFB" : "rgba(255,255,255,0.85)"}
+                    transition="color 0.18s"
+                    flex={1}
+                    letterSpacing={isActive ? "-0.01em" : "0"}
+                  >
+                    {link.label}
+                  </Text>
+                </Flex>
+              </NavLink>
+            )
+          })}
         </VStack>
       ) : null}
     </Box>
@@ -500,8 +516,9 @@ export function Sidebar({ currentUser, variant = "desktop", onNavigate }: Sideba
   const isSettingsOpen = isSettingsManualOpen || isSettingsRouteActive || isChargeRulesRouteActive
   const isAdminRouteActive = pathname === APP_ROUTES.adminRevenuePlans
   const isAdminOpen = isAdminManualOpen || isAdminRouteActive
-  const isMemberRouteActive =
-    pathname === APP_ROUTES.member.dashboard || pathname.startsWith(`${APP_ROUTES.member.dashboard}/`)
+  const isMemberRouteActive = [APP_ROUTES.member.dashboard, APP_ROUTES.memberDocuments.base].some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  )
   const isMemberOpen = isMemberManualOpen || isMemberRouteActive
 
   async function handleSignOut() {

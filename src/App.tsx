@@ -14,6 +14,13 @@ import { VenueManagementPage } from "./features/venues"
 import { CustomListCreatePage, CustomListEditPage, CustomListsPage } from "./features/custom-lists"
 import { MemberDashboardPage } from "./features/member-dashboard"
 import {
+  DocumentCategoriesPage,
+  DocumentCategoryCreatePage,
+  DocumentCategoryDetailPage,
+  DocumentCategoryEditPage,
+} from "./features/document-categories"
+import { MemberDocumentCategoryPage, MemberDocumentsPage } from "./features/member-documents"
+import {
   AlertInboxPage,
   MemberAlertComposePage,
   MemberAlertEditPage,
@@ -138,6 +145,16 @@ export default function App() {
           <Route path={APP_ROUTES.memberAlerts.create} element={<MemberAlertComposePage />} />
           <Route path={APP_ROUTES.memberAlerts.editRoute} element={<MemberAlertEditPage />} />
           <Route path={APP_ROUTES.memberAlerts.detailRoute} element={<MemberAlertDetailPage />} />
+          <Route path={APP_ROUTES.documentCategories.list} element={<DocumentCategoriesPage />} />
+          <Route path={APP_ROUTES.documentCategories.create} element={<DocumentCategoryCreatePage />} />
+          <Route path={APP_ROUTES.documentCategories.editRoute} element={<DocumentCategoryEditPage />} />
+          <Route path={APP_ROUTES.documentCategories.detailRoute} element={<DocumentCategoryDetailPage />} />
+          <Route path={APP_ROUTES.memberDocuments.list} element={<MemberDocumentsPage />} />
+          <Route path={APP_ROUTES.memberDocuments.detailRoute} element={<MemberDocumentCategoryPage />} />
+          <Route
+            path={APP_ROUTES.memberDocuments.base}
+            element={<Navigate to={APP_ROUTES.memberDocuments.list} replace />}
+          />
           <Route path={APP_ROUTES.alertInbox} element={<AlertInboxPage />} />
           <Route path={APP_ROUTES.alertInboxDetailRoute} element={<MemberNotificationDetailPage />} />
           <Route path={APP_ROUTES.team} element={<Settings />} />
