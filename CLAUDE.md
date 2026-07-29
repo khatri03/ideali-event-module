@@ -1,6 +1,6 @@
 # CLAUDE.md — Ideali Events
 
-Enterprise SaaS event management platform. **Frontend-only repo.** Backend is a separate .NET Core 9 modular monolith at `D:\My Projects\V4Ideas\Ideali\ideali.api`.
+Enterprise SaaS event management platform. **Frontend-only repo.** Backend is a separate .NET Core 9 modular monolith at `D:\V4Ideas\Ideali\ideali.api`.
 
 ---
 
@@ -9,30 +9,37 @@ Enterprise SaaS event management platform. **Frontend-only repo.** Backend is a 
 These rules govern how you work in this repo, not just how the code is structured.
 
 **Before creating any file:**
+
 - State what file(s) you will create and where, then wait if the intent is ambiguous.
 - Never create a file outside the locations defined in Project Structure below.
 
 **Before adding any dependency:**
+
 - Ask. Do not `npm install` anything without explicit approval.
 - Date library → `date-fns`. Calendar → `FullCalendar`. Charts → `Recharts`. Do not introduce alternatives.
 
 **After every code change:**
+
 - Run `npm run lint` mentally — do not produce code that would obviously fail ESLint strict mode.
 - If you edit a hook, check that its query key follows `[resource, filters]` and that `onSuccess`/`onError`/`onSettled` are all handled.
 
 **On the mock data situation:**
+
 - `src/data/mock.ts` is temporary. Before adding any new feature, check whether a real API endpoint exists in `src/api/`. If it does, wire to it. If it doesn't, say so and ask whether to use mock data or wait.
 - Do not expand `mock.ts`. Do not add new mock shapes unless explicitly told to.
 
 **Universal UI cursor rules:**
+
 - Every clickable item should show a pointer cursor when hovered.
 - Every disabled or readonly item should show a `not-allowed` cursor when hovered.
 
 **When in doubt about architecture:**
+
 - Follow the decision ladder in State Management below.
 - If a pattern isn't covered here, match the closest existing pattern in the codebase rather than inventing something new.
 
 **What NOT to do without being asked:**
+
 - Do not add Zustand, Redux, Jotai, or any global state library.
 - Do not add `dayjs`, `moment`, or `luxon` — use `date-fns`.
 - Do not use `localStorage` or `sessionStorage` for anything, especially auth tokens.
@@ -44,18 +51,18 @@ These rules govern how you work in this repo, not just how the code is structure
 
 ## Tech Stack
 
-| Layer | Tech |
-|---|---|
-| Framework | React 19 + TypeScript (strict) |
-| Build | Vite |
-| UI | Chakra UI **v3** (API differs from v2 — `disabled` not `isDisabled`, new `ChakraProvider`, etc.) |
-| Routing | React Router DOM v7 (`Routes`/`Route` — not v5 `Switch`) |
-| Server state | TanStack Query v5 |
-| Forms | React Hook Form v7 + Zod v4 |
-| Calendar | FullCalendar v6 |
-| Charts | Recharts (requires fixed-height container — wrap in `Box` with explicit `h` prop) |
-| Dates | date-fns v4 |
-| Icons | Lucide React |
+| Layer        | Tech                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------ |
+| Framework    | React 19 + TypeScript (strict)                                                                   |
+| Build        | Vite                                                                                             |
+| UI           | Chakra UI **v3** (API differs from v2 — `disabled` not `isDisabled`, new `ChakraProvider`, etc.) |
+| Routing      | React Router DOM v7 (`Routes`/`Route` — not v5 `Switch`)                                         |
+| Server state | TanStack Query v5                                                                                |
+| Forms        | React Hook Form v7 + Zod v4                                                                      |
+| Calendar     | FullCalendar v6                                                                                  |
+| Charts       | Recharts (requires fixed-height container — wrap in `Box` with explicit `h` prop)                |
+| Dates        | date-fns v4                                                                                      |
+| Icons        | Lucide React                                                                                     |
 
 ---
 
@@ -69,6 +76,7 @@ npm run preview    # preview dist
 ```
 
 No test runner yet. When adding tests:
+
 ```bash
 npm install -D vitest @testing-library/react @testing-library/user-event @testing-library/jest-dom msw happy-dom
 npm install -D playwright @playwright/test
@@ -115,11 +123,12 @@ src/
 ### Structure Rules
 
 **Cross-feature imports — use public API only:**
+
 ```typescript
 // ✅
-import { EventCard } from "@/features/events"
+import { EventCard } from "@/features/events";
 // ❌
-import { EventCard } from "@/features/events/components/EventCard"
+import { EventCard } from "@/features/events/components/EventCard";
 ```
 
 **File type → location:**
@@ -141,9 +150,10 @@ import { EventCard } from "@/features/events/components/EventCard"
 **Path alias:** use `@/` for `src/`. Never use `../../..` chains.
 
 **All pages are lazy-loaded:**
+
 ```typescript
 // App.tsx
-const Dashboard = lazy(() => import("./features/dashboard/pages/Dashboard"))
+const Dashboard = lazy(() => import("./features/dashboard/pages/Dashboard"));
 // Wrap in <Suspense fallback={<DashboardSkeleton />}> — not a spinner, not null
 ```
 
@@ -175,8 +185,8 @@ const { data: events } = useEvents(filters)
 ```typescript
 // api/events.ts — fetch + Zod parse only. No React.
 export async function fetchEvents(filters?: EventFilters) {
-  const res = await client.get("/events", { params: filters })
-  return z.array(appEventSchema).parse(res.data)  // throw if invalid
+  const res = await client.get("/events", { params: filters });
+  return z.array(appEventSchema).parse(res.data); // throw if invalid
 }
 ```
 
@@ -185,6 +195,7 @@ export async function fetchEvents(filters?: EventFilters) {
 ```
 Component → Hook (TanStack Query) → api/[module].ts → axios client
 ```
+
 Components never import from `src/api/` directly. Hooks never contain JSX.
 
 ### Page files compose, they don't implement
@@ -201,7 +212,7 @@ export function Events() {
       <EventFormModal />
       <EventsPagination />
     </EventsProvider>
-  )
+  );
 }
 ```
 
@@ -209,22 +220,22 @@ export function Events() {
 
 ## Naming
 
-| What | Convention | Example |
-|---|---|---|
-| Component file | `PascalCase.tsx` | `EventCard.tsx` |
-| Skeleton file | `PascalCase.skeleton.tsx` | `EventCard.skeleton.tsx` |
-| Hook file | `camelCase.ts` | `useEvents.ts` |
-| Schema file | `[noun].schemas.ts` | `event.schemas.ts` |
-| Component | `PascalCase` | `EventFormModal` |
-| Props interface | `[Component]Props` | `EventCardProps` |
-| Hook | `use` + camelCase | `useCreateEvent` |
-| Zod variable | `[noun]Schema` | `eventSchema` |
-| Derived type | `PascalCase` | `EventFormValues` |
-| Constant | `SCREAMING_SNAKE_CASE` | `PAGE_SIZE` |
-| Boolean prop | `is`/`has`/`can` | `isLoading`, `canEdit` |
-| Event handler | `handle[Action]` | `handleSubmit` |
-| API fetch fn | `fetch[Resource]` | `fetchEvents` |
-| Converter | `[source]To[Target]` | `appEventToCalendarEvent` |
+| What            | Convention                | Example                   |
+| --------------- | ------------------------- | ------------------------- |
+| Component file  | `PascalCase.tsx`          | `EventCard.tsx`           |
+| Skeleton file   | `PascalCase.skeleton.tsx` | `EventCard.skeleton.tsx`  |
+| Hook file       | `camelCase.ts`            | `useEvents.ts`            |
+| Schema file     | `[noun].schemas.ts`       | `event.schemas.ts`        |
+| Component       | `PascalCase`              | `EventFormModal`          |
+| Props interface | `[Component]Props`        | `EventCardProps`          |
+| Hook            | `use` + camelCase         | `useCreateEvent`          |
+| Zod variable    | `[noun]Schema`            | `eventSchema`             |
+| Derived type    | `PascalCase`              | `EventFormValues`         |
+| Constant        | `SCREAMING_SNAKE_CASE`    | `PAGE_SIZE`               |
+| Boolean prop    | `is`/`has`/`can`          | `isLoading`, `canEdit`    |
+| Event handler   | `handle[Action]`          | `handleSubmit`            |
+| API fetch fn    | `fetch[Resource]`         | `fetchEvents`             |
+| Converter       | `[source]To[Target]`      | `appEventToCalendarEvent` |
 
 **No:** `Manager`, `Service`, `Helper`, `Utils` suffixes. No `data`, `info`, `temp` vars. No `I` prefix on TS interfaces. Named exports only — no default exports except `App.tsx` and page files.
 
@@ -247,13 +258,18 @@ export function Events() {
 const schema = z.object({
   title: z.string().min(1).max(100),
   startDate: z.string().datetime(),
-})
-type FormValues = z.infer<typeof schema>
+});
+type FormValues = z.infer<typeof schema>;
 
-const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+const {
+  register,
+  handleSubmit,
+  formState: { errors },
+} = useForm<FormValues>({
   resolver: zodResolver(schema),
-})
+});
 ```
+
 Zod schema is the single source of truth. Never duplicate validation in the component.
 
 ### Data Fetching
@@ -264,21 +280,22 @@ export function useEvents(filters?: EventFilters, page = 1) {
   return useQuery({
     queryKey: ["events", filters, page],
     queryFn: () => fetchEvents({ ...filters, page, pageSize: PAGE_SIZE }),
-    placeholderData: keepPreviousData,  // mandatory — prevents flash on page change
-  })
+    placeholderData: keepPreviousData, // mandatory — prevents flash on page change
+  });
 }
 
 // Mutation
 export function useCreateEvent() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: api.events.create,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["events"] })
-      toaster.create({ type: "success", title: "Event created" })
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      toaster.create({ type: "success", title: "Event created" });
     },
-    onError: (err) => toaster.create({ type: "error", title: extractApiError(err) }),
-  })
+    onError: (err) =>
+      toaster.create({ type: "error", title: extractApiError(err) }),
+  });
 }
 ```
 
@@ -289,10 +306,10 @@ Always handle `isLoading`, `isError`, `data`. Always handle `onSuccess`, `onErro
 Every async surface shows a skeleton — never a blank area, never a spinner alone.
 
 ```tsx
-const { data, isLoading, isError } = useEvents()
-if (isError) return <ErrorBanner message="Failed to load events." />
-if (isLoading) return <EventsGridSkeleton />
-return <EventsGrid events={data} />
+const { data, isLoading, isError } = useEvents();
+if (isError) return <ErrorBanner message="Failed to load events." />;
+if (isLoading) return <EventsGridSkeleton />;
+return <EventsGrid events={data} />;
 ```
 
 ### Buttons During Async
@@ -311,20 +328,22 @@ Chakra v3 uses `disabled`, not `isDisabled`. Always pair with `loading`:
 
 ### Optimistic Updates — when to use
 
-| Scenario | Pattern |
-|---|---|
-| Delete from list | ✅ Optimistic |
-| Toggle boolean field | ✅ Optimistic |
-| Create (needs server-generated ID) | ❌ Wait for response |
-| Multi-field form update | ❌ Too complex to rollback |
+| Scenario                           | Pattern                    |
+| ---------------------------------- | -------------------------- |
+| Delete from list                   | ✅ Optimistic              |
+| Toggle boolean field               | ✅ Optimistic              |
+| Create (needs server-generated ID) | ❌ Wait for response       |
+| Multi-field form update            | ❌ Too complex to rollback |
 
 Always call `invalidateQueries` in `onSettled`, not `onSuccess`.
 
 ### Pagination
 
 ```typescript
-const [page, setPage] = useState(1)
-useEffect(() => { setPage(1) }, [filters])  // reset on filter change
+const [page, setPage] = useState(1);
+useEffect(() => {
+  setPage(1);
+}, [filters]); // reset on filter change
 ```
 
 Query params: `?page=1&pageSize=20`. Never invent other param names.
@@ -334,8 +353,8 @@ Query params: `?page=1&pageSize=20`. Never invent other param names.
 ```typescript
 // src/utils/errors.ts
 export function extractApiError(err: unknown): string {
-  const axiosErr = err as AxiosError<ProblemDetails>
-  return axiosErr.response?.data?.title ?? "An unexpected error occurred."
+  const axiosErr = err as AxiosError<ProblemDetails>;
+  return axiosErr.response?.data?.title ?? "An unexpected error occurred.";
 }
 ```
 
@@ -349,14 +368,14 @@ Enterprise SaaS must work on all viewports. Responsive design is **mandatory on 
 
 ### Breakpoints (Chakra UI v3)
 
-| Token | Width | Target |
-|---|---|---|
-| `base` | 0px | Mobile — design starts here |
-| `sm` | 480px | Large mobile |
-| `md` | 768px | Tablet |
-| `lg` | 992px | Desktop |
-| `xl` | 1280px | Large desktop |
-| `2xl` | 1536px | Wide screen |
+| Token  | Width  | Target                      |
+| ------ | ------ | --------------------------- |
+| `base` | 0px    | Mobile — design starts here |
+| `sm`   | 480px  | Large mobile                |
+| `md`   | 768px  | Tablet                      |
+| `lg`   | 992px  | Desktop                     |
+| `xl`   | 1280px | Large desktop               |
+| `2xl`  | 1536px | Wide screen                 |
 
 **Mobile-first. Always.** `base` value targets mobile. Override upward. Never write desktop layout as default then patch mobile.
 
@@ -382,32 +401,40 @@ Enterprise SaaS must work on all viewports. Responsive design is **mandatory on 
 ### Mandatory Rules by Surface
 
 **Page layout:**
+
 - All pages use `maxW` + `mx="auto"` container. Never full-bleed without explicit design intent.
 - Sidebar: `display={{ base: "none", lg: "flex" }}`. Mobile gets hamburger + `Drawer`.
 
 **Grids and lists:**
+
 - Always `SimpleGrid` with responsive `columns`. Never hardcoded `Flex` with fixed widths.
 - `columns={{ base: 1, md: 2, xl: 3 }}` minimum pattern for card grids.
 
 **Typography:**
+
 - Headings: `fontSize={{ base: "xl", md: "2xl", lg: "3xl" }}`.
 - Body: `fontSize={{ base: "sm", md: "md" }}`. Never hardcode a single size for text that appears on all viewports.
 
 **Data tables:**
+
 - Always wrap in `TableContainer` with `overflowX="auto"`. Never clip or truncate silently on mobile.
 - At `base`, consider card-list layout if table has 5+ columns.
 
 **Forms:**
+
 - Full width at `base`. Two-column `SimpleGrid` allowed at `md+` only.
 - Submit/primary CTA button: `w={{ base: "full", md: "auto" }}`.
 
 **Modals:**
+
 - `size={{ base: "full", md: "lg" }}`. Full screen on mobile — no tiny modals on small viewports.
 
 **Charts (Recharts):**
+
 - Container `Box` must have `w="100%"` and an explicit `h` prop. Recharts respects container width — never set a fixed `width` prop on the chart component.
 
 **Touch targets:**
+
 - All interactive elements minimum 44×44px. Use `minH="11"` (44px) on buttons/links where Chakra default is smaller.
 
 ### Anti-Patterns — Hard Prohibited
@@ -445,13 +472,17 @@ Before marking any feature/component complete, verify all three:
 Access token → **in-memory only** (`src/lib/auth.ts`). Never localStorage. Refresh token → httpOnly cookie.
 
 ```typescript
-let _accessToken: string | null = null
+let _accessToken: string | null = null;
 export const auth = {
-  setToken: (token: string) => { _accessToken = token },
+  setToken: (token: string) => {
+    _accessToken = token;
+  },
   getToken: () => _accessToken,
-  clear: () => { _accessToken = null },
+  clear: () => {
+    _accessToken = null;
+  },
   isAuthenticated: () => _accessToken !== null,
-}
+};
 ```
 
 On login: `auth.setToken(data.accessToken)` → navigate to `/dashboard`.
@@ -465,12 +496,14 @@ Route guard lives in `AppLayout.tsx`. Auth pages (`/auth/*`) are outside `AppLay
 ## Event Domain
 
 Core types (`src/types/index.ts`):
+
 - `AppEvent` — main entity. `id` is UUID string.
 - `EventStatus`: `draft | published | ongoing | completed | cancelled`
 - `EventCategory`: `conference | workshop | seminar | concert | sports | networking | webinar | hackathon | other`
 - `AuthUser` — `id`, `name`, `email`, `role`
 
 Status machine (enforce in UI — do not allow invalid transitions):
+
 ```
 draft → published → ongoing → completed
               ↘ cancelled (from draft or published only)
@@ -484,18 +517,19 @@ FullCalendar event objects are not `AppEvent`. Always map via `appEventToCalenda
 
 These are enforced, not optional.
 
-| Principle | Rule |
-|---|---|
-| Single Responsibility | One component/hook/util, one job. `useEvents` fetches. `EventCard` renders. |
-| DRY | Status labels → one map constant. Form validation → Zod only. Error extraction → `extractApiError` only. |
-| KISS | Obvious over clever. Extract only at the third callsite. No premature abstraction. |
-| YAGNI | No plugin systems for one use case. No scaffolding for hypothetical requirements. |
-| Immutability | Return new objects. Never mutate in place. |
-| Fail Fast | Zod parse at API boundary. If response doesn't match schema, throw — don't pass bad data to UI. |
-| Composition | Hooks provide behaviour, components compose UI. No class inheritance for domain logic. |
-| Lean Components | ~150 lines max. If it fetches AND renders AND manages local state → split it. |
+| Principle             | Rule                                                                                                     |
+| --------------------- | -------------------------------------------------------------------------------------------------------- |
+| Single Responsibility | One component/hook/util, one job. `useEvents` fetches. `EventCard` renders.                              |
+| DRY                   | Status labels → one map constant. Form validation → Zod only. Error extraction → `extractApiError` only. |
+| KISS                  | Obvious over clever. Extract only at the third callsite. No premature abstraction.                       |
+| YAGNI                 | No plugin systems for one use case. No scaffolding for hypothetical requirements.                        |
+| Immutability          | Return new objects. Never mutate in place.                                                               |
+| Fail Fast             | Zod parse at API boundary. If response doesn't match schema, throw — don't pass bad data to UI.          |
+| Composition           | Hooks provide behaviour, components compose UI. No class inheritance for domain logic.                   |
+| Lean Components       | ~150 lines max. If it fetches AND renders AND manages local state → split it.                            |
 
 **Bad hook — violates SRP:**
+
 ```typescript
 // ❌ Fetches + transforms + has side effect
 export function useEvents() {
@@ -507,11 +541,16 @@ export function useEvents() {
 ```
 
 **Bad component — violates ISP:**
+
 ```tsx
 // ❌ Receives full entity when it only needs one field
-function EventBadge({ event }: { event: AppEvent }) { return <Badge>{event.status}</Badge> }
+function EventBadge({ event }: { event: AppEvent }) {
+  return <Badge>{event.status}</Badge>;
+}
 // ✅
-function EventBadge({ status }: { status: EventStatus }) { return <Badge>{status}</Badge> }
+function EventBadge({ status }: { status: EventStatus }) {
+  return <Badge>{status}</Badge>;
+}
 ```
 
 ---
@@ -543,7 +582,13 @@ Test naming: `[Scenario]_[Condition]_[ExpectedResult]` — e.g., `Publish_DraftE
 - REST API. Base URL via `VITE_API_BASE_URL` env var.
 - Auth: JWT bearer + httpOnly refresh cookie.
 - Error shape (RFC 7807):
+
 ```json
-{ "title": "Validation failed", "status": 400, "errors": { "field": ["message"] } }
+{
+  "title": "Validation failed",
+  "status": 400,
+  "errors": { "field": ["message"] }
+}
 ```
+
 - Pagination params: `?page=1&pageSize=20`. Response: `{ items, total, page, pageSize, totalPages }`.
