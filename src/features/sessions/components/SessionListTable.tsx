@@ -226,7 +226,7 @@ export function SessionListTable({
                     <Flex justify="center">
                       <Menu.Root positioning={{ placement: "bottom-start" }}>
                         <Menu.Trigger asChild>
-                          <Box as="button" type="button" aria-label={`Actions for ${session.name}`} cursor="pointer" {...actionButtonStyles}>
+                          <Box as="button" aria-label={`Actions for ${session.name}`} cursor="pointer" {...actionButtonStyles}>
                             <Flex align="center" justify="center" w="full" h="full">
                               <MoreHorizontal size={18} aria-hidden="true" />
                             </Flex>

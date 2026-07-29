@@ -197,7 +197,7 @@ export function EventChargeRulesSection() {
         control={control}
         name="chargeRuleUniqueIds"
         render={({ field }) => (
-          <ReactSelect
+          <ReactSelect<ChargeRuleSelectOption, true>
             isMulti
             closeMenuOnSelect={false}
             hideSelectedOptions={false}

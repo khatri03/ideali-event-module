@@ -1695,15 +1695,17 @@ export function AdminFeePlansManager() {
                                   <Box
                                     key={`${plan.uniqueId}-${moduleId ?? moduleName}-${index}`}
                                     as="button"
-                                    type="button"
+                                    // Chakra's polymorphic props do not admit `disabled`, so the guard the
+                                    // attribute used to provide lives in the handler instead - without it a
+                                    // chip would become clickable again mid-unmap.
                                     onClick={() => {
-                                      if (moduleId) {
+                                      if (moduleId && !unmapModuleMutation.isPending) {
                                         void handleEditModule(plan, moduleId)
                                       }
                                     }}
                                     cursor={moduleId ? "pointer" : "not-allowed"}
                                     _hover={moduleId ? { bg: "gray.200", borderColor: "gray.300" } : undefined}
-                                    disabled={!moduleId || unmapModuleMutation.isPending}
+                                    aria-disabled={!moduleId || unmapModuleMutation.isPending}
                                     aria-label={moduleId ? `Edit ${moduleName} module` : moduleName}
                                     title={moduleName}
                                     {...revenuePlanChipStyles}

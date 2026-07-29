@@ -45,7 +45,6 @@ createRoot(document.getElementById("root")!).render(
                 </Box>
                 <Box
                   as="button"
-                  type="button"
                   aria-label="Dismiss notification"
                   onClick={() => toaster.dismiss(toast.id)}
                   cursor="pointer"

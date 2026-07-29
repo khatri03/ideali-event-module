@@ -772,9 +772,11 @@ function AutoImageCarousel({ slides, accentColor, height = { base: '220px', md: 
     return () => window.clearInterval(timer)
   }, [slides.length, isPaused])
 
-  useEffect(() => {
+  const [prevSlides, setPrevSlides] = useState(slides)
+  if (slides !== prevSlides) {
+    setPrevSlides(slides)
     setActiveSlide(0)
-  }, [slides])
+  }
 
   if (slides.length === 0) {
     return null
@@ -1067,7 +1069,7 @@ function AttendeeTicketCard({
           <Flex justify='space-between' gap={4} align={{ base: 'start', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
             <Stack gap={1} minW={0}>
               <HStack gap={2} align='baseline' flexWrap='wrap' minW={0}>
-                <Text fontSize='sm' fontWeight='800' color='gray.900' lineHeight='1.4' noOfLines={1}>
+                <Text fontSize='sm' fontWeight='800' color='gray.900' lineHeight='1.4' lineClamp={1}>
                   {group.ticketName}
                 </Text>
                 <Text fontSize='sm' color='gray.600' lineHeight='1.4' whiteSpace='nowrap'>
@@ -1576,9 +1578,13 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     enabled: tabs.some((tab) => tab.id === 'questionnaire') && activeTab === 'questionnaire',
     retry: 1,
   })
-  useEffect(() => {
-    setActiveTab((current) => (tabs.some((tab) => tab.id === current) ? current : firstTab))
-  }, [firstTab, tabs])
+  const [prevTabs, setPrevTabs] = useState(tabs)
+  if (tabs !== prevTabs) {
+    setPrevTabs(tabs)
+    if (!tabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab(firstTab)
+    }
+  }
 
   useEffect(() => {
     if (purchaseTimerStartedAt === null) return
@@ -1596,12 +1602,15 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const activeIndex = getStepIndex(tabs, activeTab)
   const isFinalStep = activeIndex >= 0 && activeIndex === tabs.length - 1
   const descriptionData = descriptionQuery.data ?? event
-  const sessionsData =
-    sessionsQuery.data?.sessions ??
-    attendeeInfoQuery.data?.sessions ??
-    questionnaireQuery.data?.sessions ??
-    event.sessions ??
-    []
+  const sessionsData = useMemo(
+    () =>
+      sessionsQuery.data?.sessions ??
+      attendeeInfoQuery.data?.sessions ??
+      questionnaireQuery.data?.sessions ??
+      event.sessions ??
+      [],
+    [sessionsQuery.data, attendeeInfoQuery.data, questionnaireQuery.data, event.sessions],
+  )
   const selectedTicketSummary = useMemo<SelectedTicketSummaryItem[]>(
     () =>
       sessionsData.flatMap((session) =>
@@ -1744,10 +1753,15 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const sessions = currentEvent.sessions
   const bannerSlides = useMemo(() => getSessionBannerSlides(currentEvent), [currentEvent])
   const sessionsLoading = sessionsQuery.isLoading || (sessionsQuery.isFetching && sessions.length === 0)
-  useEffect(() => {
+  const [prevSessions, setPrevSessions] = useState(sessions)
+  if (sessions !== prevSessions) {
+    setPrevSessions(sessions)
     setExpandedSessionIds(sessions.map((session) => session.uniqueId))
-  }, [sessions])
-  useEffect(() => {
+  }
+
+  const [prevAttendeeSlotEntries, setPrevAttendeeSlotEntries] = useState(attendeeSlotEntries)
+  if (attendeeSlotEntries !== prevAttendeeSlotEntries) {
+    setPrevAttendeeSlotEntries(attendeeSlotEntries)
     setAttendeeInfoBySlot((current) => {
       const next: Record<string, AttendeeSlotState> = {}
       let hasChanges = false
@@ -1770,8 +1784,12 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
       return hasChanges ? next : current
     })
-  }, [attendeeSlotEntries])
-  useEffect(() => {
+  }
+
+  const [prevAttendeeSessionGroups, setPrevAttendeeSessionGroups] = useState(attendeeSessionGroups)
+  if (attendeeSessionGroups !== prevAttendeeSessionGroups) {
+    setPrevAttendeeSessionGroups(attendeeSessionGroups)
+
     const allowedSessionIds = new Set(attendeeSessionGroups.map((sessionGroup) => sessionGroup.sessionId))
     const allowedTicketIds = new Set(attendeeSessionGroups.flatMap((sessionGroup) => sessionGroup.tickets.map((ticket) => ticket.ticketId)))
 
@@ -1814,17 +1832,19 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
       return hasChanges ? next : current
     })
-  }, [attendeeSessionGroups])
+  }
   const purchaseTimerDurationMs = Math.max(currentEvent.purchaseTimeLimitMinutes, 1) * 60 * 1000
   const purchaseTimerRemainingMs = purchaseTimerStartedAt === null ? null : purchaseTimerStartedAt + purchaseTimerDurationMs - purchaseTimerNow
   const purchaseTimerVisible = purchaseTimerStartedAt !== null
   const purchaseTimerExpired = purchaseTimerRemainingMs !== null && purchaseTimerRemainingMs <= 0
 
-  useEffect(() => {
-    if (purchaseTimerRemainingMs === null || purchaseTimerRemainingMs > 0) return
-
-    setPurchaseTimerExpiryOpen(true)
-  }, [purchaseTimerRemainingMs])
+  const [prevPurchaseTimerRemainingMs, setPrevPurchaseTimerRemainingMs] = useState(purchaseTimerRemainingMs)
+  if (purchaseTimerRemainingMs !== prevPurchaseTimerRemainingMs) {
+    setPrevPurchaseTimerRemainingMs(purchaseTimerRemainingMs)
+    if (purchaseTimerRemainingMs !== null && purchaseTimerRemainingMs <= 0) {
+      setPurchaseTimerExpiryOpen(true)
+    }
+  }
 
   useEffect(() => {
     if (activeTab !== 'payment' || !paymentBreakdownLoaded) return
@@ -1839,23 +1859,31 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     refetchPaymentBreakdown()
   }, [activeTab, paymentBreakdownLoaded, refetchPaymentBreakdown, selectedTicketTotal])
 
-  useEffect(() => {
-    if (activeTab !== 'payment') return
+  const [prevPaymentMethodDeps, setPrevPaymentMethodDeps] = useState({ activeTab, paymentBreakdowns, visiblePaymentMethods })
+  const paymentMethodDepsChanged =
+    prevPaymentMethodDeps.activeTab !== activeTab ||
+    prevPaymentMethodDeps.paymentBreakdowns !== paymentBreakdowns ||
+    prevPaymentMethodDeps.visiblePaymentMethods !== visiblePaymentMethods
+  if (paymentMethodDepsChanged) {
+    setPrevPaymentMethodDeps({ activeTab, paymentBreakdowns, visiblePaymentMethods })
 
-    const availableMethods = paymentBreakdowns.length > 0
-      ? paymentBreakdowns.map((breakdown) => breakdown.paymentMethod)
-      : visiblePaymentMethods.map((method) => method.paymentMethod)
+    if (activeTab === 'payment') {
+      const availableMethods = paymentBreakdowns.length > 0
+        ? paymentBreakdowns.map((breakdown) => breakdown.paymentMethod)
+        : visiblePaymentMethods.map((method) => method.paymentMethod)
 
-    if (availableMethods.length === 0) {
-      setSelectedPaymentMethod(null)
-      return
+      if (availableMethods.length === 0) {
+        setSelectedPaymentMethod(null)
+      } else {
+        setSelectedPaymentMethod((current) => (current && availableMethods.includes(current) ? current : availableMethods[0]))
+      }
     }
-
-    setSelectedPaymentMethod((current) => (current && availableMethods.includes(current) ? current : availableMethods[0]))
-  }, [activeTab, paymentBreakdowns, visiblePaymentMethods])
-  useEffect(() => {
+  }
+  const [prevTabsLength, setPrevTabsLength] = useState(tabs.length)
+  if (tabs.length !== prevTabsLength) {
+    setPrevTabsLength(tabs.length)
     setHighestUnlockedIndex((current) => Math.min(current, Math.max(tabs.length - 1, 0)))
-  }, [tabs.length])
+  }
   const shouldHighlightSummaryLauncher = selectedTicketCount > 0 || purchaseTimerVisible
   const isDescriptionStep = activeTab === 'description'
   const sessionsStepIndex = getStepIndex(tabs, 'sessions')
@@ -2252,6 +2280,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     })
 
     if (purchaseTimerStartedAt === null && nextQuantity > 0) {
+      // eslint-disable-next-line react-hooks/purity -- runs only inside this event handler, never during render
       const now = Date.now()
       setPurchaseTimerStartedAt(now)
       setPurchaseTimerNow(now)
@@ -2288,6 +2317,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setPurchaseReviewMessage(null)
     setPurchaseReviewScrollTarget(null)
     setPurchaseTimerStartedAt(null)
+    // eslint-disable-next-line react-hooks/purity -- runs only inside this event handler, never during render
     setPurchaseTimerNow(Date.now())
     paymentSubtotalSnapshotRef.current = null
     setIsSummaryOpen(false)
@@ -2335,14 +2365,14 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setPendingDeleteAction(null)
   }
 
-  useEffect(() => {
-    if (selectedTicketCount > 0) return
-    if (activeIndex <= sessionsStepIndex) return
-    if (sessionsStepIndex < 0) return
-
-    setHighestUnlockedIndex((current) => Math.min(current, sessionsStepIndex))
-    setActiveTab(tabs[sessionsStepIndex].id)
-  }, [activeIndex, selectedTicketCount, sessionsStepIndex, tabs])
+  const [prevSelectedTicketCount, setPrevSelectedTicketCount] = useState(selectedTicketCount)
+  if (selectedTicketCount !== prevSelectedTicketCount) {
+    setPrevSelectedTicketCount(selectedTicketCount)
+    if (selectedTicketCount <= 0 && activeIndex > sessionsStepIndex && sessionsStepIndex >= 0) {
+      setHighestUnlockedIndex((current) => Math.min(current, sessionsStepIndex))
+      setActiveTab(tabs[sessionsStepIndex].id)
+    }
+  }
 
   const areAllSessionsExpanded =
     sessions.length > 0 && expandedSessionIds.length === sessions.length
@@ -3178,7 +3208,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                             <Flex key={ticket.ticket.uniqueId} justify='space-between' gap={4} align='center' bg='white' borderWidth='1px' borderColor='gray.200' borderRadius='14px' px={4} py={3}>
                                               <Stack gap={0.5} minW={0}>
                                                 <HStack gap={2} align='baseline' flexWrap='wrap' minW={0}>
-                                                  <Text fontWeight='700' color='gray.900' noOfLines={1}>
+                                                  <Text fontWeight='700' color='gray.900' lineClamp={1}>
                                                     {ticket.ticket.name}
                                                   </Text>
                                                   <Text fontSize='sm' fontWeight='400' color='gray.600' whiteSpace='nowrap'>

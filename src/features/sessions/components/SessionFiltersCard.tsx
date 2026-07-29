@@ -24,7 +24,8 @@ interface SelectOption {
   value: string
 }
 
-const filterMultiSelectStyles: StylesConfig<SelectOption, true> = {
+// Shared by both the multi and single selects below, so IsMulti stays open rather than pinned to true.
+const filterMultiSelectStyles: StylesConfig<SelectOption, boolean> = {
   control: (base, state) => ({
     ...base,
     minHeight: 44,

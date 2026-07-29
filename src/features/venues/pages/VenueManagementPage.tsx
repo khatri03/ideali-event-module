@@ -3,7 +3,6 @@ import type { CSSProperties } from "react"
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 import { Badge, Box, Button, CloseButton, Dialog, Flex, Heading, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text, Tooltip } from "@chakra-ui/react"
 import { ArrowDown, ArrowUp, ArrowUpDown, CalendarPlus, MapPin, MoreHorizontal, PencilLine, Plus, Search, Sparkles } from "lucide-react"
-import { StyledSelect } from "@/components/common/StyledSelect"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 import {
