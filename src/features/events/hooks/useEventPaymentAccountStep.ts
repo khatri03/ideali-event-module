@@ -94,7 +94,7 @@ export function useEventPaymentAccountStep(): EventPaymentAccountStepState {
     })
   }, [paymentAccountStepQuery.data, paymentMethodsQuery.data, selectedPaymentAccountUniqueId, setValue])
 
-  const paymentAccounts = organizerPaymentAccountsQuery.data ?? []
+  const paymentAccounts = useMemo(() => organizerPaymentAccountsQuery.data ?? [], [organizerPaymentAccountsQuery.data])
   const selectedAccount = useMemo(
     () => paymentAccounts.find((account) => account.uniqueId === selectedPaymentAccountUniqueId) ?? null,
     [paymentAccounts, selectedPaymentAccountUniqueId],

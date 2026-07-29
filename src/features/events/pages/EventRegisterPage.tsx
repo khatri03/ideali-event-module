@@ -402,9 +402,12 @@ export function EventRegisterPage() {
     return () => window.clearInterval(timer)
   }, [bookingStartAt])
 
+  const bookingStartAtTime = bookingStartAt?.getTime()
+  const refetchEvent = eventQuery.refetch
+
   useEffect(() => {
     bookingOpenRef.current = false
-  }, [eventUniqueId, bookingStartAt?.getTime()])
+  }, [eventUniqueId, bookingStartAtTime])
 
   useEffect(() => {
     if (!event || !bookingStartAt) return
@@ -412,8 +415,8 @@ export function EventRegisterPage() {
     if (bookingOpenRef.current) return
 
     bookingOpenRef.current = true
-    void eventQuery.refetch()
-  }, [bookingStartAt, event, eventQuery.refetch, now])
+    void refetchEvent()
+  }, [bookingStartAt, event, refetchEvent, now])
 
   function handleBackToEvents() {
     navigate(APP_ROUTES.events)
