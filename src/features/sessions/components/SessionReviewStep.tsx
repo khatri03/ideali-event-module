@@ -156,7 +156,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   const reviewReturnUrl = useMemo(() => `${location.pathname}${location.search}`, [location.pathname, location.search])
   const reviewSummaryQuery = useSessionReviewSummary(sessionId)
   const reviewSummary = reviewSummaryQuery.data
-  const setupStateOptions = reviewSummary?.setupStateOptions ?? []
+  const setupStateOptions = useMemo(() => reviewSummary?.setupStateOptions ?? [], [reviewSummary])
   const selectableSetupStates = useMemo(
     () => setupStateOptions.filter((option) => option.isSelectable),
     [setupStateOptions],
@@ -254,23 +254,25 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   }, [sessionId, setPrimaryAction, setPrimaryActionReady, setupStateMutation])
 
   useEffect(() => {
-    if (!isInitialised || !reviewSummary) {
-      setPrimaryAction(null)
-      setPrimaryActionReady(false)
-      return
-    }
+    void Promise.resolve().then(() => {
+      if (!isInitialised || !reviewSummary) {
+        setPrimaryAction(null)
+        setPrimaryActionReady(false)
+        return
+      }
 
-    setSetupState(reviewSummary.setupState)
-    setFinishSetupState(
-      selectableSetupStates.find((option) => option.value === reviewSummary.setupState)?.value ??
-        selectableSetupStates.find((option) => !option.isFinal)?.value ??
-        selectableSetupStates.find((option) => option.isFinal)?.value ??
-        null,
-    )
-    setPrimaryAction(async () => {
-      await openFinishConfirmation()
+      setSetupState(reviewSummary.setupState)
+      setFinishSetupState(
+        selectableSetupStates.find((option) => option.value === reviewSummary.setupState)?.value ??
+          selectableSetupStates.find((option) => !option.isFinal)?.value ??
+          selectableSetupStates.find((option) => option.isFinal)?.value ??
+          null,
+      )
+      setPrimaryAction(async () => {
+        await openFinishConfirmation()
+      })
+      setPrimaryActionReady(true)
     })
-    setPrimaryActionReady(true)
   }, [isInitialised, openFinishConfirmation, reviewSummary, selectableSetupStates, setPrimaryAction, setPrimaryActionReady])
 
   const selectedGenres = reviewSummary?.genres ?? []

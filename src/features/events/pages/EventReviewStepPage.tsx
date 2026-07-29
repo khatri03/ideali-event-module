@@ -256,7 +256,7 @@ export function EventReviewStepPage() {
 
   const reviewSummaryQuery = useEventReviewSummary(eventId)
   const reviewSummary = reviewSummaryQuery.data
-  const setupStateOptions = reviewSummary?.setupStateOptions ?? []
+  const setupStateOptions = useMemo(() => reviewSummary?.setupStateOptions ?? [], [reviewSummary])
   const selectableSetupStates = useMemo(() => setupStateOptions.filter((option) => option.isSelectable), [setupStateOptions])
   const finalSetupState = setupStateOptions.find((option) => option.isFinal)?.value ?? ""
   const setupStateTheme = getEventSetupStateTheme(setupState || reviewSummary?.setupState || "", setupStateOptions)
@@ -321,23 +321,26 @@ export function EventReviewStepPage() {
   }, [finishMutation, resolvedFinishSetupState, setPrimaryActionReady])
 
   useEffect(() => {
-    if (!eventId || !reviewSummary) {
-      setPrimaryAction(null)
-      setPrimaryActionReady(false)
-      return
-    }
+    void Promise.resolve().then(() => {
+      if (!eventId || !reviewSummary) {
+        setPrimaryAction(null)
+        setPrimaryActionReady(false)
+        return
+      }
 
-    setSetupState(reviewSummary.setupState)
-    setFinishSetupState(
-      setupStateOptions.find((option) => option.value === reviewSummary.setupState)?.value ??
-        selectableSetupStates.find((option) => !option.isFinal)?.value ??
-        selectableSetupStates.find((option) => option.isFinal)?.value ??
-        null,
-    )
-    setPrimaryAction(async () => {
-      await openFinishConfirmation()
+      setSetupState(reviewSummary.setupState)
+      setFinishSetupState(
+        setupStateOptions.find((option) => option.value === reviewSummary.setupState)?.value ??
+          selectableSetupStates.find((option) => !option.isFinal)?.value ??
+          selectableSetupStates.find((option) => option.isFinal)?.value ??
+          null,
+      )
+      setPrimaryAction(async () => {
+        await openFinishConfirmation()
+      })
+      setPrimaryActionReady(true)
     })
-    setPrimaryActionReady(true)
+
     return () => {
       setPrimaryAction(null)
       setPrimaryActionReady(true)

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import type { Region } from "@seatsio/seatsio-types"
 import { SeatsioDesigner } from "@seatsio/seatsio-react"
@@ -110,43 +110,53 @@ export function SeatingLayoutDesignerPage() {
   const designerRegion = workspace?.region
   const hasSupportedRegion = Boolean(designerRegion && SUPPORTED_SEATSIO_REGIONS.has(designerRegion as Region))
 
-  useEffect(() => {
+  const [prevIsEditRoute, setPrevIsEditRoute] = useState(isEditRoute)
+  if (isEditRoute !== prevIsEditRoute) {
+    setPrevIsEditRoute(isEditRoute)
+
     if (isEditRoute) {
       setLayoutMode("edit")
     }
-  }, [isEditRoute])
+  }
 
-  useEffect(() => {
-    if (!layoutDetailQuery.data) {
-      return
+  const [prevLayoutDetailData, setPrevLayoutDetailData] = useState(layoutDetailQuery.data)
+  if (layoutDetailQuery.data !== prevLayoutDetailData) {
+    setPrevLayoutDetailData(layoutDetailQuery.data)
+
+    if (layoutDetailQuery.data) {
+      setValue("venueUniqueId", layoutDetailQuery.data.venueUniqueId ?? "", {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: true,
+      })
+      setValue("name", layoutDetailQuery.data.name, {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: true,
+      })
+      setLayoutChartKey(layoutDetailQuery.data.seatsIoChartKey)
     }
+  }
 
-    setValue("venueUniqueId", layoutDetailQuery.data.venueUniqueId ?? "", {
-      shouldDirty: false,
-      shouldTouch: false,
-      shouldValidate: true,
-    })
-    setValue("name", layoutDetailQuery.data.name, {
-      shouldDirty: false,
-      shouldTouch: false,
-      shouldValidate: true,
-    })
-    setLayoutChartKey(layoutDetailQuery.data.seatsIoChartKey)
-  }, [layoutDetailQuery.data, setValue])
+  const isWorkspaceCreationInFlightRef = useRef(false)
 
   useEffect(() => {
     if (layoutMode !== "edit") {
       return
     }
 
-    if (!layoutChartKey || designerWorkspace || isLoadingDesignerCredentials || workspaceError) {
+    if (!layoutChartKey || designerWorkspace || isWorkspaceCreationInFlightRef.current || workspaceError) {
       return
     }
 
-    setIsLoadingDesignerCredentials(true)
-    setIsDesignerRendered(false)
+    isWorkspaceCreationInFlightRef.current = true
 
-    void createSeatsIoWorkspace()
+    void Promise.resolve()
+      .then(() => {
+        setIsLoadingDesignerCredentials(true)
+        setIsDesignerRendered(false)
+        return createSeatsIoWorkspace()
+      })
       .then((designerCredentials) => {
         setDesignerWorkspace(designerCredentials)
       })
@@ -155,8 +165,9 @@ export function SeatingLayoutDesignerPage() {
       })
       .finally(() => {
         setIsLoadingDesignerCredentials(false)
+        isWorkspaceCreationInFlightRef.current = false
       })
-  }, [designerWorkspace, isLoadingDesignerCredentials, layoutChartKey, layoutMode, workspaceError])
+  }, [designerWorkspace, layoutChartKey, layoutMode, workspaceError])
 
   async function handleCreateVenue() {
     const trimmedName = venueName.trim()

@@ -175,28 +175,32 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
     },
   })
 
-  useEffect(() => {
-    if (!seatSelectionQuery.isSuccess || !seatSelectionQuery.data || isHydrated) {
-      return
-    }
+  const [prevSeatSelectionData, setPrevSeatSelectionData] = useState(seatSelectionQuery.data)
+  if (seatSelectionQuery.data !== prevSeatSelectionData) {
+    setPrevSeatSelectionData(seatSelectionQuery.data)
 
-    setDraftOfferPickingSeats(seatSelectionQuery.data.offerPickingSeats)
-    setDraftSeatsIoEventUniqueId(seatSelectionQuery.data.seatsIoEventUniqueId)
-    setDraftSeatsIoChartUniqueId(seatSelectionQuery.data.seatsIoChartUniqueId)
-    setIsHydrated(true)
-  }, [isHydrated, seatSelectionQuery.data, seatSelectionQuery.isSuccess])
-
-  useEffect(() => {
-    if (!isHydrated || !draftSeatsIoChartUniqueId || !venueChartsQuery.isSuccess) {
-      return
+    if (seatSelectionQuery.isSuccess && seatSelectionQuery.data && !isHydrated) {
+      setDraftOfferPickingSeats(seatSelectionQuery.data.offerPickingSeats)
+      setDraftSeatsIoEventUniqueId(seatSelectionQuery.data.seatsIoEventUniqueId)
+      setDraftSeatsIoChartUniqueId(seatSelectionQuery.data.seatsIoChartUniqueId)
+      setIsHydrated(true)
     }
+  }
 
-    const chartStillBelongsToVenue = (venueChartsQuery.data ?? []).some((chart) => chart.uniqueId === draftSeatsIoChartUniqueId)
-    if (!chartStillBelongsToVenue) {
-      setDraftSeatsIoChartUniqueId(null)
-      setDraftSeatsIoEventUniqueId(null)
+  const chartMembershipDeps = [draftSeatsIoChartUniqueId, isHydrated, venueChartsQuery.data, venueChartsQuery.isSuccess]
+  const [prevChartMembershipDeps, setPrevChartMembershipDeps] = useState(chartMembershipDeps)
+  const chartMembershipDepsChanged = chartMembershipDeps.some((dep, index) => dep !== prevChartMembershipDeps[index])
+  if (chartMembershipDepsChanged) {
+    setPrevChartMembershipDeps(chartMembershipDeps)
+
+    if (isHydrated && draftSeatsIoChartUniqueId && venueChartsQuery.isSuccess) {
+      const chartStillBelongsToVenue = (venueChartsQuery.data ?? []).some((chart) => chart.uniqueId === draftSeatsIoChartUniqueId)
+      if (!chartStillBelongsToVenue) {
+        setDraftSeatsIoChartUniqueId(null)
+        setDraftSeatsIoEventUniqueId(null)
+      }
     }
-  }, [draftSeatsIoChartUniqueId, isHydrated, venueChartsQuery.data, venueChartsQuery.isSuccess])
+  }
 
   useEffect(() => {
     if (!seatSelectionQuery.isSuccess || !isHydrated || venueChartsQuery.isFetching || chartEventsQuery.isFetching) {

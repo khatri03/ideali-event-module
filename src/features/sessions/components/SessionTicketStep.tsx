@@ -334,15 +334,16 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
   const hasChartCategories = Boolean(chartCategoriesQuery.isSuccess && chartCategoryOptions.length > 0)
   const hasNoChartCategories = Boolean(chartCategoriesQuery.isSuccess && chartCategoryOptions.length === 0)
 
-  useEffect(() => {
-    if (!ticketCategoryId || !chartCategoriesQuery.isSuccess) {
-      return
-    }
+  const categoryValidityDeps = [chartCategoriesQuery.isSuccess, chartCategoryOptions, ticketCategoryId]
+  const [prevCategoryValidityDeps, setPrevCategoryValidityDeps] = useState(categoryValidityDeps)
+  const categoryValidityDepsChanged = categoryValidityDeps.some((dep, index) => dep !== prevCategoryValidityDeps[index])
+  if (categoryValidityDepsChanged) {
+    setPrevCategoryValidityDeps(categoryValidityDeps)
 
-    if (!chartCategoryOptions.some((option) => option.value === ticketCategoryId)) {
+    if (ticketCategoryId && chartCategoriesQuery.isSuccess && !chartCategoryOptions.some((option) => option.value === ticketCategoryId)) {
       setTicketCategoryId("")
     }
-  }, [chartCategoriesQuery.isSuccess, chartCategoryOptions, ticketCategoryId])
+  }
   const createTicketMutation = useMutation({
     mutationFn: (payload: {
       name: string
@@ -425,19 +426,22 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
     return () => window.cancelAnimationFrame(frameId)
   }, [isOpen])
 
-  useEffect(() => {
-    if (editingTicketId || !ticketCategoryId || ticketName.trim()) {
-      return
-    }
+  const ticketNameDefaultDeps = [chartCategoriesQuery.data, editingTicketId, ticketCategoryId, ticketName]
+  const [prevTicketNameDefaultDeps, setPrevTicketNameDefaultDeps] = useState(ticketNameDefaultDeps)
+  const ticketNameDefaultDepsChanged = ticketNameDefaultDeps.some((dep, index) => dep !== prevTicketNameDefaultDeps[index])
+  if (ticketNameDefaultDepsChanged) {
+    setPrevTicketNameDefaultDeps(ticketNameDefaultDeps)
 
-    const selectedCategory = chartCategoriesQuery.data?.find(
-      (category) => String(category.id) === ticketCategoryId,
-    )
+    if (!editingTicketId && ticketCategoryId && !ticketName.trim()) {
+      const selectedCategory = chartCategoriesQuery.data?.find(
+        (category) => String(category.id) === ticketCategoryId,
+      )
 
-    if (selectedCategory?.name) {
-      setTicketName(selectedCategory.name)
+      if (selectedCategory?.name) {
+        setTicketName(selectedCategory.name)
+      }
     }
-  }, [chartCategoriesQuery.data, editingTicketId, ticketCategoryId, ticketName])
+  }
 
   useEffect(() => {
     setPrimaryActionReady(!ticketsQuery.isLoading && !ticketsQuery.isError)

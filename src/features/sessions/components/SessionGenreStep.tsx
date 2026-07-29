@@ -39,7 +39,7 @@ export function SessionGenreStep({ sessionId }: SessionGenreStepProps) {
     retry: false,
   })
 
-  const currentGenres = genresQuery.data ?? []
+  const currentGenres = useMemo(() => genresQuery.data ?? [], [genresQuery.data])
   const currentSelectedGenreUniqueIds = useMemo(() => {
     if (draftGenreUniqueIds) {
       return draftGenreUniqueIds
