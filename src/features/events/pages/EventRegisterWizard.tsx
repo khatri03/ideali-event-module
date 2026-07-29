@@ -1732,23 +1732,32 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     retry: 1,
   })
   const { refetch: refetchPaymentBreakdown, isSuccess: paymentBreakdownLoaded } = paymentQuery
-  const paymentMethodsData = paymentQuery.data?.paymentMethods ?? event.paymentMethods ?? []
-  const visiblePaymentMethods = paymentMethodsData.filter((method) => !method.isOrganizerOnly || event.isOrganizer)
-  const paymentBreakdowns = paymentQuery.data?.paymentBreakdowns ?? []
+  const paymentMethodsData = useMemo(
+    () => paymentQuery.data?.paymentMethods ?? event.paymentMethods ?? [],
+    [paymentQuery.data, event.paymentMethods],
+  )
+  const visiblePaymentMethods = useMemo(
+    () => paymentMethodsData.filter((method) => !method.isOrganizerOnly || event.isOrganizer),
+    [paymentMethodsData, event.isOrganizer],
+  )
+  const paymentBreakdowns = useMemo(() => paymentQuery.data?.paymentBreakdowns ?? [], [paymentQuery.data])
   const selectedPaymentBreakdown =
     paymentBreakdowns.find((breakdown) => breakdown.paymentMethod === selectedPaymentMethod) ??
     paymentBreakdowns[0] ??
     null
   const isSelectedPaymentMethodCard = Boolean(selectedPaymentBreakdown && isCardPaymentMethod(selectedPaymentBreakdown.paymentMethod))
   const paymentBreakdownSubtotal = selectedPaymentBreakdown?.subtotal ?? selectedTicketTotal
-  const eventData = {
-    ...event,
-    description: descriptionData.description ?? event.description,
-    summary: descriptionData.summary ?? event.summary,
-    termsConditions: descriptionData.termsConditions ?? event.termsConditions,
-    sessions: sessionsData,
-    paymentMethods: paymentMethodsData,
-  }
+  const eventData = useMemo(
+    () => ({
+      ...event,
+      description: descriptionData.description ?? event.description,
+      summary: descriptionData.summary ?? event.summary,
+      termsConditions: descriptionData.termsConditions ?? event.termsConditions,
+      sessions: sessionsData,
+      paymentMethods: paymentMethodsData,
+    }),
+    [event, descriptionData.description, descriptionData.summary, descriptionData.termsConditions, sessionsData, paymentMethodsData],
+  )
   const currentEvent = eventData
   const sessions = currentEvent.sessions
   const bannerSlides = useMemo(() => getSessionBannerSlides(currentEvent), [currentEvent])
