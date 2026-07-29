@@ -3,6 +3,7 @@
 
 # MCP / tooling session files
 .playwright-mcp/
+.playwright-cli/
 
 # Dev screenshots
 *.png
