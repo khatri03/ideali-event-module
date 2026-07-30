@@ -59,6 +59,7 @@ export function ContactDetailsFields({ values, onChange, disabled = false }: Con
             value={values[config.field]}
             onChange={(event) => onChange(config.field, event.target.value)}
             placeholder={config.placeholder}
+            aria-label={config.label}
             type={config.type}
             autoComplete={config.autoComplete}
             inputMode={config.inputMode}

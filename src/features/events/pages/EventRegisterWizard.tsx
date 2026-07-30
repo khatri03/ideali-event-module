@@ -142,6 +142,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     expiresAtUtc,
     lineByTicketTypeId,
     syncTicketSelection,
+    setBuyerIdentity,
     resetCart,
   } = useRegistrationCart(event.uniqueId)
   const [buyerInfo, setBuyerInfo] = useState<BuyerAttendeeInfoState>(EMPTY_BUYER_INFO)
@@ -467,6 +468,18 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   }
   // The hold deadline is the server's; the chip only counts down to it.
   const purchaseTimerVisible = Boolean(expiresAtUtc)
+
+  // The server refuses to open a cart without a buyer, so hand the identity over as soon as it is
+  // complete; tickets picked beforehand are replayed against the newly opened cart.
+  useEffect(() => {
+    const name = `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim()
+
+    if (!name || !buyerInfo.email.trim()) {
+      return
+    }
+
+    void setBuyerIdentity({ name, email: buyerInfo.email })
+  }, [buyerInfo.firstName, buyerInfo.lastName, buyerInfo.email, setBuyerIdentity])
 
   const handlePurchaseTimerExpire = useCallback(() => {
     setPurchaseTimerExpired(true)
@@ -819,10 +832,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   function updateBuyerField(field: keyof BuyerAttendeeInfoState, value: string) {
     const nextValue = field === 'phone' ? formatPhoneNumberInput(value) : value
 
-    setBuyerInfo((current) => ({
-      ...current,
-      [field]: nextValue,
-    }))
+    setBuyerInfo((current) => ({ ...current, [field]: nextValue }))
   }
 
   function updateAttendeeField(slotKey: string, field: keyof BuyerAttendeeInfoState, value: string) {
