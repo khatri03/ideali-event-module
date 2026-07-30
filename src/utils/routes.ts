@@ -59,6 +59,8 @@ export const APP_ROUTES = {
   eventRegisterSessions: (eventUniqueId: string) => `/api/events/${eventUniqueId}/register/sessions`,
   eventRegisterAttendeeInfo: (eventUniqueId: string) => `/api/events/${eventUniqueId}/register/attendee-info`,
   eventRegisterQuestionnaire: (eventUniqueId: string) => `/api/events/${eventUniqueId}/register/questionnaire`,
+  eventTicketViewRoute: "/events/tickets/:ticketUniqueId/view",
+  eventTicketView: (ticketUniqueId: string) => `/events/tickets/${ticketUniqueId}/view`,
   sessionWizard: {
     list: "/organizer/sessions",
     edit: (sessionId: string) => `/organizer/sessions/${sessionId}`,
@@ -146,6 +148,7 @@ export const API_ROUTES = {
     `/api/events/cart/${cartUniqueId}/lines/${lineUniqueId}/answers`,
   eventCartCheckoutIntent: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/checkout/intent`,
   eventCartCheckoutConfirm: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/checkout/confirm`,
+  eventTicketView: (ticketUniqueId: string) => `/api/events/tickets/${ticketUniqueId}/view`,
   eventWizardProgress: (id: string) => `/api/organizer/events/${id}/wizard-progress`,
   eventWizardNameCreate: "/api/organizer/events/name",
   eventWizardSkip: (id: string) => `/api/organizer/events/${id}/skip`,
