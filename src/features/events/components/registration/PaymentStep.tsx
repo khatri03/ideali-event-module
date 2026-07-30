@@ -1,9 +1,10 @@
 import type { RefObject } from "react"
-import { Badge, Box, Button, HStack, Separator, SimpleGrid, Skeleton, SkeletonText, Stack, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, HStack, Separator, Stack, Text } from "@chakra-ui/react"
 import { ChevronDown } from "lucide-react"
 import type { EventRegistrationTicket } from "@/api/events"
 import type { EventCartPaymentBreakdown, EventPaymentIntentResult } from "@/features/events/schemas/eventCart.schemas"
 import type { SelectedTicketSummaryItem } from "@/features/events/components/registration/types"
+import { PaymentStepSkeleton } from "@/features/events/components/registration/PaymentStep.skeleton"
 import { AnimatedPaymentMethodBody } from "@/features/events/components/registration/AnimatedPaymentMethodBody"
 import { PaymentBreakdownTable } from "@/features/events/components/registration/PaymentBreakdownTable"
 import { StripeCardFields } from "@/features/events/components/registration/StripeCardFields"
@@ -194,16 +195,7 @@ export function PaymentStep({
       </Box>
 
       {isLoading && breakdowns.length === 0 ? (
-        <Stack gap={4}>
-          <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
-            {[0, 1].map((index) => (
-              <Skeleton key={index} h="92px" borderRadius="18px" />
-            ))}
-          </SimpleGrid>
-          <Box borderWidth="1px" borderColor="gray.200" borderRadius="18px" bg="gray.50" p={4}>
-            <SkeletonText noOfLines={4} gap="4" />
-          </Box>
-        </Stack>
+        <PaymentStepSkeleton />
       ) : breakdowns.length > 0 ? (
         <>
           <Stack gap={2} ref={methodValidationRef}>

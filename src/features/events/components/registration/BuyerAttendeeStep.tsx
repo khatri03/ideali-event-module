@@ -1,6 +1,7 @@
 import { Badge, Box, Flex, HStack, Stack, Switch, Text } from "@chakra-ui/react"
 import { Users } from "lucide-react"
 import { AttendeeTicketCard } from "@/features/events/components/registration/AttendeeTicketCard"
+import { BuyerAttendeeStepSkeleton } from "@/features/events/components/registration/BuyerAttendeeStep.skeleton"
 import { ContactDetailsFields } from "@/features/events/components/registration/ContactDetailsFields"
 import { SupportCard } from "@/features/events/components/registration/SupportCard"
 import type {
@@ -22,6 +23,7 @@ interface BuyerAttendeeStepProps {
   requiresAttendeeInfo: boolean
   requiresQuestions: boolean
   validationMessage: string | null
+  isLoading: boolean
 }
 
 export function BuyerAttendeeStep({
@@ -37,7 +39,12 @@ export function BuyerAttendeeStep({
   requiresAttendeeInfo,
   requiresQuestions,
   validationMessage,
+  isLoading,
 }: BuyerAttendeeStepProps) {
+  if (isLoading && attendeeSessionGroups.length === 0) {
+    return <BuyerAttendeeStepSkeleton />
+  }
+
   return (
     <Stack gap={5}>
       {validationMessage ? (

@@ -383,6 +383,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const confirmCheckoutMutation = useConfirmEventCheckout(cart?.cartUniqueId)
   const bannerSlides = useMemo(() => getSessionBannerSlides(currentEvent), [currentEvent])
   const sessionsLoading = sessionsQuery.isLoading || (sessionsQuery.isFetching && sessions.length === 0)
+  const attendeeInfoLoading = attendeeInfoQuery.isLoading && !attendeeInfoQuery.data
+  const questionnaireLoading = questionnaireQuery.isLoading && !questionnaireQuery.data
   const [prevSessions, setPrevSessions] = useState(sessions)
   if (sessions !== prevSessions) {
     setPrevSessions(sessions)
@@ -1238,6 +1240,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                 onToggleSessionSameAsBuyer={toggleSessionSameAsBuyer}
                                 onToggleTicketSameAsBuyer={toggleTicketSameAsBuyer}
                                 onChangeAttendeeField={updateAttendeeField}
+                                isLoading={attendeeInfoLoading}
                                 requiresAttendeeInfo={requiresAttendeeInfo}
                                 requiresQuestions={requiresQuestions}
                                 validationMessage={
@@ -1304,6 +1307,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                             <SupportCard title='Questionnaire' subtitle='Custom forms and questions mapped to the selected sessions are rendered here.' icon={<MessageSquareText size={18} />}>
                               <QuestionnaireStep
                                 sessionSummaries={selectedSessionSummaries}
+                                isLoading={questionnaireLoading}
                                 getAnswer={getAnswer}
                                 getErrorMessage={getQuestionErrorMessage}
                                 onChangeAnswer={setAnswer}
