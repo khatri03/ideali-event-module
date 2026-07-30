@@ -65,6 +65,10 @@ export async function confirmPurchase(page: Page) {
   const confirmButton = page.getByRole("button", { name: /Confirm Purchase/i })
   await expect(confirmButton).toBeVisible({ timeout: 30_000 })
   await confirmButton.click()
+
+  // The dialog animates out, and anything clicked while it is still on screen hits the dialog
+  // instead of the page underneath.
+  await expect(confirmButton).toHaveCount(0, { timeout: 30_000 })
 }
 
 /**
@@ -100,11 +104,9 @@ export async function payWithCard(page: Page, card: { number: string; expiry: st
 
   await page.getByPlaceholder(/Enter cardholder name/i).fill("Playwright Payer")
 
-  // The sticky summary bar overlays the bottom of the page and swallows the click even when the
-  // button is scrolled into view, so the button is invoked directly.
-  const payButton = page.getByRole("button", { name: /^Pay now$/i })
-  await payButton.scrollIntoViewIfNeeded()
-  await payButton.evaluate((node) => (node as HTMLButtonElement).click())
+  // A plain click, deliberately: the docked cart summary used to cover this button, and this is what
+  // proves the page still reserves room for it.
+  await page.getByRole("button", { name: /^Pay now$/i }).click()
 }
 
 /** Runs the wizard from a cold page load up to a filled-in, ready-to-pay card form. */
