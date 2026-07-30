@@ -17,6 +17,7 @@ interface PaymentBreakdownTableProps {
   breakdown: EventCartPaymentBreakdown
   sessionGroups: SessionGroup[]
   subtotal: number
+  discountAmount: number
   currencyCode: string | null
   onChangeQuantity: (ticket: EventRegistrationTicket, quantity: number) => void
   onRequestRemove: (ticket: EventRegistrationTicket, ticketName: string) => void
@@ -32,6 +33,7 @@ export function PaymentBreakdownTable({
   breakdown,
   sessionGroups,
   subtotal,
+  discountAmount,
   currencyCode,
   onChangeQuantity,
   onRequestRemove,
@@ -155,6 +157,23 @@ export function PaymentBreakdownTable({
                 </Text>
               </Table.Cell>
             </Table.Row>
+
+            {discountAmount > 0 ? (
+              <Table.Row>
+                <Table.Cell borderColor="gray.200" px={4} py={3}>
+                  <Text fontWeight="700" color="green.700">
+                    Coupon discount
+                  </Text>
+                </Table.Cell>
+                <Table.Cell borderColor="gray.200" px={4} py={3} />
+                <Table.Cell borderColor="gray.200" px={4} py={3} />
+                <Table.Cell borderColor="gray.200" px={4} py={3} textAlign="right">
+                  <Text fontWeight="700" color="green.700">
+                    -{formatAmount(discountAmount, currencyCode)}
+                  </Text>
+                </Table.Cell>
+              </Table.Row>
+            ) : null}
 
             {breakdown.charges.length > 0 ? (
               breakdown.charges.map((charge) => (

@@ -15,6 +15,7 @@ interface PurchaseReviewValidation {
   paymentMethodRef: RefObject<HTMLDivElement | null>
   paymentCardRef: RefObject<HTMLDivElement | null>
   termsRef: RefObject<HTMLDivElement | null>
+  refundPolicyRef: RefObject<HTMLDivElement | null>
   /** Reports the first issue and keeps the review dialog shut. */
   applyIssues: (issues: PurchaseReviewIssue[]) => void
   /** Clears any reported issue and opens the review dialog. */
@@ -41,6 +42,7 @@ export function usePurchaseReviewValidation(): PurchaseReviewValidation {
   const paymentMethodRef = useRef<HTMLDivElement | null>(null)
   const paymentCardRef = useRef<HTMLDivElement | null>(null)
   const termsRef = useRef<HTMLDivElement | null>(null)
+  const refundPolicyRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (!attempted || !message || isReviewOpen) return
@@ -53,7 +55,9 @@ export function usePurchaseReviewValidation(): PurchaseReviewValidation {
           ? paymentMethodRef
           : scrollTarget === "payment-card"
             ? paymentCardRef
-            : termsRef
+            : scrollTarget === "refund-policy"
+              ? refundPolicyRef
+              : termsRef
 
     const frame = window.requestAnimationFrame(() => {
       targetRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
@@ -106,6 +110,7 @@ export function usePurchaseReviewValidation(): PurchaseReviewValidation {
     paymentMethodRef,
     paymentCardRef,
     termsRef,
+    refundPolicyRef,
     applyIssues,
     openReview,
     reset,
