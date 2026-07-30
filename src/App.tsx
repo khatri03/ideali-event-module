@@ -9,8 +9,26 @@ import { Events } from "./pages/Events"
 import { CalendarPage } from "./pages/CalendarPage"
 import { Settings } from "./pages/Settings"
 import { AdminFeePlansPage } from "./features/admin-fee-plans"
+import { AdminRateLimitPage } from "./features/admin-rate-limit"
 import { ChargeRulesPage } from "./features/charge-rules"
 import { VenueManagementPage } from "./features/venues"
+import { CustomListCreatePage, CustomListEditPage, CustomListsPage } from "./features/custom-lists"
+import { MemberDashboardPage } from "./features/member-dashboard"
+import {
+  DocumentCategoriesPage,
+  DocumentCategoryCreatePage,
+  DocumentCategoryDetailPage,
+  DocumentCategoryEditPage,
+} from "./features/document-categories"
+import { MemberDocumentCategoryPage, MemberDocumentsPage } from "./features/member-documents"
+import {
+  AlertInboxPage,
+  MemberAlertComposePage,
+  MemberAlertEditPage,
+  MemberAlertDetailPage,
+  MemberAlertsPage,
+  MemberNotificationDetailPage,
+} from "./features/member-alerts"
 import { SeatingLayoutDesignerPage, SeatingLayoutsPage } from "./features/seating-layouts"
 import {
   EventBannerStepPage,
@@ -106,6 +124,10 @@ export default function App() {
         </Route>
         <Route path={APP_ROUTES.eventRegisterRoute} element={<EventRegisterPage />} />
 
+        <Route path={APP_ROUTES.member.dashboard} element={<AppLayout />}>
+          <Route index element={<MemberDashboardPage />} />
+        </Route>
+
         {/* App */}
         <Route element={<AppLayout />}>
           <Route path={APP_ROUTES.dashboard} element={<Dashboard />} />
@@ -116,7 +138,27 @@ export default function App() {
           <Route path={APP_ROUTES.chargeRules.list} element={<ChargeRulesPage />} />
           <Route path={APP_ROUTES.adminRevenuePlans} element={<AdminFeePlansPage />} />
           <Route path={APP_ROUTES.adminFeePlansLegacy} element={<Navigate to={APP_ROUTES.adminRevenuePlans} replace />} />
+          <Route path={APP_ROUTES.adminRateLimit} element={<AdminRateLimitPage />} />
           <Route path={APP_ROUTES.venues.list} element={<VenueManagementPage />} />
+          <Route path={APP_ROUTES.customLists.list} element={<CustomListsPage />} />
+          <Route path={APP_ROUTES.customLists.create} element={<CustomListCreatePage />} />
+          <Route path={APP_ROUTES.customLists.editRoute} element={<CustomListEditPage />} />
+          <Route path={APP_ROUTES.memberAlerts.list} element={<MemberAlertsPage />} />
+          <Route path={APP_ROUTES.memberAlerts.create} element={<MemberAlertComposePage />} />
+          <Route path={APP_ROUTES.memberAlerts.editRoute} element={<MemberAlertEditPage />} />
+          <Route path={APP_ROUTES.memberAlerts.detailRoute} element={<MemberAlertDetailPage />} />
+          <Route path={APP_ROUTES.documentCategories.list} element={<DocumentCategoriesPage />} />
+          <Route path={APP_ROUTES.documentCategories.create} element={<DocumentCategoryCreatePage />} />
+          <Route path={APP_ROUTES.documentCategories.editRoute} element={<DocumentCategoryEditPage />} />
+          <Route path={APP_ROUTES.documentCategories.detailRoute} element={<DocumentCategoryDetailPage />} />
+          <Route path={APP_ROUTES.memberDocuments.list} element={<MemberDocumentsPage />} />
+          <Route path={APP_ROUTES.memberDocuments.detailRoute} element={<MemberDocumentCategoryPage />} />
+          <Route
+            path={APP_ROUTES.memberDocuments.base}
+            element={<Navigate to={APP_ROUTES.memberDocuments.list} replace />}
+          />
+          <Route path={APP_ROUTES.alertInbox} element={<AlertInboxPage />} />
+          <Route path={APP_ROUTES.alertInboxDetailRoute} element={<MemberNotificationDetailPage />} />
           <Route path={APP_ROUTES.team} element={<Settings />} />
           <Route path={APP_ROUTES.analytics} element={<Settings />} />
           <Route path={APP_ROUTES.help} element={<Settings />} />

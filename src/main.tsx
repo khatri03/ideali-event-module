@@ -1,10 +1,11 @@
-import { StrictMode } from "react"
+import { StrictMode, type MouseEvent } from "react"
 import { createRoot } from "react-dom/client"
 import { Box, ChakraProvider, Flex, Text, Toaster } from "@chakra-ui/react"
 import { QueryClientProvider } from "@tanstack/react-query"
 import { system } from "./theme"
 import { queryClient } from "./lib/queryClient"
 import { toaster } from "./lib/toaster"
+import { openNotificationBell } from "./features/member-alerts"
 import "./index.css"
 import "timepicker-ui/main.css"
 import App from "./App"
@@ -14,7 +15,9 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <ChakraProvider value={system}>
         <Toaster toaster={toaster}>
-          {(toast) => (
+          {(toast) => {
+            const opensBell = toast.meta?.onClick === "open-bell"
+            return (
             <Box
               key={toast.id}
               role="status"
@@ -28,6 +31,10 @@ createRoot(document.getElementById("root")!).render(
               px={4}
               py={3}
               w="sm"
+              cursor={opensBell ? "pointer" : undefined}
+              transition="opacity 0.15s"
+              _hover={opensBell ? { opacity: 0.9 } : undefined}
+              onClick={opensBell ? () => { openNotificationBell(); toaster.dismiss(toast.id) } : undefined}
             >
               <Flex align="flex-start" gap={3}>
                 <Box mt={1} fontSize="lg" lineHeight={1} aria-hidden="true">
@@ -46,7 +53,7 @@ createRoot(document.getElementById("root")!).render(
                 <Box
                   as="button"
                   aria-label="Dismiss notification"
-                  onClick={() => toaster.dismiss(toast.id)}
+                  onClick={(event: MouseEvent) => { event.stopPropagation(); toaster.dismiss(toast.id) }}
                   cursor="pointer"
                   color="currentColor"
                   fontSize="lg"
@@ -57,7 +64,8 @@ createRoot(document.getElementById("root")!).render(
                 </Box>
               </Flex>
             </Box>
-          )}
+            )
+          }}
         </Toaster>
         <App />
       </ChakraProvider>

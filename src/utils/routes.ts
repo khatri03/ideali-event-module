@@ -4,12 +4,16 @@ export const APP_ROUTES = {
   events: "/events",
   calendar: "/calendar",
   settings: "/organizer/payment-processor-fee/list",
+  member: {
+    dashboard: "/member/dashboard",
+  },
   chargeRules: {
     list: "/organizer/charge-rule/list",
   },
   adminRevenuePlans: "/admin/revenue-plans/list",
   adminFeePlans: "/admin/revenue-plans/list",
   adminFeePlansLegacy: "/admin/admin-revenue-plans/list",
+  adminRateLimit: "/admin/rate-limit",
   team: "/team",
   analytics: "/analytics",
   help: "/help",
@@ -86,6 +90,40 @@ export const APP_ROUTES = {
   venues: {
     list: "/organizer/venues/manage/list",
   },
+  customLists: {
+    base: "/organizer/membership/custom-list",
+    list: "/organizer/membership/custom-list/list",
+    create: "/organizer/membership/custom-list/new",
+    editRoute: "/organizer/membership/custom-list/:uniqueId",
+    edit: (uniqueId: string) => `/organizer/membership/custom-list/${uniqueId}`,
+  },
+  memberAlerts: {
+    base: "/organizer/membership/alert",
+    list: "/organizer/membership/alert/list",
+    create: "/organizer/membership/alert/new",
+    detailRoute: "/organizer/membership/alert/:uniqueId",
+    detail: (uniqueId: string) => `/organizer/membership/alert/${uniqueId}`,
+    editRoute: "/organizer/membership/alert/:uniqueId/edit",
+    edit: (uniqueId: string) => `/organizer/membership/alert/${uniqueId}/edit`,
+  },
+  documentCategories: {
+    base: "/organizer/membership/document-category",
+    list: "/organizer/membership/document-category/list",
+    create: "/organizer/membership/document-category/new",
+    detailRoute: "/organizer/membership/document-category/:uniqueId",
+    detail: (uniqueId: string) => `/organizer/membership/document-category/${uniqueId}`,
+    editRoute: "/organizer/membership/document-category/:uniqueId/edit",
+    edit: (uniqueId: string) => `/organizer/membership/document-category/${uniqueId}/edit`,
+  },
+  memberDocuments: {
+    base: "/member-documents",
+    list: "/member-documents/categories",
+    detailRoute: "/member-documents/categories/:uniqueId",
+    detail: (uniqueId: string) => `/member-documents/categories/${uniqueId}`,
+  },
+  alertInbox: "/alerts",
+  alertInboxDetailRoute: "/alerts/:recipientUniqueId",
+  alertInboxDetail: (recipientUniqueId: string) => `/alerts/${recipientUniqueId}`,
 } as const
 
 export const API_ROUTES = {
@@ -134,6 +172,7 @@ export const API_ROUTES = {
   organizerChargeRuleUpdate: (chargeRuleId: string) => `/api/organizer/charge-rule/${chargeRuleId}/update`,
   adminRevenuePlans: "/api/admin/revenue-plans/list",
   adminFeePlans: "/api/admin/revenue-plans/list",
+  adminRateLimit: "/api/admin/rate-limit",
   adminRevenuePlanDetail: (uniqueId: string) => `/api/admin/revenue-plans/${uniqueId}/detail`,
   adminRevenuePlanOrganizers: (uniqueId: string) => `/api/admin/revenue-plans/${uniqueId}/organizers`,
   adminRevenuePlanCreate: "/api/admin/revenue-plans/create",
@@ -151,6 +190,7 @@ export const API_ROUTES = {
   adminPaymentMerchants: "/api/admin/list-items/payment-merchants",
   organizerEvents: "/api/organizer/events/list",
   membershipTypeOptions: "/api/organizer/membership/type/options",
+  membershipStatusOptions: "/api/organizer/membership/type/status-options",
   seatsIoWorkspace: "/api/organizer/seatsio/workspace",
   seatsIoSeatingLayouts: "/api/organizer/seatsio/seating-layouts",
   seatsIoSeatingLayout: (chartUniqueId: string) => `/api/organizer/seatsio/seating-layouts/${chartUniqueId}`,
@@ -201,6 +241,53 @@ export const API_ROUTES = {
   organizerCustomFormControls: "/api/organizer/custom-form/controls",
   organizerCustomFormListItems: "/api/organizer/custom-form/list-items",
   organizerCustomFormPreview: (id: string) => `/api/organizer/custom-form/${id}/edit`,
+  customLists: "/api/organizer/membership/custom-list/list",
+  customListOptions: "/api/organizer/membership/custom-list/options",
+  customListMembershipTypeOptions: "/api/organizer/membership/custom-list/membership-type-options",
+  customListMemberOptions: "/api/organizer/membership/custom-list/member-options",
+  customListCreate: "/api/organizer/membership/custom-list",
+  customListDetail: (uniqueId: string) => `/api/organizer/membership/custom-list/${uniqueId}`,
+  customListUpdate: (uniqueId: string) => `/api/organizer/membership/custom-list/${uniqueId}`,
+  customListDelete: (uniqueId: string) => `/api/organizer/membership/custom-list/${uniqueId}`,
+  customListMembers: (uniqueId: string) => `/api/organizer/membership/custom-list/${uniqueId}/members`,
+
+  memberAlerts: "/api/organizer/membership/alert/list",
+  memberAlertDetail: (uniqueId: string) => `/api/organizer/membership/alert/${uniqueId}`,
+  memberAlertRecipients: (uniqueId: string) => `/api/organizer/membership/alert/${uniqueId}/recipients`,
+  memberAlertRecipientOptions: "/api/organizer/membership/alert/recipient-options",
+  memberAlertMembershipTypeOptions: "/api/organizer/membership/alert/membership-type-options",
+  memberAlertCustomListOptions: "/api/organizer/membership/alert/custom-list-options",
+  memberAlertCustomListPreview: "/api/organizer/membership/alert/custom-list-preview",
+  memberAlertCreate: "/api/organizer/membership/alert",
+  memberAlertResend: (uniqueId: string) => `/api/organizer/membership/alert/${uniqueId}/resend`,
+  memberAlertDelete: (uniqueId: string) => `/api/organizer/membership/alert/${uniqueId}`,
+  membershipTypeMembers: "/api/organizer/membership/type/members",
+
+  documentCategories: "/api/organizer/membership/document-category/list",
+  documentCategoryMembershipTypeOptions: "/api/organizer/membership/document-category/membership-type-options",
+  documentCategoryCreate: "/api/organizer/membership/document-category",
+  documentCategoryDetail: (uniqueId: string) => `/api/organizer/membership/document-category/${uniqueId}`,
+  documentCategoryDocuments: (uniqueId: string) =>
+    `/api/organizer/membership/document-category/${uniqueId}/documents`,
+  documentCategoryDocumentDownload: (documentUniqueId: string) =>
+    `/api/organizer/membership/document-category/documents/${documentUniqueId}/download`,
+
+  memberDocumentCategories: "/api/member-documents/categories",
+  memberDocumentCategoryDetail: (uniqueId: string) => `/api/member-documents/categories/${uniqueId}`,
+  memberDocumentCategoryDocuments: (uniqueId: string) =>
+    `/api/member-documents/categories/${uniqueId}/documents`,
+  memberDocumentView: (documentUniqueId: string) =>
+    `/api/member-documents/documents/${documentUniqueId}`,
+  memberDocumentDownload: (documentUniqueId: string) =>
+    `/api/member-documents/documents/${documentUniqueId}/download`,
+
+  alertInbox: "/api/alert-inbox/list",
+  alertInboxItem: (recipientUniqueId: string) => `/api/alert-inbox/${recipientUniqueId}`,
+  alertInboxUnreadCount: "/api/alert-inbox/unread-count",
+  alertInboxUnseenCount: "/api/alert-inbox/unseen-count",
+  alertInboxMarkAllSeen: "/api/alert-inbox/seen",
+  alertInboxClaimInstantToasts: "/api/alert-inbox/instant-toasts/claim",
+  alertInboxMarkRead: (recipientUniqueId: string) => `/api/alert-inbox/${recipientUniqueId}/read`,
 } as const
 
 export const API_AUTH_ROUTES = {
