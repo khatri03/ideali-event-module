@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Badge,
@@ -14,11 +14,8 @@ import {
   Input,
   Link,
   Portal,
-  Separator,
   SimpleGrid,
   Table,
-  Skeleton,
-  SkeletonText,
   Stack,
   Tabs,
   Switch,
@@ -29,7 +26,6 @@ import { toaster } from '@/lib/toaster'
 import {
   ArrowLeft,
   CalendarDays,
-  ChevronDown,
   ChevronRight,
   CreditCard,
   Clock3,
@@ -41,9 +37,7 @@ import {
   Check,
   Trash2,
   Users,
-  X,
 } from 'lucide-react'
-import { chakra } from '@chakra-ui/react'
 import {
   fetchEventRegistrationAttendeeInfo,
   fetchEventRegistrationDescription,
@@ -60,12 +54,12 @@ import { useQuestionnaireAnswers } from '@/features/events/hooks/useQuestionnair
 import { useCreateEventPaymentIntent, useConfirmEventCheckout } from '@/features/events/hooks/useEventCheckout'
 import { useSubmitLineAttendees, useSubmitLineAnswers } from '@/features/events/hooks/useEventCartAttendees'
 import { PurchaseTimerChip } from '@/features/events/components/registration/PurchaseTimerChip'
+import { CartSummaryPanel } from '@/features/events/components/registration/CartSummaryPanel'
+import { PaymentStep } from '@/features/events/components/registration/PaymentStep'
 import { QuestionField } from '@/features/events/components/registration/QuestionField'
-import { StripeCardFields } from '@/features/events/components/registration/StripeCardFields'
 import type { EventPaymentIntentResult, PaymentProduct } from '@/features/events/schemas/eventCart.schemas'
 import { extractApiError } from '@/utils/errors'
 
-import { AnimatedPaymentMethodBody } from '@/features/events/components/registration/AnimatedPaymentMethodBody'
 import { AutoImageCarousel } from '@/features/events/components/registration/AutoImageCarousel'
 import { AttendeeTicketCard } from '@/features/events/components/registration/AttendeeTicketCard'
 import { ContactDetailsFields } from '@/features/events/components/registration/ContactDetailsFields'
@@ -97,8 +91,6 @@ import {
   getSessionBannerSlides,
   getTicketDisplayPrice,
   getTicketQuantityAfterDecrement,
-  getTicketQuantityOptions,
-  getTicketSelectableMax,
   isCardPaymentMethod,
   isHtmlContent,
 } from '@/features/events/utils/ticketSelection'
@@ -506,7 +498,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setPrevTabsLength(tabs.length)
     setHighestUnlockedIndex((current) => Math.min(current, Math.max(tabs.length - 1, 0)))
   }
-  const shouldHighlightSummaryLauncher = selectedTicketCount > 0 || purchaseTimerVisible
   const isDescriptionStep = activeTab === 'description'
   const sessionsStepIndex = getStepIndex(tabs, 'sessions')
   const effectiveHighestUnlockedIndex =
@@ -1094,345 +1085,18 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
               </Box>
             </Box>
 
-            <Portal>
-              <Box
-                position='fixed'
-                left={{ base: 0, md: 'auto' }}
-                right={{ base: 0, md: 2.5 }}
-                bottom={{ base: 0, sm: 0, md: 2.5 }}
-                zIndex={999}
-                pointerEvents='none'
-                px={{ base: 0, md: 0 }}
-                pb={{ base: 0, md: 0 }}
-              >
-              <Box
-                pointerEvents='auto'
-                w={{ base: 'full', md: '380px' }}
-                maxH={{ base: 'min(72dvh, 560px)', md: 'calc(100dvh - 1.5rem)' }}
-                  borderWidth='1px'
-                  borderColor='gray.200'
-                  borderRadius={{ base: '24px 24px 0 0', md: '26px' }}
-                  bg='white'
-                  boxShadow='0 28px 80px rgba(15, 23, 42, 0.22)'
-                  overflow='hidden'
-                  display='flex'
-                  flexDirection='column'
-                >
-                  <Box
-                    px={4}
-                    py={3.5}
-                    borderBottomWidth={isSummaryOpen ? '1px' : '0'}
-                    borderBottomColor={hexToRgba(formAccent, 0.32)}
-                    bg={formAccent}
-                    color='white'
-                    cursor='pointer'
-                    onClick={() => setIsSummaryOpen((current) => !current)}
-                    transition='border-color 0.22s ease'
-                  >
-                    <Flex
-                      align='center'
-                      justify='space-between'
-                      gap={3}
-                    >
-                      <HStack gap={3} minW={0}>
-                        <Stack gap={0} minW={0}>
-                          <Text fontSize='sm' fontWeight='800' lineHeight='1.2'>Summary</Text>
-                          {isSummaryOpen && selectedTicketCount > 0 ? (
-                            <Text fontSize='xs' color={shouldHighlightSummaryLauncher ? 'white' : 'whiteAlpha.900'} lineHeight='1.3'>
-                              {selectedTicketCount} selected
-                            </Text>
-                          ) : null}
-                        </Stack>
-                      </HStack>
-                      <HStack gap={2.5} flexShrink={0}>
-                        <Text fontSize='sm' fontWeight='800' lineHeight='1.1' color='white'>
-                          {formatAmount(selectedTicketTotal, event.paymentAccountCurrency)}
-                        </Text>
-                        <Box
-                          color='whiteAlpha.900'
-                          transform={isSummaryOpen ? 'rotate(0deg)' : 'rotate(-90deg)'}
-                          transition='transform 220ms ease'
-                          flexShrink={0}
-                        >
-                          <ChevronDown size={18} />
-                        </Box>
-                      </HStack>
-                    </Flex>
-                  </Box>
-
-                  <Box
-                    flex='1'
-                    minH={0}
-                    maxH={isSummaryOpen ? { base: 'min(72vh, 560px)', md: 'min(74vh, 620px)' } : '0px'}
-                    opacity={isSummaryOpen ? 1 : 0}
-                    transform={isSummaryOpen ? 'translateY(0)' : 'translateY(10px)'}
-                    transition='max-height 280ms ease, opacity 220ms ease, transform 220ms ease'
-                    overflow='hidden'
-                    display='flex'
-                    flexDirection='column'
-                  >
-                    <Stack gap={3} px={4} py={4} flex='1' minH={0} overflow='hidden'>
-                      <Box borderWidth='1px' borderColor='orange.200' bg='orange.50' borderRadius='16px' px={3.5} py={3}>
-                        <Text fontSize='sm' color='orange.900' lineHeight='1.6' fontWeight='800'>
-                          Prices exclusive of tax and other charges.
-                        </Text>
-                      </Box>
-
-                      <Box flex='1' minH={0} overflowY='auto' pr={1}>
-                        {selectedTicketSummaryBySession.length > 0 ? (
-                          <Stack gap={3.5}>
-                            {selectedTicketSummaryBySession.map((sessionGroup) => (
-                              <Box
-                                key={sessionGroup.sessionId}
-                                borderWidth='1px'
-                                borderColor='gray.200'
-                                borderRadius='20px'
-                                bg='white'
-                                overflow='hidden'
-                                boxShadow='0 12px 28px rgba(15, 23, 42, 0.05)'
-                              >
-                                <Box px={4} py={3.5} bg='gray.50' borderBottomWidth='1px' borderBottomColor='gray.200'>
-                                  <Flex align='start' justify='space-between' gap={3}>
-                                    <Stack gap={1} minW={0}>
-                                      <Text
-                                        fontSize='sm'
-                                        fontWeight='800'
-                                        color='gray.900'
-                                        lineHeight='1.4'
-                                        whiteSpace='normal'
-                                        wordBreak='break-word'
-                                        minW={0}
-                                      >
-                                        {sessionGroup.sessionName}
-                                      </Text>
-                                      <Text fontSize='xs' color='gray.500' lineHeight='1.4'>
-                                        {sessionGroup.items.length} {sessionGroup.items.length === 1 ? 'ticket type selected' : 'ticket types selected'}
-                                      </Text>
-                                    </Stack>
-
-                                    <HStack gap={2.5} flexShrink={0}>
-                                      <Badge
-                                        colorPalette='gray'
-                                        variant='subtle'
-                                        borderRadius='full'
-                                        px={3}
-                                        py={1.5}
-                                        fontSize='sm'
-                                        fontWeight='800'
-                                        color='gray.800'
-                                        bg='white'
-                                        borderWidth='1px'
-                                        borderColor='gray.200'
-                                      >
-                                        {formatAmount(sessionGroup.total, event.paymentAccountCurrency)}
-                                      </Badge>
-                                      <Button
-                                        minW='0'
-                                        h='20px'
-                                        p='0'
-                                        variant='ghost'
-                                        color='red.500'
-                                        _hover={{ bg: 'transparent', color: 'red.600' }}
-                                        _active={{ bg: 'transparent', color: 'red.700' }}
-                                        aria-label={`Remove ${sessionGroup.sessionName}`}
-                                        title={`Remove ${sessionGroup.sessionName}`}
-                                        onClick={() => requestRemoveSession(sessionGroup.items, sessionGroup.sessionName)}
-                                      >
-                                        <X size={13} strokeWidth={2.3} />
-                                      </Button>
-                                    </HStack>
-                                  </Flex>
-                                </Box>
-
-                                <Stack gap={0} px={4} py={2.5}>
-                                  {sessionGroup.items.map((item, itemIndex) => {
-                                    const quantityOptions = getTicketQuantityOptions(item.ticket, item.quantity)
-
-                                    return (
-                                    <Box
-                                      key={item.ticketId}
-                                      py={3}
-                                      borderBottomWidth={itemIndex < sessionGroup.items.length - 1 ? '1px' : '0'}
-                                      borderBottomColor='gray.100'
-                                    >
-                                      <Stack gap={2.5}>
-                                        <Flex justify='space-between' align='start' gap={3}>
-                                          <Stack gap={1} minW={0}>
-                                            <Text
-                                              fontSize='sm'
-                                              fontWeight='800'
-                                              color='gray.900'
-                                              lineHeight='1.4'
-                                              whiteSpace='normal'
-                                              wordBreak='break-word'
-                                              minW={0}
-                                            >
-                                              {item.ticketName}
-                                            </Text>
-                                            <HStack gap={2} wrap='wrap' minW={0} align='center'>
-                                              <Text fontSize='xs' color='gray.500'>
-                                                {formatAmount(item.unitPrice, event.paymentAccountCurrency)}
-                                              </Text>
-                                              <Text fontSize='xs' color='gray.300'>|</Text>
-                                              <Text fontSize='xs' fontWeight='700' color='gray.700'>
-                                                {formatAmount(item.lineTotal, event.paymentAccountCurrency)}
-                                              </Text>
-                                            </HStack>
-                                          </Stack>
-
-                                          <Button
-                                            minW='0'
-                                            h='16px'
-                                            p='0'
-                                            variant='ghost'
-                                            color='red.500'
-                                            _hover={{ bg: 'transparent', color: 'red.600' }}
-                                            _active={{ bg: 'transparent', color: 'red.700' }}
-                                            aria-label={`Remove ${item.ticketName}`}
-                                            title={`Remove ${item.ticketName}`}
-                                            onClick={() => requestRemoveTicket(item.ticket, item.ticketName)}
-                                          >
-                                            <Trash2 size={12} strokeWidth={2.2} />
-                                          </Button>
-                                        </Flex>
-
-                                        <HStack
-                                          gap={2}
-                                          align='center'
-                                          justify='space-between'
-                                          borderWidth='1px'
-                                          borderColor='gray.200'
-                                          borderRadius='16px'
-                                          bg='gray.50'
-                                          px={2}
-                                          py={1.5}
-                                        >
-                                          <Text fontSize='xs' color='gray.500' fontWeight='600' flexShrink={0}>
-                                            Qty
-                                          </Text>
-                                          <HStack
-                                            gap={1}
-                                            borderWidth='1px'
-                                            borderColor='gray.200'
-                                            borderRadius='full'
-                                            bg='white'
-                                            px={1}
-                                            py={0.5}
-                                            w='132px'
-                                            minW='132px'
-                                            flexShrink={0}
-                                            justify='space-between'
-                                            align='center'
-                                          >
-                                              <Button
-                                                minW='0'
-                                                w='28px'
-                                                h='28px'
-                                                p='0'
-                                                borderRadius='full'
-                                                borderWidth='1px'
-                                                borderColor='gray.300'
-                                                bg='white'
-                                                onClick={() => handleTicketQuantityChange(item.ticket, getTicketQuantityAfterDecrement(item.ticket, item.quantity))}
-                                                disabled={item.quantity <= 0}
-                                                aria-label={`Decrease ${item.ticketName}`}
-                                                title={`Decrease ${item.ticketName}`}
-                                              >
-                                                <Text as='span' fontSize='md' fontWeight='800' lineHeight='1' color='gray.700'>-</Text>
-                                              </Button>
-
-                                            <Box flex='1' minW='0' position='relative'>
-                                              <chakra.select
-                                                value={String(item.quantity)}
-                                                onChange={(event) => handleTicketQuantityChange(item.ticket, Number(event.target.value))}
-                                                w='full'
-                                                h='28px'
-                                                pl={2}
-                                                pr={6}
-                                                border='none'
-                                                outline='none'
-                                                bg='transparent'
-                                                color='gray.900'
-                                                fontSize='sm'
-                                                fontWeight='800'
-                                                textAlign='center'
-                                                textAlignLast='center'
-                                                appearance='none'
-                                                cursor='pointer'
-                                                _focusVisible={{ outline: 'none' }}
-                                              >
-                                                {quantityOptions.map((option) => (
-                                                  <option key={option.value} value={option.value}>
-                                                    {option.label}
-                                                  </option>
-                                                ))}
-                                              </chakra.select>
-                                              <Flex
-                                                position='absolute'
-                                                insetY='0'
-                                                right={2}
-                                                align='center'
-                                                pointerEvents='none'
-                                                color='gray.500'
-                                              >
-                                                <ChevronDown size={14} strokeWidth={2.25} />
-                                              </Flex>
-                                            </Box>
-
-                                            <Button
-                                              minW='0'
-                                              w='28px'
-                                              h='28px'
-                                              p='0'
-                                              borderRadius='full'
-                                              borderWidth='1px'
-                                              borderColor='gray.300'
-                                              bg='white'
-                                              color='gray.700'
-                                              onClick={() => handleTicketQuantityChange(item.ticket, item.quantity + 1)}
-                                              disabled={getTicketSelectableMax(item.ticket) !== null && item.quantity >= (getTicketSelectableMax(item.ticket) ?? 0)}
-                                              aria-label={`Increase ${item.ticketName}`}
-                                              title={`Increase ${item.ticketName}`}
-                                            >
-                                              <Text as='span' fontSize='md' fontWeight='800' lineHeight='1'>+</Text>
-                                            </Button>
-                                          </HStack>
-                                        </HStack>
-                                      </Stack>
-                                    </Box>
-                                    )
-                                  })}
-                                </Stack>
-                              </Box>
-                            ))}
-                          </Stack>
-                        ) : (
-                          <Box borderWidth='1px' borderColor='gray.200' borderRadius='14px' bg='gray.50' px={3.5} py={3}>
-                            <Text fontSize='sm' fontWeight='600' color='gray.700'>
-                              No tickets selected yet.
-                            </Text>
-                            <Text mt={1} fontSize='xs' color='gray.500' lineHeight='1.55'>
-                              Pick tickets in Sessions and the summary updates instantly.
-                            </Text>
-                          </Box>
-                        )}
-                      </Box>
-
-                      <Separator borderColor='gray.200' />
-
-                      <Flex justify='space-between' align='center' gap={3}>
-                        <Text fontSize='sm' color='gray.600'>
-                          Total
-                        </Text>
-                        <Text fontSize='lg' fontWeight='800' color='gray.900'>
-                          {formatAmount(selectedTicketTotal, event.paymentAccountCurrency)}
-                        </Text>
-                      </Flex>
-                    </Stack>
-                  </Box>
-                </Box>
-              </Box>
-            </Portal>
+            <CartSummaryPanel
+              isOpen={isSummaryOpen}
+              onToggle={() => setIsSummaryOpen((current) => !current)}
+              sessionGroups={selectedTicketSummaryBySession}
+              selectedTicketCount={selectedTicketCount}
+              total={selectedTicketTotal}
+              currencyCode={event.paymentAccountCurrency}
+              formAccent={formAccent}
+              onChangeQuantity={handleTicketQuantityChange}
+              onRequestRemoveTicket={requestRemoveTicket}
+              onRequestRemoveSession={requestRemoveSession}
+            />
 
             {currentEvent.termsConditions ? (
               <Box ref={termsValidationRef} borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' px={{ base: 4, md: 5 }} py={4} boxShadow='0 12px 30px rgba(15, 23, 42, 0.08)'>
@@ -2002,407 +1666,32 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
                           {tab.id === 'payment' ? (
                             <SupportCard title='Payment' subtitle='Show the mapped payment methods and protect organizer-only cheque payments.' icon={<CreditCard size={18} />}>
-                              <Stack gap={4}>
-                                <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'>
-                                  <HStack justify='space-between' gap={4} align='start' flexWrap='wrap'>
-                                    <Stack gap={1}>
-                                      <Text fontSize='sm' color='gray.600'>Selected ticket subtotal</Text>
-                                      <Text fontSize='2xl' fontWeight='800' color='gray.900'>
-                                        {formatAmount(selectedTicketTotal, currentEvent.paymentAccountCurrency)}
-                                      </Text>
-                                    </Stack>
-                                    <Text fontSize='sm' color='gray.600' textAlign='right' maxW='sm'>
-                                      Review the charges for each payment method before choosing how to pay.
-                                    </Text>
-                                  </HStack>
-                                </Box>
-
-                                {isCartSyncing && paymentBreakdowns.length === 0 ? (
-                                  <Stack gap={4}>
-                                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
-                                      {[0, 1].map((index) => (
-                                        <Skeleton key={index} h='92px' borderRadius='18px' />
-                                      ))}
-                                    </SimpleGrid>
-                                    <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
-                                      <SkeletonText noOfLines={4} gap='4' />
-                                    </Box>
-                                  </Stack>
-                                ) : paymentBreakdowns.length > 0 ? (
-                                  <>
-                                    <Stack gap={4}>
-                                    <Stack gap={2} ref={paymentMethodValidationRef}>
-                                      <HStack justify='space-between' gap={4} flexWrap='wrap'>
-                                        <Text fontSize='sm' fontWeight='700' color='gray.700'>Select payment method</Text>
-                                      </HStack>
-                                    </Stack>
-
-                                    <Stack gap={3}>
-                                      {paymentBreakdowns.map((breakdown) => {
-                                        const isSelected = selectedPaymentBreakdown?.paymentMethod === breakdown.paymentMethod
-                                        const isExpanded = expandedPaymentMethod === breakdown.paymentMethod
-                                        const showPaymentControls = isSelected && isCardPaymentMethod(breakdown.paymentMethod)
-
-                                        return (
-                                          <Box
-                                            key={breakdown.paymentMethod}
-                                            borderWidth='1px'
-                                            borderColor={isSelected ? formAccent : 'gray.200'}
-                                            borderRadius='18px'
-                                            bg={isSelected ? hexToRgba(formAccent, 0.08) : 'white'}
-                                            boxShadow={isSelected ? `0 0 0 1px ${formAccent}` : '0 10px 24px rgba(15, 23, 42, 0.04)'}
-                                            overflow='hidden'
-                                          >
-                                            <Button
-                                              onClick={() => {
-                                                setSelectedPaymentMethod(breakdown.paymentMethod)
-                                                setExpandedPaymentMethod((current) =>
-                                                  current === breakdown.paymentMethod ? null : breakdown.paymentMethod,
-                                                )
-                                              }}
-                                              variant='ghost'
-                                              w='full'
-                                              h='auto'
-                                              px={4}
-                                              py={4}
-                                              justifyContent='space-between'
-                                              alignItems='center'
-                                              textAlign='left'
-                                              borderRadius={0}
-                                              _hover={{ bg: isSelected ? hexToRgba(formAccent, 0.12) : 'gray.50' }}
-                                              _active={{ bg: isSelected ? hexToRgba(formAccent, 0.16) : 'gray.100' }}
-                                            >
-                                              <HStack gap={3} minW={0} flex='1' justify='space-between' align='start'>
-                                                <Stack gap={1} minW={0} flex='1'>
-                                                  <HStack gap={2} wrap='wrap' minW={0}>
-                                                    <Text fontWeight='800' color='gray.900'>{breakdown.label}</Text>
-                                                    {breakdown.isOrganizerOnly ? <Badge colorPalette='purple' variant='subtle' borderRadius='full' px={3} py={1}>Organizer only</Badge> : null}
-                                                  </HStack>
-                                                </Stack>
-
-                                                <HStack gap={2} flexShrink={0}>
-                                                  <Text fontSize='lg' fontWeight='800' color='gray.900'>
-                                                    {formatAmount(breakdown.grandTotal, currentEvent.paymentAccountCurrency)}
-                                                  </Text>
-                                                  <Box
-                                                    display='inline-flex'
-                                                    alignItems='center'
-                                                    justifyContent='center'
-                                                    w='28px'
-                                                    h='28px'
-                                                    borderRadius='full'
-                                                    borderWidth='1px'
-                                                    borderColor={isExpanded ? formAccent : 'gray.300'}
-                                                    bg={isExpanded ? hexToRgba(formAccent, 0.12) : 'gray.50'}
-                                                    color='gray.700'
-                                                    flexShrink={0}
-                                                  >
-                                                    <Box transform={isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'} transition='transform 0.2s ease'>
-                                                      <ChevronDown size={14} />
-                                                    </Box>
-                                                  </Box>
-                                                </HStack>
-                                              </HStack>
-                                            </Button>
-
-                                            <Separator borderColor='gray.200' />
-
-                                            <AnimatedPaymentMethodBody isOpen={isExpanded}>
-                                              <Stack gap={4} px={4} py={4} ref={paymentCardValidationRef}>
-                                                {showPaymentControls && paymentIntent ? (
-                                                  <StripeCardFields
-                                                    intent={paymentIntent}
-                                                    accentColor={formAccent}
-                                                    isConfirming={confirmCheckoutMutation.isPending}
-                                                    onPaid={handlePaymentSucceeded}
-                                                  />
-                                                ) : showPaymentControls ? (
-                                                  <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
-                                                    <Text fontSize='sm' color='gray.600'>
-                                                      Review your purchase to continue to card entry.
-                                                    </Text>
-                                                  </Box>
-                                                ) : (
-                                                  <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
-                                                    <Text fontSize='sm' color='gray.600'>
-                                                      You will be prompted to complete this payment after reviewing your purchase.
-                                                    </Text>
-                                                  </Box>
-                                                )}
-                                              </Stack>
-                                            </AnimatedPaymentMethodBody>
-                                          </Box>
-                                        )
-                                      })}
-                                    </Stack>
-                                    </Stack>
-
-                                    {isFinalStep && purchaseReviewAttempted && purchaseReviewMessage ? (
-                                      <Box borderWidth='1px' borderColor='red.200' bg='red.50' borderRadius='18px' p={4}>
-                                        <Text fontSize='sm' color='red.700' fontWeight='600'>
-                                          {purchaseReviewMessage}
-                                        </Text>
-                                      </Box>
-                                    ) : null}
-
-                                    {selectedPaymentBreakdown ? (
-                                      <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' overflow='hidden' boxShadow='0 10px 24px rgba(15, 23, 42, 0.04)'>
-                                        <Box px={4} py={4} borderBottomWidth='1px' borderBottomColor='gray.200' bg='gray.50'>
-                                          <HStack justify='space-between' gap={4} flexWrap='wrap'>
-                                            <Stack gap={1}>
-                                              <Text fontSize='sm' fontWeight='700' color='gray.600'>Payment breakdown</Text>
-                                              <Text fontSize='lg' fontWeight='800' color='gray.900'>{selectedPaymentBreakdown.label}</Text>
-                                            </Stack>
-                                            {selectedPaymentBreakdown.isOrganizerOnly ? <Badge colorPalette='purple' variant='subtle' borderRadius='full' px={3} py={1}>Organizer only</Badge> : null}
-                                          </HStack>
-                                        </Box>
-
-                                        <Stack gap={4} p={4}>
-                                          <Table.Root variant='line' size='sm' borderColor='gray.200'>
-                                            <Table.Header>
-                                              <Table.Row bg='white'>
-                                                <Table.ColumnHeader borderColor='gray.200' px={4} py={3} color='gray.600' fontSize='xs' textTransform='uppercase' letterSpacing='0.12em'>
-                                                  Item
-                                                </Table.ColumnHeader>
-                                                <Table.ColumnHeader borderColor='gray.200' px={4} py={3} color='gray.600' fontSize='xs' textTransform='uppercase' letterSpacing='0.12em'>
-                                                  Price
-                                                </Table.ColumnHeader>
-                                                <Table.ColumnHeader borderColor='gray.200' px={4} py={3} color='gray.600' fontSize='xs' textTransform='uppercase' letterSpacing='0.12em'>
-                                                  Quantity
-                                                </Table.ColumnHeader>
-                                                <Table.ColumnHeader borderColor='gray.200' px={4} py={3} color='gray.600' fontSize='xs' textTransform='uppercase' letterSpacing='0.12em' textAlign='right'>
-                                                  Total
-                                                </Table.ColumnHeader>
-                                              </Table.Row>
-                                            </Table.Header>
-
-                                            <Table.Body>
-                                              {selectedTicketSummaryBySession.map((sessionGroup, sessionIndex) => (
-                                                <Fragment key={sessionGroup.sessionId}>
-                                                  <Table.Row key={`${sessionGroup.sessionId}-header`} bg='gray.50'>
-                                                    <Table.Cell borderColor='gray.200' px={4} py={3} colSpan={4}>
-                                                      <HStack justify='space-between' gap={3} minW={0}>
-                                                        <Stack gap={0.5} minW={0}>
-                                                          <Text fontWeight='800' color='gray.900' lineHeight='1.4' whiteSpace='normal' wordBreak='break-word'>
-                                                            {sessionGroup.sessionName}
-                                                          </Text>
-                                                          <Text fontSize='xs' color='gray.500'>
-                                                            {sessionGroup.items.length} {sessionGroup.items.length === 1 ? 'ticket type selected' : 'ticket types selected'}
-                                                          </Text>
-                                                        </Stack>
-                                                      </HStack>
-                                                    </Table.Cell>
-                                                  </Table.Row>
-
-                                                  {sessionGroup.items.map((item) => {
-                                                    const quantityOptions = getTicketQuantityOptions(item.ticket, item.quantity)
-
-                                                    return (
-                                                      <Table.Row key={item.ticketId}>
-                                                        <Table.Cell borderColor='gray.200' px={4} py={3}>
-                                                          <Text fontWeight='700' color='gray.900' lineHeight='1.4' whiteSpace='normal' wordBreak='break-word'>
-                                                            {item.ticketName}
-                                                          </Text>
-                                                        </Table.Cell>
-                                                        <Table.Cell borderColor='gray.200' px={4} py={3}>
-                                                          <Text fontWeight='700' color='gray.800'>
-                                                            {formatAmount(item.unitPrice, currentEvent.paymentAccountCurrency)}
-                                                          </Text>
-                                                        </Table.Cell>
-                                                        <Table.Cell borderColor='gray.200' px={4} py={3}>
-                                                          <Flex justify='center'>
-                                                            <HStack
-                                                              gap={1.5}
-                                                              borderWidth='1px'
-                                                              borderColor='gray.200'
-                                                              borderRadius='full'
-                                                              bg='gray.50'
-                                                              px={1.5}
-                                                              py={1}
-                                                              w='full'
-                                                              maxW='152px'
-                                                              justify='space-between'
-                                                              align='center'
-                                                            >
-                                                              <Button
-                                                                minW='0'
-                                                                w='28px'
-                                                                h='28px'
-                                                                p='0'
-                                                                borderRadius='full'
-                                                                borderWidth='1px'
-                                                                borderColor={item.quantity === 1 ? 'red.300' : 'gray.300'}
-                                                                bg={item.quantity === 1 ? 'red.50' : 'white'}
-                                                                color={item.quantity === 1 ? 'red.500' : 'gray.700'}
-                                                                _hover={item.quantity === 1 ? { bg: 'red.100', color: 'red.600' } : { bg: 'gray.50' }}
-                                                                _active={item.quantity === 1 ? { bg: 'red.200', color: 'red.700' } : { bg: 'gray.100' }}
-                                                                onClick={() =>
-                                                                  item.quantity === 1
-                                                                    ? requestRemoveTicket(item.ticket, item.ticketName)
-                                                                    : handleTicketQuantityChange(item.ticket, getTicketQuantityAfterDecrement(item.ticket, item.quantity))
-                                                                }
-                                                                disabled={item.quantity <= 0}
-                                                                aria-label={item.quantity === 1 ? `Remove ${item.ticketName}` : `Decrease ${item.ticketName}`}
-                                                                title={item.quantity === 1 ? `Remove ${item.ticketName}` : `Decrease ${item.ticketName}`}
-                                                              >
-                                                                {item.quantity === 1 ? (
-                                                                  <Trash2 size={13} strokeWidth={2.2} />
-                                                                ) : (
-                                                                  <Text as='span' fontSize='md' fontWeight='800' lineHeight='1'>-</Text>
-                                                                )}
-                                                              </Button>
-
-                                                              <Box flex='1' minW='68px' maxW='84px' position='relative'>
-                                                                <chakra.select
-                                                                  value={String(item.quantity)}
-                                                                  onChange={(event) => handleTicketQuantityChange(item.ticket, Number(event.target.value))}
-                                                                  w='full'
-                                                                  h='30px'
-                                                                  pl={2}
-                                                                  pr={7}
-                                                                  border='none'
-                                                                  outline='none'
-                                                                  bg='transparent'
-                                                                  color='gray.900'
-                                                                  fontSize='sm'
-                                                                  fontWeight='800'
-                                                                  textAlign='center'
-                                                                  textAlignLast='center'
-                                                                  appearance='none'
-                                                                  cursor='pointer'
-                                                                  _focusVisible={{ outline: 'none' }}
-                                                                >
-                                                                  {quantityOptions.map((option) => (
-                                                                    <option key={option.value} value={option.value}>
-                                                                      {option.label}
-                                                                    </option>
-                                                                  ))}
-                                                                </chakra.select>
-                                                                <Flex
-                                                                  position='absolute'
-                                                                  insetY='0'
-                                                                  right={2}
-                                                                  align='center'
-                                                                  pointerEvents='none'
-                                                                  color='gray.500'
-                                                                >
-                                                                  <ChevronDown size={12} strokeWidth={2.25} />
-                                                                </Flex>
-                                                              </Box>
-
-                                                              <Button
-                                                                minW='0'
-                                                                w='28px'
-                                                                h='28px'
-                                                                p='0'
-                                                                borderRadius='full'
-                                                                borderWidth='1px'
-                                                                borderColor='gray.300'
-                                                                bg='white'
-                                                                color='gray.700'
-                                                                onClick={() => handleTicketQuantityChange(item.ticket, item.quantity + 1)}
-                                                                disabled={getTicketSelectableMax(item.ticket) !== null && item.quantity >= (getTicketSelectableMax(item.ticket) ?? 0)}
-                                                                aria-label={`Increase ${item.ticketName}`}
-                                                                title={`Increase ${item.ticketName}`}
-                                                              >
-                                                                <Text as='span' fontSize='md' fontWeight='800' lineHeight='1'>+</Text>
-                                                              </Button>
-                                                            </HStack>
-                                                          </Flex>
-                                                        </Table.Cell>
-                                                        <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
-                                                          <HStack justify='flex-end' gap={2} align='center'>
-                                                            <Text fontWeight='700' color='gray.900'>
-                                                              {formatAmount(item.lineTotal, currentEvent.paymentAccountCurrency)}
-                                                            </Text>
-                                                          </HStack>
-                                                        </Table.Cell>
-                                                      </Table.Row>
-                                                    )
-                                                  })}
-
-                                                  {sessionIndex < selectedTicketSummaryBySession.length - 1 ? (
-                                                    <Table.Row>
-                                                      <Table.Cell borderColor='gray.200' px={4} py={0} colSpan={4}>
-                                                        <Separator borderColor='gray.200' />
-                                                      </Table.Cell>
-                                                    </Table.Row>
-                                                  ) : null}
-                                                </Fragment>
-                                              ))}
-
-                                              <Table.Row bg='gray.50'>
-                                                <Table.Cell borderColor='gray.200' px={4} py={3}>
-                                                  <Text fontWeight='800' color='gray.900'>Subtotal</Text>
-                                                </Table.Cell>
-                                                <Table.Cell borderColor='gray.200' px={4} py={3} />
-                                                <Table.Cell borderColor='gray.200' px={4} py={3} />
-                                                <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
-                                                  <Text fontSize='lg' fontWeight='800' color='gray.900'>
-                                                    {formatAmount(paymentBreakdownSubtotal, currentEvent.paymentAccountCurrency)}
-                                                  </Text>
-                                                </Table.Cell>
-                                              </Table.Row>
-
-                                              {selectedPaymentBreakdown.charges.length > 0 ? selectedPaymentBreakdown.charges.map((charge) => (
-                                                <Table.Row key={`${selectedPaymentBreakdown.paymentMethod}-${charge.source}-${charge.title}`}>
-                                                  <Table.Cell borderColor='gray.200' px={4} py={3}>
-                                                    <Stack gap={0.5}>
-                                                      <Text fontWeight='700' color='gray.900'>
-                                                        {charge.title}
-                                                      </Text>
-                                                    </Stack>
-                                                  </Table.Cell>
-                                                  <Table.Cell borderColor='gray.200' px={4} py={3}>
-                                                    <Text fontWeight='700' color='gray.800'>
-                                                      {formatChargeRate(charge.valueType, charge.value, currentEvent.paymentAccountCurrency)}
-                                                    </Text>
-                                                  </Table.Cell>
-                                                  <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='center'>
-                                                    <Text fontWeight='700' color='gray.800'>&nbsp;</Text>
-                                                  </Table.Cell>
-                                                  <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
-                                                    <Text fontWeight='700' color='gray.900'>
-                                                      {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
-                                                    </Text>
-                                                  </Table.Cell>
-                                                </Table.Row>
-                                              )) : (
-                                                <Table.Row>
-                                                  <Table.Cell borderColor='gray.200' px={4} py={3} colSpan={4}>
-                                                    <Text fontSize='sm' color='gray.600'>No additional buyer charges apply for this method.</Text>
-                                                  </Table.Cell>
-                                                </Table.Row>
-                                              )}
-
-                                              <Table.Row bg='gray.50'>
-                                                <Table.Cell borderColor='gray.200' px={4} py={3}>
-                                                  <Text fontWeight='800' color='gray.900'>Total payable</Text>
-                                                </Table.Cell>
-                                                <Table.Cell borderColor='gray.200' px={4} py={3} />
-                                                <Table.Cell borderColor='gray.200' px={4} py={3} />
-                                                <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
-                                                  <Text fontSize='lg' fontWeight='800' color='gray.900'>
-                                                    {formatAmount(selectedPaymentBreakdown.grandTotal, currentEvent.paymentAccountCurrency)}
-                                                  </Text>
-                                                </Table.Cell>
-                                              </Table.Row>
-                                            </Table.Body>
-                                          </Table.Root>
-                                        </Stack>
-                                      </Box>
-                                    ) : null}
-                                  </>
-                                ) : visiblePaymentMethods.length > 0 ? (
-                                  <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'>
-                                    <Text color='gray.600' fontSize='sm'>Payment methods are available, but the price breakdown could not be loaded yet.</Text>
-                                  </Box>
-                                ) : (
-                                  <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'>
-                                    <Text color='gray.600' fontSize='sm'>No public payment methods are currently mapped for this event.</Text>
-                                  </Box>
-                                )}
-                              </Stack>
+                              <PaymentStep
+                                breakdowns={paymentBreakdowns}
+                                selectedBreakdown={selectedPaymentBreakdown}
+                                expandedPaymentMethod={expandedPaymentMethod}
+                                onSelectMethod={setSelectedPaymentMethod}
+                                onToggleExpanded={(method) =>
+                                  setExpandedPaymentMethod((current) => (current === method ? null : method))
+                                }
+                                sessionGroups={selectedTicketSummaryBySession}
+                                subtotal={paymentBreakdownSubtotal}
+                                ticketSubtotal={selectedTicketTotal}
+                                currencyCode={currentEvent.paymentAccountCurrency}
+                                formAccent={formAccent}
+                                isLoading={isCartSyncing}
+                                hasVisiblePaymentMethods={visiblePaymentMethods.length > 0}
+                                paymentIntent={paymentIntent}
+                                isConfirming={confirmCheckoutMutation.isPending}
+                                onPaid={handlePaymentSucceeded}
+                                validationMessage={
+                                  isFinalStep && purchaseReviewAttempted ? purchaseReviewMessage : null
+                                }
+                                methodValidationRef={paymentMethodValidationRef}
+                                cardValidationRef={paymentCardValidationRef}
+                                onChangeQuantity={handleTicketQuantityChange}
+                                onRequestRemove={requestRemoveTicket}
+                              />
                             </SupportCard>
                           ) : null}
                         </Stack>
