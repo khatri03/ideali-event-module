@@ -30,6 +30,7 @@ interface EventRegistrationViewModel {
   description: string | null
   summary: string | null
   termsConditions: string | null
+  refundPolicy: string | null
   isOrganizer: boolean
   paymentAccountCurrency: string | null
   paymentAccountUniqueId: string | null
@@ -358,6 +359,7 @@ function mapRegistrationToViewModel(registration: EventRegistrationResponse): Ev
     description: registration.description,
     summary: registration.summary,
     termsConditions: registration.termsConditions,
+    refundPolicy: registration.refundPolicy,
     isOrganizer: registration.isOrganizer,
     paymentAccountCurrency: registration.paymentAccountCurrency,
     paymentAccountUniqueId: registration.paymentAccountUniqueId,

@@ -8,7 +8,12 @@ export type WizardTabId =
   | "questionnaire"
   | "payment"
 
-export type PurchaseReviewValidationTarget = "buyer-attendee-info" | "payment-method" | "payment-card" | "terms"
+export type PurchaseReviewValidationTarget =
+  | "buyer-attendee-info"
+  | "payment-method"
+  | "payment-card"
+  | "terms"
+  | "refund-policy"
 
 export interface PurchaseReviewIssue {
   message: string
@@ -125,6 +130,7 @@ export interface EventRegisterWizardEvent {
   description: string | null
   summary: string | null
   termsConditions: string | null
+  refundPolicy: string | null
   location: string
   locationMapUrl: string | null
   organizer: string

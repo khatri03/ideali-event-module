@@ -6,6 +6,7 @@ import type { EventCartPaymentBreakdown, EventPaymentIntentResult } from "@/feat
 import type { SelectedTicketSummaryItem } from "@/features/events/components/registration/types"
 import { PaymentStepSkeleton } from "@/features/events/components/registration/PaymentStep.skeleton"
 import { AnimatedPaymentMethodBody } from "@/features/events/components/registration/AnimatedPaymentMethodBody"
+import { CouponEntryCard } from "@/features/events/components/registration/CouponEntryCard"
 import { PaymentBreakdownTable } from "@/features/events/components/registration/PaymentBreakdownTable"
 import { StripeCardFields } from "@/features/events/components/registration/StripeCardFields"
 import { formatAmount, hexToRgba } from "@/features/events/utils/registrationFormat"
@@ -27,6 +28,11 @@ interface PaymentStepProps {
   sessionGroups: SessionGroup[]
   subtotal: number
   ticketSubtotal: number
+  discountAmount: number
+  appliedCouponCode: string | null
+  onApplyCoupon: (code: string) => void
+  onRemoveCoupon: () => void
+  isCouponSyncing: boolean
   currencyCode: string | null
   formAccent: string
   isLoading: boolean
@@ -163,6 +169,11 @@ export function PaymentStep({
   sessionGroups,
   subtotal,
   ticketSubtotal,
+  discountAmount,
+  appliedCouponCode,
+  onApplyCoupon,
+  onRemoveCoupon,
+  isCouponSyncing,
   currencyCode,
   formAccent,
   isLoading,
@@ -193,6 +204,16 @@ export function PaymentStep({
           </Text>
         </HStack>
       </Box>
+
+      <CouponEntryCard
+        appliedCouponCode={appliedCouponCode}
+        discountAmount={discountAmount}
+        currencyCode={currencyCode}
+        isSyncing={isCouponSyncing}
+        formAccent={formAccent}
+        onApply={onApplyCoupon}
+        onRemove={onRemoveCoupon}
+      />
 
       {isLoading && breakdowns.length === 0 ? (
         <PaymentStepSkeleton />
@@ -238,6 +259,7 @@ export function PaymentStep({
               breakdown={selectedBreakdown}
               sessionGroups={sessionGroups}
               subtotal={subtotal}
+              discountAmount={discountAmount}
               currencyCode={currencyCode}
               onChangeQuantity={onChangeQuantity}
               onRequestRemove={onRequestRemove}

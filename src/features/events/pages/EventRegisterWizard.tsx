@@ -57,6 +57,7 @@ import { extractApiError } from '@/utils/errors'
 
 import { EventHeroCard } from '@/features/events/components/registration/EventHeroCard'
 import { RegistrationTermsCard } from '@/features/events/components/registration/RegistrationTermsCard'
+import { RegistrationRefundPolicyCard } from '@/features/events/components/registration/RegistrationRefundPolicyCard'
 import { BuyerAttendeeStep } from '@/features/events/components/registration/BuyerAttendeeStep'
 import { RichTextBlock, SupportCard } from '@/features/events/components/registration/SupportCard'
 import { SessionsStep } from '@/features/events/components/registration/SessionsStep'
@@ -124,12 +125,18 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     error: cartError,
     expiresAtUtc,
     lineByTicketTypeId,
+    restoredCart,
     syncTicketSelection,
     setBuyerIdentity,
+    applyCoupon,
     resetCart,
+    completeCart,
   } = useRegistrationCart(event.uniqueId)
+  const [appliedCouponCode, setAppliedCouponCode] = useState<string | null>(null)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [termsOpen, setTermsOpen] = useState(false)
+  const [refundPolicyAccepted, setRefundPolicyAccepted] = useState(false)
+  const [refundPolicyOpen, setRefundPolicyOpen] = useState(false)
   const [expandedSessionIds, setExpandedSessionIds] = useState<string[]>([])
   const [activeSessionDescription, setActiveSessionDescription] = useState<{ title: string; description: string } | null>(null)
   const [sessionTicketSearch, setSessionTicketSearch] = useState<Record<string, string>>({})
@@ -149,6 +156,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     paymentMethodRef: paymentMethodValidationRef,
     paymentCardRef: paymentCardValidationRef,
     termsRef: termsValidationRef,
+    refundPolicyRef: refundPolicyValidationRef,
     applyIssues: applyPurchaseReviewIssues,
     openReview,
     clearBuyerAttendeeIssue: clearBuyerAttendeeValidation,
@@ -193,6 +201,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   }
 
   function restartPurchaseFlow() {
+    // Drop the stored cart first, or the reload resumes the very cart that just expired.
+    resetCart()
     window.location.reload()
   }
 
@@ -258,10 +268,19 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       description: descriptionData.description ?? event.description,
       summary: descriptionData.summary ?? event.summary,
       termsConditions: descriptionData.termsConditions ?? event.termsConditions,
+      refundPolicy: descriptionData.refundPolicy ?? event.refundPolicy,
       sessions: sessionsData,
       paymentMethods: paymentMethodsData,
     }),
-    [event, descriptionData.description, descriptionData.summary, descriptionData.termsConditions, sessionsData, paymentMethodsData],
+    [
+      event,
+      descriptionData.description,
+      descriptionData.summary,
+      descriptionData.termsConditions,
+      descriptionData.refundPolicy,
+      sessionsData,
+      paymentMethodsData,
+    ],
   )
   const currentEvent = eventData
   const sessions = currentEvent.sessions
@@ -290,6 +309,23 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
   // The hold deadline is the server's; the chip only counts down to it.
   const purchaseTimerVisible = Boolean(expiresAtUtc)
+
+  // A cart that survived a refresh brings its lines back with it. Seeding the quantities rebuilds
+  // the whole selection, because that one map drives the visible tabs, the summary and the
+  // attendee slots. Buyer and attendee details are only sent at confirm time, so they are retyped.
+  const [prevRestoredCart, setPrevRestoredCart] = useState(restoredCart)
+  if (restoredCart !== prevRestoredCart) {
+    setPrevRestoredCart(restoredCart)
+
+    if (restoredCart) {
+      setSelectedTicketQuantities(
+        restoredCart.lines.reduce<Record<string, number>>((quantities, line) => {
+          quantities[line.ticketTypeUniqueId] = line.quantity
+          return quantities
+        }, {}),
+      )
+    }
+  }
 
   // The server refuses to open a cart without a buyer, so hand the identity over as soon as it is
   // complete; tickets picked beforehand are replayed against the newly opened cart.
@@ -444,6 +480,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       issues.push({ message: 'Accept the registration terms and conditions.', target: 'terms' })
     }
 
+    if (currentEvent.refundPolicy && !refundPolicyAccepted) {
+      issues.push({ message: 'Accept the refund policy.', target: 'refund-policy' })
+    }
+
     return issues
   }
 
@@ -536,6 +576,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
    * ticket issuance, so a non-settled result here is expected on the bank rails, not a failure.
    */
   async function handlePaymentSucceeded() {
+    // The money has already moved, so the cart must stop being resumable whatever the confirm call
+    // reports back - the webhook is what settles it from here.
+    completeCart()
+
     try {
       const confirmation = await confirmCheckoutMutation.mutateAsync()
 
@@ -626,6 +670,16 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     })
   }
 
+  function handleApplyCoupon(code: string) {
+    setAppliedCouponCode(code)
+    void applyCoupon(code)
+  }
+
+  function handleRemoveCoupon() {
+    setAppliedCouponCode(null)
+    void applyCoupon(null)
+  }
+
   function handleRemoveTicket(ticket: EventRegistrationTicket) {
     handleTicketQuantityChange(ticket, 0)
   }
@@ -644,6 +698,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     resetBuyerAttendeeInfo()
     setTermsAccepted(false)
     setTermsOpen(false)
+    setRefundPolicyAccepted(false)
+    setRefundPolicyOpen(false)
+    setAppliedCouponCode(null)
     resetPurchaseReview()
     setPurchaseTimerExpired(false)
     setPaymentIntent(null)
@@ -743,6 +800,16 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                 onViewTerms={() => setTermsOpen(true)}
                 accentColor={formAccent}
                 validationRef={termsValidationRef}
+              />
+            ) : null}
+
+            {currentEvent.refundPolicy ? (
+              <RegistrationRefundPolicyCard
+                isAccepted={refundPolicyAccepted}
+                onAcceptedChange={setRefundPolicyAccepted}
+                onViewPolicy={() => setRefundPolicyOpen(true)}
+                accentColor={formAccent}
+                validationRef={refundPolicyValidationRef}
               />
             ) : null}
 
@@ -954,6 +1021,11 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                 sessionGroups={selectedTicketSummaryBySession}
                                 subtotal={paymentBreakdownSubtotal}
                                 ticketSubtotal={selectedTicketTotal}
+                                discountAmount={cartPrice?.discountAmount ?? 0}
+                                appliedCouponCode={appliedCouponCode}
+                                onApplyCoupon={handleApplyCoupon}
+                                onRemoveCoupon={handleRemoveCoupon}
+                                isCouponSyncing={isCartSyncing}
                                 currencyCode={currentEvent.paymentAccountCurrency}
                                 formAccent={formAccent}
                                 isLoading={isCartSyncing}
@@ -1028,6 +1100,14 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
         eyebrow='Terms & Conditions'
         title='Registration agreement'
         body={currentEvent.termsConditions}
+      />
+
+      <ContentDialog
+        isOpen={refundPolicyOpen}
+        onClose={() => setRefundPolicyOpen(false)}
+        eyebrow='Refund Policy'
+        title='Refund policy'
+        body={currentEvent.refundPolicy}
       />
 
       <BuyerDetailsMissingDialog
