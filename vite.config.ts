@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import fs from "fs";
 import path from "path";
@@ -21,6 +21,21 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  test: {
+    environment: "happy-dom",
+    include: ["src/**/*.test.{ts,tsx}"],
+    environmentOptions: {
+      // A real browser never loads sub-resources out of a DOMParser document; happy-dom will try,
+      // so hostile markup under test must not be able to reach the network.
+      happyDOM: {
+        settings: {
+          disableIframePageLoading: true,
+          disableJavaScriptFileLoading: true,
+          disableCSSFileLoading: true,
+        },
+      },
     },
   },
   server: {

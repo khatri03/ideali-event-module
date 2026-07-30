@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { Box, Flex, HStack, Heading, Stack, Text } from "@chakra-ui/react"
+import { RichText } from "@/components/common/RichText"
 
 interface SupportCardProps {
   title: string
@@ -47,5 +48,5 @@ export function SupportCard({ title, subtitle, icon, children, bg = "white", has
 }
 
 export function RichTextBlock({ html }: { html: string }) {
-  return <Box color="gray.700" lineHeight="1.75" dangerouslySetInnerHTML={{ __html: html }} />
+  return <RichText html={html} />
 }

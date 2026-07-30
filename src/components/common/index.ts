@@ -1,4 +1,5 @@
 export { ColorModeToggle } from "./ColorModeToggle"
 export { PageHeader } from "./PageHeader"
+export { RichText } from "./RichText"
 export { StyledSelect } from "./StyledSelect"
 export type { SelectOption } from "./StyledSelect"
