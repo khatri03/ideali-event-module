@@ -138,6 +138,18 @@ export const API_ROUTES = {
   eventRegisterPayment: (eventUniqueId: string) => `/api/events/${eventUniqueId}/register/payment`,
   organizerPaymentAccountPciCredentials: (paymentAccountUniqueId: string) =>
     `/api/organizer/payment-account/pci/${paymentAccountUniqueId}/credentials`,
+  eventCart: "/api/events/cart",
+  eventCartDetail: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}`,
+  eventCartLines: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/lines`,
+  eventCartLine: (cartUniqueId: string, lineUniqueId: string) =>
+    `/api/events/cart/${cartUniqueId}/lines/${lineUniqueId}`,
+  eventCartPrice: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/price`,
+  eventCartLineAttendees: (cartUniqueId: string, lineUniqueId: string) =>
+    `/api/events/cart/${cartUniqueId}/lines/${lineUniqueId}/attendees`,
+  eventCartLineAnswers: (cartUniqueId: string, lineUniqueId: string) =>
+    `/api/events/cart/${cartUniqueId}/lines/${lineUniqueId}/answers`,
+  eventCartCheckoutIntent: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/checkout/intent`,
+  eventCartCheckoutConfirm: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/checkout/confirm`,
   eventWizardProgress: (id: string) => `/api/organizer/events/${id}/wizard-progress`,
   eventWizardNameCreate: "/api/organizer/events/name",
   eventWizardSkip: (id: string) => `/api/organizer/events/${id}/skip`,
