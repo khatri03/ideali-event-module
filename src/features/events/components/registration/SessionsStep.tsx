@@ -1,7 +1,8 @@
 import { Badge, Box, Button, CloseButton, Flex, HStack, Input, SimpleGrid, Stack, Text, Tooltip } from "@chakra-ui/react"
 import { AlertCircle } from "lucide-react"
 import type { EventRegistrationSession, EventRegistrationTicket } from "@/api/events"
-import { SessionTitleCard, SessionsTabSkeleton } from "@/features/events/components/registration/SessionTitleCard"
+import { SessionTitleCard } from "@/features/events/components/registration/SessionTitleCard"
+import { SessionsStepSkeleton } from "@/features/events/components/registration/SessionsStep.skeleton"
 import { TicketCard } from "@/features/events/components/registration/TicketCard"
 import { getTicketQuantityAfterDecrement } from "@/features/events/utils/ticketSelection"
 
@@ -99,7 +100,7 @@ export function SessionsStep({
   onRequestRemoveAll,
 }: SessionsStepProps) {
   if (isLoading) {
-    return <SessionsTabSkeleton />
+    return <SessionsStepSkeleton />
   }
 
   if (sessions.length === 0) {

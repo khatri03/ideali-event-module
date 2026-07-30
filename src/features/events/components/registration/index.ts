@@ -2,13 +2,16 @@ export { AnimatedPaymentMethodBody } from "./AnimatedPaymentMethodBody"
 export { AttendeeSlotCard, AttendeeTicketCard } from "./AttendeeTicketCard"
 export { AutoImageCarousel } from "./AutoImageCarousel"
 export { BuyerAttendeeStep } from "./BuyerAttendeeStep"
+export { BuyerAttendeeStepSkeleton } from "./BuyerAttendeeStep.skeleton"
 export { CartSummaryPanel } from "./CartSummaryPanel"
 export { ContactDetailsFields } from "./ContactDetailsFields"
 export { PaymentBreakdownTable } from "./PaymentBreakdownTable"
 export { PaymentStep } from "./PaymentStep"
+export { PaymentStepSkeleton } from "./PaymentStep.skeleton"
 export { PurchaseTimerChip } from "./PurchaseTimerChip"
 export { QuestionField } from "./QuestionField"
 export { QuestionnaireStep } from "./QuestionnaireStep"
+export { QuestionnaireStepSkeleton } from "./QuestionnaireStep.skeleton"
 export {
   BuyerDetailsMissingDialog,
   ConfirmRemoveDialog,
@@ -16,8 +19,9 @@ export {
   NoticeDialog,
   PurchaseExpiredDialog,
 } from "./RegistrationDialogs"
-export { SessionTitleCard, SessionsTabSkeleton } from "./SessionTitleCard"
+export { SessionTitleCard } from "./SessionTitleCard"
 export { SessionsStep } from "./SessionsStep"
+export { SessionsStepSkeleton } from "./SessionsStep.skeleton"
 export { StripeCardFields } from "./StripeCardFields"
 export { RichTextBlock, SupportCard } from "./SupportCard"
 export { TicketCard } from "./TicketCard"

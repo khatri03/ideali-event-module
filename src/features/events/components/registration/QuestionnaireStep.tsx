@@ -1,10 +1,12 @@
 import { Box, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import type { EventRegistrationQuestion } from "@/api/events"
 import { QuestionField } from "@/features/events/components/registration/QuestionField"
+import { QuestionnaireStepSkeleton } from "@/features/events/components/registration/QuestionnaireStep.skeleton"
 import type { SelectedSessionSummary } from "@/features/events/components/registration/types"
 
 interface QuestionnaireStepProps {
   sessionSummaries: SelectedSessionSummary[]
+  isLoading: boolean
   getAnswer: (sessionUniqueId: string, questionUniqueId: string) => string
   getErrorMessage: (sessionUniqueId: string, question: EventRegistrationQuestion) => string | null
   onChangeAnswer: (sessionUniqueId: string, questionUniqueId: string, value: string) => void
@@ -21,11 +23,16 @@ function SectionLabel({ children }: { children: string }) {
 /** Renders the custom forms and questions attached to whichever sessions the buyer selected. */
 export function QuestionnaireStep({
   sessionSummaries,
+  isLoading,
   getAnswer,
   getErrorMessage,
   onChangeAnswer,
 }: QuestionnaireStepProps) {
   const sessionsWithQuestions = sessionSummaries.filter((summary) => summary.hasQuestions)
+
+  if (isLoading && sessionsWithQuestions.length === 0) {
+    return <QuestionnaireStepSkeleton />
+  }
 
   if (sessionsWithQuestions.length === 0) {
     return (
