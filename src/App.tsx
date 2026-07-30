@@ -42,6 +42,7 @@ import {
   EventRegisterPage,
   EventReviewStepPage,
   EventSessionsStepPage,
+  EventTicketViewPage,
   EventVenueStepPage,
   EventThankYouEmailStepPage,
   EventThemeColorStepPage,
@@ -123,6 +124,9 @@ export default function App() {
           <Route path={APP_ROUTES.sessionWizard.slugs.review} element={<SessionWizardStepPage />} />
         </Route>
         <Route path={APP_ROUTES.eventRegisterRoute} element={<EventRegisterPage />} />
+
+        {/* Public and deliberately outside AppLayout: its fixed-height shell would clip the PDF. */}
+        <Route path={APP_ROUTES.eventTicketViewRoute} element={<EventTicketViewPage />} />
 
         <Route path={APP_ROUTES.member.dashboard} element={<AppLayout />}>
           <Route index element={<MemberDashboardPage />} />
