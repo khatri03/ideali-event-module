@@ -87,7 +87,7 @@ export function NoticeDialog({
   actionLabel,
 }: NoticeDialogProps) {
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(details) => (details.open ? undefined : onDismiss())} size={{ base: "full", md: "sm" }}>
+    <Dialog.Root open={isOpen} onOpenChange={(details) => (details.open ? undefined : onDismiss())} size={{ base: "xs", md: "sm" }}>
       <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.700" />
       <Dialog.Positioner
         alignItems="center"
@@ -205,7 +205,7 @@ export function ConfirmRemoveDialog({
   onConfirm: () => void
 }) {
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(details) => (details.open ? undefined : onCancel())} size={{ base: "full", md: "sm" }}>
+    <Dialog.Root open={isOpen} onOpenChange={(details) => (details.open ? undefined : onCancel())} size={{ base: "xs", md: "sm" }}>
       <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.600" />
       <Dialog.Positioner
         alignItems="center"
