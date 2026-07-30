@@ -874,11 +874,6 @@ export interface EventRegistrationResponse {
   sessions: EventRegistrationSession[]
 }
 
-export interface StripePublicCredentials {
-  publishableKey: string
-  stripeAccount: string
-}
-
 function parseEventRegistrationTicket(item: z.infer<typeof eventRegistrationTicketSchema>): EventRegistrationTicket {
   return {
     uniqueId: item.UniqueId ?? item.uniqueId ?? "",
@@ -1040,31 +1035,6 @@ export async function fetchEventRegistrationAttendeeInfo(eventUniqueId: string):
 export async function fetchEventRegistrationQuestionnaire(eventUniqueId: string): Promise<EventRegistrationResponse> {
   const res = await client.get<unknown>(`${API_ROUTES.eventRegisterQuestionnaire(eventUniqueId)}`)
   return parseEventRegistrationResponse(res.data)
-}
-
-export async function fetchEventRegistrationPayment(eventUniqueId: string, subtotal = 0): Promise<EventRegistrationResponse> {
-  const res = await client.get<unknown>(`${API_ROUTES.eventRegisterPayment(eventUniqueId)}?subtotal=${encodeURIComponent(subtotal.toFixed(2))}`)
-  return parseEventRegistrationResponse(res.data)
-}
-
-const stripePublicCredentialsSchema = z.object({
-  PublishableKey: z.string().optional(),
-  publishableKey: z.string().optional(),
-  StripeAccount: z.string().optional(),
-  stripeAccount: z.string().optional(),
-})
-
-export async function fetchStripePublicCredentials(paymentAccountUniqueId: string): Promise<StripePublicCredentials> {
-  const res = await client.get<unknown>(API_ROUTES.organizerPaymentAccountPciCredentials(paymentAccountUniqueId))
-  const responseData = parseServiceResponseData(res.data)
-  const response = stripePublicCredentialsSchema.parse(responseData)
-  const publishableKey = response.PublishableKey ?? response.publishableKey ?? ''
-  const stripeAccount = response.StripeAccount ?? response.stripeAccount ?? ''
-
-  return {
-    publishableKey,
-    stripeAccount,
-  }
 }
 
 export async function createEvent(payload: Omit<AppEvent, "id">): Promise<AppEvent> {
