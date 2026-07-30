@@ -1,6 +1,8 @@
-import { useCallback, useMemo, useRef, useState } from "react"
-import { addEventCartLine, createEventCart, priceEventCart, removeEventCartLine } from "@/api/eventCheckout"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { addEventCartLine, createEventCart, fetchEventCart, priceEventCart, removeEventCartLine } from "@/api/eventCheckout"
 import type { EventCart, EventCartPrice } from "@/features/events/schemas/eventCart.schemas"
+import { clearStoredCartId, readStoredCartId, storeCartId } from "@/features/events/utils/registrationCartCookie"
+import { parseUtcDateTime } from "@/features/events/utils/registrationFormat"
 import { extractApiError } from "@/utils/errors"
 
 interface TicketSelectionInput {
@@ -33,6 +35,24 @@ function hasIdentity(identity: BuyerIdentity | null): identity is BuyerIdentity 
 }
 
 /**
+ * A cart is only worth resuming while it still holds stock. The cart itself carries no status, so
+ * the line reservations are the signal: `Confirmed` means it was already paid for, `Expired` and
+ * `Cancelled` mean the hold is gone.
+ */
+function isCartResumable(cart: EventCart, eventUniqueId: string): boolean {
+  if (cart.eventUniqueId !== eventUniqueId) {
+    return false
+  }
+
+  const deadline = parseUtcDateTime(cart.expiresAtUtc)
+  if (deadline && deadline.getTime() <= Date.now()) {
+    return false
+  }
+
+  return cart.lines.some((line) => line.reservationStatus === "Active")
+}
+
+/**
  * Owns the server cart for one registration session: creates it once the buyer has identified
  * themselves, reconciles their ticket choices against the cart's lines, and re-prices after every
  * change. Totals, charges and the purchase deadline all come from the server.
@@ -43,9 +63,13 @@ function hasIdentity(identity: BuyerIdentity | null): identity is BuyerIdentity 
  *
  * Mutations are serialized through a promise chain because each one returns the whole cart; running
  * two concurrently would let a stale response overwrite a newer one.
+ *
+ * The cart id is mirrored into a cookie so a refresh resumes the same server cart instead of
+ * abandoning it - an orphaned cart keeps holding stock the buyer can no longer reach or release.
  */
 export function useRegistrationCart(eventUniqueId: string) {
   const [state, setState] = useState<RegistrationCartState>(EMPTY_STATE)
+  const [restoredCart, setRestoredCart] = useState<EventCart | null>(null)
   const cartRef = useRef<EventCart | null>(null)
   const queueRef = useRef<Promise<void>>(Promise.resolve())
   const couponCodeRef = useRef<string | null>(null)
@@ -53,8 +77,20 @@ export function useRegistrationCart(eventUniqueId: string) {
   /** Selections made before the buyer identified themselves, keyed by ticket type. */
   const pendingRef = useRef<Map<string, TicketSelectionInput>>(new Map())
 
+  const restoreAttemptedRef = useRef(false)
+
   const applyCart = useCallback((cart: EventCart) => {
     cartRef.current = cart
+
+    // Every cart response lands here, so the cookie always carries the current deadline. Only a
+    // cart holding stock is worth remembering though: an empty one has nothing to resume, and
+    // pointing at it would strand the buyer behind a cookie that restore is bound to reject.
+    if (cart.lines.length > 0) {
+      storeCartId(cart.cartUniqueId, cart.expiresAtUtc)
+    } else {
+      clearStoredCartId()
+    }
+
     setState((current) => ({ ...current, cart }))
   }, [])
 
@@ -141,6 +177,41 @@ export function useRegistrationCart(eventUniqueId: string) {
   )
 
   /**
+   * Resumes the cart left behind by a refresh. Runs through the same queue as every other mutation
+   * so a selection made while the fetch is in flight cannot overwrite it. Failures are swallowed on
+   * purpose: a buyer arriving with a dead cookie should get a clean form, not an error banner.
+   */
+  useEffect(() => {
+    if (restoreAttemptedRef.current) {
+      return
+    }
+
+    restoreAttemptedRef.current = true
+
+    const storedCartId = readStoredCartId()
+    if (!storedCartId) {
+      return
+    }
+
+    void enqueue(async () => {
+      try {
+        const cart = await fetchEventCart(storedCartId)
+
+        if (!isCartResumable(cart, eventUniqueId)) {
+          clearStoredCartId()
+          return
+        }
+
+        applyCart(cart)
+        await repriceCart(cart.cartUniqueId)
+        setRestoredCart(cart)
+      } catch {
+        clearStoredCartId()
+      }
+    })
+  }, [applyCart, enqueue, eventUniqueId, repriceCart])
+
+  /**
    * Records who is buying. Once name and email are both present the cart is opened and any
    * selections made beforehand are replayed against it.
    */
@@ -183,7 +254,17 @@ export function useRegistrationCart(eventUniqueId: string) {
     couponCodeRef.current = null
     identityRef.current = null
     pendingRef.current.clear()
+    clearStoredCartId()
+    setRestoredCart(null)
     setState(EMPTY_STATE)
+  }, [])
+
+  /**
+   * Drops the stored id once the purchase has gone through. The in-memory cart stays so the buyer
+   * keeps seeing what they bought, but a reload must never resume a cart that is already paid for.
+   */
+  const completeCart = useCallback(() => {
+    clearStoredCartId()
   }, [])
 
   const lineByTicketTypeId = useMemo(() => {
@@ -202,9 +283,12 @@ export function useRegistrationCart(eventUniqueId: string) {
     /** Absolute UTC deadline the hold expires at. The UI only counts down to it. */
     expiresAtUtc: state.cart?.expiresAtUtc ?? null,
     lineByTicketTypeId,
+    /** Set once when a cart survived a refresh, so the wizard can rebuild its selection from it. */
+    restoredCart,
     syncTicketSelection,
     setBuyerIdentity,
     applyCoupon,
     resetCart,
+    completeCart,
   }
 }
