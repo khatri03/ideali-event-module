@@ -244,8 +244,8 @@ export function AlertComposer({ uniqueId }: AlertComposerProps) {
     })
   }
 
-  function handleAudienceChange(details: { value: AudienceTab }) {
-    setValue("targetMode", details.value, { shouldValidate: true })
+  function handleAudienceChange(details: { value: string }) {
+    setValue("targetMode", details.value as AudienceTab, { shouldValidate: true })
   }
 
   if (isEditMode && alertQuery.isLoading) {

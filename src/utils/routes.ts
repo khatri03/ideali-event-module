@@ -59,7 +59,6 @@ export const APP_ROUTES = {
   eventRegisterSessions: (eventUniqueId: string) => `/api/events/${eventUniqueId}/register/sessions`,
   eventRegisterAttendeeInfo: (eventUniqueId: string) => `/api/events/${eventUniqueId}/register/attendee-info`,
   eventRegisterQuestionnaire: (eventUniqueId: string) => `/api/events/${eventUniqueId}/register/questionnaire`,
-  eventRegisterPayment: (eventUniqueId: string) => `/api/events/${eventUniqueId}/register/payment`,
   sessionWizard: {
     list: "/organizer/sessions",
     edit: (sessionId: string) => `/organizer/sessions/${sessionId}`,
@@ -135,9 +134,6 @@ export const API_ROUTES = {
   eventRegisterSessions: (eventUniqueId: string) => `/api/events/${eventUniqueId}/register/sessions`,
   eventRegisterAttendeeInfo: (eventUniqueId: string) => `/api/events/${eventUniqueId}/register/attendee-info`,
   eventRegisterQuestionnaire: (eventUniqueId: string) => `/api/events/${eventUniqueId}/register/questionnaire`,
-  eventRegisterPayment: (eventUniqueId: string) => `/api/events/${eventUniqueId}/register/payment`,
-  organizerPaymentAccountPciCredentials: (paymentAccountUniqueId: string) =>
-    `/api/organizer/payment-account/pci/${paymentAccountUniqueId}/credentials`,
   eventCart: "/api/events/cart",
   eventCartDetail: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}`,
   eventCartLines: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/lines`,

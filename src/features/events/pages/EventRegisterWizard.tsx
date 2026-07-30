@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import type { ReactNode, RefObject } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Badge,
@@ -15,7 +15,6 @@ import {
   Image,
   Input,
   Link,
-  Grid,
   Portal,
   Separator,
   SimpleGrid,
@@ -29,8 +28,6 @@ import {
   Tooltip,
 } from '@chakra-ui/react'
 import { toaster } from '@/lib/toaster'
-import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement } from '@stripe/react-stripe-js'
-import { loadStripe } from '@stripe/stripe-js'
 import {
   ArrowLeft,
   CalendarDays,
@@ -53,10 +50,8 @@ import { format } from 'date-fns'
 import {
   fetchEventRegistrationAttendeeInfo,
   fetchEventRegistrationDescription,
-  fetchEventRegistrationPayment,
   fetchEventRegistrationQuestionnaire,
   fetchEventRegistrationSessions,
-  fetchStripePublicCredentials,
 } from '@/api/events'
 import type {
   EventRegistrationPaymentMethod,
@@ -67,22 +62,19 @@ import {
   CONTROL_BUTTON_OUTLINE,
   CONTROL_BUTTON_PRIMARY,
 } from '@/components/common/controlStyles'
+import { useRegistrationCart } from '@/features/events/hooks/useRegistrationCart'
+import { useQuestionnaireAnswers } from '@/features/events/hooks/useQuestionnaireAnswers'
+import { useCreateEventPaymentIntent, useConfirmEventCheckout } from '@/features/events/hooks/useEventCheckout'
+import { useSubmitLineAttendees, useSubmitLineAnswers } from '@/features/events/hooks/useEventCartAttendees'
+import { PurchaseTimerChip } from '@/features/events/components/registration/PurchaseTimerChip'
+import { QuestionField } from '@/features/events/components/registration/QuestionField'
+import { StripeCardFields } from '@/features/events/components/registration/StripeCardFields'
+import type { EventPaymentIntentResult, PaymentProduct } from '@/features/events/schemas/eventCart.schemas'
+import { extractApiError } from '@/utils/errors'
 
 const LOCAL_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
 type WizardTabId = 'description' | 'sessions' | 'buyer-attendee-info' | 'attendee-info' | 'questionnaire' | 'payment'
-type CardFieldId = 'number' | 'expiry' | 'cvc'
 type PurchaseReviewValidationTarget = 'buyer-attendee-info' | 'payment-method' | 'payment-card' | 'terms'
-
-interface CardFieldState {
-  complete: boolean
-  error: string | null
-}
-
-interface PaymentCardValidationState {
-  number: CardFieldState
-  expiry: CardFieldState
-  cvc: CardFieldState
-}
 
 interface PurchaseReviewIssue {
   message: string
@@ -152,12 +144,6 @@ const EMPTY_BUYER_INFO: BuyerAttendeeInfoState = {
   phone: '',
 }
 
-const INITIAL_CARD_FIELD_STATE: PaymentCardValidationState = {
-  number: { complete: false, error: null },
-  expiry: { complete: false, error: null },
-  cvc: { complete: false, error: null },
-}
-
 interface BannerSlide {
   imageUrl: string
 }
@@ -214,20 +200,6 @@ function formatDateTimeRange(startDate: string | null | undefined, endDate: stri
   if (start === 'Date not set' && end === 'Date not set') return 'Not set'
   if (start === end) return start
   return `${start} - ${end}`
-}
-
-function formatPurchaseCountdown(milliseconds: number) {
-  const safeMilliseconds = Math.max(milliseconds, 0)
-  const totalSeconds = Math.floor(safeMilliseconds / 1000)
-  const hours = Math.floor(totalSeconds / 3600)
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
-  const seconds = totalSeconds % 60
-
-  if (hours > 0) {
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-  }
-
-  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
 function getCurrencyDisplayPrefix(currencyCode?: string | null) {
@@ -392,274 +364,6 @@ function AnimatedPaymentMethodBody({ isOpen, children }: { isOpen: boolean; chil
 
 function isCardPaymentMethod(paymentMethod: string) {
   return /card/i.test(paymentMethod)
-}
-
-function StripePaymentFields({
-  paymentMethod,
-  paymentAccountUniqueId,
-  paymentAccountCurrency,
-  cardHolderName,
-  onCardHolderNameChange,
-  cardFieldStates,
-  showValidationErrors,
-  onCardFieldStateChange,
-  onAvailabilityChange,
-  validationRef,
-}: {
-  paymentMethod: string
-  paymentAccountUniqueId: string | null
-  paymentAccountCurrency: string | null
-  cardHolderName: string
-  onCardHolderNameChange: (value: string) => void
-  cardFieldStates: PaymentCardValidationState
-  showValidationErrors: boolean
-  onCardFieldStateChange: (fieldId: CardFieldId, nextState: CardFieldState) => void
-  onAvailabilityChange: (state: { isReady: boolean; message: string | null }) => void
-  validationRef?: RefObject<HTMLDivElement | null>
-}) {
-  const stripeCredentialsQuery = useQuery({
-    queryKey: ['event-registration', paymentAccountUniqueId, 'stripe-credentials'],
-    queryFn: () => fetchStripePublicCredentials(paymentAccountUniqueId ?? ''),
-    enabled: isCardPaymentMethod(paymentMethod) && Boolean(paymentAccountUniqueId),
-    retry: 1,
-  })
-
-  useEffect(() => {
-    if (!isCardPaymentMethod(paymentMethod)) return
-
-    if (!paymentAccountUniqueId) {
-      onAvailabilityChange({
-        isReady: false,
-        message: 'Card fields are unavailable because the payment account is not configured.',
-      })
-      return
-    }
-
-    if (stripeCredentialsQuery.isLoading) {
-      onAvailabilityChange({
-        isReady: false,
-        message: 'Loading card fields...',
-      })
-      return
-    }
-
-    if (stripeCredentialsQuery.isError) {
-      onAvailabilityChange({
-        isReady: false,
-        message: 'Unable to load card fields right now.',
-      })
-      return
-    }
-
-    if (!stripeCredentialsQuery.data) {
-      onAvailabilityChange({
-        isReady: false,
-        message: 'Card fields are not ready yet.',
-      })
-      return
-    }
-
-    onAvailabilityChange({
-      isReady: true,
-      message: null,
-    })
-  }, [onAvailabilityChange, paymentAccountUniqueId, paymentMethod, stripeCredentialsQuery.data, stripeCredentialsQuery.isError, stripeCredentialsQuery.isLoading])
-
-  const stripePromise = useMemo(() => {
-    const stripeCredentials = stripeCredentialsQuery.data
-    if (!stripeCredentials) return null
-
-    const stripeAccount = stripeCredentials.stripeAccount.trim()
-    return loadStripe(
-      stripeCredentials.publishableKey,
-      stripeAccount ? { stripeAccount } : undefined,
-    )
-  }, [stripeCredentialsQuery.data])
-
-  const elementOptions = useMemo(
-    () => ({
-      disableLink: true,
-      style: {
-        base: {
-          color: '#0f172a',
-          fontSize: '16px',
-          fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-          fontSmoothing: 'antialiased',
-          '::placeholder': {
-            color: '#94a3b8',
-          },
-        },
-        invalid: {
-          color: '#dc2626',
-        },
-      },
-    }),
-    [],
-  )
-
-  if (!isCardPaymentMethod(paymentMethod)) {
-    return null
-  }
-
-  if (!paymentAccountUniqueId) {
-    return (
-      <Box borderWidth='1px' borderColor='orange.200' bg='orange.50' borderRadius='18px' p={4}>
-        <Text fontSize='sm' color='orange.800'>
-          Card fields are unavailable because the payment account is not configured.
-        </Text>
-      </Box>
-    )
-  }
-
-  if (stripeCredentialsQuery.isLoading) {
-    return (
-      <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' p={4} bg='gray.50'>
-        <SkeletonText noOfLines={4} gap='3' />
-      </Box>
-    )
-  }
-
-  if (stripeCredentialsQuery.isError) {
-    return (
-      <Box borderWidth='1px' borderColor='red.200' bg='red.50' borderRadius='18px' p={4}>
-        <Text fontSize='sm' color='red.700'>
-          Unable to load card fields right now.
-        </Text>
-      </Box>
-    )
-  }
-
-  if (!stripePromise) {
-    return null
-  }
-
-  return (
-    <Elements stripe={stripePromise}>
-      <Box ref={validationRef} borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='white' overflow='hidden'>
-        <Box px={4} py={3} bg='gray.50' borderBottomWidth='1px' borderBottomColor='gray.200'>
-          <Text fontSize='sm' fontWeight='700' color='gray.700'>
-            Card details
-          </Text>
-          <Text fontSize='sm' color='gray.500'>
-            Enter the cardholder name and card information for {paymentAccountCurrency ?? 'the selected currency'}.
-          </Text>
-        </Box>
-
-        <Stack gap={4} p={4}>
-          <Box>
-            <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
-              Name on card <Text as='span' color='red.500'>*</Text>
-            </Text>
-            <Input
-              value={cardHolderName}
-              onChange={(event) => onCardHolderNameChange(event.target.value)}
-              autoComplete='cc-name'
-              placeholder='Enter cardholder name'
-              borderColor={showValidationErrors && !cardHolderName.trim() ? 'red.300' : 'gray.200'}
-              bg='white'
-              borderRadius='14px'
-              h='12'
-              px={4}
-            />
-            {showValidationErrors && !cardHolderName.trim() ? (
-              <Text mt={2} fontSize='xs' color='red.600'>
-                Enter the cardholder name.
-              </Text>
-            ) : null}
-          </Box>
-
-          <Grid templateColumns={{ base: '1fr', md: '3fr 1fr 1fr' }} gap={3}>
-            <Box>
-              <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
-                Card number <Text as='span' color='red.500'>*</Text>
-              </Text>
-              <Box
-                borderWidth='1px'
-                borderColor={showValidationErrors && (!cardFieldStates.number.complete || Boolean(cardFieldStates.number.error)) ? 'red.300' : 'gray.200'}
-                borderRadius='14px'
-                px={3}
-                py={3}
-                bg='white'
-              >
-                <CardNumberElement
-                  options={elementOptions}
-                  onChange={(details) =>
-                    onCardFieldStateChange('number', {
-                      complete: details.complete,
-                      error: details.error?.message ?? null,
-                    })
-                  }
-                />
-              </Box>
-              {showValidationErrors && (!cardFieldStates.number.complete || Boolean(cardFieldStates.number.error)) ? (
-                <Text mt={2} fontSize='xs' color='red.600'>
-                  {cardFieldStates.number.error ?? 'Complete the card number.'}
-                </Text>
-              ) : null}
-            </Box>
-
-            <Box>
-              <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
-                Expiry <Text as='span' color='red.500'>*</Text>
-              </Text>
-              <Box
-                borderWidth='1px'
-                borderColor={showValidationErrors && (!cardFieldStates.expiry.complete || Boolean(cardFieldStates.expiry.error)) ? 'red.300' : 'gray.200'}
-                borderRadius='14px'
-                px={3}
-                py={3}
-                bg='white'
-              >
-                <CardExpiryElement
-                  options={elementOptions}
-                  onChange={(details) =>
-                    onCardFieldStateChange('expiry', {
-                      complete: details.complete,
-                      error: details.error?.message ?? null,
-                    })
-                  }
-                />
-              </Box>
-              {showValidationErrors && (!cardFieldStates.expiry.complete || Boolean(cardFieldStates.expiry.error)) ? (
-                <Text mt={2} fontSize='xs' color='red.600'>
-                  {cardFieldStates.expiry.error ?? 'Complete the expiry date.'}
-                </Text>
-              ) : null}
-            </Box>
-
-            <Box>
-              <Text fontSize='sm' fontWeight='600' color='gray.700' mb={2}>
-                CVV <Text as='span' color='red.500'>*</Text>
-              </Text>
-              <Box
-                borderWidth='1px'
-                borderColor={showValidationErrors && (!cardFieldStates.cvc.complete || Boolean(cardFieldStates.cvc.error)) ? 'red.300' : 'gray.200'}
-                borderRadius='14px'
-                px={3}
-                py={3}
-                bg='white'
-              >
-                <CardCvcElement
-                  options={elementOptions}
-                  onChange={(details) =>
-                    onCardFieldStateChange('cvc', {
-                      complete: details.complete,
-                      error: details.error?.message ?? null,
-                    })
-                  }
-                />
-              </Box>
-              {showValidationErrors && (!cardFieldStates.cvc.complete || Boolean(cardFieldStates.cvc.error)) ? (
-                <Text mt={2} fontSize='xs' color='red.600'>
-                  {cardFieldStates.cvc.error ?? 'Complete the CVV.'}
-                </Text>
-              ) : null}
-            </Box>
-          </Grid>
-        </Stack>
-      </Box>
-    </Elements>
-  )
 }
 
 function getStepIndex(tabs: Array<{ id: WizardTabId }>, stepId: WizardTabId) {
@@ -1159,59 +863,6 @@ type PendingDeleteAction =
       description: string
     }
 
-function PurchaseTimerChip({
-  remainingMs,
-  durationMs,
-  expired,
-  accentColor,
-}: {
-  remainingMs: number
-  durationMs: number
-  expired: boolean
-  accentColor: string
-}) {
-  const remainingText = formatPurchaseCountdown(remainingMs)
-  const isRunningLow = !expired && remainingMs <= durationMs * 0.2
-  const borderColor = expired ? 'red.200' : isRunningLow ? 'orange.200' : hexToRgba(accentColor, 0.16)
-  const background = expired ? 'red.50' : isRunningLow ? 'orange.50' : 'white'
-  const iconBackground = expired ? 'red.600' : isRunningLow ? 'orange.600' : accentColor
-  const textColor = expired ? 'red.700' : isRunningLow ? 'orange.800' : 'gray.800'
-  const borderGlow = expired ? '0 0 0 1px rgba(239, 68, 68, 0.12)' : isRunningLow ? '0 0 0 1px rgba(249, 115, 22, 0.12)' : '0 0 0 1px rgba(15, 23, 42, 0.06)'
-  const helperText = expired
-    ? 'Purchase time limit reached. Remove selected tickets to start a new purchase flow.'
-    : isRunningLow
-      ? 'Time is running out. Less than 20% of your purchase window remains.'
-      : 'Your purchase window started the moment you selected your first ticket.'
-
-  return (
-    <Box
-      as='span'
-      title={helperText}
-      aria-label={helperText}
-      role='status'
-      display='inline-flex'
-      alignItems='center'
-      gap={2.5}
-      borderWidth='1px'
-      borderColor={borderColor}
-      borderRadius='full'
-      bg={background}
-      boxShadow={`0 12px 28px rgba(15, 23, 42, 0.08), ${borderGlow}`}
-      px={3}
-      py={2}
-      cursor='help'
-      maxW='full'
-    >
-      <Box w='8' h='8' borderRadius='full' display='grid' placeItems='center' bg={iconBackground} color='white' flexShrink={0}>
-        <Clock3 size={16} />
-      </Box>
-      <Text fontSize='sm' fontWeight='900' color={textColor} letterSpacing='-0.02em' lineHeight='1'>
-        {remainingText}
-      </Text>
-    </Box>
-  )
-}
-
 function TicketCard({
   ticket,
   quantity,
@@ -1515,6 +1166,16 @@ function SessionsTabSkeleton() {
 
 export function EventRegisterWizard({ event, formAccent, onBack }: { event: EventRegisterWizardEvent; formAccent: string; onBack: () => void }) {
   const accentBackground = hexToRgba(formAccent, 0.18)
+  const {
+    cart,
+    price: cartPrice,
+    isSyncing: isCartSyncing,
+    error: cartError,
+    expiresAtUtc,
+    lineByTicketTypeId,
+    syncTicketSelection,
+    resetCart,
+  } = useRegistrationCart(event.uniqueId)
   const [buyerInfo, setBuyerInfo] = useState<BuyerAttendeeInfoState>(EMPTY_BUYER_INFO)
   const [buyerDetailsAlertMessage, setBuyerDetailsAlertMessage] = useState<string | null>(null)
   const [buyerDetailsAlertOpen, setBuyerDetailsAlertOpen] = useState(false)
@@ -1532,24 +1193,17 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [activeTab, setActiveTab] = useState<WizardTabId>(firstTab)
   const [highestUnlockedIndex, setHighestUnlockedIndex] = useState(0)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null)
-  const [cardHolderName, setCardHolderName] = useState('')
-  const [cardFieldStates, setCardFieldStates] = useState<PaymentCardValidationState>(INITIAL_CARD_FIELD_STATE)
-  const [cardFieldAvailability, setCardFieldAvailability] = useState<{ isReady: boolean; message: string | null }>({
-    isReady: false,
-    message: null,
-  })
   const [isPurchaseReviewOpen, setIsPurchaseReviewOpen] = useState(false)
   const [purchaseReviewAttempted, setPurchaseReviewAttempted] = useState(false)
   const [purchaseReviewMessage, setPurchaseReviewMessage] = useState<string | null>(null)
   const [purchaseReviewScrollTarget, setPurchaseReviewScrollTarget] = useState<PurchaseReviewValidationTarget | null>(null)
   const [purchaseReviewScrollRequestId, setPurchaseReviewScrollRequestId] = useState(0)
   const [expandedPaymentMethod, setExpandedPaymentMethod] = useState<string | null>(null)
-  const [purchaseTimerStartedAt, setPurchaseTimerStartedAt] = useState<number | null>(null)
-  const [purchaseTimerNow, setPurchaseTimerNow] = useState(() => Date.now())
+  const [purchaseTimerExpired, setPurchaseTimerExpired] = useState(false)
   const [purchaseTimerExpiryOpen, setPurchaseTimerExpiryOpen] = useState(false)
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
   const [pendingDeleteAction, setPendingDeleteAction] = useState<PendingDeleteAction | null>(null)
-  const paymentSubtotalSnapshotRef = useRef<number | null>(null)
+  const [paymentIntent, setPaymentIntent] = useState<EventPaymentIntentResult | null>(null)
   const buyerAttendeeValidationRef = useRef<HTMLDivElement | null>(null)
   const paymentMethodValidationRef = useRef<HTMLDivElement | null>(null)
   const paymentCardValidationRef = useRef<HTMLDivElement | null>(null)
@@ -1585,15 +1239,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       setActiveTab(firstTab)
     }
   }
-
-  useEffect(() => {
-    if (purchaseTimerStartedAt === null) return
-    const timer = window.setInterval(() => {
-      setPurchaseTimerNow(Date.now())
-    }, 1000)
-
-    return () => window.clearInterval(timer)
-  }, [purchaseTimerStartedAt])
 
   function restartPurchaseFlow() {
     window.location.reload()
@@ -1664,7 +1309,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     [selectedTicketSummary],
   )
   const selectedTicketCount = selectedTicketSummary.reduce((total, item) => total + item.quantity, 0)
-  const selectedTicketTotal = selectedTicketSummary.reduce((total, item) => total + item.lineTotal, 0)
+  // Server-priced net subtotal. Falls back to the catalog-derived figure only until the first
+  // pricing round-trip lands, so the buyer never sees an empty total mid-flight.
+  const selectedTicketTotal =
+    cartPrice?.netSubtotal ?? selectedTicketSummary.reduce((total, item) => total + item.lineTotal, 0)
   const selectedSessionSummaries = useMemo(
     () => getSelectedSessionSummaries(sessionsData, selectedTicketQuantities),
     [sessionsData, selectedTicketQuantities],
@@ -1725,28 +1373,22 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       }, {}),
     [attendeeSlotEntries],
   )
-  const paymentQuery = useQuery({
-    queryKey: ['event-registration', event.uniqueId, 'payment'],
-    queryFn: () => fetchEventRegistrationPayment(event.uniqueId, selectedTicketTotal),
-    enabled: tabs.some((tab) => tab.id === 'payment') && activeTab === 'payment',
-    retry: 1,
-  })
-  const { refetch: refetchPaymentBreakdown, isSuccess: paymentBreakdownLoaded } = paymentQuery
-  const paymentMethodsData = useMemo(
-    () => paymentQuery.data?.paymentMethods ?? event.paymentMethods ?? [],
-    [paymentQuery.data, event.paymentMethods],
-  )
+  const paymentMethodsData = useMemo(() => event.paymentMethods ?? [], [event.paymentMethods])
   const visiblePaymentMethods = useMemo(
     () => paymentMethodsData.filter((method) => !method.isOrganizerOnly || event.isOrganizer),
     [paymentMethodsData, event.isOrganizer],
   )
-  const paymentBreakdowns = useMemo(() => paymentQuery.data?.paymentBreakdowns ?? [], [paymentQuery.data])
+  // Totals, charges and the payable amount per method are all priced by the server.
+  const paymentBreakdowns = useMemo(
+    () => (cartPrice?.paymentBreakdowns ?? []).filter((breakdown) => !breakdown.isOrganizerOnly || event.isOrganizer),
+    [cartPrice, event.isOrganizer],
+  )
   const selectedPaymentBreakdown =
     paymentBreakdowns.find((breakdown) => breakdown.paymentMethod === selectedPaymentMethod) ??
     paymentBreakdowns[0] ??
     null
   const isSelectedPaymentMethodCard = Boolean(selectedPaymentBreakdown && isCardPaymentMethod(selectedPaymentBreakdown.paymentMethod))
-  const paymentBreakdownSubtotal = selectedPaymentBreakdown?.subtotal ?? selectedTicketTotal
+  const paymentBreakdownSubtotal = selectedPaymentBreakdown?.subtotal ?? cartPrice?.netSubtotal ?? 0
   const eventData = useMemo(
     () => ({
       ...event,
@@ -1760,6 +1402,19 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   )
   const currentEvent = eventData
   const sessions = currentEvent.sessions
+  const {
+    getAnswer,
+    setAnswer,
+    getErrorMessage: getQuestionErrorMessage,
+    buildQuestionResponses,
+    missingRequiredCount,
+    setShowValidation: setShowQuestionValidation,
+    resetAnswers,
+  } = useQuestionnaireAnswers(sessions)
+  const submitAttendeesMutation = useSubmitLineAttendees(cart?.cartUniqueId)
+  const submitAnswersMutation = useSubmitLineAnswers(cart?.cartUniqueId)
+  const createPaymentIntentMutation = useCreateEventPaymentIntent(cart?.cartUniqueId)
+  const confirmCheckoutMutation = useConfirmEventCheckout(cart?.cartUniqueId)
   const bannerSlides = useMemo(() => getSessionBannerSlides(currentEvent), [currentEvent])
   const sessionsLoading = sessionsQuery.isLoading || (sessionsQuery.isFetching && sessions.length === 0)
   const [prevSessions, setPrevSessions] = useState(sessions)
@@ -1842,31 +1497,13 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       return hasChanges ? next : current
     })
   }
-  const purchaseTimerDurationMs = Math.max(currentEvent.purchaseTimeLimitMinutes, 1) * 60 * 1000
-  const purchaseTimerRemainingMs = purchaseTimerStartedAt === null ? null : purchaseTimerStartedAt + purchaseTimerDurationMs - purchaseTimerNow
-  const purchaseTimerVisible = purchaseTimerStartedAt !== null
-  const purchaseTimerExpired = purchaseTimerRemainingMs !== null && purchaseTimerRemainingMs <= 0
+  // The hold deadline is the server's; the chip only counts down to it.
+  const purchaseTimerVisible = Boolean(expiresAtUtc)
 
-  const [prevPurchaseTimerRemainingMs, setPrevPurchaseTimerRemainingMs] = useState(purchaseTimerRemainingMs)
-  if (purchaseTimerRemainingMs !== prevPurchaseTimerRemainingMs) {
-    setPrevPurchaseTimerRemainingMs(purchaseTimerRemainingMs)
-    if (purchaseTimerRemainingMs !== null && purchaseTimerRemainingMs <= 0) {
-      setPurchaseTimerExpiryOpen(true)
-    }
-  }
-
-  useEffect(() => {
-    if (activeTab !== 'payment' || !paymentBreakdownLoaded) return
-    if (paymentSubtotalSnapshotRef.current === null) {
-      paymentSubtotalSnapshotRef.current = selectedTicketTotal
-      return
-    }
-
-    if (paymentSubtotalSnapshotRef.current === selectedTicketTotal) return
-
-    paymentSubtotalSnapshotRef.current = selectedTicketTotal
-    refetchPaymentBreakdown()
-  }, [activeTab, paymentBreakdownLoaded, refetchPaymentBreakdown, selectedTicketTotal])
+  const handlePurchaseTimerExpire = useCallback(() => {
+    setPurchaseTimerExpired(true)
+    setPurchaseTimerExpiryOpen(true)
+  }, [])
 
   const [prevPaymentMethodDeps, setPrevPaymentMethodDeps] = useState({ activeTab, paymentBreakdowns, visiblePaymentMethods })
   const paymentMethodDepsChanged =
@@ -1986,28 +1623,21 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       })
     }
 
+    if (missingRequiredCount > 0) {
+      setShowQuestionValidation(true)
+      issues.push({
+        message:
+          missingRequiredCount === 1
+            ? 'Answer the required question before continuing.'
+            : `Answer the ${missingRequiredCount} required questions before continuing.`,
+        target: 'buyer-attendee-info',
+      })
+    }
+
+    // Card field completeness is Stripe's to enforce at confirm time; pre-checking it here only
+    // duplicated the check and drifted from what Stripe actually accepts.
     if (!selectedPaymentBreakdown) {
       issues.push({ message: 'Select a payment method.', target: 'payment-method' })
-    } else if (isCardPaymentMethod(selectedPaymentBreakdown.paymentMethod)) {
-      if (!cardFieldAvailability.isReady) {
-        issues.push({ message: cardFieldAvailability.message ?? 'Card fields are not ready yet.', target: 'payment-card' })
-      }
-
-      if (!cardHolderName.trim()) {
-        issues.push({ message: 'Enter the cardholder name.', target: 'payment-card' })
-      }
-
-      if (!cardFieldStates.number.complete || cardFieldStates.number.error) {
-        issues.push({ message: cardFieldStates.number.error ?? 'Complete the card number.', target: 'payment-card' })
-      }
-
-      if (!cardFieldStates.expiry.complete || cardFieldStates.expiry.error) {
-        issues.push({ message: cardFieldStates.expiry.error ?? 'Complete the expiry date.', target: 'payment-card' })
-      }
-
-      if (!cardFieldStates.cvc.complete || cardFieldStates.cvc.error) {
-        issues.push({ message: cardFieldStates.cvc.error ?? 'Complete the CVV.', target: 'payment-card' })
-      }
     }
 
     if (currentEvent.termsConditions && !termsAccepted) {
@@ -2071,7 +1701,12 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     handleContinue()
   }
 
-  function handleConfirmPurchase() {
+  /**
+   * Persists attendees and questionnaire answers against their cart lines, then asks the server for
+   * a PaymentIntent. The card fields mount against the returned client secret; nothing is charged
+   * until the buyer submits them.
+   */
+  async function handleConfirmPurchase() {
     const issues = getPurchaseReviewIssues()
 
     if (issues.length > 0) {
@@ -2079,12 +1714,76 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       return
     }
 
-    setIsPurchaseReviewOpen(false)
-    toaster.create({
-      type: 'success',
-      title: 'Purchase summary confirmed',
-      description: 'Your selected tickets and payment method have been reviewed.',
-    })
+    if (!cart || !selectedPaymentBreakdown) {
+      return
+    }
+
+    try {
+      await Promise.all(
+        cart.lines.map(async (line) => {
+          const slots = attendeeSlotEntries.filter((slot) => lineByTicketTypeId[slot.ticketId] === line.lineUniqueId)
+
+          if (slots.length > 0) {
+            await submitAttendeesMutation.mutateAsync({
+              lineUniqueId: line.lineUniqueId,
+              request: {
+                attendees: slots.map((slot) => {
+                  const info = isTicketSameAsBuyer(slot.sessionId, slot.ticketId)
+                    ? buyerInfo
+                    : (attendeeInfoBySlot[slot.key] ?? EMPTY_BUYER_INFO)
+
+                  return {
+                    name: `${info.firstName} ${info.lastName}`.trim(),
+                    email: info.email || null,
+                    phone: info.phone || null,
+                  }
+                }),
+              },
+            })
+          }
+
+          const questionResponses = buildQuestionResponses(line.sessionUniqueId)
+
+          if (questionResponses.length > 0) {
+            await submitAnswersMutation.mutateAsync({
+              lineUniqueId: line.lineUniqueId,
+              request: { formResponses: [], questionResponses },
+            })
+          }
+        }),
+      )
+
+      const intent = await createPaymentIntentMutation.mutateAsync({
+        paymentMethod: selectedPaymentBreakdown.paymentMethod as PaymentProduct,
+        buyerName: `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim() || null,
+        buyerEmail: buyerInfo.email || null,
+      })
+
+      setPaymentIntent(intent)
+      setIsPurchaseReviewOpen(false)
+    } catch (error) {
+      applyPurchaseReviewIssues([{ message: extractApiError(error), target: 'payment-method' }])
+    }
+  }
+
+  /**
+   * Runs after Stripe reports a successful confirm. The webhook is authoritative for settlement and
+   * ticket issuance, so a non-settled result here is expected on the bank rails, not a failure.
+   */
+  async function handlePaymentSucceeded() {
+    try {
+      const confirmation = await confirmCheckoutMutation.mutateAsync()
+
+      toaster.create({
+        type: 'success',
+        title: confirmation.isSettled ? 'Payment complete' : 'Payment received',
+        description: confirmation.isSettled
+          ? 'Your tickets have been issued.'
+          : 'Your payment is processing. Your tickets will be issued once it settles.',
+      })
+    } catch (error) {
+      toaster.create({ type: 'error', title: extractApiError(error) })
+    }
   }
 
   const purchaseReviewTicketRows = selectedTicketSummaryBySession.flatMap((sessionGroup) =>
@@ -2269,14 +1968,15 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   }
 
   function handleTicketQuantityChange(ticket: EventRegistrationTicket, nextQuantity: number) {
-    const maxAllowed = getTicketSelectableMax(ticket)
-    const minimumPurchase = Math.max(ticket.minPurchase ?? 1, 1)
+    const quantity = Math.max(nextQuantity, 0)
+    const sessionUniqueId = sessionsData.find((session) =>
+      session.ticketTypes.some((item) => item.uniqueId === ticket.uniqueId),
+    )?.uniqueId
+
+    if (!sessionUniqueId) return
 
     setSelectedTicketQuantities((current) => {
-      const requestedQuantity = nextQuantity <= 0 ? 0 : Math.max(nextQuantity, minimumPurchase)
-      const normalized = Math.max(0, maxAllowed === null ? requestedQuantity : Math.min(requestedQuantity, maxAllowed))
-
-      if (normalized <= 0) {
+      if (quantity <= 0) {
         const next = { ...current }
         delete next[ticket.uniqueId]
         return next
@@ -2284,16 +1984,17 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
       return {
         ...current,
-        [ticket.uniqueId]: normalized,
+        [ticket.uniqueId]: quantity,
       }
     })
 
-    if (purchaseTimerStartedAt === null && nextQuantity > 0) {
-      // eslint-disable-next-line react-hooks/purity -- runs only inside this event handler, never during render
-      const now = Date.now()
-      setPurchaseTimerStartedAt(now)
-      setPurchaseTimerNow(now)
-    }
+    // The server owns min/max/availability enforcement and the hold deadline; it rejects anything
+    // it will not sell, and the rejection message is surfaced from the cart hook.
+    void syncTicketSelection({
+      sessionUniqueId,
+      ticketTypeUniqueId: ticket.uniqueId,
+      quantity,
+    })
   }
 
   function handleRemoveTicket(ticket: EventRegistrationTicket) {
@@ -2301,12 +2002,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   }
 
   function handleRemoveSession(items: SelectedTicketSummaryItem[]) {
-    setSelectedTicketQuantities((current) => {
-      const next = { ...current }
-      items.forEach((item) => {
-        delete next[item.ticketId]
-      })
-      return next
+    items.forEach((item) => {
+      handleTicketQuantityChange(item.ticket, 0)
     })
   }
 
@@ -2317,7 +2014,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setTicketSameAsBuyerById({})
     setSelectedPaymentMethod(null)
     setExpandedPaymentMethod(null)
-    setCardHolderName('')
     setBuyerInfo(EMPTY_BUYER_INFO)
     setAttendeeInfoBySlot({})
     setTermsAccepted(false)
@@ -2325,10 +2021,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setPurchaseReviewAttempted(false)
     setPurchaseReviewMessage(null)
     setPurchaseReviewScrollTarget(null)
-    setPurchaseTimerStartedAt(null)
-    // eslint-disable-next-line react-hooks/purity -- runs only inside this event handler, never during render
-    setPurchaseTimerNow(Date.now())
-    paymentSubtotalSnapshotRef.current = null
+    setPurchaseTimerExpired(false)
+    setPaymentIntent(null)
+    resetAnswers()
+    resetCart()
     setIsSummaryOpen(false)
     setHighestUnlockedIndex((current) => Math.min(current, resetIndex))
     setActiveTab(tabs[resetIndex]?.id ?? 'sessions')
@@ -2853,6 +2549,14 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                             </Stack>
                           ) : null}
 
+                          {cartError ? (
+                            <Box borderWidth='1px' borderColor='red.200' bg='red.50' borderRadius='18px' p={4} mb={4}>
+                              <Text fontSize='sm' color='red.700' fontWeight='600'>
+                                {cartError}
+                              </Text>
+                            </Box>
+                          ) : null}
+
                           {tab.id === 'sessions' ? (
                             <Stack gap={4}>
                               {sessionsLoading ? (
@@ -3290,24 +2994,19 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                               <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>
                                                 Custom Questions
                                               </Text>
-                                              <Stack gap={3}>
-                                                {session.session.customQuestions.map((question) => (
-                                                  <Box key={question.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={4}>
-                                                    <HStack justify='space-between' gap={4} align='start' flexWrap='wrap'>
-                                                      <Stack gap={1}>
-                                                        <Text fontWeight='700' color='gray.900'>
-                                                          {question.label}
-                                                        </Text>
-                                                        <Text fontSize='sm' color='gray.600'>
-                                                          {question.controlType}
-                                                        </Text>
-                                                      </Stack>
-                                                      <Badge colorPalette={question.required ? 'red' : 'gray'} variant='subtle' borderRadius='full' px={3} py={1}>
-                                                        {question.required ? 'Required' : 'Optional'}
-                                                      </Badge>
-                                                    </HStack>
-                                                  </Box>
-                                                ))}
+                                              <Stack gap={4}>
+                                                {session.session.customQuestions
+                                                  .filter((question) => question.isActive)
+                                                  .map((question) => (
+                                                    <Box key={question.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={4}>
+                                                      <QuestionField
+                                                        question={question}
+                                                        value={getAnswer(session.session.uniqueId, question.uniqueId)}
+                                                        errorMessage={getQuestionErrorMessage(session.session.uniqueId, question)}
+                                                        onChange={(value) => setAnswer(session.session.uniqueId, question.uniqueId, value)}
+                                                      />
+                                                    </Box>
+                                                  ))}
                                               </Stack>
                                             </Stack>
                                           ) : null}
@@ -3342,7 +3041,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                   </HStack>
                                 </Box>
 
-                                {paymentQuery.isFetching && paymentBreakdowns.length === 0 ? (
+                                {isCartSyncing && paymentBreakdowns.length === 0 ? (
                                   <Stack gap={4}>
                                     <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
                                       {[0, 1].map((index) => (
@@ -3433,29 +3132,24 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                             <Separator borderColor='gray.200' />
 
                                             <AnimatedPaymentMethodBody isOpen={isExpanded}>
-                                              <Stack gap={4} px={4} py={4}>
-                                                {showPaymentControls ? (
-                                                  <StripePaymentFields
-                                                    paymentMethod={breakdown.paymentMethod}
-                                                    paymentAccountUniqueId={currentEvent.paymentAccountUniqueId}
-                                                    paymentAccountCurrency={currentEvent.paymentAccountCurrency}
-                                                    cardHolderName={cardHolderName}
-                                                    onCardHolderNameChange={setCardHolderName}
-                                                    cardFieldStates={cardFieldStates}
-                                                    showValidationErrors={purchaseReviewAttempted}
-                                                    onCardFieldStateChange={(fieldId, nextState) =>
-                                                      setCardFieldStates((current) => ({
-                                                        ...current,
-                                                        [fieldId]: nextState,
-                                                      }))
-                                                    }
-                                                    onAvailabilityChange={setCardFieldAvailability}
-                                                    validationRef={paymentCardValidationRef}
+                                              <Stack gap={4} px={4} py={4} ref={paymentCardValidationRef}>
+                                                {showPaymentControls && paymentIntent ? (
+                                                  <StripeCardFields
+                                                    intent={paymentIntent}
+                                                    accentColor={formAccent}
+                                                    isConfirming={confirmCheckoutMutation.isPending}
+                                                    onPaid={handlePaymentSucceeded}
                                                   />
+                                                ) : showPaymentControls ? (
+                                                  <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
+                                                    <Text fontSize='sm' color='gray.600'>
+                                                      Review your purchase to continue to card entry.
+                                                    </Text>
+                                                  </Box>
                                                 ) : (
                                                   <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
                                                     <Text fontSize='sm' color='gray.600'>
-                                                      This payment method has no additional input fields.
+                                                      You will be prompted to complete this payment after reviewing your purchase.
                                                     </Text>
                                                   </Box>
                                                 )}
@@ -3777,10 +3471,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
           >
             <Box pointerEvents='auto'>
               <PurchaseTimerChip
-                remainingMs={purchaseTimerRemainingMs ?? 0}
-                durationMs={purchaseTimerDurationMs}
-                expired={purchaseTimerExpired}
+                expiresAtUtc={expiresAtUtc}
                 accentColor={formAccent}
+                onExpire={handlePurchaseTimerExpire}
               />
             </Box>
           </Box>
@@ -3999,7 +3692,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                   </SimpleGrid>
                   {isSelectedPaymentMethodCard ? (
                     <Text mt={3} fontSize='sm' color='gray.600'>
-                      Cardholder: {cardHolderName.trim() || 'Not entered'}
+                      You will enter your card details securely on the next step.
                     </Text>
                   ) : null}
                 </Box>
