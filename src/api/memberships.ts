@@ -22,7 +22,19 @@ const membershipTypeOptionSchema = z.object({
   text: z.string().optional(),
 })
 
+const membershipStatusOptionSchema = z.object({
+  Value: z.string().optional(),
+  value: z.string().optional(),
+  Text: z.string().optional(),
+  text: z.string().optional(),
+})
+
 export interface MembershipTypeOption {
+  value: string
+  text: string
+}
+
+export interface MembershipStatusOption {
   value: string
   text: string
 }
@@ -52,6 +64,19 @@ export async function fetchMembershipTypeOptions(): Promise<MembershipTypeOption
   const res = await client.get<unknown>(API_ROUTES.membershipTypeOptions)
   const responseData = parseServicePayload(res.data)
   const options = z.array(membershipTypeOptionSchema).parse(responseData)
+
+  return options
+    .map((option) => ({
+      value: option.Value ?? option.value ?? "",
+      text: option.Text ?? option.text ?? "",
+    }))
+    .filter((option) => option.value && option.text)
+}
+
+export async function fetchMembershipStatusOptions(): Promise<MembershipStatusOption[]> {
+  const res = await client.get<unknown>(API_ROUTES.membershipStatusOptions)
+  const responseData = parseServicePayload(res.data)
+  const options = z.array(membershipStatusOptionSchema).parse(responseData)
 
   return options
     .map((option) => ({

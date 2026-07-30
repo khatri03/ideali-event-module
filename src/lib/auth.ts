@@ -12,13 +12,14 @@ let session: AuthSession = {
 }
 
 function mapUser(userDetail: AuthUserDetail): AuthUser {
-  const role = userDetail.roles?.[0] ?? "Organizer"
+  const roles = userDetail.roles ?? []
 
   return {
     id: String(userDetail.userId),
     name: userDetail.name,
     email: userDetail.email,
-    role,
+    role: roles[0] ?? "Organizer",
+    roles,
     avatar: userDetail.logoUrl ?? undefined,
   }
 }
@@ -39,6 +40,8 @@ export const auth = {
   },
   getUser: () => session.user,
   getOrganizer: () => session.organizer,
+  hasRole: (role: string) =>
+    session.user?.roles.some((held) => held.toLowerCase() === role.toLowerCase()) ?? false,
   clear: () => {
     session = {
       user: null,

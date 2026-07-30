@@ -5,7 +5,9 @@ export const queryClient = new QueryClient({
     queries: {
       staleTime: 1000 * 60 * 2,
       retry: 1,
-      refetchOnWindowFocus: false,
+      // Without this, a stale query only refetches on its next mount or manual invalidation — leaving a tab
+      // backgrounded past staleTime and returning to it shows old data until an explicit page refresh.
+      refetchOnWindowFocus: true,
     },
   },
 })

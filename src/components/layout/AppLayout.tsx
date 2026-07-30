@@ -6,6 +6,7 @@ import { TopBar } from "./TopBar"
 import { useAuthSession } from "@/hooks/useAuthSession"
 import { auth, sessionDataToUser } from "@/lib/auth"
 import { APP_ROUTES } from "@/utils/routes"
+import { useAlertRealtime, usePendingInstantToasts } from "@/features/member-alerts"
 
 function AppLayoutSkeleton() {
   return (
@@ -40,6 +41,14 @@ export function AppLayout() {
   const sessionQuery = useAuthSession()
   const currentUser = auth.getUser() ?? (sessionQuery.data ? sessionDataToUser(sessionQuery.data) : null)
 
+  // Reactive so the hub connects and the catch-up claim runs the moment the async session resolves —
+  // not just when auth already happens to be set at mount (e.g. a hard refresh).
+  const isAuthenticated = Boolean(currentUser)
+  // Opens the alert hub once the user is signed in; no-op until then.
+  useAlertRealtime(isAuthenticated)
+  // Catches up on instant alerts missed while offline with one summary toast.
+  usePendingInstantToasts(isAuthenticated)
+
   if (sessionQuery.isLoading && !currentUser) {
     return <AppLayoutSkeleton />
   }
@@ -51,7 +60,7 @@ export function AppLayout() {
   return (
     <Flex minH="100dvh" overflow="hidden" bg="app.bg">
       <Box display={{ base: "none", lg: "block" }}>
-        <Sidebar />
+        <Sidebar currentUser={currentUser} />
       </Box>
       <Flex flex={1} direction="column" overflow="hidden" minW={0}>
         <TopBar onOpenMobileNav={() => setIsMobileNavOpen(true)} />
@@ -70,7 +79,7 @@ export function AppLayout() {
           <Drawer.Backdrop />
           <Drawer.Positioner>
             <Drawer.Content p={0} border="none" bg="transparent" maxW="full">
-              <Sidebar variant="mobile" onNavigate={() => setIsMobileNavOpen(false)} />
+              <Sidebar currentUser={currentUser} variant="mobile" onNavigate={() => setIsMobileNavOpen(false)} />
             </Drawer.Content>
           </Drawer.Positioner>
         </Portal>

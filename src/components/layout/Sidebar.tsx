@@ -1,4 +1,5 @@
 import { useState } from "react"
+import type { ReactNode } from "react"
 import { Box, Flex, Text, VStack } from "@chakra-ui/react"
 import { NavLink, useLocation, useNavigate } from "react-router-dom"
 import {
@@ -11,47 +12,99 @@ import {
   Zap,
   LayoutGrid,
   MapPin,
+  ListChecks,
   ShieldCheck,
+  Megaphone,
+  Users,
+  FolderOpen,
 } from "lucide-react"
-import { mockUser } from "../../data/mock"
 import { logoutUser } from "@/api/auth"
 import { auth } from "@/lib/auth"
 import { queryClient } from "@/lib/queryClient"
 import { APP_ROUTES } from "@/utils/routes"
+import type { AuthUser } from "@/types"
 
 const SIDEBAR_W = "260px"
 const GRADIENT = "linear-gradient(160deg, #7551FF 0%, #5A3FCC 45%, #422AFB 100%)"
 
 interface NavItem {
   label: string
-  icon: React.ReactNode
+  icon: ReactNode
   path: string
+  roles: string[]
+  /** Base path used for the active check when the section has child routes (create/edit). Defaults to `path`. */
+  matchPath?: string
   badge?: string
 }
 
 interface SidebarProps {
+  currentUser: AuthUser
   variant?: "desktop" | "mobile"
   onNavigate?: () => void
 }
 
 const mainNav: NavItem[] = [
-  { label: "Dashboard", icon: <LayoutDashboard size={17} />, path: APP_ROUTES.dashboard },
-  { label: "Events", icon: <Zap size={17} />, path: APP_ROUTES.events, badge: "12" },
-  { label: "Sessions", icon: <CalendarRange size={17} />, path: APP_ROUTES.sessionWizard.list },
+  {
+    label: "Dashboard",
+    icon: <LayoutDashboard size={17} />,
+    path: APP_ROUTES.dashboard,
+    roles: ["Organizer", "Admin"],
+  },
+  { label: "Events", icon: <Zap size={17} />, path: APP_ROUTES.events, badge: "12", roles: ["Organizer", "Admin"] },
+  { label: "Sessions", icon: <CalendarRange size={17} />, path: APP_ROUTES.sessionWizard.list, roles: ["Organizer", "Admin"] },
 ]
 
 const managementNav: NavItem[] = [
-  { label: "Seating Layouts", icon: <LayoutGrid size={17} />, path: APP_ROUTES.seatingLayouts.list },
-  { label: "Venues", icon: <MapPin size={17} />, path: APP_ROUTES.venues.list },
+  { label: "Seating Layouts", icon: <LayoutGrid size={17} />, path: APP_ROUTES.seatingLayouts.list, roles: ["Organizer", "Admin"] },
+  { label: "Venues", icon: <MapPin size={17} />, path: APP_ROUTES.venues.list, roles: ["Organizer", "Admin"] },
+  {
+    label: "Custom Lists",
+    icon: <ListChecks size={17} />,
+    path: APP_ROUTES.customLists.list,
+    matchPath: APP_ROUTES.customLists.base,
+    roles: ["Organizer", "Admin"],
+  },
+  {
+    label: "Member Alerts",
+    icon: <Megaphone size={17} />,
+    path: APP_ROUTES.memberAlerts.list,
+    matchPath: APP_ROUTES.memberAlerts.base,
+    roles: ["Organizer", "Admin"],
+  },
+  {
+    label: "Documents",
+    icon: <FolderOpen size={17} />,
+    path: APP_ROUTES.documentCategories.list,
+    matchPath: APP_ROUTES.documentCategories.base,
+    roles: ["Organizer", "Admin"],
+  },
 ]
 
-function NavSection({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => void }) {
+function hasAnyRole(roles: string[], allowedRoles: string[]) {
+  return allowedRoles.some((allowedRole) => roles.some((role) => role.toLowerCase() === allowedRole.toLowerCase()))
+}
+
+function NavSection({
+  items,
+  currentRoles,
+  onNavigate,
+}: {
+  items: NavItem[]
+  currentRoles: string[]
+  onNavigate?: () => void
+}) {
   const { pathname } = useLocation()
+  const visibleItems = items.filter((item) => hasAnyRole(currentRoles, item.roles))
+
+  if (visibleItems.length === 0) {
+    return null
+  }
 
   return (
     <VStack gap={0.5} align="stretch" mb={6}>
-      {items.map((item) => {
-        const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`)
+      {visibleItems.map((item) => {
+        const matchPath = item.matchPath ?? item.path
+        const isActive = pathname === matchPath || pathname.startsWith(`${matchPath}/`)
         return (
           <NavLink key={item.path} to={item.path} style={{ textDecoration: "none" }} onClick={onNavigate}>
             <Flex
@@ -63,6 +116,7 @@ function NavSection({ items, onNavigate }: { items: NavItem[]; onNavigate?: () =
               mx={2}
               transition="all 0.18s ease"
               bg={isActive ? "rgba(255,255,255,0.92)" : "transparent"}
+              cursor="pointer"
               _hover={
                 !isActive
                   ? { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }
@@ -118,12 +172,18 @@ function SettingsSection({
   pathname,
   onToggle,
   onNavigate,
+  isVisible,
 }: {
   isOpen: boolean
   pathname: string
   onToggle: () => void
   onNavigate?: () => void
+  isVisible: boolean
 }) {
+  if (!isVisible) {
+    return null
+  }
+
   const isSettingsActive = pathname === APP_ROUTES.settings
   const isChargeRulesActive = pathname === APP_ROUTES.chargeRules.list
 
@@ -176,6 +236,7 @@ function SettingsSection({
               mx={2}
               transition="all 0.18s ease"
               bg={isSettingsActive ? "rgba(255,255,255,0.92)" : "transparent"}
+              cursor="pointer"
               _hover={isSettingsActive ? {} : { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }}
               boxShadow={isSettingsActive ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
             >
@@ -210,6 +271,7 @@ function SettingsSection({
               mx={2}
               transition="all 0.18s ease"
               bg={isChargeRulesActive ? "rgba(255,255,255,0.92)" : "transparent"}
+              cursor="pointer"
               _hover={isChargeRulesActive ? {} : { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }}
               boxShadow={isChargeRulesActive ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
             >
@@ -243,12 +305,18 @@ function AdminSection({
   pathname,
   onToggle,
   onNavigate,
+  isVisible,
 }: {
   isOpen: boolean
   pathname: string
   onToggle: () => void
   onNavigate?: () => void
+  isVisible: boolean
 }) {
+  if (!isVisible) {
+    return null
+  }
+
   return (
     <Box mb={6}>
       <Flex
@@ -298,6 +366,7 @@ function AdminSection({
               mx={2}
               transition="all 0.18s ease"
               bg={pathname === APP_ROUTES.adminRevenuePlans ? "rgba(255,255,255,0.92)" : "transparent"}
+              cursor="pointer"
               _hover={pathname !== APP_ROUTES.adminRevenuePlans ? { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" } : {}}
               boxShadow={pathname === APP_ROUTES.adminRevenuePlans ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
             >
@@ -320,25 +389,173 @@ function AdminSection({
               </Text>
             </Flex>
           </NavLink>
+
+          <NavLink to={APP_ROUTES.adminRateLimit} style={{ textDecoration: "none" }} onClick={onNavigate}>
+            <Flex
+              align="center"
+              gap={3}
+              pl={10}
+              pr={3}
+              py={2.5}
+              borderRadius="12px"
+              mx={2}
+              transition="all 0.18s ease"
+              bg={pathname === APP_ROUTES.adminRateLimit ? "rgba(255,255,255,0.92)" : "transparent"}
+              cursor="pointer"
+              _hover={pathname !== APP_ROUTES.adminRateLimit ? { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" } : {}}
+              boxShadow={pathname === APP_ROUTES.adminRateLimit ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
+            >
+              <Box
+                w="6px"
+                h="6px"
+                borderRadius="full"
+                bg={pathname === APP_ROUTES.adminRateLimit ? "#7551FF" : "rgba(255,255,255,0.6)"}
+                flexShrink={0}
+              />
+              <Text
+                fontSize="sm"
+                fontWeight={pathname === APP_ROUTES.adminRateLimit ? "700" : "500"}
+                color={pathname === APP_ROUTES.adminRateLimit ? "#422AFB" : "rgba(255,255,255,0.85)"}
+                transition="color 0.18s"
+                flex={1}
+                letterSpacing={pathname === APP_ROUTES.adminRateLimit ? "-0.01em" : "0"}
+              >
+                Rate Limit Settings
+              </Text>
+            </Flex>
+          </NavLink>
         </VStack>
       ) : null}
     </Box>
   )
 }
 
-export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
+function MemberSection({
+  isOpen,
+  pathname,
+  onToggle,
+  onNavigate,
+  isVisible,
+}: {
+  isOpen: boolean
+  pathname: string
+  onToggle: () => void
+  onNavigate?: () => void
+  isVisible: boolean
+}) {
+  if (!isVisible) {
+    return null
+  }
+
+  const memberLinks = [
+    { label: "Dashboard", path: APP_ROUTES.member.dashboard },
+    { label: "Documents", path: APP_ROUTES.memberDocuments.list },
+  ]
+
+  return (
+    <Box mb={6}>
+      <Flex
+        as="button"
+        align="center"
+        gap={3}
+        px={3}
+        py={2.5}
+        borderRadius="12px"
+        mx={2}
+        transition="all 0.18s ease"
+        bg="transparent"
+        boxShadow="none"
+        _hover={{ bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }}
+        onClick={onToggle}
+        cursor="pointer"
+      >
+        <Box color="rgba(255,255,255,0.7)" transition="color 0.18s" display="flex" alignItems="center">
+          <Users size={17} />
+        </Box>
+        <Text
+          fontSize="sm"
+          fontWeight="500"
+          color="rgba(255,255,255,0.85)"
+          transition="color 0.18s"
+          flex={1}
+          letterSpacing="0"
+          textAlign="left"
+        >
+          Member
+        </Text>
+        <Box color="rgba(255,255,255,0.7)" display="flex" alignItems="center" ml="auto">
+          {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </Box>
+      </Flex>
+
+      {isOpen ? (
+        <VStack gap={0.5} align="stretch" mt={1.5}>
+          {memberLinks.map((link) => {
+            const isActive = pathname === link.path || pathname.startsWith(`${link.path}/`)
+
+            return (
+              <NavLink key={link.path} to={link.path} style={{ textDecoration: "none" }} onClick={onNavigate}>
+                <Flex
+                  align="center"
+                  gap={3}
+                  pl={10}
+                  pr={3}
+                  py={2.5}
+                  borderRadius="12px"
+                  mx={2}
+                  transition="all 0.18s ease"
+                  bg={isActive ? "rgba(255,255,255,0.92)" : "transparent"}
+                  cursor="pointer"
+                  _hover={isActive ? {} : { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }}
+                  boxShadow={isActive ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
+                >
+                  <Box
+                    w="6px"
+                    h="6px"
+                    borderRadius="full"
+                    bg={isActive ? "#7551FF" : "rgba(255,255,255,0.6)"}
+                    flexShrink={0}
+                  />
+                  <Text
+                    fontSize="sm"
+                    fontWeight={isActive ? "700" : "500"}
+                    color={isActive ? "#422AFB" : "rgba(255,255,255,0.85)"}
+                    transition="color 0.18s"
+                    flex={1}
+                    letterSpacing={isActive ? "-0.01em" : "0"}
+                  >
+                    {link.label}
+                  </Text>
+                </Flex>
+              </NavLink>
+            )
+          })}
+        </VStack>
+      ) : null}
+    </Box>
+  )
+}
+
+export function Sidebar({ currentUser, variant = "desktop", onNavigate }: SidebarProps) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const currentUser = auth.getUser() ?? mockUser
   const isMobile = variant === "mobile"
   const [isSettingsManualOpen, setIsSettingsManualOpen] = useState(false)
   const [isAdminManualOpen, setIsAdminManualOpen] = useState(false)
-  const isAdmin = currentUser.role === "Admin"
+  const [isMemberManualOpen, setIsMemberManualOpen] = useState(false)
+  const hasOrganizerAccess = hasAnyRole(currentUser.roles, ["Organizer", "Admin"])
+  const isAdmin = hasAnyRole(currentUser.roles, ["Admin"])
+  const isMember = hasAnyRole(currentUser.roles, ["Member"])
   const isSettingsRouteActive = pathname === APP_ROUTES.settings
   const isChargeRulesRouteActive = pathname === APP_ROUTES.chargeRules.list
   const isSettingsOpen = isSettingsManualOpen || isSettingsRouteActive || isChargeRulesRouteActive
-  const isAdminRouteActive = pathname === APP_ROUTES.adminRevenuePlans
+  const isAdminRouteActive =
+    pathname === APP_ROUTES.adminRevenuePlans || pathname === APP_ROUTES.adminRateLimit
   const isAdminOpen = isAdminManualOpen || isAdminRouteActive
+  const isMemberRouteActive = [APP_ROUTES.member.dashboard, APP_ROUTES.memberDocuments.base].some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  )
+  const isMemberOpen = isMemberManualOpen || isMemberRouteActive
 
   async function handleSignOut() {
     try {
@@ -416,13 +633,14 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
 
       {/* Nav */}
       <Box flex={1} px={2} position="relative" zIndex={1}>
-        <NavSection items={mainNav} onNavigate={onNavigate} />
-        <NavSection items={managementNav} onNavigate={onNavigate} />
+        <NavSection items={mainNav} currentRoles={currentUser.roles} onNavigate={onNavigate} />
+        <NavSection items={managementNav} currentRoles={currentUser.roles} onNavigate={onNavigate} />
         <SettingsSection
           pathname={pathname}
           isOpen={isSettingsOpen}
           onToggle={() => setIsSettingsManualOpen((current) => !current)}
           onNavigate={onNavigate}
+          isVisible={hasOrganizerAccess}
         />
         {isAdmin ? (
           <AdminSection
@@ -430,6 +648,16 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
             isOpen={isAdminOpen}
             onToggle={() => setIsAdminManualOpen((current) => !current)}
             onNavigate={onNavigate}
+            isVisible={isAdmin}
+          />
+        ) : null}
+        {isMember ? (
+          <MemberSection
+            pathname={pathname}
+            isOpen={isMemberOpen}
+            onToggle={() => setIsMemberManualOpen((current) => !current)}
+            onNavigate={onNavigate}
+            isVisible={isMember}
           />
         ) : null}
       </Box>
@@ -470,6 +698,7 @@ export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps) {
           </Box>
           <Box
             as="button"
+            cursor="pointer"
             color="rgba(255,255,255,0.4)"
             _hover={{ color: "rgba(255,100,100,0.9)" }}
             transition="color 0.15s"

@@ -71,6 +71,9 @@ export interface AuthUser {
   id: string
   name: string
   email: string
+  /** Primary role, kept for existing callers. Prefer `roles` for gating. */
   role: string
+  /** Every role the user holds. A user can be both an organizer and a member. */
+  roles: string[]
   avatar?: string
 }
