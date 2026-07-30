@@ -1,20 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Badge,
   Box,
   Button,
-  Checkbox,
-  CloseButton,
   Container,
-  Dialog,
   Flex,
-  Heading,
   HStack,
-  Link,
   Portal,
-  SimpleGrid,
-  Table,
   Stack,
   Tabs,
   Text,
@@ -25,9 +18,7 @@ import {
   CalendarDays,
   ChevronRight,
   CreditCard,
-  ExternalLink,
   FileText,
-  MapPin,
   MessageSquareText,
   Check,
   Users,
@@ -44,12 +35,16 @@ import {
   CONTROL_BUTTON_PRIMARY,
 } from '@/components/common/controlStyles'
 import { useRegistrationCart } from '@/features/events/hooks/useRegistrationCart'
+import { useTicketSelectionSummary } from '@/features/events/hooks/useTicketSelectionSummary'
+import { usePurchaseReviewValidation } from '@/features/events/hooks/usePurchaseReviewValidation'
+import { useBuyerAttendeeInfo } from '@/features/events/hooks/useBuyerAttendeeInfo'
 import { useQuestionnaireAnswers } from '@/features/events/hooks/useQuestionnaireAnswers'
 import { useCreateEventPaymentIntent, useConfirmEventCheckout } from '@/features/events/hooks/useEventCheckout'
 import { useSubmitLineAttendees, useSubmitLineAnswers } from '@/features/events/hooks/useEventCartAttendees'
 import { PurchaseTimerChip } from '@/features/events/components/registration/PurchaseTimerChip'
 import { CartSummaryPanel } from '@/features/events/components/registration/CartSummaryPanel'
 import { PaymentStep } from '@/features/events/components/registration/PaymentStep'
+import { PurchaseReviewDialog } from '@/features/events/components/registration/PurchaseReviewDialog'
 import { QuestionnaireStep } from '@/features/events/components/registration/QuestionnaireStep'
 import {
   BuyerDetailsMissingDialog,
@@ -60,34 +55,25 @@ import {
 import type { EventPaymentIntentResult, PaymentProduct } from '@/features/events/schemas/eventCart.schemas'
 import { extractApiError } from '@/utils/errors'
 
-import { AutoImageCarousel } from '@/features/events/components/registration/AutoImageCarousel'
+import { EventHeroCard } from '@/features/events/components/registration/EventHeroCard'
+import { RegistrationTermsCard } from '@/features/events/components/registration/RegistrationTermsCard'
 import { BuyerAttendeeStep } from '@/features/events/components/registration/BuyerAttendeeStep'
 import { RichTextBlock, SupportCard } from '@/features/events/components/registration/SupportCard'
 import { SessionsStep } from '@/features/events/components/registration/SessionsStep'
-import { EMPTY_BUYER_INFO } from '@/features/events/components/registration/types'
 import type {
-  AttendeeSessionGroup,
-  AttendeeSlotEntry,
-  AttendeeSlotState,
   BuyerAttendeeInfoState,
   EventRegisterWizardEvent,
   PendingDeleteAction,
   PurchaseReviewIssue,
-  PurchaseReviewValidationTarget,
   SelectedTicketSummaryItem,
   WizardTabId,
 } from '@/features/events/components/registration/types'
 import {
-  formatAmount,
-  formatChargeRate,
-  formatRegistrationDateTime,
   hexToRgba,
 } from '@/features/events/utils/registrationFormat'
 import {
-  formatPhoneNumberInput,
   getSelectedSessionSummaries,
   getSessionBannerSlides,
-  getTicketDisplayPrice,
   isCardPaymentMethod,
   isHtmlContent,
 } from '@/features/events/utils/ticketSelection'
@@ -142,12 +128,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setBuyerIdentity,
     resetCart,
   } = useRegistrationCart(event.uniqueId)
-  const [buyerInfo, setBuyerInfo] = useState<BuyerAttendeeInfoState>(EMPTY_BUYER_INFO)
-  const [buyerDetailsAlertMessage, setBuyerDetailsAlertMessage] = useState<string | null>(null)
-  const [buyerDetailsAlertOpen, setBuyerDetailsAlertOpen] = useState(false)
-  const [attendeeInfoBySlot, setAttendeeInfoBySlot] = useState<Record<string, AttendeeSlotState>>({})
-  const [sessionSameAsBuyerById, setSessionSameAsBuyerById] = useState<Record<string, boolean>>({})
-  const [ticketSameAsBuyerById, setTicketSameAsBuyerById] = useState<Record<string, boolean>>({})
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [termsOpen, setTermsOpen] = useState(false)
   const [expandedSessionIds, setExpandedSessionIds] = useState<string[]>([])
@@ -159,21 +139,27 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [activeTab, setActiveTab] = useState<WizardTabId>(firstTab)
   const [highestUnlockedIndex, setHighestUnlockedIndex] = useState(0)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null)
-  const [isPurchaseReviewOpen, setIsPurchaseReviewOpen] = useState(false)
-  const [purchaseReviewAttempted, setPurchaseReviewAttempted] = useState(false)
-  const [purchaseReviewMessage, setPurchaseReviewMessage] = useState<string | null>(null)
-  const [purchaseReviewScrollTarget, setPurchaseReviewScrollTarget] = useState<PurchaseReviewValidationTarget | null>(null)
-  const [purchaseReviewScrollRequestId, setPurchaseReviewScrollRequestId] = useState(0)
+  const {
+    isReviewOpen: isPurchaseReviewOpen,
+    setIsReviewOpen: setIsPurchaseReviewOpen,
+    attempted: purchaseReviewAttempted,
+    message: purchaseReviewMessage,
+    scrollTarget: purchaseReviewScrollTarget,
+    buyerAttendeeRef: buyerAttendeeValidationRef,
+    paymentMethodRef: paymentMethodValidationRef,
+    paymentCardRef: paymentCardValidationRef,
+    termsRef: termsValidationRef,
+    applyIssues: applyPurchaseReviewIssues,
+    openReview,
+    clearBuyerAttendeeIssue: clearBuyerAttendeeValidation,
+    reset: resetPurchaseReview,
+  } = usePurchaseReviewValidation()
   const [expandedPaymentMethod, setExpandedPaymentMethod] = useState<string | null>(null)
   const [purchaseTimerExpired, setPurchaseTimerExpired] = useState(false)
   const [purchaseTimerExpiryOpen, setPurchaseTimerExpiryOpen] = useState(false)
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
   const [pendingDeleteAction, setPendingDeleteAction] = useState<PendingDeleteAction | null>(null)
   const [paymentIntent, setPaymentIntent] = useState<EventPaymentIntentResult | null>(null)
-  const buyerAttendeeValidationRef = useRef<HTMLDivElement | null>(null)
-  const paymentMethodValidationRef = useRef<HTMLDivElement | null>(null)
-  const paymentCardValidationRef = useRef<HTMLDivElement | null>(null)
-  const termsValidationRef = useRef<HTMLDivElement | null>(null)
   const descriptionQuery = useQuery({
     queryKey: ['event-registration', event.uniqueId, 'description'],
     queryFn: () => fetchEventRegistrationDescription(event.uniqueId),
@@ -222,123 +208,34 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       [],
     [sessionsQuery.data, attendeeInfoQuery.data, questionnaireQuery.data, event.sessions],
   )
-  const selectedTicketSummary = useMemo<SelectedTicketSummaryItem[]>(
-    () =>
-      sessionsData.flatMap((session) =>
-        session.ticketTypes.flatMap((ticket) => {
-          const quantity = selectedTicketQuantities[ticket.uniqueId] ?? 0
-          if (quantity <= 0) return []
-
-          const unitPrice = getTicketDisplayPrice(ticket)
-
-          return [
-            {
-              sessionId: session.uniqueId,
-              sessionName: session.name,
-              ticketId: ticket.uniqueId,
-              ticketName: ticket.name,
-              ticket,
-              quantity,
-              unitPrice,
-              lineTotal: unitPrice * quantity,
-            },
-          ]
-        }),
-      ),
-    [sessionsData, selectedTicketQuantities],
-  )
-  const selectedTicketSummaryBySession = useMemo(
-    () =>
-      selectedTicketSummary.reduce<Array<{
-        sessionId: string
-        sessionName: string
-        items: SelectedTicketSummaryItem[]
-        total: number
-      }>>((groups, item) => {
-        const existingGroup = groups.find((group) => group.sessionId === item.sessionId)
-
-        if (existingGroup) {
-          existingGroup.items.push(item)
-          existingGroup.total += item.lineTotal
-          return groups
-        }
-
-        groups.push({
-          sessionId: item.sessionId,
-          sessionName: item.sessionName,
-          items: [item],
-          total: item.lineTotal,
-        })
-
-        return groups
-      }, []),
-    [selectedTicketSummary],
-  )
-  const selectedTicketCount = selectedTicketSummary.reduce((total, item) => total + item.quantity, 0)
-  // Server-priced net subtotal. Falls back to the catalog-derived figure only until the first
-  // pricing round-trip lands, so the buyer never sees an empty total mid-flight.
-  const selectedTicketTotal =
-    cartPrice?.netSubtotal ?? selectedTicketSummary.reduce((total, item) => total + item.lineTotal, 0)
-  const selectedSessionSummaries = useMemo(
-    () => getSelectedSessionSummaries(sessionsData, selectedTicketQuantities),
-    [sessionsData, selectedTicketQuantities],
-  )
-  const attendeeSessionGroups = useMemo<AttendeeSessionGroup[]>(
-    () =>
-      selectedSessionSummaries.map((sessionSummary) => ({
-        key: sessionSummary.session.uniqueId,
-        sessionId: sessionSummary.session.uniqueId,
-        sessionName: sessionSummary.session.name,
-        attendeeCount: sessionSummary.attendeeCount,
-        requiresAttendeeInfo: sessionSummary.requiresAttendeeInfo,
-        hasQuestions: sessionSummary.hasQuestions,
-        tickets: sessionSummary.selectedTickets.map((selectedTicket) => {
-          const slots = Array.from({ length: selectedTicket.quantity }, (_, index) => ({
-            key: `${sessionSummary.session.uniqueId}:${selectedTicket.ticket.uniqueId}:${index + 1}`,
-            attendeeLabel: `Attendee ${index + 1}`,
-          }))
-
-          return {
-            key: `${sessionSummary.session.uniqueId}:${selectedTicket.ticket.uniqueId}`,
-            sessionId: sessionSummary.session.uniqueId,
-            sessionName: sessionSummary.session.name,
-            ticketId: selectedTicket.ticket.uniqueId,
-            ticketName: selectedTicket.ticket.name,
-            attendeeCount: selectedTicket.quantity,
-            requiresAttendeeInfo: sessionSummary.requiresAttendeeInfo,
-            hasQuestions: sessionSummary.hasQuestions,
-            slots,
-          }
-        }),
-      })),
-    [selectedSessionSummaries],
-  )
-  const attendeeSlotEntries = useMemo<AttendeeSlotEntry[]>(
-    () =>
-      attendeeSessionGroups.flatMap((sessionGroup) =>
-        sessionGroup.tickets.flatMap((ticketGroup) =>
-          ticketGroup.slots.map((slot) => ({
-            key: slot.key,
-            sessionId: sessionGroup.sessionId,
-            sessionName: sessionGroup.sessionName,
-            ticketId: ticketGroup.ticketId,
-            ticketName: ticketGroup.ticketName,
-            attendeeLabel: slot.attendeeLabel,
-            requiresAttendeeInfo: sessionGroup.requiresAttendeeInfo,
-            hasQuestions: sessionGroup.hasQuestions,
-          })),
-        ),
-      ),
-    [attendeeSessionGroups],
-  )
-  const attendeeSlotEntryByKey = useMemo(
-    () =>
-      attendeeSlotEntries.reduce<Record<string, AttendeeSlotEntry>>((entries, slot) => {
-        entries[slot.key] = slot
-        return entries
-      }, {}),
-    [attendeeSlotEntries],
-  )
+  const {
+    selectedTicketSummaryBySession,
+    selectedTicketCount,
+    selectedTicketTotal,
+    selectedSessionSummaries,
+    attendeeSessionGroups,
+    attendeeSlotEntries,
+    attendeeSlotEntryByKey,
+    requiresAttendeeInfo,
+    requiresQuestions,
+  } = useTicketSelectionSummary(sessionsData, selectedTicketQuantities, cartPrice)
+  const {
+    buyerInfo,
+    attendeeInfoBySlot,
+    ticketSameAsBuyerById,
+    alertMessage: buyerDetailsAlertMessage,
+    isAlertOpen: buyerDetailsAlertOpen,
+    isSessionSameAsBuyer,
+    isTicketSameAsBuyer,
+    getAttendeeInfo,
+    updateBuyerField,
+    updateAttendeeField,
+    toggleSessionSameAsBuyer,
+    toggleTicketSameAsBuyer,
+    closeAlert: closeBuyerDetailsAlert,
+    getIssues: getBuyerAttendeeInfoIssues,
+    reset: resetBuyerAttendeeInfo,
+  } = useBuyerAttendeeInfo({ attendeeSlotEntries, attendeeSlotEntryByKey, attendeeSessionGroups })
   const paymentMethodsData = useMemo(() => event.paymentMethods ?? [], [event.paymentMethods])
   const visiblePaymentMethods = useMemo(
     () => paymentMethodsData.filter((method) => !method.isOrganizerOnly || event.isOrganizer),
@@ -391,80 +288,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setExpandedSessionIds(sessions.map((session) => session.uniqueId))
   }
 
-  const [prevAttendeeSlotEntries, setPrevAttendeeSlotEntries] = useState(attendeeSlotEntries)
-  if (attendeeSlotEntries !== prevAttendeeSlotEntries) {
-    setPrevAttendeeSlotEntries(attendeeSlotEntries)
-    setAttendeeInfoBySlot((current) => {
-      const next: Record<string, AttendeeSlotState> = {}
-      let hasChanges = false
-
-      attendeeSlotEntries.forEach((slot) => {
-        const existing = current[slot.key]
-
-        if (existing) {
-          next[slot.key] = existing
-          return
-        }
-
-        next[slot.key] = EMPTY_BUYER_INFO
-        hasChanges = true
-      })
-
-      if (Object.keys(current).length !== Object.keys(next).length) {
-        hasChanges = true
-      }
-
-      return hasChanges ? next : current
-    })
-  }
-
-  const [prevAttendeeSessionGroups, setPrevAttendeeSessionGroups] = useState(attendeeSessionGroups)
-  if (attendeeSessionGroups !== prevAttendeeSessionGroups) {
-    setPrevAttendeeSessionGroups(attendeeSessionGroups)
-
-    const allowedSessionIds = new Set(attendeeSessionGroups.map((sessionGroup) => sessionGroup.sessionId))
-    const allowedTicketIds = new Set(attendeeSessionGroups.flatMap((sessionGroup) => sessionGroup.tickets.map((ticket) => ticket.ticketId)))
-
-    setSessionSameAsBuyerById((current) => {
-      const next: Record<string, boolean> = {}
-      let hasChanges = false
-
-      Object.entries(current).forEach(([sessionId, isSameAsBuyer]) => {
-        if (!allowedSessionIds.has(sessionId)) {
-          hasChanges = true
-          return
-        }
-
-        next[sessionId] = isSameAsBuyer
-      })
-
-      if (Object.keys(current).length !== Object.keys(next).length) {
-        hasChanges = true
-      }
-
-      return hasChanges ? next : current
-    })
-
-    setTicketSameAsBuyerById((current) => {
-      const next: Record<string, boolean> = {}
-      let hasChanges = false
-
-      Object.entries(current).forEach(([ticketId, isSameAsBuyer]) => {
-        if (!allowedTicketIds.has(ticketId)) {
-          hasChanges = true
-          return
-        }
-
-        next[ticketId] = isSameAsBuyer
-      })
-
-      if (Object.keys(current).length !== Object.keys(next).length) {
-        hasChanges = true
-      }
-
-      return hasChanges ? next : current
-    })
-  }
   // The hold deadline is the server's; the chip only counts down to it.
   const purchaseTimerVisible = Boolean(expiresAtUtc)
 
@@ -518,8 +341,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const footerActionLabel = isFinalStep ? 'Review Purchase' : 'Continue'
   const FooterActionIcon = isFinalStep ? Check : ChevronRight
   const footerActionDisabled = !canContinueForward || (isFinalStep && selectedTicketCount <= 0)
-  const requiresAttendeeInfo = selectedSessionSummaries.some((session) => session.requiresAttendeeInfo)
-  const requiresQuestions = selectedSessionSummaries.some((session) => session.hasQuestions)
 
   function isStepEnabled(stepId: WizardTabId) {
     const index = getStepIndex(tabs, stepId)
@@ -626,35 +447,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     return issues
   }
 
-  useEffect(() => {
-    if (!purchaseReviewAttempted || !purchaseReviewMessage || isPurchaseReviewOpen) return
-    if (!purchaseReviewScrollTarget) return
-
-    const targetRef =
-      purchaseReviewScrollTarget === 'buyer-attendee-info'
-        ? buyerAttendeeValidationRef
-        : purchaseReviewScrollTarget === 'payment-method'
-          ? paymentMethodValidationRef
-          : purchaseReviewScrollTarget === 'payment-card'
-            ? paymentCardValidationRef
-            : termsValidationRef
-
-    const frame = window.requestAnimationFrame(() => {
-      targetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    })
-
-    return () => window.cancelAnimationFrame(frame)
-  }, [isPurchaseReviewOpen, purchaseReviewAttempted, purchaseReviewMessage, purchaseReviewScrollTarget, purchaseReviewScrollRequestId])
-
-  function applyPurchaseReviewIssues(issues: PurchaseReviewIssue[]) {
-    const firstIssue = issues[0] ?? null
-
-    setPurchaseReviewAttempted(true)
-    setPurchaseReviewMessage(firstIssue?.message ?? null)
-    setPurchaseReviewScrollTarget(firstIssue?.target ?? null)
-    setPurchaseReviewScrollRequestId((current) => current + 1)
-    setIsPurchaseReviewOpen(false)
-  }
 
   function handlePurchaseReview() {
     const issues = getPurchaseReviewIssues()
@@ -664,11 +456,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       return
     }
 
-    setPurchaseReviewAttempted(true)
-    setPurchaseReviewMessage(null)
-    setPurchaseReviewScrollTarget(null)
-    setPurchaseReviewScrollRequestId((current) => current + 1)
-    setIsPurchaseReviewOpen(true)
+    openReview()
   }
 
   function handlePrimaryAction() {
@@ -707,9 +495,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
               lineUniqueId: line.lineUniqueId,
               request: {
                 attendees: slots.map((slot) => {
-                  const info = isTicketSameAsBuyer(slot.sessionId, slot.ticketId)
-                    ? buyerInfo
-                    : (attendeeInfoBySlot[slot.key] ?? EMPTY_BUYER_INFO)
+                  const info = getAttendeeInfo(slot)
 
                   return {
                     name: `${info.firstName} ${info.lastName}`.trim(),
@@ -778,139 +564,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     selectedPaymentBreakdown?.label ??
     selectedPaymentBreakdown?.paymentMethod ??
     'Payment method not selected'
-  const isSessionSameAsBuyer = (sessionId: string) => Boolean(sessionSameAsBuyerById[sessionId])
-  const isTicketSameAsBuyer = (sessionId: string, ticketId: string) =>
-    isSessionSameAsBuyer(sessionId) || Boolean(ticketSameAsBuyerById[ticketId])
-  const missingBuyerDetails = useMemo(
-    () => [
-      !buyerInfo.lastName.trim() ? 'Last name' : null,
-      !buyerInfo.email.trim() ? 'Email' : null,
-    ].filter((field): field is string => Boolean(field)),
-    [buyerInfo.email, buyerInfo.lastName],
-  )
-
-  function getBuyerAttendeeInfoIssues() {
-    const issues: PurchaseReviewIssue[] = []
-
-    const buyerFields: Array<[keyof BuyerAttendeeInfoState, string]> = [
-      ['lastName', buyerInfo.lastName],
-      ['email', buyerInfo.email],
-    ]
-
-    if (buyerFields.some(([, value]) => !value.trim())) {
-      issues.push({ message: 'Complete the buyer details before continuing.', target: 'buyer-attendee-info' })
-    }
-
-    const attendeeIssues = attendeeSlotEntries.find((slot) => {
-      if (!slot.requiresAttendeeInfo) {
-        return false
-      }
-
-      if (isTicketSameAsBuyer(slot.sessionId, slot.ticketId)) {
-        return false
-      }
-
-      const info = attendeeInfoBySlot[slot.key]
-      if (!info) {
-        return true
-      }
-
-      return ['firstName', 'lastName', 'email'].some((field) => !(info[field as keyof BuyerAttendeeInfoState] ?? '').trim())
-    })
-
-    if (attendeeIssues) {
-      issues.push({
-        message: `${attendeeIssues.sessionName} needs attendee details for ${attendeeIssues.ticketName}.`,
-        target: 'buyer-attendee-info',
-      })
-    }
-
-    return issues
-  }
-
-  function updateBuyerField(field: keyof BuyerAttendeeInfoState, value: string) {
-    const nextValue = field === 'phone' ? formatPhoneNumberInput(value) : value
-
-    setBuyerInfo((current) => ({ ...current, [field]: nextValue }))
-  }
-
-  function updateAttendeeField(slotKey: string, field: keyof BuyerAttendeeInfoState, value: string) {
-    const slot = attendeeSlotEntryByKey[slotKey]
-    if (!slot || isTicketSameAsBuyer(slot.sessionId, slot.ticketId)) return
-
-    setAttendeeInfoBySlot((current) => {
-      const slotState = current[slotKey]
-      if (!slotState) return current
-
-      return {
-        ...current,
-        [slotKey]: {
-          ...slotState,
-          [field]: value,
-        },
-      }
-    })
-  }
-
-  function handleBuyerDetailsMissing() {
-    const message =
-      missingBuyerDetails.length === 1
-        ? `${missingBuyerDetails[0]} is required in Your Information before enabling Same As Buyer.`
-        : `${missingBuyerDetails.join(' and ')} are required in Your Information before enabling Same As Buyer.`
-
-    setBuyerDetailsAlertMessage(message)
-    setBuyerDetailsAlertOpen(true)
-  }
-
-  function closeBuyerDetailsAlert() {
-    setBuyerDetailsAlertOpen(false)
-    setBuyerDetailsAlertMessage(null)
-  }
-
-  function toggleSessionSameAsBuyer(sessionId: string, checked: boolean) {
-    if (checked && missingBuyerDetails.length > 0) {
-      handleBuyerDetailsMissing()
-      return
-    }
-
-    setSessionSameAsBuyerById((current) => ({
-      ...current,
-      [sessionId]: checked,
-    }))
-
-    if (!checked) {
-      closeBuyerDetailsAlert()
-    }
-  }
-
-  function toggleTicketSameAsBuyer(sessionId: string, ticketId: string, checked: boolean) {
-    if (checked && missingBuyerDetails.length > 0) {
-      handleBuyerDetailsMissing()
-      return
-    }
-
-    if (isSessionSameAsBuyer(sessionId)) return
-
-    setTicketSameAsBuyerById((current) => ({
-      ...current,
-      [ticketId]: checked,
-    }))
-
-    if (!checked) {
-      closeBuyerDetailsAlert()
-    }
-  }
-
-  function clearBuyerAttendeeValidation() {
-    if (purchaseReviewScrollTarget !== 'buyer-attendee-info') {
-      return
-    }
-
-    setPurchaseReviewAttempted(false)
-    setPurchaseReviewMessage(null)
-    setPurchaseReviewScrollTarget(null)
-  }
-
   function handleBackStep() {
     if (activeIndex <= 0) {
       onBack()
@@ -986,17 +639,12 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   function handleRemoveAllTickets() {
     const resetIndex = sessionsStepIndex >= 0 ? sessionsStepIndex : 0
     setSelectedTicketQuantities({})
-    setSessionSameAsBuyerById({})
-    setTicketSameAsBuyerById({})
     setSelectedPaymentMethod(null)
     setExpandedPaymentMethod(null)
-    setBuyerInfo(EMPTY_BUYER_INFO)
-    setAttendeeInfoBySlot({})
+    resetBuyerAttendeeInfo()
     setTermsAccepted(false)
     setTermsOpen(false)
-    setPurchaseReviewAttempted(false)
-    setPurchaseReviewMessage(null)
-    setPurchaseReviewScrollTarget(null)
+    resetPurchaseReview()
     setPurchaseTimerExpired(false)
     setPaymentIntent(null)
     resetAnswers()
@@ -1063,36 +711,17 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       <Flex minH='100dvh' align='center' justify='center' px={{ base: 3, md: 6, xl: 8 }} py={{ base: 5, md: 8 }}>
         <Container maxW='8xl' p={0}>
           <Stack gap={6}>
-            <Box bg='white' borderWidth='1px' borderColor='blackAlpha.100' borderRadius='28px' overflow='hidden' boxShadow='0 24px 60px rgba(15, 23, 42, 0.08)'>
-              <Box h='6px' bg={formAccent} />
-              <Box p={{ base: 4, md: 6 }}>
-                <SimpleGrid columns={{ base: 1, lg: 12 }} gap={6} alignItems='stretch'>
-                  <Box gridColumn={{ lg: 'span 8' }} borderWidth='1px' borderColor='gray.200' borderRadius='24px' overflow='hidden' bg='gray.100'>
-                    {bannerSlides.length > 0 ? (
-                      <AutoImageCarousel slides={bannerSlides} accentColor={formAccent} />
-                    ) : (
-                      <Flex minH={{ base: '220px', md: '320px' }} align='center' justify='center' px={6} textAlign='center'><Text fontSize='sm' fontWeight='700' color='gray.500'>Banner not available</Text></Flex>
-                    )}
-                  </Box>
-                  <Box gridColumn={{ lg: 'span 4' }} borderWidth='1px' borderColor='gray.200' borderRadius='24px' bg='white' p={{ base: 5, md: 6 }}>
-                    <Stack gap={4} h='full' justify='space-between'>
-                      <Stack gap={3}>
-                        <Heading fontSize={{ base: '2xl', md: '3xl' }} lineHeight='1.08' letterSpacing='-0.04em' color='gray.900'>{event.title}</Heading>
-                        <Text fontSize={{ base: 'sm', md: 'md' }} color='gray.700' lineHeight='1.7'><Text as='span' fontWeight='400'>By:</Text>{' '}<Text as='span' fontWeight='700' color='gray.900'>{event.organizer}</Text></Text>
-                        {currentEvent.summary ? <Text fontSize='sm' color='gray.600' lineHeight='1.7'>{currentEvent.summary}</Text> : null}
-                      </Stack>
-                      <Stack gap={3}>
-                        <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='gray.50' overflow='hidden'>
-                          <HStack gap={3} align='start' px={4} py={3} borderBottomWidth='1px' borderBottomColor='gray.200'><Box color='gray.500' mt={0.5}><CalendarDays size={18} /></Box><Box><Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>Starts At</Text><Text mt={1} fontSize='sm' fontWeight='700' color='gray.900'>{formatRegistrationDateTime(event.startDate)}</Text></Box></HStack>
-                          <HStack gap={3} align='start' px={4} py={3} borderBottomWidth='1px' borderBottomColor='gray.200'><Box color='gray.500' mt={0.5}><ChevronRight size={18} /></Box><Box><Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>Ends At</Text><Text mt={1} fontSize='sm' fontWeight='700' color='gray.900'>{formatRegistrationDateTime(event.endDate)}</Text></Box></HStack>
-                          <HStack gap={3} align='start' px={4} py={3}><Box color='gray.500' mt={0.5}><MapPin size={18} /></Box><Box><Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.12em'>Venue</Text>{event.locationMapUrl ? <Link href={event.locationMapUrl} target='_blank' rel='noopener noreferrer' mt={1} display='inline-flex' alignItems='center' gap={1.5} fontSize='sm' fontWeight='700' color={formAccent} textDecoration='underline' textUnderlineOffset='3px' title='Open venue location in a new tab'>{event.location}<ExternalLink size={14} /></Link> : <Text mt={1} fontSize='sm' fontWeight='700' color='gray.900'>{event.location}</Text>}</Box></HStack>
-                        </Box>
-                      </Stack>
-                    </Stack>
-                  </Box>
-                </SimpleGrid>
-              </Box>
-            </Box>
+            <EventHeroCard
+              title={event.title}
+              organizer={event.organizer}
+              summary={currentEvent.summary ?? null}
+              startDate={event.startDate}
+              endDate={event.endDate}
+              location={event.location}
+              locationMapUrl={event.locationMapUrl ?? null}
+              bannerSlides={bannerSlides}
+              accentColor={formAccent}
+            />
 
             <CartSummaryPanel
               isOpen={isSummaryOpen}
@@ -1108,16 +737,13 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
             />
 
             {currentEvent.termsConditions ? (
-              <Box ref={termsValidationRef} borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' px={{ base: 4, md: 5 }} py={4} boxShadow='0 12px 30px rgba(15, 23, 42, 0.08)'>
-                <Flex justify='space-between' align={{ base: 'stretch', md: 'center' }} gap={4} direction={{ base: 'column', md: 'row' }}>
-                  <Checkbox.Root checked={termsAccepted} onCheckedChange={(details) => setTermsAccepted(details.checked === true)}>
-                    <Checkbox.HiddenInput />
-                    <Checkbox.Control borderColor='gray.300' borderRadius='8px' bg='white' _checked={{ bg: formAccent, borderColor: formAccent }} />
-                    <Checkbox.Label color='gray.700' fontSize='sm' fontWeight='600'>I accept the registration terms and conditions.</Checkbox.Label>
-                  </Checkbox.Root>
-                  <Button variant='ghost' color={formAccent} fontWeight='700' onClick={() => setTermsOpen(true)} alignSelf={{ base: 'flex-start', md: 'center' }}>View terms</Button>
-                </Flex>
-              </Box>
+              <RegistrationTermsCard
+                isAccepted={termsAccepted}
+                onAcceptedChange={setTermsAccepted}
+                onViewTerms={() => setTermsOpen(true)}
+                accentColor={formAccent}
+                validationRef={termsValidationRef}
+              />
             ) : null}
 
             <Box bg='white' borderWidth='1px' borderColor='blackAlpha.100' borderRadius='28px' p={{ base: 4, md: 6 }} boxShadow='0 24px 60px rgba(15, 23, 42, 0.08)'>
@@ -1432,157 +1058,21 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
         onRestart={restartPurchaseFlow}
       />
 
-      <Dialog.Root open={isPurchaseReviewOpen} onOpenChange={(details) => setIsPurchaseReviewOpen(details.open)} size='xl'>
-        <Dialog.Backdrop backdropFilter='blur(8px)' bg='blackAlpha.650' />
-        <Dialog.Positioner alignItems='center' justifyContent='center' px={{ base: 4, md: 6 }} py={{ base: 6, md: 8 }}>
-          <Dialog.Content borderRadius='28px' overflow='hidden' bg='white' boxShadow='0 30px 80px rgba(15, 23, 42, 0.28)' maxH='85vh' display='flex' flexDirection='column'>
-            <Box h='5px' bg={formAccent} />
-            <Box px={{ base: 4, md: 6 }} py={4} borderBottomWidth='1px' borderBottomColor='gray.200'>
-              <Flex justify='space-between' align='start' gap={4}>
-                <Stack gap={1}>
-                  <Text fontSize='xs' textTransform='uppercase' letterSpacing='0.14em' color='gray.500' fontWeight='700'>
-                    Review purchase
-                  </Text>
-                  <Heading fontSize={{ base: 'xl', md: '2xl' }} color='gray.900' letterSpacing='-0.03em'>
-                    {currentEvent.title}
-                  </Heading>
-                </Stack>
-                <CloseButton onClick={() => setIsPurchaseReviewOpen(false)} />
-              </Flex>
-            </Box>
-
-            <Box px={{ base: 4, md: 6 }} py={{ base: 5, md: 6 }} flex='1' overflowY='auto'>
-              <Stack gap={5}>
-                <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='gray.50' p={4}>
-                  <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
-                    <Stack gap={1}>
-                      <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>
-                        Tickets
-                      </Text>
-                      <Text fontSize='lg' fontWeight='800' color='gray.900'>
-                        {selectedTicketCount} selected
-                      </Text>
-                    </Stack>
-                    <Stack gap={1}>
-                      <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>
-                        Total
-                      </Text>
-                      <Text fontSize='lg' fontWeight='800' color='gray.900'>
-                        {formatAmount(selectedTicketTotal, currentEvent.paymentAccountCurrency)}
-                      </Text>
-                    </Stack>
-                    <Stack gap={1}>
-                      <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>
-                        Payment method
-                      </Text>
-                      <Text fontSize='lg' fontWeight='800' color='gray.900' lineHeight='1.3'>
-                        {selectedPaymentMethodLabel}
-                      </Text>
-                    </Stack>
-                  </SimpleGrid>
-                  {isSelectedPaymentMethodCard ? (
-                    <Text mt={3} fontSize='sm' color='gray.600'>
-                      You will enter your card details securely on the next step.
-                    </Text>
-                  ) : null}
-                </Box>
-
-                {purchaseReviewAttempted && purchaseReviewMessage ? (
-                  <Box borderWidth='1px' borderColor='red.200' bg='red.50' borderRadius='18px' p={4}>
-                    <Text fontSize='sm' color='red.700' fontWeight='600'>
-                      {purchaseReviewMessage}
-                    </Text>
-                  </Box>
-                ) : null}
-
-                <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' overflow='hidden'>
-                  <Box px={4} py={3} bg='gray.50' borderBottomWidth='1px' borderBottomColor='gray.200'>
-                    <Text fontSize='sm' fontWeight='700' color='gray.700'>
-                      Ticket summary
-                    </Text>
-                  </Box>
-                  <Table.Root variant='line' size='sm' borderColor='gray.200'>
-                    <Table.Header>
-                      <Table.Row bg='white'>
-                        <Table.ColumnHeader borderColor='gray.200' px={4} py={3}>Session</Table.ColumnHeader>
-                        <Table.ColumnHeader borderColor='gray.200' px={4} py={3}>Ticket</Table.ColumnHeader>
-                        <Table.ColumnHeader borderColor='gray.200' px={4} py={3} textAlign='center'>Qty</Table.ColumnHeader>
-                        <Table.ColumnHeader borderColor='gray.200' px={4} py={3} textAlign='right'>Total</Table.ColumnHeader>
-                      </Table.Row>
-                    </Table.Header>
-                    <Table.Body>
-                      {purchaseReviewTicketRows.map((row) => (
-                        <Table.Row key={`${row.sessionName}-${row.ticketName}`}>
-                          <Table.Cell borderColor='gray.200' px={4} py={3}>
-                            <Text fontWeight='700' color='gray.900' lineHeight='1.4'>{row.sessionName}</Text>
-                          </Table.Cell>
-                          <Table.Cell borderColor='gray.200' px={4} py={3}>
-                            <Text color='gray.700' lineHeight='1.4'>{row.ticketName}</Text>
-                          </Table.Cell>
-                          <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='center'>
-                            <Text fontWeight='700' color='gray.900'>{row.quantity}</Text>
-                          </Table.Cell>
-                          <Table.Cell borderColor='gray.200' px={4} py={3} textAlign='right'>
-                            <Text fontWeight='700' color='gray.900'>{formatAmount(row.lineTotal, currentEvent.paymentAccountCurrency)}</Text>
-                          </Table.Cell>
-                        </Table.Row>
-                      ))}
-                    </Table.Body>
-                  </Table.Root>
-                </Box>
-
-                <Box borderWidth='1px' borderColor='gray.200' borderRadius='20px' bg='white' overflow='hidden'>
-                  <Box px={4} py={3} bg='gray.50' borderBottomWidth='1px' borderBottomColor='gray.200'>
-                    <Text fontSize='sm' fontWeight='700' color='gray.700'>
-                      Charges
-                    </Text>
-                  </Box>
-                  <Stack gap={3} p={4}>
-                    {purchaseReviewChargeRows.length > 0 ? (
-                      purchaseReviewChargeRows.map((charge) => (
-                        <Flex key={`${charge.source}-${charge.title}`} justify='space-between' gap={4} align='start'>
-                          <Stack gap={0.5} minW={0}>
-                            <Text fontSize='sm' fontWeight='600' color='gray.900'>{charge.title}</Text>
-                            <Text fontSize='xs' color='gray.500'>
-                              {charge.source === 'processor-fee' ? 'Price' : 'Rate'}: {formatChargeRate(charge.valueType, charge.value, currentEvent.paymentAccountCurrency)}
-                            </Text>
-                          </Stack>
-                          <Text fontSize='sm' fontWeight='700' color='gray.900' flexShrink={0}>
-                            {formatAmount(charge.amount, currentEvent.paymentAccountCurrency)}
-                          </Text>
-                        </Flex>
-                      ))
-                    ) : (
-                      <Text fontSize='sm' color='gray.600'>No additional buyer charges.</Text>
-                    )}
-                  </Stack>
-                </Box>
-              </Stack>
-            </Box>
-
-            <Box px={{ base: 4, md: 6 }} py={4} borderTopWidth='1px' borderTopColor='gray.200' bg='gray.50'>
-              <Flex justify='flex-end' gap={3} direction={{ base: 'column-reverse', sm: 'row' }}>
-                <Button {...CONTROL_BUTTON_OUTLINE} onClick={() => setIsPurchaseReviewOpen(false)}>
-                  Back to payment
-                </Button>
-                <Button
-                  bg={formAccent}
-                  color='white'
-                  borderRadius='16px'
-                  minH='11'
-                  px={5}
-                  _hover={{ bg: hexToRgba(formAccent, 0.88) }}
-                  _active={{ bg: hexToRgba(formAccent, 0.95) }}
-                  onClick={handleConfirmPurchase}
-                  disabled={Boolean(purchaseReviewAttempted && purchaseReviewMessage)}
-                >
-                  Confirm Purchase
-                </Button>
-              </Flex>
-            </Box>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+      <PurchaseReviewDialog
+        isOpen={isPurchaseReviewOpen}
+        onOpenChange={setIsPurchaseReviewOpen}
+        eventTitle={currentEvent.title}
+        currencyCode={currentEvent.paymentAccountCurrency}
+        accentColor={formAccent}
+        selectedTicketCount={selectedTicketCount}
+        selectedTicketTotal={selectedTicketTotal}
+        paymentMethodLabel={selectedPaymentMethodLabel}
+        isCardPayment={isSelectedPaymentMethodCard}
+        validationMessage={purchaseReviewAttempted ? purchaseReviewMessage : null}
+        ticketRows={purchaseReviewTicketRows}
+        chargeRows={purchaseReviewChargeRows}
+        onConfirm={handleConfirmPurchase}
+      />
 
     </Box>
   )
