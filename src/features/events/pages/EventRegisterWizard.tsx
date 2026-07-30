@@ -11,16 +11,13 @@ import {
   Flex,
   Heading,
   HStack,
-  Input,
   Link,
   Portal,
   SimpleGrid,
   Table,
   Stack,
   Tabs,
-  Switch,
   Text,
-  Tooltip,
 } from '@chakra-ui/react'
 import { toaster } from '@/lib/toaster'
 import {
@@ -28,14 +25,11 @@ import {
   CalendarDays,
   ChevronRight,
   CreditCard,
-  Clock3,
   ExternalLink,
   FileText,
-  AlertCircle,
   MapPin,
   MessageSquareText,
   Check,
-  Trash2,
   Users,
 } from 'lucide-react'
 import {
@@ -56,16 +50,20 @@ import { useSubmitLineAttendees, useSubmitLineAnswers } from '@/features/events/
 import { PurchaseTimerChip } from '@/features/events/components/registration/PurchaseTimerChip'
 import { CartSummaryPanel } from '@/features/events/components/registration/CartSummaryPanel'
 import { PaymentStep } from '@/features/events/components/registration/PaymentStep'
-import { QuestionField } from '@/features/events/components/registration/QuestionField'
+import { QuestionnaireStep } from '@/features/events/components/registration/QuestionnaireStep'
+import {
+  BuyerDetailsMissingDialog,
+  ConfirmRemoveDialog,
+  ContentDialog,
+  PurchaseExpiredDialog,
+} from '@/features/events/components/registration/RegistrationDialogs'
 import type { EventPaymentIntentResult, PaymentProduct } from '@/features/events/schemas/eventCart.schemas'
 import { extractApiError } from '@/utils/errors'
 
 import { AutoImageCarousel } from '@/features/events/components/registration/AutoImageCarousel'
-import { AttendeeTicketCard } from '@/features/events/components/registration/AttendeeTicketCard'
-import { ContactDetailsFields } from '@/features/events/components/registration/ContactDetailsFields'
+import { BuyerAttendeeStep } from '@/features/events/components/registration/BuyerAttendeeStep'
 import { RichTextBlock, SupportCard } from '@/features/events/components/registration/SupportCard'
-import { SessionTitleCard, SessionsTabSkeleton } from '@/features/events/components/registration/SessionTitleCard'
-import { TicketCard } from '@/features/events/components/registration/TicketCard'
+import { SessionsStep } from '@/features/events/components/registration/SessionsStep'
 import { EMPTY_BUYER_INFO } from '@/features/events/components/registration/types'
 import type {
   AttendeeSessionGroup,
@@ -90,7 +88,6 @@ import {
   getSelectedSessionSummaries,
   getSessionBannerSlides,
   getTicketDisplayPrice,
-  getTicketQuantityAfterDecrement,
   isCardPaymentMethod,
   isHtmlContent,
 } from '@/features/events/utils/ticketSelection'
@@ -1209,344 +1206,46 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
                           {tab.id === 'sessions' ? (
                             <Stack gap={4}>
-                              {sessionsLoading ? (
-                                <SessionsTabSkeleton />
-                              ) : sessions.length > 0 ? (
-                                <>
-                                <Flex
-                                  align={{ base: 'stretch', md: 'center' }}
-                                  justify='space-between'
-                                  gap={3}
-                                  direction={{ base: 'column', md: 'row' }}
-                                >
-                                  <Box minH='11' display='flex' alignItems='center'>
-                                    {selectedTicketCount > 0 ? (
-                                      <Button
-                                        variant='ghost'
-                                        color='red.600'
-                                        fontSize='sm'
-                                        fontWeight='700'
-                                        minH='11'
-                                        px={0}
-                                        _hover={{ bg: 'transparent', color: 'red.700', textDecoration: 'underline' }}
-                                        _active={{ bg: 'transparent', color: 'red.800' }}
-                                        onClick={requestRemoveAllTickets}
-                                      >
-                                        Remove all
-                                      </Button>
-                                    ) : null}
-                                  </Box>
-
-                                  <Box display='flex' justifyContent={{ base: 'flex-start', md: 'flex-end' }}>
-                                    <Button
-                                      h='38px'
-                                      px={4}
-                                      borderRadius='full'
-                                      borderWidth='1px'
-                                      borderColor='gray.900'
-                                      bg='gray.900'
-                                      color='white'
-                                      fontSize='sm'
-                                      fontWeight='700'
-                                      boxShadow='0 10px 24px rgba(15, 23, 42, 0.18)'
-                                      _hover={{ bg: 'gray.800', borderColor: 'gray.800' }}
-                                      _active={{ bg: 'gray.700', borderColor: 'gray.700' }}
-                                      transition='all 0.2s ease'
-                                      minW='140px'
-                                      onClick={areAllSessionsExpanded ? handleCollapseAllSessions : handleExpandAllSessions}
-                                    >
-                                      {areAllSessionsExpanded ? 'Collapse All' : 'Expand All'}
-                                    </Button>
-                                  </Box>
-                                </Flex>
-                              {sessions.map((session) => (
-                                (() => {
-                                  const searchValue = sessionTicketSearch[session.uniqueId] ?? ''
-                                  const filteredTickets = session.ticketTypes.filter((ticket) => {
-                                    const needle = searchValue.trim().toLowerCase()
-                                    if (!needle) return true
-                                    return (
-                                      ticket.name.toLowerCase().includes(needle) ||
-                                      (ticket.description?.toLowerCase().includes(needle) ?? false)
-                                    )
-                                  })
-
-                                  return (
-                                    <SessionTitleCard
-                                      key={session.uniqueId}
-                                      title={session.name}
-                                      description={session.description}
-                                      ticketCount={session.ticketTypes.length}
-                                      isExpanded={expandedSessionIds.includes(session.uniqueId)}
-                                      onToggle={() => handleSessionToggle(session.uniqueId)}
-                                      onOpenDescription={() => setActiveSessionDescription({ title: session.name, description: session.description ?? '' })}
-                                    >
-                                      {session.ticketTypes.length > 0 ? (
-                                        <Stack gap={4}>
-                                          {session.requiresAttendeeInfo ? (
-                                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={3} alignItems='center'>
-                                              <HStack gap={2} minW={0} align='center'>
-                                                <Tooltip.Root openDelay={250} closeDelay={100}>
-                                                  <Tooltip.Trigger asChild>
-                                                    <Badge
-                                                      colorPalette='blue'
-                                                      variant='subtle'
-                                                      borderRadius='full'
-                                                      px={3}
-                                                      py={1}
-                                                      fontSize='xs'
-                                                      fontWeight='800'
-                                                      letterSpacing='0.08em'
-                                                      textTransform='uppercase'
-                                                      cursor='help'
-                                                    >
-                                                      <HStack gap={1.5}>
-                                                        <AlertCircle size={14} />
-                                                        <Text as='span'>Requires Attendee Info</Text>
-                                                      </HStack>
-                                                    </Badge>
-                                                  </Tooltip.Trigger>
-                                                  <Tooltip.Positioner>
-                                                    <Tooltip.Content>
-                                                      Buying this session would require attendee info.
-                                                    </Tooltip.Content>
-                                                  </Tooltip.Positioner>
-                                                </Tooltip.Root>
-                                              </HStack>
-                                              <Box position='relative' w='full' maxW={{ base: 'full', md: '280px' }} justifySelf={{ base: 'stretch', md: 'end' }}>
-                                                <Input
-                                                  value={searchValue}
-                                                  onChange={(event) => handleSessionTicketSearchChange(session.uniqueId, event.target.value)}
-                                                  placeholder='Search tickets'
-                                                  h='44px'
-                                                  px={4}
-                                                  pe={searchValue ? 11 : 4}
-                                                  borderRadius='full'
-                                                  borderColor='gray.300'
-                                                  bg='white'
-                                                  fontSize='sm'
-                                                  _focusVisible={{ borderColor: 'gray.500', boxShadow: '0 0 0 1px var(--chakra-colors-gray-500)' }}
-                                                />
-                                                {searchValue ? (
-                                                  <CloseButton
-                                                    aria-label='Clear ticket search'
-                                                    size='sm'
-                                                    position='absolute'
-                                                    top='50%'
-                                                    right='10px'
-                                                    transform='translateY(-50%)'
-                                                    borderRadius='full'
-                                                    color='gray.500'
-                                                    bg='gray.100'
-                                                    _hover={{ bg: 'gray.200', color: 'gray.700' }}
-                                                    onClick={() => handleSessionTicketSearchChange(session.uniqueId, '')}
-                                                  />
-                                                ) : null}
-                                              </Box>
-                                            </SimpleGrid>
-                                          ) : (
-                                            <Box position='relative' w='full' maxW={{ base: 'full', md: '280px' }} ml={{ md: 'auto' }}>
-                                              <Input
-                                                value={searchValue}
-                                                onChange={(event) => handleSessionTicketSearchChange(session.uniqueId, event.target.value)}
-                                                placeholder='Search tickets'
-                                                h='44px'
-                                                px={4}
-                                                pe={searchValue ? 11 : 4}
-                                                borderRadius='full'
-                                                borderColor='gray.300'
-                                                bg='white'
-                                                fontSize='sm'
-                                                _focusVisible={{ borderColor: 'gray.500', boxShadow: '0 0 0 1px var(--chakra-colors-gray-500)' }}
-                                              />
-                                              {searchValue ? (
-                                                <CloseButton
-                                                  aria-label='Clear ticket search'
-                                                  size='sm'
-                                                  position='absolute'
-                                                  top='50%'
-                                                  right='10px'
-                                                  transform='translateY(-50%)'
-                                                  borderRadius='full'
-                                                  color='gray.500'
-                                                  bg='gray.100'
-                                                  _hover={{ bg: 'gray.200', color: 'gray.700' }}
-                                                  onClick={() => handleSessionTicketSearchChange(session.uniqueId, '')}
-                                                />
-                                              ) : null}
-                                            </Box>
-                                          )}
-                                          {filteredTickets.length > 0 ? (
-                                            <SimpleGrid columns={{ base: 1, xl: 3 }} gap={4}>
-                                              {filteredTickets.map((ticket) => (
-                                                <TicketCard
-                                                  key={ticket.uniqueId}
-                                                  ticket={ticket}
-                                                  quantity={selectedTicketQuantities[ticket.uniqueId] ?? 0}
-                                                  currencyCode={event.paymentAccountCurrency}
-                                                  onDecrease={() => handleTicketQuantityChange(ticket, getTicketQuantityAfterDecrement(ticket, selectedTicketQuantities[ticket.uniqueId] ?? 0))}
-                                                  onIncrease={() => handleTicketQuantityChange(ticket, (selectedTicketQuantities[ticket.uniqueId] ?? 0) + 1)}
-                                                  onSelectQuantity={(value) => handleTicketQuantityChange(ticket, value)}
-                                                />
-                                              ))}
-                                            </SimpleGrid>
-                                          ) : (
-                                            <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
-                                              <Text fontSize='sm' color='gray.600'>No tickets matched your search for this session.</Text>
-                                            </Box>
-                                          )}
-                                        </Stack>
-                                      ) : (
-                                        <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
-                                          <Text fontSize='sm' color='gray.600'>No tickets are currently mapped to this session.</Text>
-                                        </Box>
-                                      )}
-                                    </SessionTitleCard>
-                                  )
-                                })()
-                              ))}
-                                </>
-                              ) : null}
+                              <SessionsStep
+                                sessions={sessions}
+                                isLoading={sessionsLoading}
+                                selectedTicketQuantities={selectedTicketQuantities}
+                                selectedTicketCount={selectedTicketCount}
+                                expandedSessionIds={expandedSessionIds}
+                                ticketSearchBySession={sessionTicketSearch}
+                                currencyCode={event.paymentAccountCurrency}
+                                areAllExpanded={areAllSessionsExpanded}
+                                onToggleSession={handleSessionToggle}
+                                onExpandAll={handleExpandAllSessions}
+                                onCollapseAll={handleCollapseAllSessions}
+                                onSearchChange={handleSessionTicketSearchChange}
+                                onOpenDescription={(title, description) => setActiveSessionDescription({ title, description })}
+                                onChangeQuantity={handleTicketQuantityChange}
+                                onRequestRemoveAll={requestRemoveAllTickets}
+                              />
                             </Stack>
                           ) : null}
 
                           {tab.id === 'buyer-attendee-info' ? (
                             <Box ref={buyerAttendeeValidationRef}>
-                              <Stack gap={5}>
-                                {purchaseReviewAttempted && purchaseReviewMessage && purchaseReviewScrollTarget === 'buyer-attendee-info' ? (
-                                  <Box borderWidth='1px' borderColor='red.200' bg='red.50' borderRadius='18px' p={4}>
-                                    <Text fontSize='sm' color='red.700' fontWeight='600'>
-                                      {purchaseReviewMessage}
-                                    </Text>
-                                  </Box>
-                                ) : null}
-
-                                  <SupportCard
-                                  title='Your Information'
-                                  subtitle='Enter the buyer contact details for order confirmation and follow-up.'
-                                  icon={<Users size={18} />}
-                                  bg='gray.100'
-                                  hasDivider
-                                >
-                                  <Stack gap={4}>
-                                    <Text fontSize='sm' color='gray.600' lineHeight='1.6'>
-                                      The buyer is the person placing the order and receiving the purchase confirmation.
-                                    </Text>
-                                    <ContactDetailsFields values={buyerInfo} onChange={updateBuyerField} />
-                                  </Stack>
-                                </SupportCard>
-
-                                <SupportCard
-                                  title='Session Attendees'
-                                  subtitle='Each session is grouped once. Session toggles cover every attendee in the session, while ticket toggles only affect that ticket.'
-                                  icon={<Users size={18} />}
-                                >
-                                  {attendeeSessionGroups.length > 0 ? (
-                                    <Stack gap={4}>
-                                      <Box borderWidth='1px' borderColor='blue.200' borderRadius='18px' bg='blue.50' p={4}>
-                                        <Flex justify='space-between' gap={4} align='start' flexWrap='wrap'>
-                                          <Stack gap={1} minW={0}>
-                                            <Text fontSize='sm' fontWeight='800' color='gray.900'>
-                                              Attendee details by session
-                                            </Text>
-                                            <Text fontSize='sm' color='gray.600' lineHeight='1.6'>
-                                              Turn on Same As Buyer at the session level to copy buyer data for every attendee in that session. Use ticket-level toggles when only one ticket should follow the buyer.
-                                            </Text>
-                                          </Stack>
-                                          <HStack gap={2} flexWrap='wrap' justify='flex-end'>
-                                            {requiresAttendeeInfo ? (
-                                              <Badge colorPalette='blue' variant='subtle' borderRadius='full' px={3} py={1}>
-                                                Attendee info required
-                                              </Badge>
-                                            ) : null}
-                                            {requiresQuestions ? (
-                                              <Badge colorPalette='orange' variant='subtle' borderRadius='full' px={3} py={1}>
-                                                Questions required
-                                              </Badge>
-                                            ) : null}
-                                          </HStack>
-                                        </Flex>
-                                      </Box>
-
-                                      <Stack gap={4}>
-                                        {attendeeSessionGroups.map((sessionGroup) => {
-                                          const sessionSameAsBuyer = isSessionSameAsBuyer(sessionGroup.sessionId)
-
-                                          return (
-                                            <Box
-                                              key={sessionGroup.key}
-                                              borderWidth='1px'
-                                              borderColor='gray.200'
-                                              borderRadius='20px'
-                                              bg='white'
-                                              p={4}
-                                              boxShadow='0 10px 24px rgba(15, 23, 42, 0.04)'
-                                            >
-                                              <Stack gap={4}>
-                                                <Flex
-                                                  justify='space-between'
-                                                  gap={4}
-                                                  align={{ base: 'start', md: 'center' }}
-                                                  direction={{ base: 'column', md: 'row' }}
-                                                >
-                                                  <Stack gap={1} minW={0}>
-                                                    <Text fontSize='sm' fontWeight='800' color='gray.900' lineHeight='1.4'>
-                                                      {sessionGroup.sessionName}
-                                                    </Text>
-                                                    <Text fontSize='sm' color='gray.600' lineHeight='1.4'>
-                                                      {sessionGroup.attendeeCount} {sessionGroup.attendeeCount === 1 ? 'attendee' : 'attendees'} selected in this session.
-                                                    </Text>
-                                                  </Stack>
-
-                                                  <HStack
-                                                    gap={3}
-                                                    align='center'
-                                                    cursor='help'
-                                                    title='Copy the buyer contact details into every attendee for this session.'
-                                                  >
-                                                    <Text fontSize='sm' fontWeight='700' color='gray.700'>
-                                                      Same As Buyer
-                                                    </Text>
-                                                    <Switch.Root
-                                                      checked={sessionSameAsBuyer}
-                                                      onCheckedChange={(details) => toggleSessionSameAsBuyer(sessionGroup.sessionId, details.checked === true)}
-                                                      colorPalette='brand'
-                                                    >
-                                                      <Switch.HiddenInput />
-                                                      <Switch.Control />
-                                                    </Switch.Root>
-                                                  </HStack>
-                                                </Flex>
-
-                                                <Stack gap={4}>
-                                                  {sessionGroup.tickets.map((ticketGroup) => (
-                                                    <AttendeeTicketCard
-                                                      key={ticketGroup.key}
-                                                      group={ticketGroup}
-                                                      buyerInfo={buyerInfo}
-                                                      attendeeInfoBySlot={attendeeInfoBySlot}
-                                                      sessionSameAsBuyer={sessionSameAsBuyer}
-                                                      ticketSameAsBuyer={Boolean(ticketSameAsBuyerById[ticketGroup.ticketId])}
-                                                      onToggleSameAsBuyer={toggleTicketSameAsBuyer}
-                                                      onChangeField={updateAttendeeField}
-                                                    />
-                                                  ))}
-                                                </Stack>
-                                              </Stack>
-                                            </Box>
-                                          )
-                                        })}
-                                      </Stack>
-                                    </Stack>
-                                  ) : (
-                                    <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
-                                      <Text fontSize='sm' color='gray.600' lineHeight='1.7'>
-                                        No attendee details are required for the tickets you have selected yet.
-                                      </Text>
-                                    </Box>
-                                  )}
-                                </SupportCard>
-                              </Stack>
+                              <BuyerAttendeeStep
+                                buyerInfo={buyerInfo}
+                                onChangeBuyerField={updateBuyerField}
+                                attendeeSessionGroups={attendeeSessionGroups}
+                                attendeeInfoBySlot={attendeeInfoBySlot}
+                                ticketSameAsBuyerById={ticketSameAsBuyerById}
+                                isSessionSameAsBuyer={isSessionSameAsBuyer}
+                                onToggleSessionSameAsBuyer={toggleSessionSameAsBuyer}
+                                onToggleTicketSameAsBuyer={toggleTicketSameAsBuyer}
+                                onChangeAttendeeField={updateAttendeeField}
+                                requiresAttendeeInfo={requiresAttendeeInfo}
+                                requiresQuestions={requiresQuestions}
+                                validationMessage={
+                                  purchaseReviewAttempted && purchaseReviewScrollTarget === 'buyer-attendee-info'
+                                    ? purchaseReviewMessage
+                                    : null
+                                }
+                              />
                             </Box>
                           ) : null}
 
@@ -1603,74 +1302,12 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
                           {tab.id === 'questionnaire' ? (
                             <SupportCard title='Questionnaire' subtitle='Custom forms and questions mapped to the selected sessions are rendered here.' icon={<MessageSquareText size={18} />}>
-                              <Stack gap={5}>
-                                {selectedSessionSummaries.filter((session) => session.hasQuestions).length > 0 ? (
-                                  selectedSessionSummaries
-                                    .filter((session) => session.hasQuestions)
-                                    .map((session) => (
-                                      <Box key={session.session.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='20px' p={5} bg='gray.50'>
-                                        <Stack gap={4}>
-                                          <Box>
-                                            <Text fontSize='lg' fontWeight='700' color='gray.900'>
-                                              {session.session.name}
-                                            </Text>
-                                            <Text fontSize='sm' color='gray.600'>
-                                              Questionnaire content mapped to this selected session.
-                                            </Text>
-                                          </Box>
-                                          {session.session.customForms.length > 0 ? (
-                                            <Stack gap={3}>
-                                              <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>
-                                                Custom Forms
-                                              </Text>
-                                              <SimpleGrid columns={{ base: 1, lg: 2 }} gap={3}>
-                                                {session.session.customForms.map((form) => (
-                                                  <Box key={form.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={4}>
-                                                    <Text fontWeight='700' color='gray.900'>
-                                                      {form.headerText ?? form.name}
-                                                    </Text>
-                                                    {form.description ? (
-                                                      <Text mt={2} fontSize='sm' color='gray.600' lineHeight='1.7'>
-                                                        {form.description}
-                                                      </Text>
-                                                    ) : null}
-                                                  </Box>
-                                                ))}
-                                              </SimpleGrid>
-                                            </Stack>
-                                          ) : null}
-                                          {session.session.customQuestions.length > 0 ? (
-                                            <Stack gap={3}>
-                                              <Text fontSize='xs' fontWeight='700' color='gray.500' textTransform='uppercase' letterSpacing='0.14em'>
-                                                Custom Questions
-                                              </Text>
-                                              <Stack gap={4}>
-                                                {session.session.customQuestions
-                                                  .filter((question) => question.isActive)
-                                                  .map((question) => (
-                                                    <Box key={question.uniqueId} borderWidth='1px' borderColor='gray.200' borderRadius='16px' bg='white' p={4}>
-                                                      <QuestionField
-                                                        question={question}
-                                                        value={getAnswer(session.session.uniqueId, question.uniqueId)}
-                                                        errorMessage={getQuestionErrorMessage(session.session.uniqueId, question)}
-                                                        onChange={(value) => setAnswer(session.session.uniqueId, question.uniqueId, value)}
-                                                      />
-                                                    </Box>
-                                                  ))}
-                                              </Stack>
-                                            </Stack>
-                                          ) : null}
-                                        </Stack>
-                                      </Box>
-                                    ))
-                                ) : (
-                                  <Box borderWidth='1px' borderColor='gray.200' borderRadius='18px' bg='gray.50' p={4}>
-                                    <Text fontSize='sm' color='gray.600'>
-                                      No selected session currently requires custom forms or questions.
-                                    </Text>
-                                  </Box>
-                                )}
-                              </Stack>
+                              <QuestionnaireStep
+                                sessionSummaries={selectedSessionSummaries}
+                                getAnswer={getAnswer}
+                                getErrorMessage={getQuestionErrorMessage}
+                                onChangeAnswer={setAnswer}
+                              />
                             </SupportCard>
                           ) : null}
 
@@ -1755,167 +1392,41 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
         </Portal>
       ) : null}
 
-      {currentEvent.termsConditions ? (
-        <Dialog.Root open={termsOpen} onOpenChange={(details) => setTermsOpen(details.open)} size='xl'>
-          <Dialog.Backdrop backdropFilter='blur(8px)' bg='blackAlpha.600' />
-          <Dialog.Positioner alignItems='center' justifyContent='center' px={{ base: 4, md: 6 }} py={{ base: 6, md: 8 }}>
-            <Dialog.Content borderRadius='28px' overflow='hidden' bg='white' boxShadow='0 30px 70px rgba(15, 23, 42, 0.25)' maxH='80vh' display='flex' flexDirection='column'>
-              <Box px={{ base: 4, md: 6 }} py={4} borderBottomWidth='1px' borderBottomColor='gray.200'><Flex justify='space-between' align='start' gap={4}><Stack gap={1}><Text fontSize='xs' textTransform='uppercase' letterSpacing='0.14em' color='gray.500' fontWeight='700'>Terms & Conditions</Text><Heading fontSize={{ base: 'xl', md: '2xl' }} color='gray.900' letterSpacing='-0.03em'>Registration agreement</Heading></Stack><CloseButton onClick={() => setTermsOpen(false)} /></Flex></Box>
-              <Box px={{ base: 4, md: 6 }} py={{ base: 5, md: 6 }} flex='1' overflowY='auto'>{isHtmlContent(currentEvent.termsConditions) ? <RichTextBlock html={currentEvent.termsConditions} /> : <Text color='gray.700' lineHeight='1.75'>{currentEvent.termsConditions}</Text>}</Box>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Dialog.Root>
-      ) : null}
+      <ContentDialog
+        isOpen={termsOpen}
+        onClose={() => setTermsOpen(false)}
+        eyebrow='Terms & Conditions'
+        title='Registration agreement'
+        body={currentEvent.termsConditions}
+      />
 
-      <Dialog.Root
-        open={buyerDetailsAlertOpen}
-        onOpenChange={(details) => {
-          if (!details.open) {
-            closeBuyerDetailsAlert()
-          }
-        }}
-        size='sm'
-      >
-        <Dialog.Backdrop backdropFilter='blur(8px)' bg='blackAlpha.650' />
-        <Dialog.Positioner alignItems='center' justifyContent='center' px={{ base: 4, md: 6 }} py={{ base: 6, md: 8 }}>
-          <Dialog.Content borderRadius='28px' overflow='hidden' bg='white' boxShadow='0 30px 80px rgba(15, 23, 42, 0.28)'>
-            <Box h='5px' bg='orange.400' />
-            <Box px={{ base: 4, md: 5 }} py={{ base: 5, md: 6 }}>
-              <Stack gap={5} align='center' textAlign='center'>
-                <Box w='72px' h='72px' borderRadius='24px' display='grid' placeItems='center' bg='orange.50' color='orange.500'>
-                  <AlertCircle size={30} />
-                </Box>
-                <Stack gap={2} maxW='2xl'>
-                  <Heading fontSize={{ base: '2xl', md: '3xl' }} letterSpacing='-0.04em'>
-                    Buyer details missing
-                  </Heading>
-                  <Text color='gray.600' lineHeight='1.7'>
-                    {buyerDetailsAlertMessage}
-                  </Text>
-                </Stack>
-                <Button
-                  minH='12'
-                  px={6}
-                  borderRadius='16px'
-                  color='white'
-                  bg='orange.500'
-                  _hover={{ bg: 'orange.600' }}
-                  _active={{ bg: 'orange.700' }}
-                  onClick={closeBuyerDetailsAlert}
-                >
-                  Ok
-                </Button>
-              </Stack>
-            </Box>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+      <BuyerDetailsMissingDialog
+        isOpen={buyerDetailsAlertOpen}
+        message={buyerDetailsAlertMessage}
+        onDismiss={closeBuyerDetailsAlert}
+      />
 
-      <Dialog.Root open={Boolean(activeSessionDescription)} onOpenChange={(details) => { if (!details.open) setActiveSessionDescription(null) }} size='lg'>
-        <Dialog.Backdrop backdropFilter='blur(8px)' bg='blackAlpha.600' />
-        <Dialog.Positioner alignItems='center' justifyContent='center' px={{ base: 4, md: 6 }} py={{ base: 6, md: 8 }}>
-          <Dialog.Content borderRadius='28px' overflow='hidden' bg='white' boxShadow='0 30px 70px rgba(15, 23, 42, 0.25)' maxH='80vh' display='flex' flexDirection='column'>
-            <Box px={{ base: 4, md: 6 }} py={4} borderBottomWidth='1px' borderBottomColor='gray.200'>
-              <Flex justify='space-between' align='start' gap={4}>
-                <Stack gap={1}>
-                  <Text fontSize='xs' textTransform='uppercase' letterSpacing='0.14em' color='gray.500' fontWeight='700'>Session Description</Text>
-                  <Heading fontSize={{ base: 'xl', md: '2xl' }} color='gray.900' letterSpacing='-0.03em'>
-                    {activeSessionDescription?.title}
-                  </Heading>
-                </Stack>
-                <CloseButton onClick={() => setActiveSessionDescription(null)} />
-              </Flex>
-            </Box>
-            <Box px={{ base: 4, md: 6 }} py={{ base: 5, md: 6 }} flex='1' overflowY='auto'>
-              {activeSessionDescription ? (
-                isHtmlContent(activeSessionDescription.description) ? (
-                  <RichTextBlock html={activeSessionDescription.description} />
-                ) : (
-                  <Text color='gray.700' lineHeight='1.75'>{activeSessionDescription.description}</Text>
-                )
-              ) : null}
-            </Box>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+      <ContentDialog
+        isOpen={Boolean(activeSessionDescription)}
+        onClose={() => setActiveSessionDescription(null)}
+        eyebrow='Session Description'
+        title={activeSessionDescription?.title ?? ''}
+        body={activeSessionDescription?.description ?? null}
+      />
 
-      <Dialog.Root open={Boolean(pendingDeleteAction)} onOpenChange={(details) => { if (!details.open) setPendingDeleteAction(null) }} size='sm'>
-        <Dialog.Backdrop backdropFilter='blur(8px)' bg='blackAlpha.600' />
-        <Dialog.Positioner alignItems='center' justifyContent='center' px={{ base: 4, md: 6 }} py={{ base: 6, md: 8 }}>
-          <Dialog.Content borderRadius='24px' overflow='hidden' bg='white' boxShadow='0 30px 70px rgba(15, 23, 42, 0.25)'>
-            <Box px={{ base: 4, md: 5 }} py={{ base: 4, md: 5 }}>
-              <Stack gap={5}>
-                <HStack gap={3} align='start'>
-                  <Flex w='12' h='12' borderRadius='16px' align='center' justify='center' bg='red.50' color='red.500' flexShrink={0}>
-                    <Trash2 size={18} />
-                  </Flex>
-                  <Stack gap={1}>
-                    <Heading fontSize={{ base: 'lg', md: 'xl' }} color='gray.900' letterSpacing='-0.03em'>
-                      {pendingDeleteAction?.title}
-                    </Heading>
-                    <Text fontSize='sm' color='gray.600' lineHeight='1.7'>
-                      {pendingDeleteAction?.description}
-                    </Text>
-                  </Stack>
-                </HStack>
+      <ConfirmRemoveDialog
+        isOpen={Boolean(pendingDeleteAction)}
+        title={pendingDeleteAction?.title}
+        description={pendingDeleteAction?.description}
+        onCancel={() => setPendingDeleteAction(null)}
+        onConfirm={confirmDeleteAction}
+      />
 
-                <Flex justify='flex-end' gap={3} direction={{ base: 'column-reverse', sm: 'row' }}>
-                  <Button {...CONTROL_BUTTON_OUTLINE} onClick={() => setPendingDeleteAction(null)}>
-                    Cancel
-                  </Button>
-                  <Button bg='red.500' color='white' borderRadius='16px' minH='11' px={5} _hover={{ bg: 'red.600' }} _active={{ bg: 'red.700' }} onClick={confirmDeleteAction}>
-                    Remove
-                  </Button>
-                </Flex>
-              </Stack>
-            </Box>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
-
-      <Dialog.Root
-        open={purchaseTimerExpiryOpen}
-        onOpenChange={(details) => {
-          if (!details.open) {
-            restartPurchaseFlow()
-          }
-        }}
-        size='sm'
-      >
-        <Dialog.Backdrop backdropFilter='blur(8px)' bg='blackAlpha.650' />
-        <Dialog.Positioner alignItems='center' justifyContent='center' px={{ base: 4, md: 6 }} py={{ base: 6, md: 8 }}>
-          <Dialog.Content borderRadius='28px' overflow='hidden' bg='white' boxShadow='0 30px 80px rgba(15, 23, 42, 0.28)'>
-            <Box h='5px' bg={formAccent} />
-            <Box px={{ base: 4, md: 5 }} py={{ base: 5, md: 6 }}>
-              <Stack gap={5} align='center' textAlign='center'>
-                <Box w='72px' h='72px' borderRadius='24px' display='grid' placeItems='center' bg={hexToRgba(formAccent, 0.12)} color={formAccent}>
-                  <Clock3 size={30} />
-                </Box>
-                <Stack gap={2} maxW='2xl'>
-                  <Heading fontSize={{ base: '2xl', md: '3xl' }} letterSpacing='-0.04em'>
-                    Purchase time expired
-                  </Heading>
-                  <Text color='gray.600' lineHeight='1.7'>
-                    The purchase window has ended. Press OK to reload the registration form and start again.
-                  </Text>
-                </Stack>
-                <Button
-                  minH='12'
-                  px={6}
-                  borderRadius='16px'
-                  color='white'
-                  bg={formAccent}
-                  _hover={{ bg: hexToRgba(formAccent, 0.9) }}
-                  _active={{ bg: hexToRgba(formAccent, 0.82) }}
-                  onClick={restartPurchaseFlow}
-                >
-                  OK
-                </Button>
-              </Stack>
-            </Box>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+      <PurchaseExpiredDialog
+        isOpen={purchaseTimerExpiryOpen}
+        accentColor={formAccent}
+        onRestart={restartPurchaseFlow}
+      />
 
       <Dialog.Root open={isPurchaseReviewOpen} onOpenChange={(details) => setIsPurchaseReviewOpen(details.open)} size='xl'>
         <Dialog.Backdrop backdropFilter='blur(8px)' bg='blackAlpha.650' />
