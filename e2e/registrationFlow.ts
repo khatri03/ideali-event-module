@@ -87,11 +87,8 @@ export async function fillStripeField(page: Page, namePattern: RegExp, value: st
 }
 
 export async function payWithCard(page: Page, card: { number: string; expiry: string; cvc: string }) {
-  const cardMethod = page.getByRole("button", { name: /Debit\/Credit Card/i }).first()
-  if (await cardMethod.isVisible().catch(() => false)) {
-    await cardMethod.click()
-  }
-
+  // Method selection now happens on the payment step before the review dialog opens, and the dialog
+  // is still open at this point - clicking a payment-method tile behind the backdrop is not possible.
   await expect
     .poll(async () => await fillStripeField(page, /card number/i, card.number), {
       timeout: 45_000,
