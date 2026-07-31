@@ -1,16 +1,13 @@
 import type { RefObject } from "react"
-import { Badge, Box, Button, HStack, Separator, Stack, Text } from "@chakra-ui/react"
-import { ChevronDown } from "lucide-react"
+import { Badge, Box, Button, HStack, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { CheckCircle2, Circle } from "lucide-react"
 import type { EventRegistrationTicket } from "@/api/events"
-import type { EventCartPaymentBreakdown, EventPaymentIntentResult } from "@/features/events/schemas/eventCart.schemas"
+import type { EventCartPaymentBreakdown } from "@/features/events/schemas/eventCart.schemas"
 import type { SelectedTicketSummaryItem } from "@/features/events/components/registration/types"
 import { PaymentStepSkeleton } from "@/features/events/components/registration/PaymentStep.skeleton"
-import { AnimatedPaymentMethodBody } from "@/features/events/components/registration/AnimatedPaymentMethodBody"
 import { CouponEntryCard } from "@/features/events/components/registration/CouponEntryCard"
 import { PaymentBreakdownTable } from "@/features/events/components/registration/PaymentBreakdownTable"
-import { StripeCardFields } from "@/features/events/components/registration/StripeCardFields"
 import { formatAmount, hexToRgba } from "@/features/events/utils/registrationFormat"
-import { isCardPaymentMethod } from "@/features/events/utils/ticketSelection"
 
 interface SessionGroup {
   sessionId: string
@@ -22,9 +19,7 @@ interface SessionGroup {
 interface PaymentStepProps {
   breakdowns: EventCartPaymentBreakdown[]
   selectedBreakdown: EventCartPaymentBreakdown | null
-  expandedPaymentMethod: string | null
   onSelectMethod: (paymentMethod: string) => void
-  onToggleExpanded: (paymentMethod: string) => void
   sessionGroups: SessionGroup[]
   subtotal: number
   ticketSubtotal: number
@@ -37,67 +32,52 @@ interface PaymentStepProps {
   formAccent: string
   isLoading: boolean
   hasVisiblePaymentMethods: boolean
-  paymentIntent: EventPaymentIntentResult | null
-  isConfirming: boolean
-  onPaid: () => void
   validationMessage: string | null
   methodValidationRef: RefObject<HTMLDivElement | null>
-  cardValidationRef: RefObject<HTMLDivElement | null>
   onChangeQuantity: (ticket: EventRegistrationTicket, quantity: number) => void
   onRequestRemove: (ticket: EventRegistrationTicket, ticketName: string) => void
 }
 
-function PaymentMethodRow({
+function PaymentMethodTile({
   breakdown,
   isSelected,
-  isExpanded,
   formAccent,
   currencyCode,
-  paymentIntent,
-  isConfirming,
-  onPaid,
   onSelect,
-  cardValidationRef,
 }: {
   breakdown: EventCartPaymentBreakdown
   isSelected: boolean
-  isExpanded: boolean
   formAccent: string
   currencyCode: string | null
-  paymentIntent: EventPaymentIntentResult | null
-  isConfirming: boolean
-  onPaid: () => void
   onSelect: () => void
-  cardValidationRef: RefObject<HTMLDivElement | null>
 }) {
-  const showCardEntry = isSelected && isCardPaymentMethod(breakdown.paymentMethod)
-
   return (
-    <Box
+    <Button
+      onClick={onSelect}
+      variant="ghost"
+      w="full"
+      h="auto"
+      px={4}
+      py={4}
+      minH="11"
+      cursor="pointer"
+      justifyContent="flex-start"
+      textAlign="left"
       borderWidth="1px"
       borderColor={isSelected ? formAccent : "gray.200"}
       borderRadius="18px"
       bg={isSelected ? hexToRgba(formAccent, 0.08) : "white"}
       boxShadow={isSelected ? `0 0 0 1px ${formAccent}` : "0 10px 24px rgba(15, 23, 42, 0.04)"}
-      overflow="hidden"
+      _hover={{ bg: isSelected ? hexToRgba(formAccent, 0.12) : "gray.50" }}
+      _active={{ bg: isSelected ? hexToRgba(formAccent, 0.16) : "gray.100" }}
     >
-      <Button
-        onClick={onSelect}
-        variant="ghost"
-        w="full"
-        h="auto"
-        px={4}
-        py={4}
-        minH="11"
-        cursor="pointer"
-        justifyContent="space-between"
-        alignItems="center"
-        textAlign="left"
-        borderRadius={0}
-        _hover={{ bg: isSelected ? hexToRgba(formAccent, 0.12) : "gray.50" }}
-        _active={{ bg: isSelected ? hexToRgba(formAccent, 0.16) : "gray.100" }}
-      >
-        <HStack gap={3} minW={0} flex="1" justify="space-between" align="center">
+      <HStack gap={3} w="full" justify="space-between" align="center">
+        <HStack gap={3} minW={0}>
+          {isSelected ? (
+            <CheckCircle2 size={22} color={formAccent} />
+          ) : (
+            <Circle size={22} color="var(--chakra-colors-gray-300)" />
+          )}
           <HStack gap={2} wrap="wrap" minW={0}>
             <Text fontWeight="800" color="gray.900">
               {breakdown.label}
@@ -108,64 +88,20 @@ function PaymentMethodRow({
               </Badge>
             ) : null}
           </HStack>
-
-          <HStack gap={2} flexShrink={0}>
-            <Text fontSize={{ base: "md", md: "lg" }} fontWeight="800" color="gray.900">
-              {formatAmount(breakdown.grandTotal, currencyCode)}
-            </Text>
-            <Box
-              display="inline-flex"
-              alignItems="center"
-              justifyContent="center"
-              w="28px"
-              h="28px"
-              borderRadius="full"
-              borderWidth="1px"
-              borderColor={isExpanded ? formAccent : "gray.300"}
-              bg={isExpanded ? hexToRgba(formAccent, 0.12) : "gray.50"}
-              color="gray.700"
-              flexShrink={0}
-            >
-              <Box transform={isExpanded ? "rotate(180deg)" : "rotate(0deg)"} transition="transform 0.2s ease">
-                <ChevronDown size={14} />
-              </Box>
-            </Box>
-          </HStack>
         </HStack>
-      </Button>
 
-      <Separator borderColor="gray.200" />
-
-      <AnimatedPaymentMethodBody isOpen={isExpanded}>
-        <Stack gap={4} px={4} py={4} ref={cardValidationRef}>
-          {showCardEntry && paymentIntent ? (
-            <StripeCardFields
-              intent={paymentIntent}
-              accentColor={formAccent}
-              isConfirming={isConfirming}
-              onPaid={onPaid}
-            />
-          ) : (
-            <Box borderWidth="1px" borderColor="gray.200" borderRadius="18px" bg="gray.50" p={4}>
-              <Text fontSize="sm" color="gray.600">
-                {showCardEntry
-                  ? "Review your purchase to continue to card entry."
-                  : "You will be prompted to complete this payment after reviewing your purchase."}
-              </Text>
-            </Box>
-          )}
-        </Stack>
-      </AnimatedPaymentMethodBody>
-    </Box>
+        <Text fontSize={{ base: "md", md: "lg" }} fontWeight="800" color="gray.900" flexShrink={0}>
+          {formatAmount(breakdown.grandTotal, currencyCode)}
+        </Text>
+      </HStack>
+    </Button>
   )
 }
 
 export function PaymentStep({
   breakdowns,
   selectedBreakdown,
-  expandedPaymentMethod,
   onSelectMethod,
-  onToggleExpanded,
   sessionGroups,
   subtotal,
   ticketSubtotal,
@@ -178,12 +114,8 @@ export function PaymentStep({
   formAccent,
   isLoading,
   hasVisiblePaymentMethods,
-  paymentIntent,
-  isConfirming,
-  onPaid,
   validationMessage,
   methodValidationRef,
-  cardValidationRef,
   onChangeQuantity,
   onRequestRemove,
 }: PaymentStepProps) {
@@ -225,26 +157,18 @@ export function PaymentStep({
             </Text>
           </Stack>
 
-          <Stack gap={3}>
+          <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
             {breakdowns.map((breakdown) => (
-              <PaymentMethodRow
+              <PaymentMethodTile
                 key={breakdown.paymentMethod}
                 breakdown={breakdown}
                 isSelected={selectedBreakdown?.paymentMethod === breakdown.paymentMethod}
-                isExpanded={expandedPaymentMethod === breakdown.paymentMethod}
                 formAccent={formAccent}
                 currencyCode={currencyCode}
-                paymentIntent={paymentIntent}
-                isConfirming={isConfirming}
-                onPaid={onPaid}
-                cardValidationRef={cardValidationRef}
-                onSelect={() => {
-                  onSelectMethod(breakdown.paymentMethod)
-                  onToggleExpanded(breakdown.paymentMethod)
-                }}
+                onSelect={() => onSelectMethod(breakdown.paymentMethod)}
               />
             ))}
-          </Stack>
+          </SimpleGrid>
 
           {validationMessage ? (
             <Box borderWidth="1px" borderColor="red.200" bg="red.50" borderRadius="18px" p={4}>

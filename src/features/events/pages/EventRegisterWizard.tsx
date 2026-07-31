@@ -154,7 +154,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     scrollTarget: purchaseReviewScrollTarget,
     buyerAttendeeRef: buyerAttendeeValidationRef,
     paymentMethodRef: paymentMethodValidationRef,
-    paymentCardRef: paymentCardValidationRef,
     termsRef: termsValidationRef,
     refundPolicyRef: refundPolicyValidationRef,
     applyIssues: applyPurchaseReviewIssues,
@@ -162,7 +161,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     clearBuyerAttendeeIssue: clearBuyerAttendeeValidation,
     reset: resetPurchaseReview,
   } = usePurchaseReviewValidation()
-  const [expandedPaymentMethod, setExpandedPaymentMethod] = useState<string | null>(null)
   const [purchaseTimerExpired, setPurchaseTimerExpired] = useState(false)
   const [purchaseTimerExpiryOpen, setPurchaseTimerExpiryOpen] = useState(false)
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
@@ -499,6 +497,15 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     openReview()
   }
 
+  /** A stale PaymentIntent from a previously selected method must never be handed to the wrong method's fields. */
+  function handleSelectPaymentMethod(method: string) {
+    if (method !== selectedPaymentMethod) {
+      setPaymentIntent(null)
+    }
+
+    setSelectedPaymentMethod(method)
+  }
+
   function handlePrimaryAction() {
     if (isFinalStep) {
       handlePurchaseReview()
@@ -565,7 +572,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       })
 
       setPaymentIntent(intent)
-      setIsPurchaseReviewOpen(false)
+
+      if (!isSelectedPaymentMethodCard) {
+        setIsPurchaseReviewOpen(false)
+      }
     } catch (error) {
       applyPurchaseReviewIssues([{ message: extractApiError(error), target: 'payment-method' }])
     }
@@ -579,6 +589,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     // The money has already moved, so the cart must stop being resumable whatever the confirm call
     // reports back - the webhook is what settles it from here.
     completeCart()
+    setIsPurchaseReviewOpen(false)
 
     try {
       const confirmation = await confirmCheckoutMutation.mutateAsync()
@@ -694,7 +705,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     const resetIndex = sessionsStepIndex >= 0 ? sessionsStepIndex : 0
     setSelectedTicketQuantities({})
     setSelectedPaymentMethod(null)
-    setExpandedPaymentMethod(null)
     resetBuyerAttendeeInfo()
     setTermsAccepted(false)
     setTermsOpen(false)
@@ -1013,11 +1023,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                               <PaymentStep
                                 breakdowns={paymentBreakdowns}
                                 selectedBreakdown={selectedPaymentBreakdown}
-                                expandedPaymentMethod={expandedPaymentMethod}
-                                onSelectMethod={setSelectedPaymentMethod}
-                                onToggleExpanded={(method) =>
-                                  setExpandedPaymentMethod((current) => (current === method ? null : method))
-                                }
+                                onSelectMethod={handleSelectPaymentMethod}
                                 sessionGroups={selectedTicketSummaryBySession}
                                 subtotal={paymentBreakdownSubtotal}
                                 ticketSubtotal={selectedTicketTotal}
@@ -1030,14 +1036,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                 formAccent={formAccent}
                                 isLoading={isCartSyncing}
                                 hasVisiblePaymentMethods={visiblePaymentMethods.length > 0}
-                                paymentIntent={paymentIntent}
-                                isConfirming={confirmCheckoutMutation.isPending}
-                                onPaid={handlePaymentSucceeded}
                                 validationMessage={
                                   isFinalStep && purchaseReviewAttempted ? purchaseReviewMessage : null
                                 }
                                 methodValidationRef={paymentMethodValidationRef}
-                                cardValidationRef={paymentCardValidationRef}
                                 onChangeQuantity={handleTicketQuantityChange}
                                 onRequestRemove={requestRemoveTicket}
                               />
@@ -1151,7 +1153,11 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
         validationMessage={purchaseReviewAttempted ? purchaseReviewMessage : null}
         ticketRows={purchaseReviewTicketRows}
         chargeRows={purchaseReviewChargeRows}
+        paymentIntent={paymentIntent}
+        isCreatingIntent={createPaymentIntentMutation.isPending}
+        isConfirming={confirmCheckoutMutation.isPending}
         onConfirm={handleConfirmPurchase}
+        onPaid={handlePaymentSucceeded}
       />
 
     </Box>
