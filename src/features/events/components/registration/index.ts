@@ -1,4 +1,3 @@
-export { AnimatedPaymentMethodBody } from "./AnimatedPaymentMethodBody"
 export { AttendeeSlotCard, AttendeeTicketCard } from "./AttendeeTicketCard"
 export { AutoImageCarousel } from "./AutoImageCarousel"
 export { BuyerAttendeeStep } from "./BuyerAttendeeStep"

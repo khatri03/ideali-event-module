@@ -1,6 +1,8 @@
 import { Box, Button, CloseButton, Dialog, Flex, Heading, SimpleGrid, Stack, Table, Text } from "@chakra-ui/react"
-import { CONTROL_BUTTON_OUTLINE } from "@/components/common/controlStyles"
-import type { EventCartPaymentCharge } from "@/features/events/schemas/eventCart.schemas"
+import { CONTROL_BUTTON_OUTLINE, CONTROL_BUTTON_PRIMARY } from "@/components/common/controlStyles"
+import type { EventCartPaymentCharge, EventPaymentIntentResult } from "@/features/events/schemas/eventCart.schemas"
+import { StripeCardFields } from "@/features/events/components/registration/StripeCardFields"
+import { StripeCardFieldsSkeleton } from "@/features/events/components/registration/StripeCardFields.skeleton"
 import { formatAmount, formatChargeRate, hexToRgba } from "@/features/events/utils/registrationFormat"
 
 export interface PurchaseReviewTicketRow {
@@ -24,7 +26,12 @@ interface PurchaseReviewDialogProps {
   validationMessage: string | null
   ticketRows: PurchaseReviewTicketRow[]
   chargeRows: EventCartPaymentCharge[]
+  /** Null until the PaymentIntent comes back; card fields mount against it once set. */
+  paymentIntent: EventPaymentIntentResult | null
+  isCreatingIntent: boolean
+  isConfirming: boolean
   onConfirm: () => void
+  onPaid: () => void
 }
 
 function ReviewFigure({ label, value }: { label: string; value: string }) {
@@ -159,8 +166,14 @@ export function PurchaseReviewDialog({
   validationMessage,
   ticketRows,
   chargeRows,
+  paymentIntent,
+  isCreatingIntent,
+  isConfirming,
   onConfirm,
+  onPaid,
 }: PurchaseReviewDialogProps) {
+  const showCardFields = isCardPayment && Boolean(paymentIntent)
+  const showConfirmButton = !isCardPayment || !paymentIntent
   return (
     <Dialog.Root open={isOpen} onOpenChange={(details) => onOpenChange(details.open)} size="xl">
       <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.650" />
@@ -197,11 +210,6 @@ export function PurchaseReviewDialog({
                   <ReviewFigure label="Total" value={formatAmount(selectedTicketTotal, currencyCode)} />
                   <ReviewFigure label="Payment method" value={paymentMethodLabel} />
                 </SimpleGrid>
-                {isCardPayment ? (
-                  <Text mt={3} fontSize="sm" color="gray.600">
-                    You will enter your card details securely on the next step.
-                  </Text>
-                ) : null}
               </Box>
 
               {validationMessage ? (
@@ -219,6 +227,19 @@ export function PurchaseReviewDialog({
               <ReviewSection title="Charges">
                 <ChargeList charges={chargeRows} currencyCode={currencyCode} />
               </ReviewSection>
+
+              {isCardPayment ? (
+                showCardFields && paymentIntent ? (
+                  <StripeCardFields
+                    intent={paymentIntent}
+                    accentColor={accentColor}
+                    isConfirming={isConfirming}
+                    onPaid={onPaid}
+                  />
+                ) : isCreatingIntent ? (
+                  <StripeCardFieldsSkeleton />
+                ) : null
+              ) : null}
             </Stack>
           </Box>
 
@@ -227,19 +248,23 @@ export function PurchaseReviewDialog({
               <Button {...CONTROL_BUTTON_OUTLINE} onClick={() => onOpenChange(false)}>
                 Back to payment
               </Button>
-              <Button
-                bg={accentColor}
-                color="white"
-                borderRadius="16px"
-                minH="11"
-                px={5}
-                _hover={{ bg: hexToRgba(accentColor, 0.88) }}
-                _active={{ bg: hexToRgba(accentColor, 0.95) }}
-                onClick={onConfirm}
-                disabled={Boolean(validationMessage)}
-              >
-                Confirm Purchase
-              </Button>
+              {showConfirmButton ? (
+                <Button
+                  {...CONTROL_BUTTON_PRIMARY}
+                  bg={accentColor}
+                  minH="11"
+                  px={5}
+                  cursor={isCreatingIntent ? "not-allowed" : "pointer"}
+                  _hover={{ bg: hexToRgba(accentColor, 0.88) }}
+                  _active={{ bg: hexToRgba(accentColor, 0.95) }}
+                  onClick={onConfirm}
+                  disabled={Boolean(validationMessage) || isCreatingIntent}
+                  loading={isCreatingIntent}
+                  loadingText="Preparing..."
+                >
+                  Confirm Purchase
+                </Button>
+              ) : null}
             </Flex>
           </Box>
         </Dialog.Content>
