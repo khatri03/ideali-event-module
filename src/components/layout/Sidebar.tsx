@@ -17,6 +17,7 @@ import {
   Megaphone,
   Users,
   FolderOpen,
+  Receipt,
 } from "lucide-react"
 import { logoutUser } from "@/api/auth"
 import { auth } from "@/lib/auth"
@@ -52,6 +53,12 @@ const mainNav: NavItem[] = [
   },
   { label: "Events", icon: <Zap size={17} />, path: APP_ROUTES.events, badge: "12", roles: ["Organizer", "Admin"] },
   { label: "Sessions", icon: <CalendarRange size={17} />, path: APP_ROUTES.sessionWizard.list, roles: ["Organizer", "Admin"] },
+  {
+    label: "Event Invoices",
+    icon: <Receipt size={17} />,
+    path: APP_ROUTES.eventInvoices.list,
+    roles: ["Organizer", "Admin"],
+  },
 ]
 
 const managementNav: NavItem[] = [

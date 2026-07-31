@@ -125,6 +125,11 @@ export const APP_ROUTES = {
   alertInbox: "/alerts",
   alertInboxDetailRoute: "/alerts/:recipientUniqueId",
   alertInboxDetail: (recipientUniqueId: string) => `/alerts/${recipientUniqueId}`,
+  eventInvoices: {
+    list: "/organizer/events/invoices",
+    detailRoute: "/organizer/events/invoices/:invoiceUniqueId",
+    detail: (invoiceUniqueId: string) => `/organizer/events/invoices/${invoiceUniqueId}`,
+  },
 } as const
 
 export const API_ROUTES = {
@@ -299,6 +304,9 @@ export const API_ROUTES = {
   alertInboxMarkAllSeen: "/api/alert-inbox/seen",
   alertInboxClaimInstantToasts: "/api/alert-inbox/instant-toasts/claim",
   alertInboxMarkRead: (recipientUniqueId: string) => `/api/alert-inbox/${recipientUniqueId}/read`,
+  eventInvoices: "/api/organizer/events/invoices/list",
+  eventInvoiceFilterOptions: "/api/organizer/events/invoices/filter-options",
+  eventInvoiceDetail: (invoiceUniqueId: string) => `/api/organizer/events/invoices/${invoiceUniqueId}`,
 } as const
 
 export const API_AUTH_ROUTES = {
