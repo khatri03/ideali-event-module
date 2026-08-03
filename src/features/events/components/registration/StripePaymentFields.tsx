@@ -13,6 +13,9 @@ interface StripePaymentFieldsProps {
  *
  * The name is the one exception: `billingDetails.name` is set to "never" so the Element leaves it
  * alone and the value here is handed to Stripe at confirm time instead.
+ *
+ * Link is turned off. Its inline signup asks the buyer to save their card with Stripe rather than
+ * with this event, which is a second, unrelated decision to make mid-checkout.
  */
 export function StripePaymentFields({ cardHolderName, onCardHolderNameChange }: StripePaymentFieldsProps) {
   return (
@@ -43,7 +46,13 @@ export function StripePaymentFields({ cardHolderName, onCardHolderNameChange }: 
           />
         </Box>
 
-        <PaymentElement options={{ layout: "tabs", fields: { billingDetails: { name: "never" } } }} />
+        <PaymentElement
+          options={{
+            layout: "tabs",
+            fields: { billingDetails: { name: "never" } },
+            wallets: { link: "never" },
+          }}
+        />
       </Stack>
     </Box>
   )
