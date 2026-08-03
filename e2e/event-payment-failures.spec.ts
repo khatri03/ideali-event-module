@@ -4,7 +4,7 @@ import {
   confirmPurchase,
   enterBuyerDetails,
   goToSessions,
-  payWithCard,
+  enterCardDetails,
   reachPaymentStep,
   selectFirstTicket,
 } from "./registrationFlow"
@@ -29,8 +29,8 @@ test("a declined card is reported and does not settle the order", async ({ page 
   })
 
   await reachPaymentStep(page, "playwright.declined@example.com")
+  await enterCardDetails(page, DECLINED_CARD)
   await confirmPurchase(page)
-  await payWithCard(page, DECLINED_CARD)
 
   // Stripe rejects the charge and the wizard has to surface it rather than appear to succeed.
   await expect(page.getByText(/declined/i).first()).toBeVisible({ timeout: 45_000 })
@@ -39,8 +39,9 @@ test("a declined card is reported and does not settle the order", async ({ page 
   // Nothing may be reported as settled to the backend on a decline.
   expect(confirmCalls).toEqual([])
 
-  // The buyer must be able to try again rather than be stranded.
-  await expect(page.getByRole("button", { name: /^Pay now$/i })).toBeEnabled({ timeout: 30_000 })
+  // A decline returns the buyer to the payment step, where the card fields are, so they can correct
+  // the card and go round again rather than be stranded in the dialog.
+  await expect(page.getByRole("button", { name: /Review Purchase/i })).toBeEnabled({ timeout: 30_000 })
 })
 
 test("a card that requires authentication completes after the challenge", async ({ page }) => {
@@ -52,8 +53,8 @@ test("a card that requires authentication completes after the challenge", async 
   })
 
   await reachPaymentStep(page, "playwright.threeds@example.com")
+  await enterCardDetails(page, AUTHENTICATION_CARD)
   await confirmPurchase(page)
-  await payWithCard(page, AUTHENTICATION_CARD)
 
   // Stripe renders the 3DS challenge in its own nested frame, where the approve action is "COMPLETE".
   // The button is invoked directly - a synthetic click into the nested frame does not land.

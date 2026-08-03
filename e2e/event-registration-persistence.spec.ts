@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test"
-import { confirmPurchase, enterBuyerDetails, goToSessions, payWithCard, reachPaymentStep, selectFirstTicket } from "./registrationFlow"
+import { confirmPurchase, enterBuyerDetails, goToSessions, enterCardDetails, reachPaymentStep, selectFirstTicket } from "./registrationFlow"
 
 /**
  * Proves the cart survives a page refresh. Before this the cart id lived only in React state, so a
@@ -84,8 +84,8 @@ test.describe("registration cart persistence", () => {
 
   test("a paid cart is not resumable after a refresh", async ({ page }) => {
     await reachPaymentStep(page, `playwright.persist.${Date.now()}@example.com`)
+    await enterCardDetails(page, TEST_CARD)
     await confirmPurchase(page)
-    await payWithCard(page, TEST_CARD)
 
     await expect(page.getByText(/Payment (complete|received)/i)).toBeVisible({ timeout: 60_000 })
     await expect.poll(async () => await readCartCookie(page), { timeout: 30_000 }).toBeNull()

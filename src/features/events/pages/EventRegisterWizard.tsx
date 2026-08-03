@@ -44,7 +44,8 @@ import { useSubmitLineAttendees, useSubmitLineAnswers } from '@/features/events/
 import { PurchaseTimerChip } from '@/features/events/components/registration/PurchaseTimerChip'
 import { CartSummaryPanel } from '@/features/events/components/registration/CartSummaryPanel'
 import { PaymentStep } from '@/features/events/components/registration/PaymentStep'
-import { PurchaseReviewDialog } from '@/features/events/components/registration/PurchaseReviewDialog'
+import { RegistrationPaymentConfirmation } from '@/features/events/components/registration/RegistrationPaymentConfirmation'
+import { RegistrationStripeProvider } from '@/features/events/components/registration/RegistrationStripeProvider'
 import { QuestionnaireStep } from '@/features/events/components/registration/QuestionnaireStep'
 import {
   BuyerDetailsMissingDialog,
@@ -52,7 +53,7 @@ import {
   ContentDialog,
   PurchaseExpiredDialog,
 } from '@/features/events/components/registration/RegistrationDialogs'
-import type { EventPaymentIntentResult, PaymentProduct } from '@/features/events/schemas/eventCart.schemas'
+import type { PaymentProduct } from '@/features/events/schemas/eventCart.schemas'
 import { extractApiError } from '@/utils/errors'
 
 import { EventHeroCard } from '@/features/events/components/registration/EventHeroCard'
@@ -165,7 +166,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [purchaseTimerExpiryOpen, setPurchaseTimerExpiryOpen] = useState(false)
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
   const [pendingDeleteAction, setPendingDeleteAction] = useState<PendingDeleteAction | null>(null)
-  const [paymentIntent, setPaymentIntent] = useState<EventPaymentIntentResult | null>(null)
+  const [cardHolderName, setCardHolderName] = useState('')
   const descriptionQuery = useQuery({
     queryKey: ['event-registration', event.uniqueId, 'description'],
     queryFn: () => fetchEventRegistrationDescription(event.uniqueId),
@@ -468,10 +469,12 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       })
     }
 
-    // Card field completeness is Stripe's to enforce at confirm time; pre-checking it here only
-    // duplicated the check and drifted from what Stripe actually accepts.
+    // The Payment Element owns every card field it renders, so its own submit() is what reports an
+    // incomplete card. The name is ours to check - the Element is told not to collect it.
     if (!selectedPaymentBreakdown) {
       issues.push({ message: 'Select a payment method.', target: 'payment-method' })
+    } else if (isSelectedPaymentMethodCard && !cardHolderName.trim()) {
+      issues.push({ message: 'Enter the cardholder name.', target: 'payment-method' })
     }
 
     if (currentEvent.termsConditions && !termsAccepted) {
@@ -497,10 +500,11 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     openReview()
   }
 
-  /** A stale PaymentIntent from a previously selected method must never be handed to the wrong method's fields. */
   function handleSelectPaymentMethod(method: string) {
+    // A complaint raised against the previous method - a decline, a missing field - no longer
+    // applies once the buyer switches to a different one.
     if (method !== selectedPaymentMethod) {
-      setPaymentIntent(null)
+      resetPurchaseReview()
     }
 
     setSelectedPaymentMethod(method)
@@ -516,20 +520,19 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   }
 
   /**
-   * Persists attendees and questionnaire answers against their cart lines, then asks the server for
-   * a PaymentIntent. The card fields mount against the returned client secret; nothing is charged
-   * until the buyer submits them.
+   * Validates the review and writes attendees and questionnaire answers against their cart lines.
+   * Returns false when the purchase must not go ahead, leaving the complaint on screen.
    */
-  async function handleConfirmPurchase() {
+  async function preparePurchaseAsync() {
     const issues = getPurchaseReviewIssues()
 
     if (issues.length > 0) {
       applyPurchaseReviewIssues(issues)
-      return
+      return false
     }
 
     if (!cart || !selectedPaymentBreakdown) {
-      return
+      return false
     }
 
     try {
@@ -565,20 +568,34 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
         }),
       )
 
-      const intent = await createPaymentIntentMutation.mutateAsync({
-        paymentMethod: selectedPaymentBreakdown.paymentMethod as PaymentProduct,
-        buyerName: `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim() || null,
-        buyerEmail: buyerInfo.email || null,
-      })
-
-      setPaymentIntent(intent)
-
-      if (!isSelectedPaymentMethodCard) {
-        setIsPurchaseReviewOpen(false)
-      }
+      return true
     } catch (error) {
       applyPurchaseReviewIssues([{ message: extractApiError(error), target: 'payment-method' }])
+      return false
     }
+  }
+
+  /**
+   * Mints the PaymentIntent for the chosen method. Called only once the buyer has confirmed, so an
+   * abandoned review never leaves a half-open payment attached to the cart.
+   */
+  async function createPaymentIntentAsync() {
+    if (!selectedPaymentBreakdown) {
+      throw new Error('Select a payment method.')
+    }
+
+    const intent = await createPaymentIntentMutation.mutateAsync({
+      paymentMethod: selectedPaymentBreakdown.paymentMethod as PaymentProduct,
+      buyerName: `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim() || null,
+      buyerEmail: buyerInfo.email || null,
+    })
+
+    return intent.clientSecret
+  }
+
+  /** Stripe rejected the payment, so the buyer goes back to the fields to correct it. */
+  function handlePaymentFailed(message: string) {
+    applyPurchaseReviewIssues([{ message, target: 'payment-method' }])
   }
 
   /**
@@ -711,9 +728,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setRefundPolicyAccepted(false)
     setRefundPolicyOpen(false)
     setAppliedCouponCode(null)
+    setCardHolderName('')
     resetPurchaseReview()
     setPurchaseTimerExpired(false)
-    setPaymentIntent(null)
     resetAnswers()
     resetCart()
     setIsSummaryOpen(false)
@@ -774,7 +791,12 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     sessions.length > 0 && expandedSessionIds.length === sessions.length
 
   return (
-    <Box minH='100dvh' bg={accentBackground} color='gray.900'>
+    <RegistrationStripeProvider
+      paymentAccountUniqueId={event.paymentAccountUniqueId}
+      amount={selectedPaymentBreakdown?.grandTotal ?? 0}
+      currencyCode={currentEvent.paymentAccountCurrency}
+    >
+      <Box minH='100dvh' bg={accentBackground} color='gray.900'>
       <Flex minH='100dvh' align='center' justify='center' px={{ base: 3, md: 6, xl: 8 }} py={{ base: 5, md: 8 }}>
         <Container maxW='8xl' p={0}>
           <Stack gap={6}>
@@ -1024,6 +1046,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                 breakdowns={paymentBreakdowns}
                                 selectedBreakdown={selectedPaymentBreakdown}
                                 onSelectMethod={handleSelectPaymentMethod}
+                                isCardMethodSelected={isSelectedPaymentMethodCard}
+                                cardHolderName={cardHolderName}
+                                onCardHolderNameChange={setCardHolderName}
                                 sessionGroups={selectedTicketSummaryBySession}
                                 subtotal={paymentBreakdownSubtotal}
                                 ticketSubtotal={selectedTicketTotal}
@@ -1140,7 +1165,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
         onRestart={restartPurchaseFlow}
       />
 
-      <PurchaseReviewDialog
+      <RegistrationPaymentConfirmation
         isOpen={isPurchaseReviewOpen}
         onOpenChange={setIsPurchaseReviewOpen}
         eventTitle={currentEvent.title}
@@ -1150,17 +1175,19 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
         selectedTicketTotal={selectedTicketTotal}
         paymentMethodLabel={selectedPaymentMethodLabel}
         isCardPayment={isSelectedPaymentMethodCard}
+        cardHolderName={cardHolderName}
         validationMessage={purchaseReviewAttempted ? purchaseReviewMessage : null}
         ticketRows={purchaseReviewTicketRows}
         chargeRows={purchaseReviewChargeRows}
-        paymentIntent={paymentIntent}
-        isCreatingIntent={createPaymentIntentMutation.isPending}
-        isConfirming={confirmCheckoutMutation.isPending}
-        onConfirm={handleConfirmPurchase}
+        isBusy={createPaymentIntentMutation.isPending || confirmCheckoutMutation.isPending}
+        onPrepare={preparePurchaseAsync}
+        onCreateIntent={createPaymentIntentAsync}
         onPaid={handlePaymentSucceeded}
+        onFailed={handlePaymentFailed}
       />
 
-    </Box>
+      </Box>
+    </RegistrationStripeProvider>
   )
 }
 
