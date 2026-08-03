@@ -26,6 +26,7 @@ export default defineConfig({
   test: {
     environment: "happy-dom",
     include: ["src/**/*.test.{ts,tsx}"],
+    setupFiles: ["./src/test/setup.ts"],
     environmentOptions: {
       // A real browser never loads sub-resources out of a DOMParser document; happy-dom will try,
       // so hostile markup under test must not be able to reach the network.

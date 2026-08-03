@@ -1,11 +1,19 @@
-import { Badge, Box, Heading, HStack, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { useState } from "react"
+import { Badge, Box, Button, Heading, HStack, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { format } from "date-fns"
-import type { EventInvoiceLineItem } from "@/api/eventInvoices"
+import { Send } from "lucide-react"
+import { ConfirmDialog } from "@/features/custom-lists"
+import { extractApiError } from "@/utils/errors"
+import type { EventInvoiceLineItem, EventInvoiceTicket } from "@/api/eventInvoices"
+import { useResendEventInvoice, useResendEventInvoiceTicket } from "../hooks/useEventInvoices"
 
 interface EventInvoiceLineItemsSectionProps {
+  invoiceUniqueId: string
   lineItems: EventInvoiceLineItem[]
   currencySymbol: string
 }
+
+type ResendTarget = { kind: "invoice" } | { kind: "ticket"; ticket: EventInvoiceTicket }
 
 const TICKET_STATUS_COLOR: Record<string, string> = {
   Active: "green",
@@ -24,7 +32,15 @@ function formatTimestamp(value: string | null) {
   return Number.isNaN(parsed.getTime()) ? null : format(parsed, "MMM d, yyyy h:mm a")
 }
 
-function LineItemCard({ item, currencySymbol }: { item: EventInvoiceLineItem; currencySymbol: string }) {
+function LineItemCard({
+  item,
+  currencySymbol,
+  onResendTicket,
+}: {
+  item: EventInvoiceLineItem
+  currencySymbol: string
+  onResendTicket: (ticket: EventInvoiceTicket) => void
+}) {
   return (
     <Box border="1px solid" borderColor="gray.200" borderRadius="16px" overflow="hidden">
       <Box px={4} py={3} bg="gray.50" borderBottomWidth="1px" borderBottomColor="gray.200">
@@ -95,6 +111,19 @@ function LineItemCard({ item, currencySymbol }: { item: EventInvoiceLineItem; cu
                       Checked in {formatTimestamp(ticket.checkedInAtUtc)}
                     </Text>
                   ) : null}
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    colorPalette="brand"
+                    borderRadius="10px"
+                    minH="11"
+                    px={2}
+                    cursor="pointer"
+                    onClick={() => onResendTicket(ticket)}
+                  >
+                    <Send size={14} />
+                    Resend
+                  </Button>
                 </HStack>
               ))
             )}
@@ -105,12 +134,50 @@ function LineItemCard({ item, currencySymbol }: { item: EventInvoiceLineItem; cu
   )
 }
 
-export function EventInvoiceLineItemsSection({ lineItems, currencySymbol }: EventInvoiceLineItemsSectionProps) {
+export function EventInvoiceLineItemsSection({ invoiceUniqueId, lineItems, currencySymbol }: EventInvoiceLineItemsSectionProps) {
+  const [resendTarget, setResendTarget] = useState<ResendTarget | null>(null)
+  const resendInvoiceMutation = useResendEventInvoice(invoiceUniqueId)
+  const resendTicketMutation = useResendEventInvoiceTicket(invoiceUniqueId)
+
+  const hasAnyTicket = lineItems.some((item) => item.tickets.length > 0)
+
+  async function handleConfirmResend() {
+    try {
+      if (resendTarget?.kind === "invoice") {
+        await resendInvoiceMutation.mutateAsync()
+      } else if (resendTarget?.kind === "ticket") {
+        await resendTicketMutation.mutateAsync(resendTarget.ticket.ticketUniqueId)
+      }
+      setResendTarget(null)
+    } catch {
+      // Surfaced via the mutation's own error state below - keep the dialog open so it stays visible.
+    }
+  }
+
+  const activeMutation = resendTarget?.kind === "ticket" ? resendTicketMutation : resendInvoiceMutation
+
   return (
     <Box border="1px solid" borderColor="border.subtle" borderRadius="20px" bg="card.bg" boxShadow="card" p={{ base: 4, md: 6 }}>
-      <Heading fontSize="lg" fontWeight="800" color="gray.900" mb={4}>
-        Ticket line items
-      </Heading>
+      <HStack justify="space-between" wrap="wrap" gap={2} mb={4}>
+        <Heading fontSize="lg" fontWeight="800" color="gray.900">
+          Ticket line items
+        </Heading>
+        {hasAnyTicket ? (
+          <Button
+            size="sm"
+            variant="outline"
+            colorPalette="brand"
+            borderRadius="12px"
+            minH="11"
+            px={4}
+            cursor="pointer"
+            onClick={() => setResendTarget({ kind: "invoice" })}
+          >
+            <Send size={14} />
+            Resend all tickets
+          </Button>
+        ) : null}
+      </HStack>
 
       {lineItems.length === 0 ? (
         <Text fontSize="sm" color="gray.600">
@@ -119,10 +186,37 @@ export function EventInvoiceLineItemsSection({ lineItems, currencySymbol }: Even
       ) : (
         <Stack gap={4}>
           {lineItems.map((item) => (
-            <LineItemCard key={item.invoiceItemUniqueId} item={item} currencySymbol={currencySymbol} />
+            <LineItemCard
+              key={item.invoiceItemUniqueId}
+              item={item}
+              currencySymbol={currencySymbol}
+              onResendTicket={(ticket) => setResendTarget({ kind: "ticket", ticket })}
+            />
           ))}
         </Stack>
       )}
+
+      {resendTarget ? (
+        <ConfirmDialog
+          title={resendTarget.kind === "invoice" ? "Resend all tickets" : "Resend ticket"}
+          description={
+            resendTarget.kind === "invoice" ? (
+              <Text>Re-email every ticket on this order to the buyer and any attendees with their own address?</Text>
+            ) : (
+              <Text>
+                Re-email ticket <strong>{resendTarget.ticket.ticketCode}</strong>?
+              </Text>
+            )
+          }
+          confirmLabel={resendTarget.kind === "invoice" ? "Resend all" : "Resend ticket"}
+          loadingLabel="Sending..."
+          tone="primary"
+          errorMessage={activeMutation.error ? extractApiError(activeMutation.error) : null}
+          isPending={activeMutation.isPending}
+          onConfirm={handleConfirmResend}
+          onClose={() => setResendTarget(null)}
+        />
+      ) : null}
     </Box>
   )
 }
