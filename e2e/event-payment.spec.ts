@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test"
-import { confirmPurchase, payWithCard, reachPaymentStep } from "./registrationFlow"
+import { confirmPurchase, enterCardDetails, reachPaymentStep } from "./registrationFlow"
 
 /**
- * Completes a real card payment against Stripe test mode: reviews the purchase, lets the server
- * mint a PaymentIntent, fills Stripe's hosted card fields and confirms. The webhook is authoritative
- * for settlement, so the client-side confirm is only expected to report the payment as received.
+ * Completes a real card payment against Stripe test mode: fills Stripe's hosted card fields on the
+ * payment step, then confirms, which mints the PaymentIntent and charges it. The webhook is
+ * authoritative for settlement, so the client-side confirm only reports the payment as received.
  */
 
 /** Stripe's standard test card. */
@@ -21,16 +21,18 @@ test("a card payment is created, confirmed with Stripe, and reported back", asyn
   })
 
   await reachPaymentStep(page, "playwright.payer@example.com")
+  await enterCardDetails(page, TEST_CARD)
 
-  // Confirming the review is what asks the server for a PaymentIntent.
+  // No PaymentIntent may exist until the buyer commits.
+  expect(intentCalls).toEqual([])
+
+  // Confirming the review mints the PaymentIntent and charges it.
   await confirmPurchase(page)
 
   await expect
     .poll(() => intentCalls.length, { timeout: 45_000, message: "no PaymentIntent was created" })
     .toBeGreaterThan(0)
   expect(intentCalls.every((status) => status === 200)).toBe(true)
-
-  await payWithCard(page, TEST_CARD)
 
   // Stripe confirms, then the client reports back. The webhook does the real settlement.
   await expect

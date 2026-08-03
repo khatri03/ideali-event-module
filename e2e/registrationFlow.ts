@@ -2,13 +2,25 @@ import { expect, type Page } from "@playwright/test"
 
 /** Shared drive-the-wizard steps, so each spec only expresses what it is actually asserting. */
 
-export const EVENT_UNIQUE_ID = "A974BD36-29A8-47E8-9C00-6754FB83031B"
+export const EVENT_UNIQUE_ID = "d1e9ef9e-3ff0-4542-9869-629fda7afb8a"
 export const REGISTER_PATH = `/events/${EVENT_UNIQUE_ID}/register`
+
+/**
+ * Stripe.js floats a developer tools frame over the page when it runs against test keys. Buyers
+ * never see it, but it covers the wizard footer and swallows clicks meant for the primary action.
+ */
+async function hideStripeDeveloperTools(page: Page) {
+  await page.addStyleTag({
+    content:
+      'iframe[title="Stripe developer tools frame"] { pointer-events: none !important; visibility: hidden !important; width: 0 !important; height: 0 !important; }',
+  })
+}
 
 /** The wizard opens on Description; Sessions is the next step. */
 export async function goToSessions(page: Page) {
   await page.goto(REGISTER_PATH)
   await expect(page.getByRole("heading", { name: /APPNA/i }).first()).toBeVisible({ timeout: 30_000 })
+  await hideStripeDeveloperTools(page)
 
   await page.getByRole("button", { name: /^Continue$/ }).click()
   await expect(page.getByText(/Friday Dinner/i).first()).toBeVisible({ timeout: 30_000 })
@@ -59,21 +71,9 @@ export async function advanceToPaymentStep(page: Page) {
   await expect(page.getByText(/Select payment method/i)).toBeVisible({ timeout: 30_000 })
 }
 
-/** Opens the review dialog and confirms, which is what asks the server for a PaymentIntent. */
-export async function confirmPurchase(page: Page) {
-  await page.getByRole("button", { name: /Review Purchase/i }).click()
-  const confirmButton = page.getByRole("button", { name: /Confirm Purchase/i })
-  await expect(confirmButton).toBeVisible({ timeout: 30_000 })
-  await confirmButton.click()
-
-  // The dialog animates out, and anything clicked while it is still on screen hits the dialog
-  // instead of the page underneath.
-  await expect(confirmButton).toHaveCount(0, { timeout: 30_000 })
-}
-
 /**
- * Each Stripe Element lives in its own cross-origin iframe and exposes an aria-label rather than a
- * placeholder, so fields are matched on their accessible name.
+ * The Payment Element lives in a cross-origin iframe and exposes aria-labels rather than
+ * placeholders, so fields are matched on their accessible name across every frame on the page.
  */
 export async function fillStripeField(page: Page, namePattern: RegExp, value: string) {
   for (const frame of page.frames()) {
@@ -86,24 +86,36 @@ export async function fillStripeField(page: Page, namePattern: RegExp, value: st
   return false
 }
 
-export async function payWithCard(page: Page, card: { number: string; expiry: string; cvc: string }) {
-  // Method selection now happens on the payment step before the review dialog opens, and the dialog
-  // is still open at this point - clicking a payment-method tile behind the backdrop is not possible.
+/**
+ * Card details are collected on the payment step itself, before any PaymentIntent exists - picking
+ * the card method is all it takes to mount the Payment Element.
+ */
+export async function enterCardDetails(page: Page, card: { number: string; expiry: string; cvc: string }) {
+  await page.getByRole("button", { name: /Debit\/Credit Card/i }).first().click()
+
   await expect
     .poll(async () => await fillStripeField(page, /card number/i, card.number), {
       timeout: 45_000,
-      message: "Stripe card number field never mounted",
+      message: "the Stripe Payment Element never mounted",
     })
     .toBe(true)
 
-  await fillStripeField(page, /expiration date/i, card.expiry)
-  await fillStripeField(page, /CVC/i, card.cvc)
+  await fillStripeField(page, /expiration date|expiry/i, card.expiry)
+  await fillStripeField(page, /security code|CVC|CVV/i, card.cvc)
 
+  // The Payment Element only asks for a postal code when the account's country requires one.
+  await fillStripeField(page, /postal code|ZIP/i, "M5H 2N2")
+
+  // The name is collected outside the Element, so it is an ordinary input on the page.
   await page.getByPlaceholder(/Enter cardholder name/i).fill("Playwright Payer")
+}
 
-  // A plain click, deliberately: the docked cart summary used to cover this button, and this is what
-  // proves the page still reserves room for it.
-  await page.getByRole("button", { name: /^Pay now$/i }).click()
+/** Opens the review dialog and confirms, which mints the PaymentIntent and charges it in one go. */
+export async function confirmPurchase(page: Page) {
+  await page.getByRole("button", { name: /Review Purchase/i }).click()
+  const confirmButton = page.getByRole("button", { name: /Confirm (Purchase|& Pay)/i })
+  await expect(confirmButton).toBeVisible({ timeout: 30_000 })
+  await confirmButton.click()
 }
 
 /** Runs the wizard from a cold page load up to a filled-in, ready-to-pay card form. */

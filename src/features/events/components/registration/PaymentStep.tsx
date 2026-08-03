@@ -7,6 +7,7 @@ import type { SelectedTicketSummaryItem } from "@/features/events/components/reg
 import { PaymentStepSkeleton } from "@/features/events/components/registration/PaymentStep.skeleton"
 import { CouponEntryCard } from "@/features/events/components/registration/CouponEntryCard"
 import { PaymentBreakdownTable } from "@/features/events/components/registration/PaymentBreakdownTable"
+import { StripePaymentFields } from "@/features/events/components/registration/StripePaymentFields"
 import { formatAmount, hexToRgba } from "@/features/events/utils/registrationFormat"
 
 interface SessionGroup {
@@ -36,6 +37,9 @@ interface PaymentStepProps {
   methodValidationRef: RefObject<HTMLDivElement | null>
   onChangeQuantity: (ticket: EventRegistrationTicket, quantity: number) => void
   onRequestRemove: (ticket: EventRegistrationTicket, ticketName: string) => void
+  isCardMethodSelected: boolean
+  cardHolderName: string
+  onCardHolderNameChange: (value: string) => void
 }
 
 function PaymentMethodTile({
@@ -118,6 +122,9 @@ export function PaymentStep({
   methodValidationRef,
   onChangeQuantity,
   onRequestRemove,
+  isCardMethodSelected,
+  cardHolderName,
+  onCardHolderNameChange,
 }: PaymentStepProps) {
   return (
     <Stack gap={4}>
@@ -169,6 +176,13 @@ export function PaymentStep({
               />
             ))}
           </SimpleGrid>
+
+          {isCardMethodSelected ? (
+            <StripePaymentFields
+              cardHolderName={cardHolderName}
+              onCardHolderNameChange={onCardHolderNameChange}
+            />
+          ) : null}
 
           {validationMessage ? (
             <Box borderWidth="1px" borderColor="red.200" bg="red.50" borderRadius="18px" p={4}>

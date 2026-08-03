@@ -1,13 +1,12 @@
 import { expect, test, type Page } from "@playwright/test"
 
+import { REGISTER_PATH } from "./registrationFlow"
+
 /**
  * Drives the rewritten registration wizard against a running API. Verifies the parts only a real
  * browser can prove: the server opening and pricing the cart, the countdown running against the
  * cart's own deadline, and the payment step rendering charges the client never computed.
  */
-
-const EVENT_UNIQUE_ID = "A974BD36-29A8-47E8-9C00-6754FB83031B"
-const REGISTER_PATH = `/events/${EVENT_UNIQUE_ID}/register`
 
 /** The wizard opens on Description; Sessions is the next step. */
 async function goToSessions(page: Page) {
