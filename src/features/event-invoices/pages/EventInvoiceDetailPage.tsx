@@ -42,7 +42,11 @@ export default function EventInvoiceDetailPage() {
       ) : (
         <>
           <EventInvoiceSummaryCard invoice={invoice} />
-          <EventInvoiceLineItemsSection lineItems={invoice.lineItems} currencySymbol={invoice.currencySymbol} />
+          <EventInvoiceLineItemsSection
+            invoiceUniqueId={invoice.invoiceUniqueId}
+            lineItems={invoice.lineItems}
+            currencySymbol={invoice.currencySymbol}
+          />
           <EventInvoicePaymentHistorySection payments={invoice.payments} currencySymbol={invoice.currencySymbol} />
         </>
       )}

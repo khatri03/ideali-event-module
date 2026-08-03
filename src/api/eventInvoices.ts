@@ -487,3 +487,11 @@ export async function fetchEventInvoiceDetail(invoiceUniqueId: string): Promise<
   const parsed = detailSchema.parse(parseServicePayload(response.data))
   return normalizeDetail(parsed)
 }
+
+export async function resendEventInvoice(invoiceUniqueId: string): Promise<void> {
+  await client.post(API_ROUTES.eventInvoiceResend(invoiceUniqueId))
+}
+
+export async function resendEventInvoiceTicket(invoiceUniqueId: string, ticketUniqueId: string): Promise<void> {
+  await client.post(API_ROUTES.eventInvoiceTicketResend(invoiceUniqueId, ticketUniqueId))
+}

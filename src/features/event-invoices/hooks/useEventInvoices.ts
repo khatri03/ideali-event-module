@@ -1,12 +1,16 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   fetchEventInvoiceDetail,
   fetchEventInvoiceFilterOptions,
   fetchEventInvoices,
+  resendEventInvoice,
+  resendEventInvoiceTicket,
   type EventInvoiceFilters,
   type EventInvoiceSortBy,
   type EventInvoiceSortOrder,
 } from "@/api/eventInvoices"
+import { toaster } from "@/lib/toaster"
+import { extractApiError } from "@/utils/errors"
 
 export function useEventInvoices(
   filters: EventInvoiceFilters,
@@ -34,5 +38,25 @@ export function useEventInvoiceDetail(invoiceUniqueId: string | undefined) {
     queryKey: ["event-invoice-detail", invoiceUniqueId],
     queryFn: () => fetchEventInvoiceDetail(invoiceUniqueId!),
     enabled: Boolean(invoiceUniqueId),
+  })
+}
+
+export function useResendEventInvoice(invoiceUniqueId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => resendEventInvoice(invoiceUniqueId),
+    onSuccess: () => toaster.create({ type: "success", title: "Tickets queued for resend." }),
+    onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] }),
+  })
+}
+
+export function useResendEventInvoiceTicket(invoiceUniqueId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (ticketUniqueId: string) => resendEventInvoiceTicket(invoiceUniqueId, ticketUniqueId),
+    onSuccess: () => toaster.create({ type: "success", title: "Ticket queued for resend." }),
+    onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] }),
   })
 }

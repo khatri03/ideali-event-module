@@ -307,6 +307,9 @@ export const API_ROUTES = {
   eventInvoices: "/api/organizer/events/invoices/list",
   eventInvoiceFilterOptions: "/api/organizer/events/invoices/filter-options",
   eventInvoiceDetail: (invoiceUniqueId: string) => `/api/organizer/events/invoices/${invoiceUniqueId}`,
+  eventInvoiceResend: (invoiceUniqueId: string) => `/api/organizer/events/invoices/${invoiceUniqueId}/resend`,
+  eventInvoiceTicketResend: (invoiceUniqueId: string, ticketUniqueId: string) =>
+    `/api/organizer/events/invoices/${invoiceUniqueId}/tickets/${ticketUniqueId}/resend`,
   stripePublicCredentials: (paymentAccountUniqueId: string) =>
     `/api/public/stripe/${paymentAccountUniqueId}/credentials`,
 } as const
