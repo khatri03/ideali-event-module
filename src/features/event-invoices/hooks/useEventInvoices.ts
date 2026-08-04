@@ -23,6 +23,10 @@ export function useEventInvoices(
     queryKey: ["event-invoices", filters, page, pageSize, sortBy, sortOrder],
     queryFn: () => fetchEventInvoices(filters, page, pageSize, sortBy, sortOrder),
     placeholderData: keepPreviousData,
+    // Payment status flips from checkout and Stripe webhooks while the organizer is on the page, so
+    // coming back to the list always asks the server. The global staleTime would otherwise serve a
+    // two-minute-old view of who has paid.
+    refetchOnMount: "always",
   })
 }
 
@@ -38,6 +42,7 @@ export function useEventInvoiceDetail(invoiceUniqueId: string | undefined) {
     queryKey: ["event-invoice-detail", invoiceUniqueId],
     queryFn: () => fetchEventInvoiceDetail(invoiceUniqueId!),
     enabled: Boolean(invoiceUniqueId),
+    refetchOnMount: "always",
   })
 }
 
