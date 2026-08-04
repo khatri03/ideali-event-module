@@ -19,6 +19,8 @@ export interface BuyerIdentity {
 interface RegistrationCartState {
   cart: EventCart | null
   price: EventCartPrice | null
+  /** Only ever the code the server actually priced, so the chip cannot claim a rejected one. */
+  appliedCouponCode: string | null
   isSyncing: boolean
   error: string | null
 }
@@ -26,6 +28,7 @@ interface RegistrationCartState {
 const EMPTY_STATE: RegistrationCartState = {
   cart: null,
   price: null,
+  appliedCouponCode: null,
   isSyncing: false,
   error: null,
 }
@@ -238,12 +241,26 @@ export function useRegistrationCart(eventUniqueId: string) {
 
   const applyCoupon = useCallback(
     (couponCode: string | null) => {
-      couponCodeRef.current = couponCode?.trim() || null
+      const nextCode = couponCode?.trim() || null
+      const previousCode = couponCodeRef.current
+      couponCodeRef.current = nextCode
 
       return enqueue(async () => {
         const cart = cartRef.current
-        if (!cart) return
-        await repriceCart(cart.cartUniqueId)
+
+        if (cart) {
+          try {
+            await repriceCart(cart.cartUniqueId)
+          } catch (error) {
+            // The code rides on every later reprice, so a rejected one left in place would fail the
+            // next quantity change too - and the pricing transaction rolled back, so the cart still
+            // holds whatever it had before.
+            couponCodeRef.current = previousCode
+            throw error
+          }
+        }
+
+        setState((current) => ({ ...current, appliedCouponCode: nextCode }))
       })
     },
     [enqueue, repriceCart],
@@ -278,6 +295,7 @@ export function useRegistrationCart(eventUniqueId: string) {
   return {
     cart: state.cart,
     price: state.price,
+    appliedCouponCode: state.appliedCouponCode,
     isSyncing: state.isSyncing,
     error: state.error,
     /** Absolute UTC deadline the hold expires at. The UI only counts down to it. */

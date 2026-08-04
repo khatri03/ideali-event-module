@@ -22,7 +22,7 @@ interface PaymentStepProps {
   selectedBreakdown: EventCartPaymentBreakdown | null
   onSelectMethod: (paymentMethod: string) => void
   sessionGroups: SessionGroup[]
-  subtotal: number
+  grossSubtotal: number
   ticketSubtotal: number
   discountAmount: number
   appliedCouponCode: string | null
@@ -107,7 +107,7 @@ export function PaymentStep({
   selectedBreakdown,
   onSelectMethod,
   sessionGroups,
-  subtotal,
+  grossSubtotal,
   ticketSubtotal,
   discountAmount,
   appliedCouponCode,
@@ -196,7 +196,7 @@ export function PaymentStep({
             <PaymentBreakdownTable
               breakdown={selectedBreakdown}
               sessionGroups={sessionGroups}
-              subtotal={subtotal}
+              grossSubtotal={grossSubtotal}
               discountAmount={discountAmount}
               currencyCode={currencyCode}
               onChangeQuantity={onChangeQuantity}

@@ -58,16 +58,15 @@ import { extractApiError } from '@/utils/errors'
 import { isRoutableEmail } from '@/utils/email'
 
 import { EventHeroCard } from '@/features/events/components/registration/EventHeroCard'
-import { RegistrationTermsCard } from '@/features/events/components/registration/RegistrationTermsCard'
-import { RegistrationRefundPolicyCard } from '@/features/events/components/registration/RegistrationRefundPolicyCard'
+import { RegistrationAcknowledgementCard } from '@/features/events/components/registration/RegistrationAcknowledgementCard'
 import { BuyerAttendeeStep } from '@/features/events/components/registration/BuyerAttendeeStep'
 import { RichTextBlock, SupportCard } from '@/features/events/components/registration/SupportCard'
 import { SessionsStep } from '@/features/events/components/registration/SessionsStep'
 import type {
-  BuyerAttendeeInfoState,
   EventRegisterWizardEvent,
   PendingDeleteAction,
   PurchaseReviewIssue,
+  PurchaseReviewValidationTarget,
   SelectedTicketSummaryItem,
   WizardTabId,
 } from '@/features/events/components/registration/types'
@@ -130,11 +129,11 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     restoredCart,
     syncTicketSelection,
     setBuyerIdentity,
+    appliedCouponCode,
     applyCoupon,
     resetCart,
     completeCart,
   } = useRegistrationCart(event.uniqueId)
-  const [appliedCouponCode, setAppliedCouponCode] = useState<string | null>(null)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [termsOpen, setTermsOpen] = useState(false)
   const [refundPolicyAccepted, setRefundPolicyAccepted] = useState(false)
@@ -236,7 +235,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     alertMessage: buyerDetailsAlertMessage,
     isAlertOpen: buyerDetailsAlertOpen,
     isSessionSameAsBuyer,
-    isTicketSameAsBuyer,
     getAttendeeInfo,
     updateBuyerField,
     updateAttendeeField,
@@ -261,7 +259,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     paymentBreakdowns[0] ??
     null
   const isSelectedPaymentMethodCard = Boolean(selectedPaymentBreakdown && isCardPaymentMethod(selectedPaymentBreakdown.paymentMethod))
-  const paymentBreakdownSubtotal = selectedPaymentBreakdown?.subtotal ?? cartPrice?.netSubtotal ?? 0
+  // Gross on purpose. A breakdown's own subtotal is already net of the coupon, and the table lists
+  // the coupon on its own line underneath - showing the net figure above it reads as a second deduction.
+  const paymentBreakdownGrossSubtotal = cartPrice?.subTotal ?? selectedPaymentBreakdown?.subtotal ?? 0
   const eventData = useMemo(
     () => ({
       ...event,
@@ -428,38 +428,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       issues.push({ message: 'Select at least one ticket.', target: 'payment-method' })
     }
 
-    const buyerFields: Array<[keyof BuyerAttendeeInfoState, string]> = [
-      ['lastName', buyerInfo.lastName],
-      ['email', buyerInfo.email],
-    ]
-
-    if (buyerFields.some(([, value]) => !value.trim())) {
-      issues.push({ message: 'Complete the buyer details before continuing.', target: 'buyer-attendee-info' })
-    }
-
-    const attendeeIssues = attendeeSlotEntries.find((slot) => {
-      if (!slot.requiresAttendeeInfo) {
-        return false
-      }
-
-      if (isTicketSameAsBuyer(slot.sessionId, slot.ticketId)) {
-        return false
-      }
-
-      const info = attendeeInfoBySlot[slot.key]
-      if (!info) {
-        return true
-      }
-
-      return ['firstName', 'lastName', 'email'].some((field) => !(info[field as keyof BuyerAttendeeInfoState] ?? '').trim())
-    })
-
-    if (attendeeIssues) {
-      issues.push({
-        message: `${attendeeIssues.sessionName} needs attendee details for ${attendeeIssues.ticketName}.`,
-        target: 'buyer-attendee-info',
-      })
-    }
+    // The step that owns these fields owns the rules for them. A second copy here drifted once
+    // already and told the buyer a completed form was incomplete.
+    issues.push(...getBuyerAttendeeInfoIssues())
 
     if (missingRequiredCount > 0) {
       setShowQuestionValidation(true)
@@ -491,6 +462,16 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     return issues
   }
 
+  /**
+   * Whether this acknowledgement is the one the last pay attempt stopped on. Ticking it clears the
+   * highlight immediately, without waiting for another attempt.
+   */
+  function isAcknowledgementBlocking(
+    target: Extract<PurchaseReviewValidationTarget, 'terms' | 'refund-policy'>,
+    isAccepted: boolean,
+  ) {
+    return purchaseReviewAttempted && purchaseReviewScrollTarget === target && !isAccepted
+  }
 
   function handlePurchaseReview() {
     const issues = getPurchaseReviewIssues()
@@ -702,12 +683,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   }
 
   function handleApplyCoupon(code: string) {
-    setAppliedCouponCode(code)
     void applyCoupon(code)
   }
 
   function handleRemoveCoupon() {
-    setAppliedCouponCode(null)
     void applyCoupon(null)
   }
 
@@ -730,7 +709,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     setTermsOpen(false)
     setRefundPolicyAccepted(false)
     setRefundPolicyOpen(false)
-    setAppliedCouponCode(null)
     setCardHolderName('')
     resetPurchaseReview()
     setPurchaseTimerExpired(false)
@@ -829,20 +807,26 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
             />
 
             {currentEvent.termsConditions ? (
-              <RegistrationTermsCard
+              <RegistrationAcknowledgementCard
+                label='I accept the registration terms and conditions.'
+                actionLabel='View terms'
                 isAccepted={termsAccepted}
+                isInvalid={isAcknowledgementBlocking('terms', termsAccepted)}
                 onAcceptedChange={setTermsAccepted}
-                onViewTerms={() => setTermsOpen(true)}
+                onViewContent={() => setTermsOpen(true)}
                 accentColor={formAccent}
                 validationRef={termsValidationRef}
               />
             ) : null}
 
             {currentEvent.refundPolicy ? (
-              <RegistrationRefundPolicyCard
+              <RegistrationAcknowledgementCard
+                label='I accept the refund policy.'
+                actionLabel='View refund policy'
                 isAccepted={refundPolicyAccepted}
+                isInvalid={isAcknowledgementBlocking('refund-policy', refundPolicyAccepted)}
                 onAcceptedChange={setRefundPolicyAccepted}
-                onViewPolicy={() => setRefundPolicyOpen(true)}
+                onViewContent={() => setRefundPolicyOpen(true)}
                 accentColor={formAccent}
                 validationRef={refundPolicyValidationRef}
               />
@@ -1053,7 +1037,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                 cardHolderName={cardHolderName}
                                 onCardHolderNameChange={setCardHolderName}
                                 sessionGroups={selectedTicketSummaryBySession}
-                                subtotal={paymentBreakdownSubtotal}
+                                grossSubtotal={paymentBreakdownGrossSubtotal}
                                 ticketSubtotal={selectedTicketTotal}
                                 discountAmount={cartPrice?.discountAmount ?? 0}
                                 appliedCouponCode={appliedCouponCode}

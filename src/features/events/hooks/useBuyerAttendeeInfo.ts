@@ -10,13 +10,15 @@ import type {
 import { formatPhoneNumberInput } from "@/features/events/utils/ticketSelection"
 import { isRoutableEmail } from "@/utils/email"
 
-/** Buyer fields that must be filled in before "same as buyer" can copy anything useful. */
-const REQUIRED_BUYER_FIELDS: Array<[keyof BuyerAttendeeInfoState, string]> = [
+/**
+ * The fields a person must give before their details are usable, buyer or attendee. One list for
+ * both: the same form renders them, and a rule the form does not mark with an asterisk is a rule the
+ * buyer cannot see they broke.
+ */
+const REQUIRED_CONTACT_FIELDS: Array<[keyof BuyerAttendeeInfoState, string]> = [
   ["lastName", "Last name"],
   ["email", "Email"],
 ]
-
-const REQUIRED_ATTENDEE_FIELDS: Array<keyof BuyerAttendeeInfoState> = ["firstName", "lastName", "email"]
 
 interface UseBuyerAttendeeInfoArgs {
   attendeeSlotEntries: AttendeeSlotEntry[]
@@ -43,7 +45,9 @@ export function useBuyerAttendeeInfo({
 
   // Slots come and go with ticket quantities, so anything the buyer already typed is carried across
   // and anything now unselected is dropped.
-  const [previousSlotEntries, setPreviousSlotEntries] = useState(attendeeSlotEntries)
+  // Seeded empty rather than with the first render's slots, so slots that already exist at mount -
+  // a restored cart - get their state built instead of staying unwritable until a quantity changes.
+  const [previousSlotEntries, setPreviousSlotEntries] = useState<AttendeeSlotEntry[]>([])
   if (attendeeSlotEntries !== previousSlotEntries) {
     setPreviousSlotEntries(attendeeSlotEntries)
     setAttendeeInfoBySlot((current) => {
@@ -86,7 +90,7 @@ export function useBuyerAttendeeInfo({
 
   const missingBuyerDetails = useMemo(
     () =>
-      REQUIRED_BUYER_FIELDS.filter(([field]) => !buyerInfo[field].trim()).map(([, label]) => label),
+      REQUIRED_CONTACT_FIELDS.filter(([field]) => !buyerInfo[field].trim()).map(([, label]) => label),
     [buyerInfo],
   )
 
@@ -160,25 +164,21 @@ export function useBuyerAttendeeInfo({
       issues.push({ message: "Enter a valid buyer email address.", target: "buyer-attendee-info" })
     }
 
-    const incompleteSlot = attendeeSlotEntries.find((slot) => {
-      if (!slot.requiresAttendeeInfo) return false
-      if (isTicketSameAsBuyer(slot.sessionId, slot.ticketId)) return false
-
-      const info = attendeeInfoBySlot[slot.key]
-      if (!info) return true
-
-      return REQUIRED_ATTENDEE_FIELDS.some((field) => !(info[field] ?? "").trim())
-    })
+    const incompleteSlot = attendeeSlotEntries
+      .filter((slot) => slot.requiresAttendeeInfo && !isTicketSameAsBuyer(slot.sessionId, slot.ticketId))
+      .map((slot) => ({ slot, missingFields: findMissingContactFields(attendeeInfoBySlot[slot.key]) }))
+      .find((candidate) => candidate.missingFields.length > 0)
 
     if (incompleteSlot) {
+      // Named, not "needs attendee details" - the buyer was left hunting for which box was empty.
       issues.push({
-        message: `${incompleteSlot.sessionName} needs attendee details for ${incompleteSlot.ticketName}.`,
+        message: `${incompleteSlot.slot.sessionName} needs ${formatFieldList(incompleteSlot.missingFields)} for ${incompleteSlot.slot.ticketName}.`,
         target: "buyer-attendee-info",
       })
     }
 
     const slotWithBadEmail = attendeeSlotEntries.find((slot) => {
-      if (!slot.requiresAttendeeInfo || slot === incompleteSlot) return false
+      if (!slot.requiresAttendeeInfo || slot === incompleteSlot?.slot) return false
       if (isTicketSameAsBuyer(slot.sessionId, slot.ticketId)) return false
 
       return !isRoutableEmail(attendeeInfoBySlot[slot.key]?.email)
@@ -227,6 +227,18 @@ export function useBuyerAttendeeInfo({
     getIssues,
     reset,
   }
+}
+
+function findMissingContactFields(info: AttendeeSlotState | undefined) {
+  return REQUIRED_CONTACT_FIELDS.filter(([field]) => !(info?.[field] ?? "").trim()).map(([, label]) =>
+    label.toLowerCase(),
+  )
+}
+
+function formatFieldList(labels: string[]) {
+  if (labels.length === 1) return `an attendee ${labels[0]}`
+
+  return `an attendee ${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`
 }
 
 function pruneFlags(current: Record<string, boolean>, allowedIds: Set<string>) {
