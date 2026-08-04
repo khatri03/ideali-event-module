@@ -16,7 +16,8 @@ interface SessionGroup {
 interface PaymentBreakdownTableProps {
   breakdown: EventCartPaymentBreakdown
   sessionGroups: SessionGroup[]
-  subtotal: number
+  /** Before the coupon. The discount and the amount the charges are rated on follow it as their own rows. */
+  grossSubtotal: number
   discountAmount: number
   currencyCode: string | null
   onChangeQuantity: (ticket: EventRegistrationTicket, quantity: number) => void
@@ -32,7 +33,7 @@ const COLUMN_HEADERS = ["Item", "Price", "Quantity", "Total"]
 export function PaymentBreakdownTable({
   breakdown,
   sessionGroups,
-  subtotal,
+  grossSubtotal,
   discountAmount,
   currencyCode,
   onChangeQuantity,
@@ -153,26 +154,45 @@ export function PaymentBreakdownTable({
               <Table.Cell borderColor="gray.200" px={4} py={3} />
               <Table.Cell borderColor="gray.200" px={4} py={3} textAlign="right">
                 <Text fontSize="lg" fontWeight="800" color="gray.900">
-                  {formatAmount(subtotal, currencyCode)}
+                  {formatAmount(grossSubtotal, currencyCode)}
                 </Text>
               </Table.Cell>
             </Table.Row>
 
             {discountAmount > 0 ? (
-              <Table.Row>
-                <Table.Cell borderColor="gray.200" px={4} py={3}>
-                  <Text fontWeight="700" color="green.700">
-                    Coupon discount
-                  </Text>
-                </Table.Cell>
-                <Table.Cell borderColor="gray.200" px={4} py={3} />
-                <Table.Cell borderColor="gray.200" px={4} py={3} />
-                <Table.Cell borderColor="gray.200" px={4} py={3} textAlign="right">
-                  <Text fontWeight="700" color="green.700">
-                    -{formatAmount(discountAmount, currencyCode)}
-                  </Text>
-                </Table.Cell>
-              </Table.Row>
+              <>
+                <Table.Row>
+                  <Table.Cell borderColor="gray.200" px={4} py={3}>
+                    <Text fontWeight="700" color="green.700">
+                      Coupon discount
+                    </Text>
+                  </Table.Cell>
+                  <Table.Cell borderColor="gray.200" px={4} py={3} />
+                  <Table.Cell borderColor="gray.200" px={4} py={3} />
+                  <Table.Cell borderColor="gray.200" px={4} py={3} textAlign="right">
+                    <Text fontWeight="700" color="green.700">
+                      -{formatAmount(discountAmount, currencyCode)}
+                    </Text>
+                  </Table.Cell>
+                </Table.Row>
+
+                {/* Percentage charges below are rated on this, not on the gross - without it the rates
+                    printed beside them do not reconcile against any figure on the table. */}
+                <Table.Row bg="gray.50">
+                  <Table.Cell borderColor="gray.200" px={4} py={3}>
+                    <Text fontWeight="800" color="gray.900">
+                      Subtotal after discount
+                    </Text>
+                  </Table.Cell>
+                  <Table.Cell borderColor="gray.200" px={4} py={3} />
+                  <Table.Cell borderColor="gray.200" px={4} py={3} />
+                  <Table.Cell borderColor="gray.200" px={4} py={3} textAlign="right">
+                    <Text fontWeight="800" color="gray.900">
+                      {formatAmount(breakdown.subtotal, currencyCode)}
+                    </Text>
+                  </Table.Cell>
+                </Table.Row>
+              </>
             ) : null}
 
             {breakdown.charges.length > 0 ? (
