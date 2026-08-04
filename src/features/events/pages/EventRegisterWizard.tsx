@@ -55,6 +55,7 @@ import {
 } from '@/features/events/components/registration/RegistrationDialogs'
 import type { PaymentProduct } from '@/features/events/schemas/eventCart.schemas'
 import { extractApiError } from '@/utils/errors'
+import { isRoutableEmail } from '@/utils/email'
 
 import { EventHeroCard } from '@/features/events/components/registration/EventHeroCard'
 import { RegistrationTermsCard } from '@/features/events/components/registration/RegistrationTermsCard'
@@ -331,7 +332,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   useEffect(() => {
     const name = `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim()
 
-    if (!name || !buyerInfo.email.trim()) {
+    // A malformed address is rejected by the cart endpoint, so it is not worth a round trip until
+    // the buyer has finished typing one that could route.
+    if (!name || !isRoutableEmail(buyerInfo.email)) {
       return
     }
 
