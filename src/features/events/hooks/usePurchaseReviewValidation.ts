@@ -4,6 +4,18 @@ import type {
   PurchaseReviewIssue,
   PurchaseReviewValidationTarget,
 } from "@/features/events/components/registration/types"
+import { toaster } from "@/lib/toaster"
+
+/**
+ * Targets whose card carries no inline error of its own, so a scroll alone leaves the buyer looking
+ * at a card with nothing marked wrong. The buyer/attendee and payment steps render their own banner.
+ */
+const TOASTED_TARGETS: PurchaseReviewValidationTarget[] = ["terms", "refund-policy"]
+
+const TOAST_ID_BY_TARGET: Record<string, string> = {
+  terms: "purchase-review-terms",
+  "refund-policy": "purchase-review-refund-policy",
+}
 
 interface PurchaseReviewValidation {
   isReviewOpen: boolean
@@ -74,6 +86,16 @@ export function usePurchaseReviewValidation(): PurchaseReviewValidation {
     setScrollTarget(firstIssue?.target ?? null)
     setScrollRequestId((current) => current + 1)
     setIsReviewOpen(false)
+
+    if (firstIssue && TOASTED_TARGETS.includes(firstIssue.target)) {
+      // Fixed id per target: hammering the pay button re-raises the same toast, never stacks them.
+      toaster.create({
+        id: TOAST_ID_BY_TARGET[firstIssue.target],
+        type: "error",
+        title: "One more step",
+        description: firstIssue.message,
+      })
+    }
   }
 
   function openReview() {
