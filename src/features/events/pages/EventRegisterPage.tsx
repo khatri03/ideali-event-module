@@ -34,6 +34,7 @@ interface EventRegistrationViewModel {
   isOrganizer: boolean
   paymentAccountCurrency: string | null
   paymentAccountUniqueId: string | null
+  acceptsDiscountCoupons: boolean
   paymentMethods: EventRegistrationPaymentMethod[]
   sessions: EventRegistrationSession[]
   visibleTabs: string[]
@@ -363,6 +364,7 @@ function mapRegistrationToViewModel(registration: EventRegistrationResponse): Ev
     isOrganizer: registration.isOrganizer,
     paymentAccountCurrency: registration.paymentAccountCurrency,
     paymentAccountUniqueId: registration.paymentAccountUniqueId,
+    acceptsDiscountCoupons: registration.acceptsDiscountCoupons,
     paymentMethods: registration.paymentMethods,
     sessions: registration.sessions,
     visibleTabs: registration.visibleTabs,

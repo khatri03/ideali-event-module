@@ -7,6 +7,15 @@ import {
 import type { EventCartPaymentCharge } from "@/features/events/schemas/eventCart.schemas"
 import { extractApiError } from "@/utils/errors"
 
+export interface PreparedPaymentIntent {
+  clientSecret: string
+  /**
+   * Where a payment method that genuinely redirects sends the buyer back to. It points at the order,
+   * not at this cart, because by then the cart is spent and the order is the only durable handle.
+   */
+  returnUrl: string
+}
+
 interface RegistrationPaymentConfirmationProps {
   isOpen: boolean
   onOpenChange: (isOpen: boolean) => void
@@ -14,20 +23,23 @@ interface RegistrationPaymentConfirmationProps {
   currencyCode: string | null
   accentColor: string
   selectedTicketCount: number
-  selectedTicketTotal: number
   paymentMethodLabel: string
   isCardPayment: boolean
   /** Collected outside the Payment Element, so it has to be supplied on confirm. */
   cardHolderName: string
   validationMessage: string | null
   ticketRows: PurchaseReviewTicketRow[]
+  grossSubtotal: number
+  discountAmount: number
+  netSubtotal: number
   chargeRows: EventCartPaymentCharge[]
+  grandTotal: number
   /** True while the wizard is persisting the order or reporting settlement back to the server. */
   isBusy: boolean
   /** Validates and persists the order. Returning false leaves the dialog open with the complaint. */
   onPrepare: () => Promise<boolean>
-  /** Mints the PaymentIntent for the selected method and yields its client secret. */
-  onCreateIntent: () => Promise<string>
+  /** Mints the PaymentIntent for the selected method and yields what confirming it needs. */
+  onCreateIntent: () => Promise<PreparedPaymentIntent>
   onPaid: () => Promise<void>
   onFailed: (message: string) => void
 }
@@ -92,13 +104,14 @@ export function RegistrationPaymentConfirmation({
         return
       }
 
-      const clientSecret = await onCreateIntent()
+      const { clientSecret, returnUrl } = await onCreateIntent()
       const { error: confirmError } = await stripe.confirmPayment({
         elements,
         clientSecret,
         confirmParams: {
-          // Cards settle in place; only a method that genuinely needs a redirect leaves the page.
-          return_url: window.location.href,
+          // Cards settle in place; only a method that genuinely needs a redirect leaves the page,
+          // and it comes back to the order rather than to a cart that no longer means anything.
+          return_url: returnUrl,
           payment_method_data: { billing_details: { name: cardHolderName.trim() } },
         },
         redirect: "if_required",

@@ -1,0 +1,83 @@
+import { useCallback, useEffect } from "react"
+import { Box, Container, Stack } from "@chakra-ui/react"
+import { useParams, useSearchParams } from "react-router-dom"
+import {
+  OrderConfirmationSkeleton,
+  OrderNotFoundCard,
+  OrderProcessingActions,
+  OrderStateHeader,
+  OrderSummaryCard,
+  OrderTicketList,
+} from "@/features/events/components/order"
+import { useEventOrderStatus } from "@/features/events/hooks/useEventOrderStatus"
+import { useOrderCheckoutHandoff } from "@/features/events/hooks/useOrderCheckoutHandoff"
+import { clearPendingOrderId } from "@/features/events/utils/registrationOrderCookie"
+
+/** Carries the cart forward from a redirecting payment method so the confirm fast-path can still run. */
+const CART_HANDOFF_PARAM = "cart"
+
+/**
+ * Where every completed registration lands, whether the card settled in place or the buyer came back
+ * through a bank redirect. Public and reachable only with the order id, so it survives a refresh, a
+ * shared link and a phone that died mid-payment.
+ */
+export function EventOrderConfirmationPage() {
+  const { orderUniqueId = "" } = useParams<{ orderUniqueId: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { order, isLoading, isError, isRechecking, hasPollWindowElapsed, recheck } = useEventOrderStatus(orderUniqueId)
+
+  const handoffCartUniqueId = searchParams.get(CART_HANDOFF_PARAM)
+
+  const handleHandoffCompleted = useCallback(() => {
+    void recheck()
+  }, [recheck])
+
+  const { isHandingOff } = useOrderCheckoutHandoff(handoffCartUniqueId, handleHandoffCompleted)
+
+  // The buyer made it here, so the in-flight marker the wizard left behind has done its job.
+  useEffect(() => {
+    clearPendingOrderId()
+  }, [])
+
+  // The cart id has done its job and has no business staying in a link the buyer may share.
+  useEffect(() => {
+    if (isHandingOff || !handoffCartUniqueId) return
+
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete(CART_HANDOFF_PARAM)
+    setSearchParams(nextParams, { replace: true })
+  }, [handoffCartUniqueId, isHandingOff, searchParams, setSearchParams])
+
+  const isBusy = isLoading || isHandingOff
+
+  return (
+    <Box minH="100dvh" bg="gray.50" py={{ base: 6, md: 10 }} px={{ base: 4, md: 6 }}>
+      <Container maxW="3xl" px={0}>
+        {isBusy ? <OrderConfirmationSkeleton /> : null}
+
+        {!isBusy && (isError || !order) ? <OrderNotFoundCard /> : null}
+
+        {!isBusy && order ? (
+          <Stack gap={4}>
+            <OrderStateHeader
+              orderState={order.orderState}
+              hasTickets={order.tickets.length > 0}
+              buyerEmailMasked={order.buyerEmailMasked}
+            />
+
+            {order.orderState === "Processing" ? (
+              <OrderProcessingActions
+                hasPollWindowElapsed={hasPollWindowElapsed}
+                isRechecking={isRechecking}
+                onRecheck={recheck}
+              />
+            ) : null}
+
+            <OrderSummaryCard order={order} />
+            <OrderTicketList tickets={order.tickets} />
+          </Stack>
+        ) : null}
+      </Container>
+    </Box>
+  )
+}

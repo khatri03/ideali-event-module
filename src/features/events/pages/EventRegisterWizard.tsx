@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   Badge,
@@ -39,7 +40,7 @@ import { useTicketSelectionSummary } from '@/features/events/hooks/useTicketSele
 import { usePurchaseReviewValidation } from '@/features/events/hooks/usePurchaseReviewValidation'
 import { useBuyerAttendeeInfo } from '@/features/events/hooks/useBuyerAttendeeInfo'
 import { useQuestionnaireAnswers } from '@/features/events/hooks/useQuestionnaireAnswers'
-import { useCreateEventPaymentIntent, useConfirmEventCheckout } from '@/features/events/hooks/useEventCheckout'
+import { useCreateEventPaymentIntent } from '@/features/events/hooks/useEventCheckout'
 import { useSubmitLineAttendees, useSubmitLineAnswers } from '@/features/events/hooks/useEventCartAttendees'
 import { PurchaseTimerChip } from '@/features/events/components/registration/PurchaseTimerChip'
 import { CartSummaryPanel } from '@/features/events/components/registration/CartSummaryPanel'
@@ -54,8 +55,14 @@ import {
   PurchaseExpiredDialog,
 } from '@/features/events/components/registration/RegistrationDialogs'
 import type { PaymentProduct } from '@/features/events/schemas/eventCart.schemas'
+import {
+  clearPendingOrderId,
+  readPendingOrderId,
+  storePendingOrderId,
+} from '@/features/events/utils/registrationOrderCookie'
 import { extractApiError } from '@/utils/errors'
 import { isRoutableEmail } from '@/utils/email'
+import { APP_ROUTES } from '@/utils/routes'
 
 import { EventHeroCard } from '@/features/events/components/registration/EventHeroCard'
 import { RegistrationAcknowledgementCard } from '@/features/events/components/registration/RegistrationAcknowledgementCard'
@@ -117,6 +124,15 @@ function getStepIndex(tabs: Array<{ id: WizardTabId }>, stepId: WizardTabId) {
   return tabs.findIndex((item) => item.id === stepId)
 }
 
+/**
+ * The cart rides along so the confirmation page can run the checkout confirm fast-path - the buyer
+ * may reach that page through a bank redirect, where this wizard never gets the chance to.
+ */
+function buildOrderPath(orderUniqueId: string, handoffCartUniqueId: string | null) {
+  const path = APP_ROUTES.eventOrder(orderUniqueId)
+  return handoffCartUniqueId ? `${path}?cart=${encodeURIComponent(handoffCartUniqueId)}` : path
+}
+
 export function EventRegisterWizard({ event, formAccent, onBack }: { event: EventRegisterWizardEvent; formAccent: string; onBack: () => void }) {
   const accentBackground = hexToRgba(formAccent, 0.18)
   const {
@@ -167,6 +183,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
   const [pendingDeleteAction, setPendingDeleteAction] = useState<PendingDeleteAction | null>(null)
   const [cardHolderName, setCardHolderName] = useState('')
+  /** Set the moment an intent is minted, so the buyer can be sent to their order once it is paid. */
+  const [orderUniqueId, setOrderUniqueId] = useState<string | null>(null)
+  const navigate = useNavigate()
   const descriptionQuery = useQuery({
     queryKey: ['event-registration', event.uniqueId, 'description'],
     queryFn: () => fetchEventRegistrationDescription(event.uniqueId),
@@ -198,6 +217,16 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       setActiveTab(firstTab)
     }
   }
+
+  // A payment was already in flight when this tab last closed. The order outlives the cart, so the
+  // buyer is taken to it rather than dropped back into a wizard whose cart may already be paid for.
+  useEffect(() => {
+    const pendingOrderUniqueId = readPendingOrderId()
+    if (!pendingOrderUniqueId) return
+
+    clearPendingOrderId()
+    navigate(buildOrderPath(pendingOrderUniqueId, null), { replace: true })
+  }, [navigate])
 
   function restartPurchaseFlow() {
     // Drop the stored cart first, or the reload resumes the very cart that just expired.
@@ -296,7 +325,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const submitAttendeesMutation = useSubmitLineAttendees(cart?.cartUniqueId)
   const submitAnswersMutation = useSubmitLineAnswers(cart?.cartUniqueId)
   const createPaymentIntentMutation = useCreateEventPaymentIntent(cart?.cartUniqueId)
-  const confirmCheckoutMutation = useConfirmEventCheckout(cart?.cartUniqueId)
   const bannerSlides = useMemo(() => getSessionBannerSlides(currentEvent), [currentEvent])
   const sessionsLoading = sessionsQuery.isLoading || (sessionsQuery.isFetching && sessions.length === 0)
   const attendeeInfoLoading = attendeeInfoQuery.isLoading && !attendeeInfoQuery.data
@@ -562,6 +590,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   /**
    * Mints the PaymentIntent for the chosen method. Called only once the buyer has confirmed, so an
    * abandoned review never leaves a half-open payment attached to the cart.
+   *
+   * The order id is written down before the buyer is handed to Stripe: from here on the money can
+   * move at any moment, and a tab that dies in between must still have a way back to the order.
    */
   async function createPaymentIntentAsync() {
     if (!selectedPaymentBreakdown) {
@@ -574,7 +605,13 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       buyerEmail: buyerInfo.email || null,
     })
 
-    return intent.clientSecret
+    setOrderUniqueId(intent.invoiceUniqueId)
+    storePendingOrderId(intent.invoiceUniqueId)
+
+    return {
+      clientSecret: intent.clientSecret,
+      returnUrl: `${window.location.origin}${buildOrderPath(intent.invoiceUniqueId, cart?.cartUniqueId ?? null)}`,
+    }
   }
 
   /** Stripe rejected the payment, so the buyer goes back to the fields to correct it. */
@@ -583,28 +620,32 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   }
 
   /**
-   * Runs after Stripe reports a successful confirm. The webhook is authoritative for settlement and
-   * ticket issuance, so a non-settled result here is expected on the bank rails, not a failure.
+   * Runs after Stripe reports a successful confirm. Nothing is decided here: the buyer is handed to
+   * the order page, which owns the confirm fast-path and polls the server for settlement. That is
+   * the same page a bank redirect returns to, so both routes into a paid order behave identically.
    */
   async function handlePaymentSucceeded() {
-    // The money has already moved, so the cart must stop being resumable whatever the confirm call
-    // reports back - the webhook is what settles it from here.
+    const handoffCartUniqueId = cart?.cartUniqueId ?? null
+    const paidOrderUniqueId = orderUniqueId ?? readPendingOrderId()
+
+    // The money has already moved, so the cart must stop being resumable and the hold deadline must
+    // stop counting - a paid order cannot expire.
     completeCart()
     setIsPurchaseReviewOpen(false)
 
-    try {
-      const confirmation = await confirmCheckoutMutation.mutateAsync()
-
+    if (!paidOrderUniqueId) {
+      // The intent that just paid carried the order id, so this should be unreachable - but a buyer
+      // whose money has moved is never left staring at a payment form.
       toaster.create({
         type: 'success',
-        title: confirmation.isSettled ? 'Payment complete' : 'Payment received',
-        description: confirmation.isSettled
-          ? 'Your tickets have been issued.'
-          : 'Your payment is processing. Your tickets will be issued once it settles.',
+        title: 'Payment received',
+        description: 'Your confirmation is on its way by email.',
       })
-    } catch (error) {
-      toaster.create({ type: 'error', title: extractApiError(error) })
+      return
     }
+
+    // Replaced, not pushed: back must never land on a live payment form for an order already paid.
+    navigate(buildOrderPath(paidOrderUniqueId, handoffCartUniqueId), { replace: true })
   }
 
   const purchaseReviewTicketRows = selectedTicketSummaryBySession.flatMap((sessionGroup) =>
@@ -1040,6 +1081,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                 grossSubtotal={paymentBreakdownGrossSubtotal}
                                 ticketSubtotal={selectedTicketTotal}
                                 discountAmount={cartPrice?.discountAmount ?? 0}
+                                acceptsDiscountCoupons={currentEvent.acceptsDiscountCoupons}
                                 appliedCouponCode={appliedCouponCode}
                                 onApplyCoupon={handleApplyCoupon}
                                 onRemoveCoupon={handleRemoveCoupon}
@@ -1159,14 +1201,17 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
         currencyCode={currentEvent.paymentAccountCurrency}
         accentColor={formAccent}
         selectedTicketCount={selectedTicketCount}
-        selectedTicketTotal={selectedTicketTotal}
         paymentMethodLabel={selectedPaymentMethodLabel}
         isCardPayment={isSelectedPaymentMethodCard}
         cardHolderName={cardHolderName}
         validationMessage={purchaseReviewAttempted ? purchaseReviewMessage : null}
         ticketRows={purchaseReviewTicketRows}
+        grossSubtotal={paymentBreakdownGrossSubtotal}
+        discountAmount={cartPrice?.discountAmount ?? 0}
+        netSubtotal={selectedPaymentBreakdown?.subtotal ?? paymentBreakdownGrossSubtotal}
         chargeRows={purchaseReviewChargeRows}
-        isBusy={createPaymentIntentMutation.isPending || confirmCheckoutMutation.isPending}
+        grandTotal={selectedPaymentBreakdown?.grandTotal ?? selectedTicketTotal}
+        isBusy={createPaymentIntentMutation.isPending}
         onPrepare={preparePurchaseAsync}
         onCreateIntent={createPaymentIntentAsync}
         onPaid={handlePaymentSucceeded}

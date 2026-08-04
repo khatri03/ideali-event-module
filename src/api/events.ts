@@ -337,6 +337,8 @@ const eventRegistrationResponseSchema = z.object({
   paymentAccountCurrency: z.string().nullable().optional(),
   PaymentAccountUniqueId: z.string().nullable().optional(),
   paymentAccountUniqueId: z.string().nullable().optional(),
+  AcceptsDiscountCoupons: z.boolean().optional(),
+  acceptsDiscountCoupons: z.boolean().optional(),
   VisibleTabs: z.array(z.string()).optional(),
   visibleTabs: z.array(z.string()).optional(),
   PaymentMethods: z.array(eventRegistrationPaymentMethodSchema).optional(),
@@ -871,6 +873,8 @@ export interface EventRegistrationResponse {
   isOrganizer: boolean
   paymentAccountCurrency: string | null
   paymentAccountUniqueId: string | null
+  /** False when the event has no coupon a buyer could redeem, which hides the coupon field entirely. */
+  acceptsDiscountCoupons: boolean
   visibleTabs: string[]
   paymentMethods: EventRegistrationPaymentMethod[]
   paymentBreakdowns: EventRegistrationPaymentBreakdown[]
@@ -983,6 +987,8 @@ function parseEventRegistrationResponse(payload: unknown): EventRegistrationResp
     isOrganizer: response.IsOrganizer ?? response.isOrganizer ?? false,
     paymentAccountCurrency:
       response.PaymentAccountCurrency ?? response.paymentAccountCurrency ?? null,
+    acceptsDiscountCoupons:
+      response.AcceptsDiscountCoupons ?? response.acceptsDiscountCoupons ?? false,
     paymentAccountUniqueId:
       response.PaymentAccountUniqueId ?? response.paymentAccountUniqueId ?? null,
     visibleTabs: response.VisibleTabs ?? response.visibleTabs ?? [],

@@ -36,6 +36,7 @@ import {
   EventDiscountCouponStepPage,
   EventDateTimeStepPage,
   EventNameStepPage,
+  EventOrderConfirmationPage,
   EventPaymentAccountStepPage,
   EventPurchaseTimeLimitStepPage,
   EventQuestionsStepPage,
@@ -125,6 +126,9 @@ export default function App() {
           <Route path={APP_ROUTES.sessionWizard.slugs.review} element={<SessionWizardStepPage />} />
         </Route>
         <Route path={APP_ROUTES.eventRegisterRoute} element={<EventRegisterPage />} />
+
+        {/* Public: the buyer reaches their order with the link alone, signed in or not. */}
+        <Route path={APP_ROUTES.eventOrderRoute} element={<EventOrderConfirmationPage />} />
 
         {/* Public and deliberately outside AppLayout: its fixed-height shell would clip the PDF. */}
         <Route path={APP_ROUTES.eventTicketViewRoute} element={<EventTicketViewPage />} />
