@@ -12,6 +12,9 @@ interface RegistrationStripeProviderProps {
   children: ReactNode
 }
 
+/** Stands in until the cart is priced. Never charged - the server owns the PaymentIntent amount. */
+const PLACEHOLDER_MINOR_AMOUNT = 100
+
 /**
  * Sets up Stripe.js for the registration wizard using the deferred intent flow: the Elements group
  * is created with `mode`, `amount` and `currency` instead of a client secret, so the payment form
@@ -40,29 +43,27 @@ export function RegistrationStripeProvider({
   }, [publishableKey, stripeAccount])
 
   const options = useMemo<StripeElementsOptions | null>(() => {
-    const minorAmount = currency ? toStripeMinorAmount(amount) : 0
-
-    if (minorAmount <= 0) {
+    if (!currency) {
       return null
     }
 
     return {
       mode: "payment",
-      amount: minorAmount,
+      // Elements rejects a zero amount in payment mode and refuses to have `mode` added to a live
+      // group, so the group opens on a placeholder rather than opening bare and being rebuilt.
+      // Amount is mutable, so the real total replaces it in place. The charged figure is the
+      // server's PaymentIntent amount; this one only sizes what Stripe renders.
+      amount: Math.max(toStripeMinorAmount(amount), PLACEHOLDER_MINOR_AMOUNT),
       currency,
       paymentMethodTypes: ["card"],
     }
   }, [amount, currency])
 
-  // Elements rejects a zero amount in payment mode, so the group starts bare and is rebuilt once
-  // there is a total to charge. The key forces that rebuild: `mode` cannot be added to a live
-  // group, only `amount` can be updated on one that already has it.
+  // Keyed on the currency alone, which is fixed for the event. Keying on anything that moves during
+  // the wizard - the cart total above all - remounts every child, and a buyer typing their details
+  // when the cart is first priced loses the caret mid-word.
   return (
-    <Elements
-      key={options ? "payment" : "idle"}
-      stripe={stripePromise}
-      options={options ?? undefined}
-    >
+    <Elements key={currency || "idle"} stripe={stripePromise} options={options ?? undefined}>
       {children}
     </Elements>
   )
