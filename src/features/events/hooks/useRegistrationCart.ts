@@ -73,6 +73,7 @@ function isCartResumable(cart: EventCart, eventUniqueId: string): boolean {
 export function useRegistrationCart(eventUniqueId: string) {
   const [state, setState] = useState<RegistrationCartState>(EMPTY_STATE)
   const [restoredCart, setRestoredCart] = useState<EventCart | null>(null)
+  const [isCompleted, setIsCompleted] = useState(false)
   const cartRef = useRef<EventCart | null>(null)
   const queueRef = useRef<Promise<void>>(Promise.resolve())
   const couponCodeRef = useRef<string | null>(null)
@@ -273,15 +274,18 @@ export function useRegistrationCart(eventUniqueId: string) {
     pendingRef.current.clear()
     clearStoredCartId()
     setRestoredCart(null)
+    setIsCompleted(false)
     setState(EMPTY_STATE)
   }, [])
 
   /**
    * Drops the stored id once the purchase has gone through. The in-memory cart stays so the buyer
-   * keeps seeing what they bought, but a reload must never resume a cart that is already paid for.
+   * keeps seeing what they bought, but a reload must never resume a cart that is already paid for,
+   * and the hold deadline stops applying the moment the money moves - a paid order cannot expire.
    */
   const completeCart = useCallback(() => {
     clearStoredCartId()
+    setIsCompleted(true)
   }, [])
 
   const lineByTicketTypeId = useMemo(() => {
@@ -298,8 +302,8 @@ export function useRegistrationCart(eventUniqueId: string) {
     appliedCouponCode: state.appliedCouponCode,
     isSyncing: state.isSyncing,
     error: state.error,
-    /** Absolute UTC deadline the hold expires at. The UI only counts down to it. */
-    expiresAtUtc: state.cart?.expiresAtUtc ?? null,
+    /** Absolute UTC deadline the hold expires at, or null once paid. The UI only counts down to it. */
+    expiresAtUtc: isCompleted ? null : state.cart?.expiresAtUtc ?? null,
     lineByTicketTypeId,
     /** Set once when a cart survived a refresh, so the wizard can rebuild its selection from it. */
     restoredCart,

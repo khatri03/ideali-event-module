@@ -1,6 +1,7 @@
 export { EventWizardLayout } from "./pages/EventWizardLayout"
 export { EventRegisterPage } from "./pages/EventRegisterPage"
 export { EventTicketViewPage } from "./pages/EventTicketViewPage"
+export { EventOrderConfirmationPage } from "./pages/EventOrderConfirmationPage"
 export { TicketStub, TicketStubSkeleton } from "./components/ticket"
 export { EventBannerStepPage } from "./pages/EventBannerStepPage"
 export { EventDescriptionEditor } from "./components/EventDescriptionEditor"

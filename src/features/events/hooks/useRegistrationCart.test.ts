@@ -28,6 +28,8 @@ const CART = {
   lines: [],
 } as unknown as EventCart
 
+const HELD_CART = { ...CART, expiresAtUtc: "2099-01-01T00:00:00Z" } as unknown as EventCart
+
 const PRICE = {
   cartUniqueId: CART_UNIQUE_ID,
   subTotal: 210,
@@ -105,6 +107,23 @@ describe("useRegistrationCart", () => {
 
     expect(result.current.appliedCouponCode).toBe("VIPOFFIFID")
     expect(priceEventCartMock.mock.calls.at(-1)?.[1]).toEqual({ couponCode: "VIPOFFIFID" })
+  })
+
+  it("CompleteCart_PaymentWentThrough_RetiresTheHoldDeadline", async () => {
+    createEventCartMock.mockResolvedValue(HELD_CART)
+    addEventCartLineMock.mockResolvedValue(HELD_CART)
+
+    const { result } = renderHook(() => useRegistrationCart(EVENT_UNIQUE_ID))
+    await identify(result)
+
+    await waitFor(() => expect(result.current.expiresAtUtc).toBe("2099-01-01T00:00:00Z"))
+
+    act(() => {
+      result.current.completeCart()
+    })
+
+    // A paid order cannot expire, so the countdown chip and its expiry dialog both go away with it.
+    expect(result.current.expiresAtUtc).toBeNull()
   })
 
   it("ApplyCoupon_RejectedAfterAnAcceptedOne_KeepsTheAcceptedCoupon", async () => {

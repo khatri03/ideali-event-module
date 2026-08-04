@@ -228,6 +228,8 @@ const eventPaymentIntentResultSchema = z.object({
   paymentIntentId: z.string().optional(),
   ClientSecret: z.string().optional(),
   clientSecret: z.string().optional(),
+  InvoiceUniqueId: z.string().optional(),
+  invoiceUniqueId: z.string().optional(),
   PublishableKey: z.string().optional(),
   publishableKey: z.string().optional(),
   StripeAccount: z.string().nullable().optional(),
@@ -246,6 +248,8 @@ const eventPaymentIntentResultSchema = z.object({
 
 export interface EventPaymentIntentResult {
   cartUniqueId: string
+  /** The order this intent pays for — the return URL a redirecting method comes back to. */
+  invoiceUniqueId: string
   paymentIntentId: string
   clientSecret: string
   publishableKey: string
@@ -262,6 +266,7 @@ export function normalizeEventPaymentIntentResult(payload: unknown): EventPaymen
 
   return {
     cartUniqueId: parsed.CartUniqueId ?? parsed.cartUniqueId ?? "",
+    invoiceUniqueId: parsed.InvoiceUniqueId ?? parsed.invoiceUniqueId ?? "",
     paymentIntentId: parsed.PaymentIntentId ?? parsed.paymentIntentId ?? "",
     clientSecret: parsed.ClientSecret ?? parsed.clientSecret ?? "",
     publishableKey: parsed.PublishableKey ?? parsed.publishableKey ?? "",
@@ -284,6 +289,8 @@ const eventCheckoutLineTicketsSchema = z.object({
 const eventCheckoutConfirmationSchema = z.object({
   CartUniqueId: z.string().optional(),
   cartUniqueId: z.string().optional(),
+  InvoiceUniqueId: z.string().optional(),
+  invoiceUniqueId: z.string().optional(),
   InvoiceStatus: invoiceStatusSchema.optional(),
   invoiceStatus: invoiceStatusSchema.optional(),
   IsSettled: z.boolean().optional(),
@@ -299,6 +306,8 @@ export interface EventCheckoutLineTickets {
 
 export interface EventCheckoutConfirmation {
   cartUniqueId: string
+  /** Durable order reference. The cart id dies with the cart; this is what the buyer can return to. */
+  invoiceUniqueId: string
   invoiceStatus: InvoiceStatus
   isSettled: boolean
   lines: EventCheckoutLineTickets[]
@@ -309,6 +318,7 @@ export function normalizeEventCheckoutConfirmation(payload: unknown): EventCheck
 
   return {
     cartUniqueId: parsed.CartUniqueId ?? parsed.cartUniqueId ?? "",
+    invoiceUniqueId: parsed.InvoiceUniqueId ?? parsed.invoiceUniqueId ?? "",
     invoiceStatus: parsed.InvoiceStatus ?? parsed.invoiceStatus ?? "PendingPayment",
     isSettled: parsed.IsSettled ?? parsed.isSettled ?? false,
     lines: (parsed.Lines ?? parsed.lines ?? []).map((line) => ({

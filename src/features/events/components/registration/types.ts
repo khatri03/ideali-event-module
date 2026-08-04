@@ -141,6 +141,8 @@ export interface EventRegisterWizardEvent {
   isOrganizer: boolean
   paymentAccountCurrency: string | null
   paymentAccountUniqueId: string | null
+  /** False when the event has no coupon a buyer could redeem, which hides the coupon field entirely. */
+  acceptsDiscountCoupons: boolean
   paymentMethods: EventRegistrationPaymentMethod[]
   sessions: EventRegistrationSession[]
   visibleTabs?: string[]

@@ -25,6 +25,11 @@ interface PaymentStepProps {
   grossSubtotal: number
   ticketSubtotal: number
   discountAmount: number
+  /**
+   * False when the event has no coupon a buyer could redeem. The field is hidden rather than shown
+   * and rejected - offering a code that every gate behind it will refuse is not an invitation.
+   */
+  acceptsDiscountCoupons: boolean
   appliedCouponCode: string | null
   onApplyCoupon: (code: string) => void
   onRemoveCoupon: () => void
@@ -110,6 +115,7 @@ export function PaymentStep({
   grossSubtotal,
   ticketSubtotal,
   discountAmount,
+  acceptsDiscountCoupons,
   appliedCouponCode,
   onApplyCoupon,
   onRemoveCoupon,
@@ -144,15 +150,19 @@ export function PaymentStep({
         </HStack>
       </Box>
 
-      <CouponEntryCard
-        appliedCouponCode={appliedCouponCode}
-        discountAmount={discountAmount}
-        currencyCode={currencyCode}
-        isSyncing={isCouponSyncing}
-        formAccent={formAccent}
-        onApply={onApplyCoupon}
-        onRemove={onRemoveCoupon}
-      />
+      {/* A coupon already on the cart keeps its card so the buyer can still take it off, even if the
+          organizer has since deactivated it - the alternative is a discount they cannot see or remove. */}
+      {acceptsDiscountCoupons || appliedCouponCode ? (
+        <CouponEntryCard
+          appliedCouponCode={appliedCouponCode}
+          discountAmount={discountAmount}
+          currencyCode={currencyCode}
+          isSyncing={isCouponSyncing}
+          formAccent={formAccent}
+          onApply={onApplyCoupon}
+          onRemove={onRemoveCoupon}
+        />
+      ) : null}
 
       {isLoading && breakdowns.length === 0 ? (
         <PaymentStepSkeleton />
