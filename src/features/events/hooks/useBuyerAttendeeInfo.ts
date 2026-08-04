@@ -8,6 +8,7 @@ import type {
   PurchaseReviewIssue,
 } from "@/features/events/components/registration/types"
 import { formatPhoneNumberInput } from "@/features/events/utils/ticketSelection"
+import { isRoutableEmail } from "@/utils/email"
 
 /** Buyer fields that must be filled in before "same as buyer" can copy anything useful. */
 const REQUIRED_BUYER_FIELDS: Array<[keyof BuyerAttendeeInfoState, string]> = [
@@ -146,12 +147,17 @@ export function useBuyerAttendeeInfo({
     if (!checked) closeAlert()
   }
 
-  /** Presence checks only - the server is what actually validates the submission. */
+  /**
+   * Presence checks, plus the shape of every address a ticket or confirmation is mailed to - the
+   * server is what actually validates the submission.
+   */
   function getIssues(): PurchaseReviewIssue[] {
     const issues: PurchaseReviewIssue[] = []
 
     if (missingBuyerDetails.length > 0) {
       issues.push({ message: "Complete the buyer details before continuing.", target: "buyer-attendee-info" })
+    } else if (!isRoutableEmail(buyerInfo.email)) {
+      issues.push({ message: "Enter a valid buyer email address.", target: "buyer-attendee-info" })
     }
 
     const incompleteSlot = attendeeSlotEntries.find((slot) => {
@@ -167,6 +173,20 @@ export function useBuyerAttendeeInfo({
     if (incompleteSlot) {
       issues.push({
         message: `${incompleteSlot.sessionName} needs attendee details for ${incompleteSlot.ticketName}.`,
+        target: "buyer-attendee-info",
+      })
+    }
+
+    const slotWithBadEmail = attendeeSlotEntries.find((slot) => {
+      if (!slot.requiresAttendeeInfo || slot === incompleteSlot) return false
+      if (isTicketSameAsBuyer(slot.sessionId, slot.ticketId)) return false
+
+      return !isRoutableEmail(attendeeInfoBySlot[slot.key]?.email)
+    })
+
+    if (slotWithBadEmail) {
+      issues.push({
+        message: `${slotWithBadEmail.sessionName} needs a valid attendee email for ${slotWithBadEmail.ticketName}.`,
         target: "buyer-attendee-info",
       })
     }
