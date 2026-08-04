@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Event Registration — Flow &amp; Data Plan</title>
+
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+    crossorigin="anonymous">
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    rel="stylesheet"
+    crossorigin="anonymous">
+
+  <style>
+    :root {
+      --brand: #5b3df5;
+      --brand-soft: #efecfe;
+      --ink: #16161d;
+      --ink-soft: #4a4a58;
+      --ink-faint: #7c7c8c;
+      --ground: #fbfbfc;
+      --rule: #e2e2e9;
+      --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+    }
+
+    [data-bs-theme="dark"] {
+      --brand: #a596ff;
+      --brand-soft: #241f47;
+      --ink: #ececf2;
+      --ink-soft: #b0b0be;
+      --ink-faint: #7e7e8f;
+      --ground: #0e0e13;
+      --rule: #2a2a35;
+    }
+
+    body {
+      background-color: var(--ground);
+      color: var(--ink);
+      scroll-behavior: smooth;
+    }
+
+    .navbar-doc {
+      backdrop-filter: blur(10px);
+      background-color: rgba(255, 255, 255, .86);
+      border-bottom: 1px solid var(--rule);
+    }
+
+    [data-bs-theme="dark"] .navbar-doc {
+      background-color: rgba(14, 14, 19, .86);
+    }
+
+    .navbar-doc .nav-link {
+      font-size: .875rem;
+      color: var(--ink-soft);
+      border-bottom: 2px solid transparent;
+    }
+
+    .navbar-doc .nav-link:hover,
+    .navbar-doc .nav-link.active {
+      color: var(--brand);
+      border-bottom-color: var(--brand);
+    }
+
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: .7rem;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--brand);
+    }
+
+    h1 {
+      font-weight: 700;
+      letter-spacing: -.035em;
+      line-height: 1.05;
+      text-wrap: balance;
+    }
+
+    h2.section-title {
+      font-weight: 650;
+      letter-spacing: -.02em;
+      padding-bottom: .6rem;
+      border-bottom: 1px solid var(--rule);
+      text-wrap: balance;
+    }
+
+    .lead-tight {
+      color: var(--ink-soft);
+      max-width: 56ch;
+    }
+
+    p, li { color: var(--ink-soft); }
+    p { max-width: 68ch; }
+
+    code {
+      font-family: var(--mono);
+      font-size: .85em;
+      color: var(--ink);
+      background: var(--brand-soft);
+      border-radius: 4px;
+      padding: .08em .35em;
+    }
+
+    .tbl-name {
+      font-family: var(--mono);
+      font-size: .8rem;
+      font-weight: 500;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+
+    .table thead th {
+      font-family: var(--mono);
+      font-size: .68rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      font-weight: 500;
+      color: var(--ink-faint);
+      white-space: nowrap;
+    }
+
+    .table td { color: var(--ink-soft); vertical-align: top; font-size: .875rem; }
+
+    .badge-status {
+      font-family: var(--mono);
+      font-size: .62rem;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .tree {
+      font-family: var(--mono);
+      font-size: .78rem;
+      line-height: 1.75;
+      white-space: pre;
+      overflow-x: auto;
+      color: var(--ink-soft);
+    }
+
+    .tree b { color: var(--ink); font-weight: 600; }
+    .tree i { color: var(--ink-faint); font-style: normal; }
+
+    .phase-no {
+      font-family: var(--mono);
+      font-size: .72rem;
+      letter-spacing: .08em;
+      color: var(--brand);
+    }
+
+    .phase-row { border-left: 3px solid var(--brand); }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      body { scroll-behavior: auto; }
+      .reveal { opacity: 1 !important; transform: none !important; }
+    }
+
+    #backToTop {
+      position: fixed;
+      right: 1.25rem;
+      bottom: 1.25rem;
+      display: none;
+      z-index: 1030;
+    }
+
+    .card-doc {
+      border-color: var(--rule);
+      background-color: var(--bs-body-bg);
+    }
+  </style>
+</head>
+
+<body data-bs-spy="scroll" data-bs-target="#docNav" data-bs-offset="90" tabindex="0">
+
+  <nav id="docNav" class="navbar navbar-expand-lg sticky-top navbar-doc">
+    <div class="container">
+      <a class="navbar-brand fw-semibold" href="#top">
+        <i class="bi bi-ticket-perforated me-1" style="color: var(--brand);"></i>
+        Registration Plan
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navItems"
+        aria-controls="navItems" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navItems">
+        <ul class="navbar-nav ms-auto align-items-lg-center">
+          <li class="nav-item"><a class="nav-link" href="#today">Today</a></li>
+          <li class="nav-item"><a class="nav-link" href="#wizards">Wizards</a></li>
+          <li class="nav-item"><a class="nav-link" href="#model">Model</a></li>
+          <li class="nav-item"><a class="nav-link" href="#mapping">Data map</a></li>
+          <li class="nav-item"><a class="nav-link" href="#gaps">Gaps</a></li>
+          <li class="nav-item"><a class="nav-link" href="#plan">Plan</a></li>
+          <li class="nav-item"><a class="nav-link" href="#decisions">Decisions</a></li>
+          <li class="nav-item ms-lg-3">
+            <button id="themeToggle" class="btn btn-sm btn-outline-secondary" type="button" aria-label="Toggle theme">
+              <i class="bi bi-moon-stars"></i>
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <header id="top" class="container pt-5 pb-4">
+    <div class="eyebrow mb-2">Ideali Events &middot; Implementation Plan</div>
+    <h1 class="display-5 mb-3">Event registration: making the checkout real</h1>
+    <p class="lead lead-tight">
+      The registration route reads data and never writes any. The database already models the entire
+      purchase. This plan connects the two.
+    </p>
+    <div class="d-flex flex-wrap gap-3 small text-body-secondary mt-3" style="font-family: var(--mono);">
+      <span><i class="bi bi-signpost-2 me-1"></i>/events/:eventUniqueId/register</span>
+      <span><i class="bi bi-git me-1"></i>sohail/features/event/event-registration</span>
+      <span><i class="bi bi-calendar3 me-1"></i>29 Jul 2026</span>
+    </div>
+    <hr class="border-2 mt-4">
+  </header>
+
+  <main class="container pb-5">
+
+    <!-- Today -->
+    <section id="today" class="mb-5 reveal">
+      <h2 class="section-title h3 mb-3">Where we are</h2>
+      <p>
+        The registration wizard loads an event through six read-only endpoints — one per tab — and renders
+        six steps: Description, Sessions, Buyer/Attendee info, Attendee Info, Questionnaire, Payment.
+        Selecting tickets, entering buyer details, choosing a payment method and entering card data all
+        work. Then <code>handleConfirmPurchase</code> validates the form, closes the dialog and fires a
+        success toast.
+      </p>
+      <p>
+        No network call. Nothing is saved. No ticket is issued, no inventory is held, no money moves. Every
+        pricing and eligibility rule the buyer sees is computed in the browser from a payload that may be
+        stale, including the subtotal that the server then trusts when it calculates fees.
+      </p>
+      <div class="alert alert-danger d-flex gap-3 align-items-start" role="alert">
+        <i class="bi bi-exclamation-octagon-fill fs-5"></i>
+        <div>
+          <strong class="d-block mb-1">The one that matters commercially</strong>
+          <code>GET /register/payment?subtotal=N</code> takes the order total <em>from the client</em> and
+          computes charge rules, revenue charges and processor fees on top of it. The number is editable by
+          anyone. Every fee in the system is derived from it.
+        </div>
+      </div>
+    </section>
+
+    <!-- Wizards -->
+    <section id="wizards" class="mb-5 reveal">
+      <h2 class="section-title h3 mb-3">What the wizards decide</h2>
+      <p>
+        Registration behaviour is not configured in one place. The event wizard sets the frame; the session
+        wizard sets almost everything the buyer actually experiences.
+      </p>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead>
+            <tr>
+              <th scope="col">Wizard step</th>
+              <th scope="col">Configures</th>
+              <th scope="col">Effect on the registration form</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="tbl-name">Event › Advanced settings</td>
+              <td><code>Visibility</code>, <code>PurchaseTimeLimit</code></td>
+              <td>Who may register at all; how long a held cart survives</td>
+            </tr>
+            <tr>
+              <td class="tbl-name">Event › Dates &amp; time</td>
+              <td><code>BookingStartDate</code>, <code>BookingEndDate</code></td>
+              <td>Countdown screen before open; closed screen after</td>
+            </tr>
+            <tr>
+              <td class="tbl-name">Event › Payment account</td>
+              <td>Merchant, currency</td>
+              <td>Available payment methods, Stripe connected account, currency display</td>
+            </tr>
+            <tr>
+              <td class="tbl-name">Event › Description, Terms</td>
+              <td>Description, summary, terms</td>
+              <td>Whether the Description tab exists; the terms dialog</td>
+            </tr>
+            <tr>
+              <td class="tbl-name">Session › Tickets</td>
+              <td><code>TicketType</code>, <code>TicketPricePeriod</code></td>
+              <td>Price, min/max per order, stock, sales window</td>
+            </tr>
+            <tr>
+              <td class="tbl-name">Session › Tickets</td>
+              <td><code>RequiresAttendeeInfo</code></td>
+              <td>Whether the Attendee Info step appears</td>
+            </tr>
+            <tr>
+              <td class="tbl-name">Session › Questions</td>
+              <td><code>SessionQuestions</code>, <code>SessionForms</code></td>
+              <td>Whether the Questionnaire step appears, and its contents</td>
+            </tr>
+            <tr>
+              <td class="tbl-name">Session › Membership access</td>
+              <td><code>SessionMembershipType</code>, <code>SessionMembershipDiscount</code></td>
+              <td>Member-only eligibility, and a member price discount</td>
+            </tr>
+            <tr>
+              <td class="tbl-name">Session › e-Ticketing</td>
+              <td><code>EnableDigitalTicket</code></td>
+              <td>Whether a digital ticket is issued and delivered</td>
+            </tr>
+            <tr>
+              <td class="tbl-name">Session › Seat selection</td>
+              <td><code>OfferPickingSeats</code>, seats.io chart</td>
+              <td>Seat picking — deferred, out of scope here</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Model -->
+    <section id="model" class="mb-5 reveal">
+      <h2 class="section-title h3 mb-3">The model already exists</h2>
+      <p>
+        This is the most important finding. We are not designing a schema. The purchase is fully modelled,
+        down to per-attendee ticket rows and per-answer questionnaire storage. Most of it has never been
+        written to.
+      </p>
+      <div class="card card-doc mb-3">
+        <div class="card-body">
+          <div class="tree"><b>Invoice</b> <i>— the order. Module = Event</i>
+ ├─ <b>EventInvoice</b> <i>— buyer identity + contact snapshot</i>
+ ├─ <b>InvoiceItem</b> <i>— one per cart line: qty, unit price, discount, tax, line total</i>
+ │   ├─ <b>EventInvoiceItem</b> <i>— which session, ticket type, price period</i>
+ │   │   ├─ <b>EventTicket[]</b> <i>— ONE ROW PER ATTENDEE + ticket code</i>
+ │   │   └─ <b>SessionPurchaseSubmission</b> <i>— this line's answers</i>
+ │   │        ├─ <b>SessionPurchaseSubmissionEntry</b> → <b>…Value</b> <i>— custom form answers</i>
+ │   │        └─ <b>SessionQuestionResponse[]</b> <i>— session question answers</i>
+ │   └─ <b>PaymentChargeSnapshot</b> <i>— every fee, frozen at purchase</i>
+ ├─ <b>InvoicePayment[]</b> <i>— Stripe / cheque settlement</i>
+ └─ <b>DiscountCouponUsage</b> <i>— coupon redemption</i>
+
+<b>TicketReservation</b> <i>— the inventory hold, links to Invoice</i></div>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap gap-3 small text-body-secondary">
+        <span><span class="badge badge-status text-bg-success">Written</span> in use today</span>
+        <span><span class="badge badge-status text-bg-warning">Idle</span> table exists, no code writes it</span>
+        <span><span class="badge badge-status text-bg-danger">Suspect</span> believed broken, needs a test</span>
+        <span><span class="badge badge-status text-bg-primary">New</span> to be added</span>
+      </div>
+    </section>
+
+    <!-- Data map -->
+    <section id="mapping" class="mb-5 reveal">
+      <h2 class="section-title h3 mb-3">Every field, and where it lands</h2>
+      <p>
+        This is the contract. Each row is a piece of data the buyer supplies or the server derives, and the
+        table it is written to.
+      </p>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead>
+            <tr>
+              <th scope="col">Data</th>
+              <th scope="col">Target table</th>
+              <th scope="col">Columns</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Order header, totals</td>
+              <td class="tbl-name">Invoice</td>
+              <td><code>Module=Event</code>, <code>InvoiceStatus</code>, <code>SubTotal</code>,
+                <code>DiscountAmount</code>, <code>TaxAmount</code>, <code>ServiceCharges</code>,
+                <code>PlatformCharges</code>, <code>TotalAmount</code>, <code>BalanceAmount</code></td>
+              <td><span class="badge badge-status text-bg-danger">Partial</span></td>
+            </tr>
+            <tr>
+              <td>Buyer name, email, phone</td>
+              <td class="tbl-name">EventInvoice</td>
+              <td><code>BuyerName</code>, <code>BuyerEmail</code>, <code>BuyerPhone</code>,
+                <code>ContactId</code>, <code>MemberId</code>, <code>EventId</code></td>
+              <td><span class="badge badge-status text-bg-success">Written</span></td>
+            </tr>
+            <tr>
+              <td>Cart line — quantity and price</td>
+              <td class="tbl-name">InvoiceItem</td>
+              <td><code>Quantity</code>, <code>UnitPrice</code>, <code>DiscountAmount</code>,
+                <code>LineTotal</code>, <code>BalanceAmount</code>, <code>InvoiceItemStatus</code></td>
+              <td><span class="badge badge-status text-bg-success">Written</span></td>
+            </tr>
+            <tr>
+              <td>Cart line — what was bought</td>
+              <td class="tbl-name">EventInvoiceItem</td>
+              <td><code>SessionId</code>, <code>TicketTypeId</code>, <code>TicketPricePeriodId</code></td>
+              <td><span class="badge badge-status text-bg-danger">Suspect</span></td>
+            </tr>
+            <tr>
+              <td>Inventory hold + countdown</td>
+              <td class="tbl-name">TicketReservation</td>
+              <td><code>Quantity</code>, <code>ReservedUntilUtc</code>, <code>ReservationStatus</code>,
+                <code>InvoiceId</code>, <code>BuyerContactId</code></td>
+              <td><span class="badge badge-status text-bg-success">Written</span></td>
+            </tr>
+            <tr>
+              <td>Per-attendee details</td>
+              <td class="tbl-name">EventTicket</td>
+              <td><code>AttendeeName</code>, <code>AttendeeEmail</code>, <code>AttendeePhone</code>,
+                <code>AttendeeContactId</code>, <code>TicketCode</code>, <code>TicketStatus</code></td>
+              <td><span class="badge badge-status text-bg-danger">One set for all</span></td>
+            </tr>
+            <tr>
+              <td>Questionnaire — submission root</td>
+              <td class="tbl-name">SessionPurchaseSubmission</td>
+              <td><code>EventInvoiceItemId</code>, <code>SubmittedAtUtc</code></td>
+              <td><span class="badge badge-status text-bg-warning">Idle</span></td>
+            </tr>
+            <tr>
+              <td>Questionnaire — custom form answers</td>
+              <td class="tbl-name">SessionPurchaseSubmissionEntry<br>SessionPurchaseSubmissionValue</td>
+              <td><code>SessionFormId</code>, <code>DisplayOrder</code> · <code>CustomFormFieldId</code>,
+                <code>AnswerValue</code>, <code>FileStorageId</code></td>
+              <td><span class="badge badge-status text-bg-warning">Idle</span></td>
+            </tr>
+            <tr>
+              <td>Questionnaire — session question answers</td>
+              <td class="tbl-name">SessionQuestionResponse</td>
+              <td><code>SessionQuestionId</code>, <code>SessionQuestionOptionId</code>,
+                <code>AnswerValue</code>, <code>FileStorageId</code></td>
+              <td><span class="badge badge-status text-bg-warning">Idle</span></td>
+            </tr>
+            <tr>
+              <td>Fees — charge rules, revenue plan, processor</td>
+              <td class="tbl-name">PaymentChargeSnapshot</td>
+              <td><code>SourceType</code>, <code>ChargeKind</code>, <code>CalculationType</code>,
+                <code>Label</code>, <code>Value</code>, <code>Amount</code>, <code>Currency</code></td>
+              <td><span class="badge badge-status text-bg-warning">Idle</span></td>
+            </tr>
+            <tr>
+              <td>Coupon redemption</td>
+              <td class="tbl-name">DiscountCouponUsage</td>
+              <td><code>DiscountCouponId</code>, <code>InvoiceId</code>, <code>DiscountAmountApplied</code>,
+                <code>UsedAtUtc</code></td>
+              <td><span class="badge badge-status text-bg-warning">Idle</span></td>
+            </tr>
+            <tr>
+              <td>Payment settlement</td>
+              <td class="tbl-name">InvoicePayment</td>
+              <td><code>Amount</code>, <code>PaymentProduct</code>, <code>PaymentAccountId</code>,
+                <code>ReferenceNo</code> (PaymentIntent id), <code>PaymentStatus</code>,
+                <code>RawResponse</code></td>
+              <td><span class="badge badge-status text-bg-warning">Idle for events</span></td>
+            </tr>
+            <tr>
+              <td>Stock movement</td>
+              <td class="tbl-name">TicketTransaction<br>TicketType</td>
+              <td><code>ChangeType</code>, <code>QuantityChange</code> · <code>TicketsOnHold</code>,
+                <code>AvailableForSale</code>, <code>TicketsSold</code></td>
+              <td><span class="badge badge-status text-bg-success">Written</span></td>
+            </tr>
+            <tr>
+              <td>Duplicate-submission guard</td>
+              <td class="tbl-name">(new) RegistrationIdempotencyKey</td>
+              <td><code>Key</code>, <code>Operation</code>, <code>InvoiceId</code>, <code>ResponseHash</code></td>
+              <td><span class="badge badge-status text-bg-primary">New</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="alert alert-primary d-flex gap-3 align-items-start" role="alert">
+        <i class="bi bi-info-circle-fill fs-5"></i>
+        <div>
+          One enum value is missing: <code>EnumInvoiceStatus</code> has no <code>Draft</code>. A cart being
+          built is not yet pending payment, so we add <code>Draft = 9</code> rather than overloading
+          <code>PendingPayment</code>. No other new table is required beyond the idempotency guard.
+        </div>
+      </div>
+    </section>
+
+    <!-- Gaps -->
+    <section id="gaps" class="mb-5 reveal">
+      <h2 class="section-title h3 mb-3">Gaps to close</h2>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead>
+            <tr>
+              <th scope="col">Gap</th>
+              <th scope="col">Consequence</th>
+              <th scope="col">Confidence</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>EventInvoiceItem</code> is built but appears never attached to the saved graph in
+                <code>CreateCheckoutInvoiceAsync</code></td>
+              <td><code>ConfirmPurchaseAsync</code> would throw looking for it — checkout broken end to end</td>
+              <td><span class="badge badge-status text-bg-danger">Verify first</span></td>
+            </tr>
+            <tr>
+              <td>Invoice is created with <code>SubTotal = TotalAmount = lineTotal</code>; no fees written</td>
+              <td>Buyer is quoted one number and charged another</td>
+              <td><span class="badge badge-status text-bg-secondary">Confirmed</span></td>
+            </tr>
+            <tr>
+              <td><code>ConfirmPurchaseAsync</code> throws unless there is exactly one invoice item</td>
+              <td>Multi-session carts structurally impossible, despite the schema supporting them</td>
+              <td><span class="badge badge-status text-bg-secondary">Confirmed</span></td>
+            </tr>
+            <tr>
+              <td>Confirm accepts a single attendee name/email/phone for all tickets on a line</td>
+              <td>Per-slot attendee data collected in the UI has nowhere to go</td>
+              <td><span class="badge badge-status text-bg-secondary">Confirmed</span></td>
+            </tr>
+            <tr>
+              <td>Questionnaire renders forms and questions as static cards — no inputs</td>
+              <td>No answers are collected, let alone stored</td>
+              <td><span class="badge badge-status text-bg-secondary">Confirmed</span></td>
+            </tr>
+            <tr>
+              <td><code>SessionMembershipDiscount</code> is never applied</td>
+              <td>Member pricing configured in the session wizard has no effect</td>
+              <td><span class="badge badge-status text-bg-secondary">Confirmed</span></td>
+            </tr>
+            <tr>
+              <td><code>StripeWebhookController</code> verifies the signature, then only logs</td>
+              <td>No settlement path that survives a closed tab after the card is charged</td>
+              <td><span class="badge badge-status text-bg-secondary">Confirmed</span></td>
+            </tr>
+            <tr>
+              <td>Purchase countdown starts and expires entirely in the browser</td>
+              <td>Timer holds no stock; the deadline shown is not the deadline enforced</td>
+              <td><span class="badge badge-status text-bg-secondary">Confirmed</span></td>
+            </tr>
+            <tr>
+              <td>Event-level <code>EventQuestion</code> / <code>EventForm</code> ignored by registration</td>
+              <td>The event wizard's Questions step currently changes nothing</td>
+              <td><span class="badge badge-status text-bg-secondary">Confirmed</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Plan -->
+    <section id="plan" class="mb-5 reveal">
+      <h2 class="section-title h3 mb-3">Plan</h2>
+      <p>Sequential — each phase depends on the one before it.</p>
+
+      <div class="accordion" id="phaseAccordion">
+        <div class="accordion-item">
+          <h3 class="accordion-header">
+            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#p0">
+              <span class="phase-no me-3">P0</span> Verify the spine
+            </button>
+          </h3>
+          <div id="p0" class="accordion-collapse collapse show" data-bs-parent="#phaseAccordion">
+            <div class="accordion-body">
+              Integration test across reserve → invoice → confirm. Fix the <code>EventInvoiceItem</code>
+              persistence gap. Check the stock counters against <code>TicketsOnHold</code> /
+              <code>AvailableForSale</code> / <code>TicketsSold</code>. No new features. Nothing below is
+              trustworthy until this is green.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <h3 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#p1">
+              <span class="phase-no me-3">P1</span> Server-owned cart
+            </button>
+          </h3>
+          <div id="p1" class="accordion-collapse collapse" data-bs-parent="#phaseAccordion">
+            <div class="accordion-body">
+              A <code>Draft</code> invoice becomes the cart. Endpoints to create it, add and remove lines,
+              and read its state. Each line drives its own reservation, so holds are real. The countdown
+              comes from the event's <code>PurchaseTimeLimit</code> as an absolute UTC deadline the UI only
+              displays. Order id in an httpOnly cookie and in the response body.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <h3 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#p2">
+              <span class="phase-no me-3">P2</span> Server-owned pricing
+            </button>
+          </h3>
+          <div id="p2" class="accordion-collapse collapse" data-bs-parent="#phaseAccordion">
+            <div class="accordion-body">
+              One pricing service: active price period, membership discount, coupon, min/max and
+              availability checks, event charge rules, buyer revenue charges, processor fee per method.
+              Results written to <code>InvoiceItem</code> and <code>PaymentChargeSnapshot</code>. The
+              <code>subtotal</code> query parameter is removed — the server reads its own order.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <h3 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#p3">
+              <span class="phase-no me-3">P3</span> Attendees and answers
+            </button>
+          </h3>
+          <div id="p3" class="accordion-collapse collapse" data-bs-parent="#phaseAccordion">
+            <div class="accordion-body">
+              Per-slot attendees onto <code>EventTicket</code>. Questionnaire answers into
+              <code>SessionPurchaseSubmission</code> and its children. Required-field validation enforced
+              server-side from <code>SessionQuestion.Required</code>.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <h3 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#p4">
+              <span class="phase-no me-3">P4</span> Payment
+            </button>
+          </h3>
+          <div id="p4" class="accordion-collapse collapse" data-bs-parent="#phaseAccordion">
+            <div class="accordion-body">
+              PaymentIntent carrying the invoice id in metadata, following the membership payment service
+              already in the codebase. The webhook becomes authoritative: it settles the invoice and issues
+              tickets, idempotently. Client confirm becomes a UX fast-path that is safe to run twice.
+              Cheque orders settle as pending with tickets issued.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <h3 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#p5">
+              <span class="phase-no me-3">P5</span> Frontend
+            </button>
+          </h3>
+          <div id="p5" class="accordion-collapse collapse" data-bs-parent="#phaseAccordion">
+            <div class="accordion-body">
+              The server returns the step list, deadline, totals and validation errors; the UI renders them.
+              Client-side tab logic, price display, savings, quantity limits, purchase validation, subtotal
+              and timer start are deleted. The questionnaire gets real inputs. The 4,100-line wizard file is
+              split per the repo's own structure rules.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <h3 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#p6">
+              <span class="phase-no me-3">P6</span> Remaining wizard promises
+            </button>
+          </h3>
+          <div id="p6" class="accordion-collapse collapse" data-bs-parent="#phaseAccordion">
+            <div class="accordion-body">
+              Coupon entry, digital ticket delivery, thank-you email on settlement, refund policies shown at
+              checkout. Seats.io stays out of scope.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Decisions -->
+    <section id="decisions" class="mb-5 reveal">
+      <h2 class="section-title h3 mb-3">Open decisions</h2>
+      <div class="row g-3">
+        <div class="col-12 col-lg-4">
+          <div class="card card-doc h-100 phase-row">
+            <div class="card-body">
+              <h3 class="h6 fw-semibold">Do event-level questions belong in the registration form?</h3>
+              <p class="small mb-0">
+                The event wizard collects <code>EventQuestion</code> and <code>EventForm</code>.
+                Registration reads only session questions. Either we wire them in — which needs a storage
+                decision, since <code>SessionPurchaseSubmission</code> hangs off a session line — or the
+                wizard step is dead UI. Product call.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-lg-4">
+          <div class="card card-doc h-100 phase-row">
+            <div class="card-body">
+              <h3 class="h6 fw-semibold">Does anything outside the wizard call <code>checkout/confirm</code>?</h3>
+              <p class="small mb-0">
+                Phase 4 inverts its meaning: the webhook issues tickets, and confirm becomes advisory. If
+                another client depends on getting ticket codes back synchronously, that breaks. No other
+                caller found, but worth confirming before the change lands.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-lg-4">
+          <div class="card card-doc h-100 phase-row">
+            <div class="card-body">
+              <h3 class="h6 fw-semibold">Cheque orders — tickets before the cheque clears?</h3>
+              <p class="small mb-0">
+                Cheque is organizer-only. The proposal is to issue tickets immediately and mark the invoice
+                pending, so the organizer can register someone on the spot and reconcile later. Confirm that
+                matches how it is used.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <button id="backToTop" class="btn btn-primary btn-sm rounded-circle p-2" type="button" aria-label="Back to top">
+    <i class="bi bi-arrow-up"></i>
+  </button>
+
+  <script
+    src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous"></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+    crossorigin="anonymous"></script>
+
+  <script>
+    $(function () {
+      var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // Staggered reveal on scroll.
+      if (!prefersReducedMotion && 'IntersectionObserver' in window) {
+        var observer = new IntersectionObserver(function (entries) {
+          $.each(entries, function (index, entry) {
+            if (!entry.isIntersecting) return;
+            $(entry.target)
+              .delay(index * 90)
+              .animate({ opacity: 1 }, 420)
+              .css({ transition: 'transform .45s ease', transform: 'translateY(0)' });
+            observer.unobserve(entry.target);
+          });
+        }, { threshold: 0.08 });
+
+        $('.reveal').each(function () { observer.observe(this); });
+      } else {
+        $('.reveal').css({ opacity: 1, transform: 'none' });
+      }
+
+      // Smooth anchor scroll that clears the sticky navbar.
+      $('a[href^="#"]').on('click', function (event) {
+        var target = $($(this).attr('href'));
+        if (!target.length) return;
+        event.preventDefault();
+        var offset = target.offset().top - ($('.navbar-doc').outerHeight() + 12);
+        $('html, body').animate({ scrollTop: offset }, prefersReducedMotion ? 0 : 400);
+        $('#navItems').collapse('hide');
+      });
+
+      // Back to top.
+      $(window).on('scroll', function () {
+        $('#backToTop')[$(window).scrollTop() > 500 ? 'fadeIn' : 'fadeOut'](180);
+      });
+
+      $('#backToTop').on('click', function () {
+        $('html, body').animate({ scrollTop: 0 }, prefersReducedMotion ? 0 : 400);
+      });
+
+      // Theme toggle, seeded from the OS preference.
+      var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+      function applyTheme() {
+        $('html').attr('data-bs-theme', dark ? 'dark' : 'light');
+        $('#themeToggle i').attr('class', dark ? 'bi bi-sun' : 'bi bi-moon-stars');
+      }
+
+      applyTheme();
+
+      $('#themeToggle').on('click', function () {
+        dark = !dark;
+        applyTheme();
+      });
+    });
+  </script>
+</body>
+</html>
