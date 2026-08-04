@@ -1,11 +1,10 @@
-import { useMemo, useState } from "react"
-import { Box, Button, Flex, HStack, Link, Separator, Stack, Text, chakra } from "@chakra-ui/react"
+import { useMemo } from "react"
+import { Box, Button, Flex, HStack, Stack, Text, chakra } from "@chakra-ui/react"
 import { ChevronDown } from "lucide-react"
 import type { EventRegistrationTicket } from "@/api/events"
-import { formatAmount, formatRegistrationDateTime } from "@/features/events/utils/registrationFormat"
+import { formatAmount } from "@/features/events/utils/registrationFormat"
 import {
   getTicketDisplayPrice,
-  getTicketPricePeriod,
   getTicketQuantityOptions,
   getTicketSavings,
   getTicketSelectableMax,
@@ -20,16 +19,6 @@ interface TicketCardProps {
   currencyCode?: string | null
 }
 
-function formatPricePeriodRange(startDateTime: string | null, endDateTime: string | null) {
-  const start = formatRegistrationDateTime(startDateTime)
-  const end = formatRegistrationDateTime(endDateTime)
-
-  if (start === "Date not set" && end === "Date not set") return "Not set"
-  if (start === end) return start
-
-  return `${start} - ${end}`
-}
-
 export function TicketCard({
   ticket,
   quantity,
@@ -38,11 +27,9 @@ export function TicketCard({
   onSelectQuantity,
   currencyCode,
 }: TicketCardProps) {
-  const activePricePeriod = getTicketPricePeriod(ticket)
   const displayPrice = getTicketDisplayPrice(ticket)
   const savings = getTicketSavings(ticket)
   const selectableMax = getTicketSelectableMax(ticket)
-  const [pricingExpanded, setPricingExpanded] = useState(false)
   const quantityOptions = useMemo(() => getTicketQuantityOptions(ticket, quantity), [ticket, quantity])
   const canDecrease = quantity > 0
   const canIncrease = selectableMax === null || quantity < selectableMax
@@ -167,64 +154,6 @@ export function TicketCard({
           ) : null}
         </Flex>
 
-        {ticket.pricePeriods.length > 1 ? (
-          <>
-            <Separator borderColor="gray.200" />
-            <Flex justify="flex-end">
-              <Link
-                as="button"
-                type="button"
-                fontSize="xs"
-                fontWeight="700"
-                color="gray.700"
-                textDecoration="underline"
-                textUnderlineOffset="3px"
-                cursor="pointer"
-                onClick={() => setPricingExpanded((current) => !current)}
-              >
-                {pricingExpanded ? "Hide pricing" : "View pricing"}
-              </Link>
-            </Flex>
-          </>
-        ) : null}
-
-        {pricingExpanded && ticket.pricePeriods.length > 1 ? (
-          <Stack gap={2}>
-            {ticket.pricePeriods.map((period) => (
-              <Box
-                key={period.uniqueId}
-                borderWidth="1px"
-                borderColor="gray.200"
-                borderRadius="16px"
-                bg="gray.50"
-                px={3.5}
-                py={3}
-              >
-                <Flex justify="space-between" align="start" gap={3} wrap="wrap">
-                  <Stack gap={0.5}>
-                    <Text fontSize="sm" fontWeight="700" color="gray.900">
-                      {period.name ?? "Price window"}
-                    </Text>
-                    <Text fontSize="xs" color="gray.500">
-                      {formatPricePeriodRange(period.startDateTime, period.endDateTime)}
-                    </Text>
-                  </Stack>
-                  <Stack gap={0.5} align={{ base: "start", md: "end" }}>
-                    <Text fontSize="sm" fontWeight="700" color="gray.900">
-                      {formatAmount(period.amount ?? 0, currencyCode)}
-                    </Text>
-                    <Text
-                      fontSize="xs"
-                      color={period.uniqueId === activePricePeriod?.uniqueId ? "green.600" : "gray.500"}
-                    >
-                      {period.currentStatus}
-                    </Text>
-                  </Stack>
-                </Flex>
-              </Box>
-            ))}
-          </Stack>
-        ) : null}
       </Stack>
     </Box>
   )
