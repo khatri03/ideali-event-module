@@ -1,8 +1,9 @@
 import { useCallback, useEffect } from "react"
 import { Box, Container, Stack } from "@chakra-ui/react"
-import { useParams, useSearchParams } from "react-router-dom"
+import { useLocation, useParams, useSearchParams } from "react-router-dom"
 import {
   OrderConfirmationSkeleton,
+  OrderNextStepDialog,
   OrderNotFoundCard,
   OrderProcessingActions,
   OrderStateHeader,
@@ -11,10 +12,16 @@ import {
 } from "@/features/events/components/order"
 import { useEventOrderStatus } from "@/features/events/hooks/useEventOrderStatus"
 import { useOrderCheckoutHandoff } from "@/features/events/hooks/useOrderCheckoutHandoff"
+import { useOrderCompletionPrompt } from "@/features/events/hooks/useOrderCompletionPrompt"
 import { clearPendingOrderId } from "@/features/events/utils/registrationOrderCookie"
 
 /** Carries the cart forward from a redirecting payment method so the confirm fast-path can still run. */
 const CART_HANDOFF_PARAM = "cart"
+
+/** Left by the wizard so a buyer who wants a second purchase is sent back to the right event. */
+interface OrderLocationState {
+  registerPath?: string
+}
 
 /**
  * Where every completed registration lands, whether the card settled in place or the buyer came back
@@ -33,6 +40,10 @@ export function EventOrderConfirmationPage() {
   }, [recheck])
 
   const { isHandingOff } = useOrderCheckoutHandoff(handoffCartUniqueId, handleHandoffCompleted)
+
+  const { state } = useLocation()
+  const registerPath = (state as OrderLocationState | null)?.registerPath ?? null
+  const completionPrompt = useOrderCompletionPrompt(order?.orderState === "Confirmed", registerPath)
 
   // The buyer made it here, so the in-flight marker the wizard left behind has done its job.
   useEffect(() => {
@@ -76,6 +87,17 @@ export function EventOrderConfirmationPage() {
             <OrderSummaryCard order={order} />
             <OrderTicketList tickets={order.tickets} />
           </Stack>
+        ) : null}
+
+        {order ? (
+          <OrderNextStepDialog
+            isOpen={completionPrompt.isPromptOpen}
+            eventName={order.eventName}
+            hasCloseFailed={completionPrompt.hasCloseFailed}
+            onBuyAgain={completionPrompt.buyAgain}
+            onCloseTab={completionPrompt.closeTab}
+            onDismiss={completionPrompt.dismiss}
+          />
         ) : null}
       </Container>
     </Box>
