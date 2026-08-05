@@ -288,26 +288,6 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
   const sessionDateTime = formatRange(reviewSummary?.duration.startDate, reviewSummary?.duration.endDate)
   const scheduleCount = reviewSummary?.scheduleCount ?? 0
   const ticketsCount = reviewSummary?.ticketCount ?? 0
-  const selectedFormCount = reviewSummary?.questions.customFormUniqueIds.length ?? 0
-  const customQuestionCount = reviewSummary?.questions.customQuestions.length ?? 0
-  const selectedQuestionsSummary = (() => {
-    const formLabel = `${selectedFormCount} Custom Form${selectedFormCount === 1 ? "" : "s"}`
-    const questionLabel = `${customQuestionCount} Question${customQuestionCount === 1 ? "" : "s"}`
-
-    if (selectedFormCount > 0 && customQuestionCount > 0) {
-      return `${formLabel} and ${questionLabel}`
-    }
-
-    if (selectedFormCount > 0) {
-      return formLabel
-    }
-
-    if (customQuestionCount > 0) {
-      return questionLabel
-    }
-
-    return "None"
-  })()
 
   function buildEditUrl(
     step:
@@ -322,8 +302,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
       | "dates-time"
       | "schedule"
       | "ticket"
-      | "e-ticketing"
-      | "questions",
+      | "e-ticketing",
   ) {
     const target = APP_ROUTES.sessionWizard.editStep(sessionId, step)
     return `${target}?returnUrl=${encodeURIComponent(reviewReturnUrl)}`
@@ -342,8 +321,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
       | "dates-time"
       | "schedule"
       | "ticket"
-      | "e-ticketing"
-      | "questions",
+      | "e-ticketing",
   ) {
     navigate(buildEditUrl(step))
   }
@@ -589,13 +567,6 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
           }
           onEdit={() => handleEdit("schedule")}
           editLabel="Edit schedule"
-          isLoading={isSummaryLoading}
-        />
-        <ReviewItem
-          label="Questions"
-          value={selectedQuestionsSummary}
-          onEdit={() => handleEdit("questions")}
-          editLabel="Edit questions"
           isLoading={isSummaryLoading}
         />
         <ReviewItem

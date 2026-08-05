@@ -5,7 +5,13 @@ import { AlertTriangle, ArrowLeft, CalendarDays, MapPin, ShieldCheck, Users } fr
 import { useNavigate, useParams } from 'react-router-dom'
 import { client } from '@/api/client'
 import { fetchEventRegistrationBootstrap } from '@/api/events'
-import type { EventRegistrationPaymentMethod, EventRegistrationResponse, EventRegistrationSession } from '@/api/events'
+import type {
+  EventRegistrationForm,
+  EventRegistrationPaymentMethod,
+  EventRegistrationQuestion,
+  EventRegistrationResponse,
+  EventRegistrationSession,
+} from '@/api/events'
 import { extractApiError } from '@/utils/errors'
 import { APP_ROUTES } from '@/utils/routes'
 import { EventRegisterWizard } from './EventRegisterWizard'
@@ -37,6 +43,8 @@ interface EventRegistrationViewModel {
   acceptsDiscountCoupons: boolean
   paymentMethods: EventRegistrationPaymentMethod[]
   sessions: EventRegistrationSession[]
+  customForms: EventRegistrationForm[]
+  customQuestions: EventRegistrationQuestion[]
   visibleTabs: string[]
   coverColor: string
 }
@@ -367,6 +375,8 @@ function mapRegistrationToViewModel(registration: EventRegistrationResponse): Ev
     acceptsDiscountCoupons: registration.acceptsDiscountCoupons,
     paymentMethods: registration.paymentMethods,
     sessions: registration.sessions,
+    customForms: registration.customForms,
+    customQuestions: registration.customQuestions,
     visibleTabs: registration.visibleTabs,
     coverColor: registration.themeColor ?? '#7551FF',
   }

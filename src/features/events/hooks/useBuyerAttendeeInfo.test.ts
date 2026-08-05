@@ -11,7 +11,6 @@ const SLOT: AttendeeSlotEntry = {
   ticketName: "Aga Khan",
   attendeeLabel: "Attendee 1",
   requiresAttendeeInfo: true,
-  hasQuestions: false,
 }
 
 const SESSION_GROUP = {
@@ -20,7 +19,6 @@ const SESSION_GROUP = {
   sessionName: SLOT.sessionName,
   attendeeCount: 1,
   requiresAttendeeInfo: true,
-  hasQuestions: false,
   tickets: [
     {
       key: "ticket-1",
@@ -30,8 +28,7 @@ const SESSION_GROUP = {
       ticketName: SLOT.ticketName,
       attendeeCount: 1,
       requiresAttendeeInfo: true,
-      hasQuestions: false,
-      slots: [{ key: SLOT.key, attendeeLabel: SLOT.attendeeLabel }],
+          slots: [{ key: SLOT.key, attendeeLabel: SLOT.attendeeLabel }],
     },
   ],
 }

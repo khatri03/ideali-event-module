@@ -1,11 +1,16 @@
 import { Box, Checkbox, Input, NativeSelect, Text, Textarea } from "@chakra-ui/react"
-import type { EventRegistrationQuestion } from "@/api/events"
+import { AnswerFileField } from "@/features/events/components/registration/AnswerFileField"
+import type { UploadedAnswerFile } from "@/features/events/schemas/eventCart.schemas"
+import type { RegistrationFieldDescriptor } from "@/features/events/utils/registrationFields"
 
-export interface QuestionFieldProps {
-  question: EventRegistrationQuestion
+export interface RegistrationFieldProps {
+  descriptor: RegistrationFieldDescriptor
   value: string
+  file: UploadedAnswerFile | undefined
   errorMessage: string | null
   onChange: (value: string) => void
+  onUpload: (file: File) => Promise<UploadedAnswerFile>
+  onClearFile: () => void
 }
 
 function normalizeControlType(controlType: string) {
@@ -13,17 +18,37 @@ function normalizeControlType(controlType: string) {
 }
 
 /**
- * Renders one custom question as a real input. `controlType` is whatever the organizer picked when
- * building the form, so unknown types fall back to a single-line text input rather than rendering
- * nothing and silently losing the answer.
+ * Renders one custom form field or custom question as a real input. `controlType` is whatever the
+ * organizer picked when building the form, so unknown types fall back to a single-line text input
+ * rather than rendering nothing and silently losing the answer.
  */
-export function QuestionField({ question, value, errorMessage, onChange }: QuestionFieldProps) {
-  const controlType = normalizeControlType(question.controlType)
-  const placeholder = question.placeHolder ?? ""
+export function RegistrationField({
+  descriptor,
+  value,
+  file,
+  errorMessage,
+  onChange,
+  onUpload,
+  onClearFile,
+}: RegistrationFieldProps) {
+  const controlType = normalizeControlType(descriptor.controlType)
+  const placeholder = descriptor.placeHolder ?? ""
   const isInvalid = Boolean(errorMessage)
   const borderColor = isInvalid ? "red.300" : "gray.200"
 
   function renderControl() {
+    if (controlType === "file") {
+      return (
+        <AnswerFileField
+          accept={descriptor.acceptedFileTypes}
+          file={file}
+          isInvalid={isInvalid}
+          onSelect={onUpload}
+          onClear={onClearFile}
+        />
+      )
+    }
+
     if (controlType === "checkbox") {
       return (
         <Checkbox.Root
@@ -33,13 +58,13 @@ export function QuestionField({ question, value, errorMessage, onChange }: Quest
           <Checkbox.HiddenInput />
           <Checkbox.Control cursor="pointer" />
           <Checkbox.Label cursor="pointer" fontSize="sm">
-            {placeholder || question.label}
+            {placeholder || descriptor.label}
           </Checkbox.Label>
         </Checkbox.Root>
       )
     }
 
-    if (controlType === "dropdown" || controlType === "select" || controlType === "radio") {
+    if (descriptor.options.length > 0) {
       return (
         <NativeSelect.Root>
           <NativeSelect.Field
@@ -51,8 +76,8 @@ export function QuestionField({ question, value, errorMessage, onChange }: Quest
             cursor="pointer"
           >
             <option value="">{placeholder || "Select an option"}</option>
-            {question.options.map((option) => (
-              <option key={option.uniqueId} value={option.uniqueId}>
+            {descriptor.options.map((option) => (
+              <option key={option.value} value={option.value}>
                 {option.displayText}
               </option>
             ))}
@@ -70,6 +95,7 @@ export function QuestionField({ question, value, errorMessage, onChange }: Quest
           placeholder={placeholder}
           borderColor={borderColor}
           borderRadius="14px"
+          maxLength={descriptor.maxLength ?? undefined}
           rows={4}
         />
       )
@@ -86,6 +112,7 @@ export function QuestionField({ question, value, errorMessage, onChange }: Quest
         placeholder={placeholder}
         borderColor={borderColor}
         borderRadius="14px"
+        maxLength={descriptor.maxLength ?? undefined}
         h="12"
         px={4}
       />
@@ -95,8 +122,8 @@ export function QuestionField({ question, value, errorMessage, onChange }: Quest
   return (
     <Box>
       <Text fontSize="sm" fontWeight="600" color="gray.700" mb={2}>
-        {question.label}
-        {question.required ? (
+        {descriptor.label}
+        {descriptor.isRequired ? (
           <Text as="span" color="red.500">
             {" *"}
           </Text>
@@ -105,9 +132,9 @@ export function QuestionField({ question, value, errorMessage, onChange }: Quest
 
       {renderControl()}
 
-      {question.tooltip ? (
+      {descriptor.tooltip ? (
         <Text mt={1.5} fontSize="xs" color="gray.500">
-          {question.tooltip}
+          {descriptor.tooltip}
         </Text>
       ) : null}
 

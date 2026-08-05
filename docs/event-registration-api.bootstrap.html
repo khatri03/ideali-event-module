@@ -1,0 +1,2585 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Event Registration — Beginner-Friendly Frontend Guide</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root { --doc-max: 1180px; }
+    body { scroll-behavior: smooth; }
+    .doc-shell { max-width: var(--doc-max); }
+    .sidebar { position: sticky; top: 1rem; max-height: calc(100dvh - 2rem); overflow-y: auto; }
+    .sidebar .nav-link { padding: .3rem .6rem; font-size: .875rem; border-radius: .375rem; }
+    .sidebar .nav-link:hover { background: var(--bs-secondary-bg); }
+    .endpoint { scroll-margin-top: 1rem; }
+    .endpoint-head { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+    code.path { font-size: .95rem; word-break: break-all; }
+    pre { background: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color); border-radius: .5rem; padding: 1rem; overflow-x: auto; font-size: .8125rem; margin-bottom: 0; }
+    pre code { color: inherit; }
+    .badge-method { font-family: var(--bs-font-monospace); letter-spacing: .04em; }
+    h2 { scroll-margin-top: 1rem; border-bottom: 1px solid var(--bs-border-color); padding-bottom: .5rem; margin-top: 3rem; }
+    h3 { margin-top: 2rem; }
+    .table td, .table th { vertical-align: top; }
+    .plain { background: var(--bs-info-bg-subtle); border-left: 4px solid var(--bs-info); padding: .85rem 1rem; border-radius: .375rem; margin: 1rem 0; }
+    .plain::before { content: "In plain words"; display: block; font-weight: 600; font-size: .8125rem; text-transform: uppercase; letter-spacing: .04em; opacity: .75; margin-bottom: .3rem; }
+    .dont { background: var(--bs-danger-bg-subtle); border-left: 4px solid var(--bs-danger); padding: .85rem 1rem; border-radius: .375rem; margin: 1rem 0; }
+    .dont::before { content: "Common mistake"; display: block; font-weight: 600; font-size: .8125rem; text-transform: uppercase; letter-spacing: .04em; opacity: .75; margin-bottom: .3rem; }
+    .step-rail { counter-reset: step; list-style: none; padding-left: 0; }
+    .step-rail > li { position: relative; padding-left: 3rem; padding-bottom: 1.5rem; border-left: 2px solid var(--bs-border-color); margin-left: 1rem; }
+    .step-rail > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+    .step-rail > li::before { counter-increment: step; content: counter(step); position: absolute; left: -1.05rem; top: -.15rem; width: 2.1rem; height: 2.1rem; border-radius: 50%; background: var(--bs-primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: .875rem; }
+    .glossary dt { margin-top: .85rem; }
+    @media (max-width: 991.98px) { .sidebar { position: static; max-height: none; } }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand bg-body-tertiary border-bottom sticky-top">
+  <div class="container doc-shell">
+    <span class="navbar-brand fw-semibold mb-0">Ideali Events — Registration Guide</span>
+    <span class="ms-auto badge text-bg-secondary d-none d-sm-inline">For frontend developers</span>
+  </div>
+</nav>
+
+<div class="container doc-shell my-4">
+  <div class="row g-4">
+
+    <!-- ── Sidebar ─────────────────────────────────────────────── -->
+    <aside class="col-lg-3">
+      <div class="sidebar">
+        <p class="text-uppercase text-secondary small fw-semibold mb-2">Contents</p>
+        <nav class="nav flex-column">
+          <a class="nav-link" href="#start">1. Start here</a>
+          <a class="nav-link" href="#glossary">2. Words you need to know</a>
+          <a class="nav-link" href="#rules">3. Rules for every call</a>
+          <a class="nav-link" href="#journey">4. The whole journey</a>
+          <a class="nav-link" href="#ep-registration">5. Page-loading calls</a>
+          <a class="nav-link ms-3" href="#ep-bootstrap">Load the page</a>
+          <a class="nav-link ms-3" href="#ep-description">Load description</a>
+          <a class="nav-link ms-3" href="#ep-sessions">Load tickets</a>
+          <a class="nav-link ms-3" href="#ep-attendee">Load attendee rules</a>
+          <a class="nav-link ms-3" href="#ep-questionnaire">Load questions</a>
+          <a class="nav-link ms-3" href="#ep-regpayment">Fee preview</a>
+          <a class="nav-link ms-3" href="#ep-register">Load everything</a>
+          <a class="nav-link" href="#ep-cart">6. Cart calls</a>
+          <a class="nav-link ms-3" href="#ep-cart-create">Create cart</a>
+          <a class="nav-link ms-3" href="#ep-cart-get">Get cart</a>
+          <a class="nav-link ms-3" href="#ep-cart-addline">Add tickets</a>
+          <a class="nav-link ms-3" href="#ep-cart-removeline">Remove tickets</a>
+          <a class="nav-link ms-3" href="#ep-cart-price">Price the cart</a>
+          <a class="nav-link ms-3" href="#ep-cart-attendees">Save attendees</a>
+          <a class="nav-link ms-3" href="#ep-cart-answers">Save answers</a>
+          <a class="nav-link ms-3" href="#ep-cart-answer-files">Upload an answer file</a>
+          <a class="nav-link" href="#ep-checkout">7. Payment calls</a>
+          <a class="nav-link ms-3" href="#ep-stripe-creds">Stripe keys</a>
+          <a class="nav-link ms-3" href="#ep-intent">Start payment</a>
+          <a class="nav-link ms-3" href="#ep-confirm">Confirm payment</a>
+          <a class="nav-link ms-3" href="#ep-cheque">Cheque (organizer)</a>
+          <a class="nav-link" href="#ep-order">8. Order status call</a>
+          <a class="nav-link" href="#conditional">9. What to show, and when</a>
+          <a class="nav-link ms-3" href="#cond-gates">Show the form at all?</a>
+          <a class="nav-link ms-3" href="#cond-countdown">Sales-not-open countdown</a>
+          <a class="nav-link ms-3" href="#cond-tabs">Which tabs</a>
+          <a class="nav-link ms-3" href="#cond-sessions">Session card + modal</a>
+          <a class="nav-link ms-3" href="#cond-terms">Terms &amp; refund policy</a>
+          <a class="nav-link ms-3" href="#cond-coupon">Coupon control</a>
+          <a class="nav-link ms-3" href="#cond-next-step">After a successful order</a>
+          <a class="nav-link ms-3" href="#cond-dialogs">All dialogs</a>
+          <a class="nav-link" href="#emails">10. Emails</a>
+          <a class="nav-link" href="#errors">11. When things go wrong</a>
+          <a class="nav-link" href="#checklist">12. Final checklist</a>
+          <a class="nav-link" href="#gaps">13. Not covered here</a>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- ── Main ────────────────────────────────────────────────── -->
+    <main class="col-lg-9">
+
+      <!-- 1. START HERE -->
+      <section id="start">
+        <h1 class="h2 mb-3">Event Registration — Frontend Guide</h1>
+        <p class="lead">
+          This guide explains every server call the event registration screens make, in order, in plain
+          language. If you are new to this project — or new to React — read sections 1 to 4 first. They
+          explain the shape of the whole thing. After that you can jump to whichever call you are
+          working on.
+        </p>
+
+        <h3 class="h5">What are we building?</h3>
+        <p>
+          A public page where someone buys tickets to an event. They do not log in. They open a link,
+          pick tickets, type their details, pay by card or bank transfer, and then see a confirmation
+          page. Tickets arrive by email as PDF files.
+        </p>
+        <p>That is five screens, roughly:</p>
+        <ol>
+          <li><strong>Description</strong> — what the event is about.</li>
+          <li><strong>Sessions</strong> — pick which tickets and how many.</li>
+          <li><strong>Buyer / Attendee info</strong> — who is paying, and who is coming.</li>
+          <li><strong>Questionnaire</strong> — extra questions the organizer added.</li>
+          <li><strong>Payment</strong> — see the total, pay.</li>
+        </ol>
+        <p>Then a sixth page, on its own URL: the <strong>order confirmation page</strong>.</p>
+
+        <div class="plain">
+          Not every event uses all five screens. Some have no description, no extra questions and no
+          named attendees. The server tells you which screens to show — you never guess. Section 9
+          covers this in detail.
+        </div>
+
+        <h3 class="h5">Where does the code live?</h3>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:38%">What</th><th>Where</th></tr></thead>
+            <tbody>
+              <tr><td>Functions that call the server</td><td><code>src/api/</code> — one file per area. Nothing else in the app may call the server directly.</td></tr>
+              <tr><td>TanStack Query hooks</td><td><code>src/features/events/hooks/</code></td></tr>
+              <tr><td>Screens and components</td><td><code>src/features/events/components/registration/</code></td></tr>
+              <tr><td>Response shapes (Zod)</td><td><code>src/features/events/schemas/</code></td></tr>
+              <tr><td>URL list</td><td><code>src/utils/routes.ts</code> — never hardcode a URL in a component.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="plain">
+          The rule is one direction only:
+          <strong>Component → Hook → <code>src/api/</code> file → server.</strong>
+          A component never calls <code>axios</code> itself, and an API file never contains JSX. If you
+          find yourself breaking that, you are in the wrong file.
+        </div>
+      </section>
+
+      <!-- 2. GLOSSARY -->
+      <section id="glossary">
+        <h2 class="h3">2. Words you need to know</h2>
+        <p>These words appear on every page below. Learn them once here and the rest reads easily.</p>
+
+        <dl class="glossary row">
+          <dt class="col-sm-3">Event</dt>
+          <dd class="col-sm-9">The whole thing being sold — "Global Product Summit 2026".</dd>
+
+          <dt class="col-sm-3">Session</dt>
+          <dd class="col-sm-9">One bookable part of an event — "Day One — Main Stage". An event has one or many.</dd>
+
+          <dt class="col-sm-3">Ticket type</dt>
+          <dd class="col-sm-9">A kind of ticket inside a session — "General Admission", "VIP". Each has its own price and stock.</dd>
+
+          <dt class="col-sm-3">Cart</dt>
+          <dd class="col-sm-9">
+            The buyer's in-progress order. <strong>It is not a JavaScript array in your component.</strong>
+            It is a real record on the server that holds stock and expires. More on this in section 6.
+          </dd>
+
+          <dt class="col-sm-3">Line</dt>
+          <dd class="col-sm-9">One row in the cart — "2 × General Admission for Day One". Attendee names are attached per line; questionnaire answers belong to the whole order.</dd>
+
+          <dt class="col-sm-3">Reservation</dt>
+          <dd class="col-sm-9">
+            The hold placed on stock when a line is added. It expires after a set number of minutes. This
+            is what stops two people buying the last seat at the same time.
+          </dd>
+
+          <dt class="col-sm-3">Invoice / Order</dt>
+          <dd class="col-sm-9">
+            Same thing, two names. Created when payment starts. Unlike the cart, it is permanent. The
+            buyer's confirmation page is built from it.
+          </dd>
+
+          <dt class="col-sm-3">GUID</dt>
+          <dd class="col-sm-9">
+            A long random id like <code>8f2a1c44-3f0e-4b53-9a4a-7c0d1e5f22b1</code>. Every public id in this
+            system is one. They are random on purpose — random means unguessable.
+          </dd>
+
+          <dt class="col-sm-3">Envelope</dt>
+          <dd class="col-sm-9">
+            The wrapper around every server response. The data you want is always inside a
+            <code>data</code> property. See section 3.1.
+          </dd>
+
+          <dt class="col-sm-3">Stripe</dt>
+          <dd class="col-sm-9">The payment company. Their JavaScript library runs in the buyer's browser and handles the actual card details.</dd>
+
+          <dt class="col-sm-3">PaymentIntent</dt>
+          <dd class="col-sm-9">
+            Stripe's record of "someone is about to pay this exact amount". Our server creates it and
+            hands you a <code>clientSecret</code> — a one-time token your page gives to Stripe to complete
+            the payment.
+          </dd>
+
+          <dt class="col-sm-3">Webhook</dt>
+          <dd class="col-sm-9">
+            Stripe calling <em>our server</em> directly to say "that payment went through". It happens
+            behind the scenes, and it is the thing that truly finishes an order. Your page never sees it.
+          </dd>
+
+          <dt class="col-sm-3">Settled</dt>
+          <dd class="col-sm-9">
+            The money has actually arrived. Cards settle instantly. Bank transfers can take days — so
+            "paid but not settled yet" is a completely normal state you must design for.
+          </dd>
+
+          <dt class="col-sm-3">Polling</dt>
+          <dd class="col-sm-9">
+            Asking the server the same question every few seconds until the answer changes. Used on the
+            confirmation page while a bank payment settles.
+          </dd>
+
+          <dt class="col-sm-3">Anonymous endpoint</dt>
+          <dd class="col-sm-9">A server call that needs no login. Almost every call in this guide is one — buyers are not users.</dd>
+
+          <dt class="col-sm-3">Idempotent</dt>
+          <dd class="col-sm-9">
+            Safe to call more than once. Calling it twice does the same thing as calling it once. Useful
+            when you cannot be sure whether the first call arrived.
+          </dd>
+        </dl>
+      </section>
+
+      <!-- 3. RULES -->
+      <section id="rules">
+        <h2 class="h3">3. Rules that apply to every call</h2>
+
+        <h3 class="h5">3.1 Every response is wrapped in an envelope</h3>
+        <p>The server never sends you the data directly. It always wraps it:</p>
+<pre><code>{
+  "success": true,
+  "message": null,
+  "errorCode": null,
+  "validationErrors": null,
+  "data": { /* &lt;-- what you actually want is in here */ },
+  "timestamp": "2026-08-05T09:14:22.881Z"
+}</code></pre>
+
+        <div class="dont">
+          Reading <code>response.data.name</code> and getting <code>undefined</code>. With axios,
+          <code>response.data</code> is the envelope. The event's name is at
+          <code>response.data.data.name</code>. That double <code>data</code> catches everyone once.
+          Use the shared unwrap helper instead of reaching in by hand.
+        </div>
+
+        <p>When something goes wrong, the same envelope comes back with the bad news filled in:</p>
+<pre><code>{
+  "success": false,
+  "message": "Discount coupon not found.",
+  "errorCode": null,
+  "validationErrors": {
+    "buyerEmail": ["The BuyerEmail field is not a valid e-mail address."]
+  },
+  "data": null
+}</code></pre>
+        <ul>
+          <li><code>message</code> — one sentence, safe to show the buyer as-is.</li>
+          <li><code>validationErrors</code> — a map of field name → list of problems. Show each under its own input.</li>
+        </ul>
+
+        <h3 class="h5">3.2 Property names may be capitalised either way</h3>
+        <p>
+          The same field can arrive as <code>name</code> or <code>Name</code> depending on the endpoint.
+          Do not fight this — every parser in this project already accepts both and picks whichever
+          turned up:
+        </p>
+<pre><code>name: parsed.Name ?? parsed.name ?? ""</code></pre>
+        <p>Examples in this guide use lowercase. Copy the existing parser pattern and you are fine.</p>
+
+        <h3 class="h5">3.3 What each status code means</h3>
+        <div class="table-responsive">
+          <table class="table table-sm table-striped">
+            <thead><tr><th style="width:5rem">Code</th><th>Meaning</th><th>What your UI does</th></tr></thead>
+            <tbody>
+              <tr><td><code>200</code></td><td>It worked.</td><td>Render the data.</td></tr>
+              <tr><td><code>400</code></td><td>The server understood you and said no. There is a reason in <code>message</code>.</td><td>Show <code>message</code> near the thing that failed. This is a normal outcome, not a crash.</td></tr>
+              <tr><td><code>404</code></td><td>No such order. Only the order-status call returns this.</td><td>Show the "order not found" card. Stop asking.</td></tr>
+              <tr><td><code>429</code></td><td>You asked too many times too fast.</td><td>Slow down. Only the order-status call can return this.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="h5" id="rules-bot">3.4 Two calls are challenged by Cloudflare Turnstile</h3>
+        <p>
+          Registration needs no login, so two calls sit wide open to anyone: <code>POST /api/events/cart</code>,
+          which takes seats off the shelf, and <code>POST …/checkout/intent</code>, which reaches Stripe. Both
+          require a Cloudflare Turnstile token in a <code>Turnstile-Token</code> header. Every other cart call
+          needs a cart id that only the first of those can hand out, so they are left alone.
+        </p>
+        <p>
+          You do not add the header yourself. The shared axios client mints a token and attaches it for
+          exactly those two routes. A token is single-use and expires in minutes, so it is minted per
+          request rather than once per session — a wizard sits open far longer than a token lives.
+        </p>
+        <ul>
+          <li><code>VITE_TURNSTILE_SITE_KEY</code> switches it on. Empty means unchallenged, which is how local development runs.</li>
+          <li>Most visitors see nothing. Cloudflare only paints a widget when it wants proof, and it disappears again once solved.</li>
+          <li>A rejected token comes back as <code>400</code> with <code>errorCode: "captcha_failed"</code>. Show <code>message</code> and let the buyer retry — the next attempt mints a new token by itself.</li>
+        </ul>
+        <div class="dont">
+          Caching a token, or reusing one across the cart and the payment call. Cloudflare answers the
+          second use with <code>timeout-or-duplicate</code> and the buyer is blocked for no reason.
+        </div>
+
+        <h3 class="h5">3.5 Money</h3>
+        <ul>
+          <li>Amounts arrive as numbers like <code>470.61</code>.</li>
+          <li>Display them with <code>Intl.NumberFormat</code>, never with string concatenation.</li>
+          <li><strong>Never add prices up yourself.</strong> The server sends you every total you need. Section 6.5 explains why this matters so much.</li>
+        </ul>
+
+        <h3 class="h5">3.6 Dates</h3>
+        <p>
+          All dates are UTC, in ISO format: <code>"2026-09-14T13:00:00Z"</code>. The event also sends a
+          <code>timeZone</code>. Show session times in the <em>event's</em> time zone, not the buyer's
+          browser time zone — otherwise someone in London reads the wrong start time for a Toronto event.
+          Use <code>date-fns</code>. Do not add another date library.
+        </p>
+
+        <h3 class="h5">3.7 A reusable call template</h3>
+        <p>Every API function in this project looks like this. Copy the shape:</p>
+<pre><code>// src/api/eventOrders.ts
+import { z } from "zod"
+import { client } from "@/api/client"
+import { API_ROUTES } from "@/utils/routes"
+import { normalizeEventOrderStatus, type EventOrderStatus } from "@/features/events/schemas/eventOrder.schemas"
+
+// 1. Describe the envelope
+const serviceResponseSchema = z.object({
+  Data: z.unknown().nullable().optional(),
+  data: z.unknown().nullable().optional(),
+})
+
+// 2. Pull the payload out of the envelope
+function readResponseData(payload: unknown): unknown {
+  const parsed = serviceResponseSchema.parse(payload)
+  return parsed.Data ?? parsed.data
+}
+
+// 3. Call, unwrap, validate, return a clean typed object
+export async function fetchEventOrderStatus(orderUniqueId: string): Promise&lt;EventOrderStatus&gt; {
+  const res = await client.get&lt;unknown&gt;(API_ROUTES.eventOrderStatus(orderUniqueId))
+  return normalizeEventOrderStatus(readResponseData(res.data))
+}</code></pre>
+        <p class="mb-0">
+          Three steps, always: unwrap the envelope, validate the shape with Zod, return a clean object.
+          The rest of the app then only ever sees clean, typed data.
+        </p>
+      </section>
+
+      <!-- 4. JOURNEY -->
+      <section id="journey">
+        <h2 class="h3">4. The whole journey, in order</h2>
+        <p>
+          Order matters. You cannot price a cart that has no tickets in it, and you cannot start a
+          payment before you know the price. Here is the full sequence.
+        </p>
+
+        <ol class="step-rail mt-4">
+          <li>
+            <h3 class="h6 mb-1">Buyer opens the registration link</h3>
+            <p class="mb-1"><code>GET /api/events/{eventUniqueId}/register/bootstrap</code></p>
+            <p class="text-secondary small mb-0">One small, fast call. Answers: can they register at all, which tabs exist, what colour is the brand, which currency. Everything else waits.</p>
+          </li>
+          <li>
+            <h3 class="h6 mb-1">Buyer picks tickets</h3>
+            <p class="mb-1"><code>GET …/register/sessions</code>, then <code>POST /api/events/cart</code>, then <code>POST /api/events/cart/{id}/lines</code></p>
+            <p class="text-secondary small mb-0">Create the cart on the <em>first ticket chosen</em>, not on page load. Adding a line reserves real stock, and the countdown timer starts right here.</p>
+          </li>
+          <li>
+            <h3 class="h6 mb-1">Buyer types their details</h3>
+            <p class="mb-1"><code>GET …/register/attendee-info</code>, then <code>POST …/lines/{lineId}/attendees</code></p>
+            <p class="text-secondary small mb-0">Only for sessions that ask for attendee names. Whatever email you put on an attendee decides who gets that ticket by email.</p>
+          </li>
+          <li>
+            <h3 class="h6 mb-1">Buyer answers extra questions</h3>
+            <p class="mb-1"><code>GET …/register/questionnaire</code>, then <code>POST …/cart/{cartId}/answers</code></p>
+            <p class="text-secondary small mb-0">Only when the event actually asks for custom forms or questions.</p>
+          </li>
+          <li>
+            <h3 class="h6 mb-1">Show the price</h3>
+            <p class="mb-1"><code>POST /api/events/cart/{id}/price</code></p>
+            <p class="text-secondary small mb-0">Returns a separate total for each payment method, because fees differ. This is also where a discount coupon is accepted or rejected.</p>
+          </li>
+          <li>
+            <h3 class="h6 mb-1">Buyer pays</h3>
+            <p class="mb-1"><code>GET /api/public/stripe/{paymentAccountUniqueId}/credentials</code>, then <code>POST …/checkout/intent</code>, then Stripe.js</p>
+            <p class="text-secondary small mb-0">Card fields appear on screen <em>before</em> the payment exists, so the Stripe key comes from its own call.</p>
+          </li>
+          <li>
+            <h3 class="h6 mb-1">Buyer lands on their order page</h3>
+            <p class="mb-1"><code>POST …/checkout/confirm</code>, then <code>GET /api/events/orders/{orderUniqueId}</code></p>
+            <p class="text-secondary small mb-0">The cart is finished and gone. From here the buyer has one permanent id: the order id.</p>
+          </li>
+          <li>
+            <h3 class="h6 mb-1">Emails go out</h3>
+            <p class="mb-1">Nothing for you to call — see section 10.</p>
+            <p class="text-secondary small mb-0">Two different emails, to different people, for different reasons. The frontend sends neither.</p>
+          </li>
+        </ol>
+
+        <div class="alert alert-danger mt-4">
+          <strong>The one rule you must never break:</strong> card numbers, CVC codes and bank account
+          numbers go from the buyer's browser <em>straight to Stripe</em>. They never pass through our
+          API, in any form, for any reason. Stripe's own components collect them. Our server only ever
+          learns a PaymentIntent id. If a design ever asks you to POST a card number to our backend,
+          that design is wrong — raise it, do not build it.
+        </div>
+      </section>
+
+      <!-- 5. REGISTRATION -->
+      <section id="ep-registration">
+        <h2 class="h3">5. Page-loading calls</h2>
+        <p>
+          There are seven of these, and here is the thing that confuses people first:
+          <strong>all seven return the exact same shape.</strong> The difference is which parts are
+          filled in. The bootstrap call fills in the event details and leaves <code>sessions</code>
+          empty; the sessions call fills in <code>sessions</code> and leaves most event details out.
+        </p>
+        <div class="plain">
+          Why? So one parser handles all seven, and so each screen downloads only what it needs. Loading
+          every question for every session when the buyer only wants to read the description would be
+          slow and wasteful.
+        </div>
+
+        <!-- bootstrap -->
+        <article id="ep-bootstrap" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-success badge-method">GET</span>
+            <code class="path">/api/events/{eventUniqueId}/register/bootstrap</code>
+            <span class="badge text-bg-light border ms-auto">No login needed</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>
+              It sets up the page. It answers the questions you must have answers to before you can draw
+              anything: is this event even open for registration, what tabs should appear, what colour is
+              the brand, which currency, and does this event accept discount coupons.
+            </p>
+            <p><strong>This is the very first call the page makes.</strong> Everything else waits for it.</p>
+
+            <h4 class="h6 mt-4">What do you send?</h4>
+            <p class="text-secondary">Nothing. No body, no query string. Just the event id in the URL.</p>
+
+            <h4 class="h6 mt-4">How do you call it?</h4>
+<pre><code>// The API function already exists — use it, do not write a new one
+import { fetchEventRegistrationBootstrap } from "@/api/events"
+
+export function useEventRegistration(eventUniqueId: string) {
+  return useQuery({
+    queryKey: ["event-registration", eventUniqueId, "bootstrap"],
+    queryFn: () =&gt; fetchEventRegistrationBootstrap(eventUniqueId),
+  })
+}</code></pre>
+
+            <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
+<pre><code>{
+  "uniqueId": "8f2a1c44-3f0e-4b53-9a4a-7c0d1e5f22b1",
+  "name": "Global Product Summit 2026",
+  "summary": "Two days on how the best teams ship.",
+  "description": null,
+  "bannerUrl": "https://cdn.ideali.io/events/8f2a1c44/banner.jpg",
+  "themeColor": "#1F4FD8",
+  "termsConditions": "&lt;p&gt;Tickets are non-transferable…&lt;/p&gt;",
+  "refundPolicy": "&lt;p&gt;Full refund up to 14 days before…&lt;/p&gt;",
+  "organizerName": "Northwind Events",
+  "timeZone": "Eastern Standard Time",
+  "venueName": "Metro Convention Centre",
+  "venueMapUrl": "https://maps.google.com/?q=43.6426,-79.3871",
+  "startDate": "2026-09-14T13:00:00Z",
+  "endDate": "2026-09-15T22:00:00Z",
+  "bookingStartDate": "2026-06-01T04:00:00Z",
+  "bookingEndDate": "2026-09-13T03:59:00Z",
+  "purchaseTimeLimitMinutes": 15,
+  "registrationStatus": "Open",
+  "canRegister": true,
+  "registrationBlockedReason": null,
+  "isOrganizer": false,
+  "paymentAccountUniqueId": "b31d9f77-52ac-4a10-8f65-2c9e4a7d1b03",
+  "paymentAccountCurrency": "USD",
+  "acceptsDiscountCoupons": true,
+  "visibleTabs": ["description", "sessions", "attendee-info", "questionnaire", "payment"],
+  "paymentMethods": [
+    { "paymentMethod": "CreditCard", "label": "Debit/Credit Card", "isOrganizerOnly": false },
+    { "paymentMethod": "Ach",        "label": "Bank Transfer (ACH)", "isOrganizerOnly": false },
+    { "paymentMethod": "Cheque",     "label": "Cheque",              "isOrganizerOnly": true  }
+  ],
+  "paymentBreakdowns": [],
+  "sessions": []
+}</code></pre>
+
+            <h4 class="h6 mt-4">The fields that change what you draw</h4>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light"><tr><th style="width:32%">Field</th><th>What it means and what you do</th></tr></thead>
+                <tbody>
+                  <tr><td><code>canRegister</code></td><td><strong>The big one.</strong> If it is <code>false</code>, show the "cannot register" screen and stop. Do not draw a greyed-out wizard, and do not make any further calls.</td></tr>
+                  <tr><td><code>registrationBlockedReason</code></td><td>The sentence to show when <code>canRegister</code> is false. If it is <code>null</code>, use a generic message of your own.</td></tr>
+                  <tr><td><code>bookingStartDate</code></td><td>If this is still in the future, sales have not opened. Show a countdown instead of the wizard, and refetch this call once the time passes.</td></tr>
+                  <tr><td><code>purchaseTimeLimitMinutes</code></td><td>How many minutes a buyer gets to finish before their reserved tickets are released. Drives the countdown timer. If this field is missing, treat the response as broken.</td></tr>
+                  <tr><td><code>visibleTabs</code></td><td>The list of tabs the server permits. If the array is <strong>empty</strong>, you decide. If it has items, only show tabs from that list. Section 9.2 has the full rule.</td></tr>
+                  <tr><td><code>isOrganizer</code></td><td>True when the person viewing is the organizer, not a public buyer. It unlocks organizer-only payment methods such as cheque. This is for display only — the server checks properly on its own.</td></tr>
+                  <tr><td><code>acceptsDiscountCoupons</code></td><td>Whether there is at least one coupon a buyer could actually use. <code>false</code> ⇒ <strong>do not show the coupon box at all.</strong> It contains no coupon codes, only true or false.</td></tr>
+                  <tr><td><code>paymentAccountUniqueId</code></td><td>You need this to fetch the Stripe key later. Keep it.</td></tr>
+                  <tr><td><code>themeColor</code></td><td>The organizer's brand colour. Use it for buttons and highlights.</td></tr>
+                  <tr><td><code>paymentMethods</code></td><td>Which ways this event can be paid for. Anything with <code>isOrganizerOnly: true</code> is hidden unless <code>isOrganizer</code> is true.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="dont">
+              Showing a disabled wizard when <code>canRegister</code> is false. The buyer then hunts for
+              the thing they did wrong. Show the reason instead — it is right there in
+              <code>registrationBlockedReason</code>.
+            </div>
+          </div>
+        </article>
+
+        <!-- description -->
+        <article id="ep-description" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-success badge-method">GET</span>
+            <code class="path">/api/events/{eventUniqueId}/register/description</code>
+            <span class="badge text-bg-light border ms-auto">No login needed</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>
+              The long write-up of the event. This can be several pages of formatted text the organizer
+              wrote, so it is a separate call — no point downloading it for a buyer who goes straight to
+              the tickets.
+            </p>
+
+            <h4 class="h6 mt-4">When do you call it?</h4>
+            <p>The first time the buyer opens the Description tab. Then keep the result; do not refetch on every tab switch.</p>
+
+            <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
+<pre><code>{
+  "uniqueId": "8f2a1c44-3f0e-4b53-9a4a-7c0d1e5f22b1",
+  "name": "Global Product Summit 2026",
+  "summary": "Two days on how the best teams ship.",
+  "description": "&lt;h2&gt;What you'll take away&lt;/h2&gt;&lt;p&gt;Sessions run in three tracks…&lt;/p&gt;",
+  "termsConditions": "&lt;p&gt;Tickets are non-transferable…&lt;/p&gt;",
+  "refundPolicy": "&lt;p&gt;Full refund up to 14 days before…&lt;/p&gt;",
+  "sessions": []
+}</code></pre>
+
+            <div class="alert alert-danger mt-3 mb-0">
+              <strong>Important — this is HTML written by another person.</strong>
+              <code>description</code>, <code>termsConditions</code> and <code>refundPolicy</code> are
+              typed by organizers, and organizers are not trusted input. If you render them with
+              <code>dangerouslySetInnerHTML</code> without sanitising first, an organizer can inject a
+              script that runs in your buyers' browsers. That is a real attack, called stored XSS.
+              Sanitise, always.
+            </div>
+          </div>
+        </article>
+
+        <!-- sessions -->
+        <article id="ep-sessions" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-success badge-method">GET</span>
+            <code class="path">/api/events/{eventUniqueId}/register/sessions</code>
+            <span class="badge text-bg-light border ms-auto">No login needed</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>
+              Everything that is actually for sale: each session, each ticket type inside it, how many
+              are left, and which price is currently in force. This is the data the ticket picker draws.
+            </p>
+
+            <div class="plain">
+              <code>availableForSale</code> is a live number that changes as other people buy. Refetch
+              when the buyer comes back to this tab, rather than trusting a copy from ten minutes ago —
+              otherwise they will pick a ticket that is already gone and get a confusing error later.
+            </div>
+
+            <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
+<pre><code>{
+  "uniqueId": "8f2a1c44-3f0e-4b53-9a4a-7c0d1e5f22b1",
+  "name": "Global Product Summit 2026",
+  "sessions": [
+    {
+      "uniqueId": "c9e0b1a2-77d4-4f6a-8b21-5a3e9c7f4d10",
+      "name": "Day One — Main Stage",
+      "description": "&lt;p&gt;Keynotes and the product track.&lt;/p&gt;",
+      "bannerUrl": null,
+      "setupState": "Published",
+      "bookingStatus": "Open",
+      "startDate": "2026-09-14T13:00:00Z",
+      "endDate": "2026-09-14T22:00:00Z",
+      "bookingStartDate": "2026-06-01T04:00:00Z",
+      "bookingEndDate": "2026-09-13T03:59:00Z",
+      "requiresAttendeeInfo": true,
+      "ticketTypes": [
+        {
+          "uniqueId": "2d7c4e19-9a11-42b8-b0d6-6f8c1e3a5b72",
+          "name": "General Admission",
+          "description": "Full access to all main-stage sessions.",
+          "colorCode": "#0EA5E9",
+          "fullPrice": 249.00,
+          "minPurchase": 1,
+          "maxPurchase": 6,
+          "totalQuantity": 500,
+          "availableForSale": 118,
+          "ticketsSold": 382,
+          "isActive": true,
+          "salesStartDateUtc": "2026-06-01T04:00:00Z",
+          "salesEndDateUtc": "2026-09-13T03:59:00Z",
+          "pricePeriods": [
+            {
+              "uniqueId": "a44b1e77-2c3d-4e58-9f01-8b6a2d5c9e34",
+              "name": "Early bird",
+              "amount": 199.00,
+              "startDateTime": "2026-06-01T04:00:00Z",
+              "endDateTime": "2026-07-31T03:59:00Z",
+              "currentStatus": "Expired"
+            },
+            {
+              "uniqueId": "b55c2f88-3d4e-4f69-a012-9c7b3e6d0f45",
+              "name": "Standard",
+              "amount": 249.00,
+              "startDateTime": "2026-07-31T04:00:00Z",
+              "endDateTime": "2026-09-13T03:59:00Z",
+              "currentStatus": "Active"
+            }
+          ]
+        }
+      ],
+    }
+  ]
+}</code></pre>
+
+            <h4 class="h6 mt-4">What is a "price period"?</h4>
+            <p>
+              Organizers often sell the same ticket cheaper early on — an early-bird price. Each ticket
+              type therefore carries a list of price periods, each with its own dates. Exactly one of
+              them has <code>currentStatus: "Active"</code>, and <strong>that one's <code>amount</code> is
+              today's price</strong>.
+            </p>
+            <p>
+              <code>fullPrice</code> is the normal, undiscounted price. When the active period is cheaper
+              than <code>fullPrice</code>, show <code>fullPrice</code> struck through next to the real
+              price — buyers respond to seeing the saving.
+            </p>
+
+            <h4 class="h6 mt-4">Rules the ticket picker must follow</h4>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light"><tr><th style="width:32%">If you see…</th><th>Then…</th></tr></thead>
+                <tbody>
+                  <tr><td><code>isActive: false</code></td><td>Do not draw that ticket type at all.</td></tr>
+                  <tr><td><code>availableForSale: 0</code></td><td>Show "Sold out". Disable the quantity buttons and give them a <code>not-allowed</code> cursor.</td></tr>
+                  <tr><td><code>availableForSale: null</code></td><td>Unlimited. Say nothing about availability.</td></tr>
+                  <tr><td><code>availableForSale</code> is a small number</td><td>Optional: "Only 3 left". Nice touch, not required.</td></tr>
+                  <tr><td>Now is outside <code>salesStartDateUtc</code>–<code>salesEndDateUtc</code></td><td>Disable it, and say why.</td></tr>
+                  <tr><td><code>minPurchase</code> / <code>maxPurchase</code></td><td>The lowest and highest quantity allowed. <code>maxPurchase: null</code> means only stock limits them.</td></tr>
+                  <tr><td><code>requiresAttendeeInfo: true</code></td><td>Put a badge on the session card. Picking from here adds an extra step later, and buyers should not be ambushed by it.</td></tr>
+                  <tr><td><code>bookingStatus</code> is not <code>"Open"</code></td><td>The whole session is view-only.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+
+        <!-- attendee-info -->
+        <article id="ep-attendee" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-success badge-method">GET</span>
+            <code class="path">/api/events/{eventUniqueId}/register/attendee-info</code>
+            <span class="badge text-bg-light border ms-auto">No login needed</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>
+              Tells you which sessions need a name for every single ticket. Some events only need the
+              buyer's name; others need to know exactly who is walking in. This call tells you which
+              kind you are dealing with, so you know how many name forms to draw.
+            </p>
+
+            <h4 class="h6 mt-4">When do you call it?</h4>
+            <p>Only when the Attendee Info tab is actually going to be shown.</p>
+
+            <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
+<pre><code>{
+  "uniqueId": "8f2a1c44-3f0e-4b53-9a4a-7c0d1e5f22b1",
+  "sessions": [
+    {
+      "uniqueId": "c9e0b1a2-77d4-4f6a-8b21-5a3e9c7f4d10",
+      "name": "Day One — Main Stage",
+      "requiresAttendeeInfo": true,
+      "ticketTypes": [
+        { "uniqueId": "2d7c4e19-9a11-42b8-b0d6-6f8c1e3a5b72", "name": "General Admission" }
+      ]
+    },
+    {
+      "uniqueId": "d0f1c2b3-88e5-4a7b-9c32-6b4f0d8e5a21",
+      "name": "Evening Reception",
+      "requiresAttendeeInfo": false,
+      "ticketTypes": []
+    }
+  ]
+}</code></pre>
+
+            <div class="alert alert-warning mt-3 mb-0">
+              <strong>The attendee email field matters more than it looks.</strong> Whatever address is
+              typed there is where that person's ticket is emailed. A typo silently sends someone's
+              ticket to a stranger. Validate the format, and consider showing the address back to the
+              buyer for confirmation.
+            </div>
+          </div>
+        </article>
+
+        <!-- questionnaire -->
+        <article id="ep-questionnaire" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-success badge-method">GET</span>
+            <code class="path">/api/events/{eventUniqueId}/register/questionnaire</code>
+            <span class="badge text-bg-light border ms-auto">No login needed</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>
+              Organizers can add their own questions — "any dietary requirements?", "which track will you
+              attend?". This call returns those questions as a description of form fields, and your job
+              is to build a form out of it.
+            </p>
+
+            <div class="plain">
+              You are not hardcoding these fields. The organizer built them; the server describes them;
+              you render whatever arrives. Think of it as a small form-builder. Each question tells you
+              which widget to use (<code>controlType</code>), what to label it, whether it is required,
+              and what its options are.
+            </div>
+
+            <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
+<pre><code>{
+  "uniqueId": "8f2a1c44-3f0e-4b53-9a4a-7c0d1e5f22b1",
+  "sessions": [
+    {
+      "uniqueId": "c9e0b1a2-77d4-4f6a-8b21-5a3e9c7f4d10",
+      "name": "Day One — Main Stage",
+      "customForms": [
+        {
+          "uniqueId": "f1a2b3c4-1122-4d5e-8899-aabbccddeeff",
+          "name": "Dietary requirements",
+          "headerText": "Help us cater properly",
+          "description": "We share totals with the venue, never your name.",
+          "displayOrder": 1,
+          "layoutColumn": 2,
+          "fields": [
+            {
+              "uniqueId": "9c8b7a65-4433-4221-9110-ffeeddccbbaa",
+              "controlType": "text",
+              "controlLabel": "Allergies",
+              "isMandatory": true,
+              "layoutColumn": 2,
+              "displayOrder": 1,
+              "hasOptions": false,
+              "options": []
+            }
+          ]
+        }
+      ],
+      "customQuestions": [
+        {
+          "uniqueId": "e5d4c3b2-9988-4a1b-b7c6-112233445566",
+          "controlId": 3,
+          "controlName": "DropDown",
+          "controlType": "select",
+          "iconClass": "list",
+          "label": "Which track will you attend?",
+          "placeHolder": "Choose a track",
+          "tooltip": "You can switch on the day.",
+          "required": true,
+          "requiredMessage": "Pick a track so we can size the rooms.",
+          "acceptedFileTypes": null,
+          "minLength": null,
+          "maxLength": null,
+          "defaultValue": null,
+          "isActive": true,
+          "displayOrder": 1,
+          "options": [
+            { "uniqueId": "aa11bb22-cc33-4d44-9e55-6f7788990011", "displayText": "Product",     "value": "product", "isDefault": true  },
+            { "uniqueId": "bb22cc33-dd44-4e55-9f66-708899aabbcc", "displayText": "Engineering", "value": "eng",     "isDefault": false }
+          ]
+        },
+        {
+          "uniqueId": "c7b6a5d4-3322-4f11-8e99-665544332211",
+          "controlId": 7,
+          "controlName": "FileUpload",
+          "controlType": "file",
+          "label": "Upload your accreditation",
+          "required": false,
+          "acceptedFileTypes": ".pdf,.png,.jpg",
+          "isActive": true,
+          "displayOrder": 2,
+          "options": []
+        }
+      ]
+    }
+  ]
+}</code></pre>
+
+            <h4 class="h6 mt-4">How to render each question</h4>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light"><tr><th style="width:30%">Field</th><th>What to do with it</th></tr></thead>
+                <tbody>
+                  <tr><td><code>isActive: false</code></td><td>Questions only. Skip it entirely: do not render it and do not send an answer for it.</td></tr>
+                  <tr><td><code>displayOrder</code></td><td>Sort by this. Do not trust the array order.</td></tr>
+                  <tr><td><code>controlType</code></td><td>Picks the widget: <code>select</code>, <code>file</code>, <code>text</code>, and so on. Anything you do not recognise renders as a text input — never as nothing.</td></tr>
+                  <tr><td><code>label</code> / <code>controlLabel</code></td><td>The visible label. Always attach it properly to the input with <code>htmlFor</code> — screen readers need it.</td></tr>
+                  <tr><td><code>required</code> / <code>isMandatory</code></td><td>Block submission when it is empty. The server refuses too, so skipping this only produces a worse error later.</td></tr>
+                  <tr><td><code>requiredMessage</code></td><td>The organizer's own wording for the error. Prefer it over your generic one.</td></tr>
+                  <tr><td><code>acceptedFileTypes</code></td><td>Organizer free text — <code>".pdf,.docx"</code>, <code>"pdf docx"</code> and <code>"PDF, DOCX"</code> all occur. Normalise it before putting it in the file input's <code>accept</code> attribute.</td></tr>
+                  <tr><td><code>minLength</code> / <code>maxLength</code></td><td>Numbers on a form field; <strong>strings</strong> on a question. Convert before comparing.</td></tr>
+                  <tr><td><code>layoutColumn</code></td><td>Form fields only. On the form it is the grid's column count; on a field it is how many of those columns the field spans. Clamp the form to 4 columns, cap a field's span at its form's column count, and collapse to one column on small screens. Missing or <code>null</code> means one.</td></tr>
+                  <tr><td><code>options</code></td><td>The choices for a select or radio group. A <em>question</em> answer sends the chosen option's <code>uniqueId</code>; a <em>form field</em> answer sends the option's <code>value</code>. Never the display text.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+
+        <!-- register/payment -->
+        <article id="ep-regpayment" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-success badge-method">GET</span>
+            <code class="path">/api/events/{eventUniqueId}/register/payment?subtotal={number}</code>
+            <span class="badge text-bg-light border ms-auto">No login needed</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>
+              A "what would this cost me?" preview, before any cart exists. Pass a made-up subtotal and
+              it shows what the fees would be for each payment method.
+            </p>
+
+            <div class="alert alert-warning">
+              <strong>This is a preview only.</strong> The real amount a buyer pays always comes from
+              <a href="#ep-cart-price">Price the cart</a>. Never take a payment based on a number from
+              this call.
+            </div>
+
+            <h4 class="h6 mt-4">Query string</h4>
+            <p><code>?subtotal=498.00</code> — defaults to <code>0</code> if you leave it out.</p>
+
+            <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
+<pre><code>{
+  "uniqueId": "8f2a1c44-3f0e-4b53-9a4a-7c0d1e5f22b1",
+  "paymentAccountCurrency": "USD",
+  "paymentMethods": [
+    { "paymentMethod": "CreditCard", "label": "Debit/Credit Card", "isOrganizerOnly": false }
+  ],
+  "paymentBreakdowns": [
+    {
+      "paymentMethod": "CreditCard",
+      "label": "Debit/Credit Card",
+      "isOrganizerOnly": false,
+      "merchantName": "Stripe",
+      "subtotal": 498.00,
+      "buyerChargeTotal": 24.42,
+      "grandTotal": 522.42,
+      "charges": [
+        { "source": "ChargeRule",      "title": "Booking fee",     "valueType": "Fixed",      "value": 2.50, "amount": 5.00  },
+        { "source": "ProcessorFee",    "title": "Card processing", "valueType": "Percentage", "value": 2.90, "amount": 14.44 },
+        { "source": "RevenuePlanRule", "title": "Platform fee",    "valueType": "Percentage", "value": 1.00, "amount": 4.98  }
+      ]
+    }
+  ]
+}</code></pre>
+          </div>
+        </article>
+
+        <!-- register (full) -->
+        <article id="ep-register" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-success badge-method">GET</span>
+            <code class="path">/api/events/{eventUniqueId}/register</code>
+            <span class="badge text-bg-light border ms-auto">No login needed</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>Everything at once — event, all sessions, all tickets, all questions, all fee breakdowns, in a single response.</p>
+            <h4 class="h6 mt-4">Should you use it?</h4>
+            <p class="mb-0">
+              Generally no. It is the biggest response in the whole flow. Use <code>bootstrap</code> plus
+              the per-tab calls in the real UI. This one is handy for debugging, or for seeing the full
+              shape in one place while you are learning.
+            </p>
+          </div>
+        </article>
+      </section>
+
+      <!-- 6. CART -->
+      <section id="ep-cart">
+        <h2 class="h3">6. Cart calls</h2>
+
+        <div class="alert alert-primary">
+          <strong>Read this before writing any cart code.</strong> The cart is not a list in React state.
+          It is a real record on the server, it holds real stock away from other buyers, and it expires.
+          Every cart call returns the <em>whole updated cart</em>, so you never have to work out the new
+          state yourself — just replace what you had with what came back.
+        </div>
+
+        <div class="plain">
+          Think of a cart like a supermarket trolley that the shop is watching. Putting something in
+          takes it off the shelf, so nobody else can buy it. If you wander off for twenty minutes, staff
+          put it all back. That is exactly how this works.
+        </div>
+
+        <!-- create cart -->
+        <article id="ep-cart-create" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-primary badge-method">POST</span>
+            <code class="path">/api/events/cart</code>
+            <span class="badge text-bg-warning-subtle text-warning-emphasis border ms-auto">Bot challenge</span>
+            <span class="badge text-bg-light border">No login needed</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>Opens an empty cart for this event and starts the countdown clock.</p>
+
+            <h4 class="h6 mt-4">When do you call it?</h4>
+            <p>
+              When the buyer picks their <strong>first ticket</strong> — not when the page loads. A cart
+              created on page load holds nothing, helps nobody, and clutters the organizer's reports with
+              carts that were never real.
+            </p>
+
+            <h4 class="h6 mt-4">What do you send?</h4>
+<pre><code>{
+  "eventUniqueId": "8f2a1c44-3f0e-4b53-9a4a-7c0d1e5f22b1",
+  "buyerContactId": null,
+  "buyerName": "Priya Raman",
+  "buyerEmail": "priya.raman@example.com",
+  "buyerPhone": "+1 416 555 0142"
+}</code></pre>
+            <p class="small text-secondary">Only <code>eventUniqueId</code> is required. The buyer fields can be filled in later — you can also send them again when starting the payment, and those win.</p>
+
+            <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
+<pre><code>{
+  "cartUniqueId": "5c1d8e2f-6b7a-4c39-9d80-1e2f3a4b5c6d",
+  "invoiceNo": "EV-2026-004183",
+  "eventUniqueId": "8f2a1c44-3f0e-4b53-9a4a-7c0d1e5f22b1",
+  "expiresAtUtc": "2026-08-05T09:29:41Z",
+  "subTotal": 0.00,
+  "discountAmount": null,
+  "netSubtotal": 0.00,
+  "totalAmount": 0.00,
+  "lines": []
+}</code></pre>
+
+            <h4 class="h6 mt-4">What you must do with it</h4>
+            <ul>
+              <li>Save <code>cartUniqueId</code> somewhere it survives a page refresh, so a reload does not orphan the buyer's reservation.</li>
+              <li>Start the countdown from <code>expiresAtUtc</code>.</li>
+            </ul>
+            <div class="dont">
+              Saving the cart id in <code>localStorage</code>. This project does not use web storage for
+              anything. Use a short-lived cookie scoped to the registration path — there is already a
+              helper for exactly this.
+            </div>
+          </div>
+        </article>
+
+        <!-- get cart -->
+        <article id="ep-cart-get" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-success badge-method">GET</span>
+            <code class="path">/api/events/cart/{cartUniqueId}</code>
+            <span class="badge text-bg-light border ms-auto">No login needed</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>Fetches a cart you already have the id for. Used after a page refresh, or when the buyer comes back from an external page.</p>
+
+            <div class="plain">
+              A <code>400</code> here is <strong>normal, not a bug</strong>. It means the cart expired or
+              was cancelled. When that happens: clear the saved cart id, stop the timer, and put the
+              buyer back at ticket selection with a clear message. Do not show a red error screen — this
+              is an expected part of life.
+            </div>
+
+            <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
+<pre><code>{
+  "cartUniqueId": "5c1d8e2f-6b7a-4c39-9d80-1e2f3a4b5c6d",
+  "invoiceNo": "EV-2026-004183",
+  "eventUniqueId": "8f2a1c44-3f0e-4b53-9a4a-7c0d1e5f22b1",
+  "expiresAtUtc": "2026-08-05T09:29:41Z",
+  "subTotal": 498.00,
+  "discountAmount": 49.80,
+  "netSubtotal": 448.20,
+  "totalAmount": 470.61,
+  "lines": [
+    {
+      "lineUniqueId": "7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d",
+      "sessionUniqueId": "c9e0b1a2-77d4-4f6a-8b21-5a3e9c7f4d10",
+      "ticketTypeUniqueId": "2d7c4e19-9a11-42b8-b0d6-6f8c1e3a5b72",
+      "ticketTypeName": "General Admission",
+      "quantity": 2,
+      "unitPrice": 249.00,
+      "lineTotal": 498.00,
+      "discountAmount": 49.80,
+      "reservationStatus": "Active"
+    }
+  ]
+}</code></pre>
+
+            <h4 class="h6 mt-4"><code>reservationStatus</code> — the four values</h4>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light"><tr><th style="width:9rem">Value</th><th>Meaning</th></tr></thead>
+                <tbody>
+                  <tr><td><code>Active</code></td><td>Stock is being held. This is the only healthy value before payment.</td></tr>
+                  <tr><td><code>Confirmed</code></td><td>Paid for. Tickets belong to the buyer now.</td></tr>
+                  <tr><td><code>Expired</code></td><td>The clock ran out; the stock went back on sale.</td></tr>
+                  <tr><td><code>Cancelled</code></td><td>Released deliberately — removed, or payment failed.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="mb-0">Anything other than <code>Active</code> before payment means that line is no longer buyable. Do not present it as if it is.</p>
+          </div>
+        </article>
+
+        <!-- add line -->
+        <article id="ep-cart-addline" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-primary badge-method">POST</span>
+            <code class="path">/api/events/cart/{cartUniqueId}/lines</code>
+            <span class="badge text-bg-light border ms-auto">No login needed</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>
+              Reserves a quantity of one ticket type. This is the call that actually takes stock off the
+              shelf. The server re-checks availability, per-order limits and the sales window here — so
+              it can say no even though your UI allowed it.
+            </p>
+
+            <div class="plain">
+              <strong>It sets the quantity; it does not add to it.</strong> Sending <code>quantity: 2</code>
+              for a ticket type the buyer already has 2 of leaves them with 2, not 4. So when the buyer
+              presses "+", send the new total (3), not the difference (1).
+            </div>
+
+            <h4 class="h6 mt-4">What do you send?</h4>
+<pre><code>{
+  "sessionUniqueId": "c9e0b1a2-77d4-4f6a-8b21-5a3e9c7f4d10",
+  "ticketTypeUniqueId": "2d7c4e19-9a11-42b8-b0d6-6f8c1e3a5b72",
+  "quantity": 2,
+  "ticketPricePeriodUniqueId": "b55c2f88-3d4e-4f69-a012-9c7b3e6d0f45"
+}</code></pre>
+            <p class="small text-secondary">
+              <code>ticketPricePeriodUniqueId</code> is optional — leave it out and the server works out
+              the right price period itself. Sending an expired one does not get you the old price; the
+              server checks.
+            </p>
+
+            <h4 class="h6 mt-4">What comes back</h4>
+            <p>The whole cart, same shape as <a href="#ep-cart-get">Get cart</a>. Replace your local copy with it.</p>
+
+            <h4 class="h6 mt-4">Times this returns <code>400</code> — all normal</h4>
+            <ul class="mb-0">
+              <li>Someone else bought the last tickets while the buyer was deciding.</li>
+              <li>Quantity below the minimum or above the maximum.</li>
+              <li>Sales closed a moment ago.</li>
+              <li>The cart expired.</li>
+            </ul>
+            <div class="dont">
+              Retrying automatically when this returns 400. The server said no for a reason and it will
+              say no again. Show the message, refresh the sessions list so the counts correct themselves,
+              and let the buyer choose again.
+            </div>
+          </div>
+        </article>
+
+        <!-- remove line -->
+        <article id="ep-cart-removeline" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-danger badge-method">DELETE</span>
+            <code class="path">/api/events/cart/{cartUniqueId}/lines/{lineUniqueId}</code>
+            <span class="badge text-bg-light border ms-auto">No login needed</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>Removes a line and puts its stock straight back on sale.</p>
+
+            <div class="alert alert-warning">
+              <strong>This throws away work the buyer already did.</strong> Attendee names and
+              questionnaire answers typed against that line go with it. Ask for confirmation before
+              calling. And do not use an optimistic update here — if the delete fails, the buyer must see
+              that it failed.
+            </div>
+
+            <h4 class="h6 mt-4">What comes back</h4>
+            <p class="mb-0">
+              The whole cart again. An empty cart comes back with <code>lines: []</code> and zero totals —
+              the cart itself is still alive and can be added to.
+            </p>
+          </div>
+        </article>
+
+        <!-- price -->
+        <article id="ep-cart-price" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-primary badge-method">POST</span>
+            <code class="path">/api/events/cart/{cartUniqueId}/price</code>
+            <span class="badge text-bg-light border ms-auto">No login needed</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>
+              This is <strong>the</strong> call that decides what the buyer pays. It prices the real
+              tickets in the cart, applies a coupon if there is one, and gives you a complete total
+              <em>for each payment method</em>.
+            </p>
+
+            <div class="plain">
+              Why one total per method? Because a card charges the buyer more than a bank transfer does.
+              The card fee is a percentage; the bank fee is often a small flat amount. So the honest
+              answer to "what does this cost?" is "it depends how you pay" — and this endpoint answers it
+              for every option at once.
+            </div>
+
+            <h4 class="h6 mt-4">When do you call it?</h4>
+            <ul>
+              <li>When the buyer reaches the Payment step.</li>
+              <li>Any time the cart changes.</li>
+              <li>Every time a coupon is applied or removed.</li>
+            </ul>
+            <p class="small text-secondary">Debounce the coupon field. Do not fire this on every keystroke.</p>
+
+            <h4 class="h6 mt-4">What do you send?</h4>
+<pre><code>{ "couponCode": "SUMMIT10" }</code></pre>
+            <p class="small text-secondary">Send <code>null</code> or leave it out to price without a coupon. That is also how you remove one.</p>
+
+            <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
+<pre><code>{
+  "cartUniqueId": "5c1d8e2f-6b7a-4c39-9d80-1e2f3a4b5c6d",
+  "subTotal": 498.00,
+  "discountAmount": 49.80,
+  "netSubtotal": 448.20,
+  "paymentBreakdowns": [
+    {
+      "paymentMethod": "CreditCard",
+      "label": "Debit/Credit Card",
+      "isOrganizerOnly": false,
+      "merchantName": "Stripe",
+      "subtotal": 448.20,
+      "buyerChargeTotal": 22.41,
+      "grandTotal": 470.61,
+      "charges": [
+        { "source": "ChargeRule",      "title": "Booking fee",     "valueType": "Fixed",      "value": 2.50, "amount": 5.00  },
+        { "source": "ProcessorFee",    "title": "Card processing", "valueType": "Percentage", "value": 2.90, "amount": 13.00 },
+        { "source": "RevenuePlanRule", "title": "Platform fee",    "valueType": "Percentage", "value": 1.00, "amount": 4.41  }
+      ]
+    },
+    {
+      "paymentMethod": "Ach",
+      "label": "Bank Transfer (ACH)",
+      "isOrganizerOnly": false,
+      "merchantName": "Stripe",
+      "subtotal": 448.20,
+      "buyerChargeTotal": 5.80,
+      "grandTotal": 454.00,
+      "charges": [
+        { "source": "ChargeRule",   "title": "Booking fee",   "valueType": "Fixed", "value": 2.50, "amount": 5.00 },
+        { "source": "ProcessorFee", "title": "Bank transfer", "valueType": "Fixed", "value": 0.80, "amount": 0.80 }
+      ]
+    }
+  ]
+}</code></pre>
+
+            <h4 class="h6 mt-4">Reading the numbers, top to bottom</h4>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light"><tr><th style="width:30%">Field</th><th>Meaning</th></tr></thead>
+                <tbody>
+                  <tr><td><code>subTotal</code></td><td>Ticket prices added up, before any discount. <em>498.00</em></td></tr>
+                  <tr><td><code>discountAmount</code></td><td>What the coupon took off. <em>49.80</em></td></tr>
+                  <tr><td><code>netSubtotal</code></td><td><code>subTotal − discountAmount</code>. Every fee is worked out from this. <em>448.20</em></td></tr>
+                  <tr><td><code>charges[]</code></td><td>Each fee listed separately, with its name and amount. Show this list — buyers argue with totals they cannot break down.</td></tr>
+                  <tr><td><code>buyerChargeTotal</code></td><td>All the fees added together. <em>22.41</em></td></tr>
+                  <tr><td><code>grandTotal</code></td><td><strong>What the buyer actually pays.</strong> Put this on the pay button. <em>470.61</em></td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="dont">
+              Calculating the total in JavaScript — <code>subtotal + fees</code>, or applying the
+              discount percentage yourself. It will look right in testing and then be a cent off in
+              production, because rounding rules and fee ordering live on the server. Use
+              <code>grandTotal</code>. Always.
+            </div>
+
+            <h4 class="h6 mt-4">Coupons</h4>
+            <p>
+              If a coupon cannot be used, you get a <code>400</code> with this exact message:
+              <code>"Discount coupon not found."</code>
+            </p>
+            <p>You get the same message whether the coupon:</p>
+            <ul>
+              <li>does not exist,</li>
+              <li>exists but was switched off,</li>
+              <li>exists but has already been fully used up, or</li>
+              <li>exists but discounts are switched off for the event.</li>
+            </ul>
+            <div class="alert alert-warning">
+              <strong>This sameness is deliberate — please do not "improve" it.</strong> This page is
+              public. If the message said "that coupon is used up" instead of "not found", anyone could
+              type codes in a loop and learn which ones are real. Keeping every answer identical closes
+              that hole. Show the server's message word for word.
+            </div>
+            <p class="mb-0">
+              When a coupon <em>is</em> accepted: show the code as a removable chip, and let the discount
+              row appear naturally in the breakdown.
+            </p>
+          </div>
+        </article>
+
+        <!-- attendees -->
+        <article id="ep-cart-attendees" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-primary badge-method">POST</span>
+            <code class="path">/api/events/cart/{cartUniqueId}/lines/{lineUniqueId}/attendees</code>
+            <span class="badge text-bg-light border ms-auto">No login needed</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>Saves the names of the people the tickets on one line are for.</p>
+
+            <div class="plain">
+              <strong>This replaces everything on that line.</strong> It is not a merge. Always send the
+              complete list of attendees for the line, even if the buyer only edited one name. Sending
+              one attendee when the line has three will leave you with one.
+            </div>
+
+            <div class="alert alert-warning">
+              <strong>The count must match the quantity exactly.</strong> A line for 2 tickets needs
+              exactly 2 attendees. The server rejects a mismatch — and it must, because a mismatch that
+              slipped through would break ticket creation <em>after</em> the buyer's money was taken.
+            </div>
+
+            <h4 class="h6 mt-4">What do you send?</h4>
+<pre><code>{
+  "attendees": [
+    { "contactId": null, "name": "Priya Raman", "email": "priya.raman@example.com", "phone": "+1 416 555 0142" },
+    { "contactId": null, "name": "Sam Okonjo",  "email": "sam.okonjo@example.com",  "phone": null }
+  ]
+}</code></pre>
+
+            <div class="table-responsive mt-3">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light"><tr><th>Field</th><th style="width:7rem">Required</th><th>What it does</th></tr></thead>
+                <tbody>
+                  <tr><td><code>name</code></td><td>Yes</td><td>Printed on the ticket PDF and shown on the confirmation page.</td></tr>
+                  <tr><td><code>email</code></td><td>No</td><td><strong>If present and valid, this person gets their own ticket email.</strong> If left out, their ticket goes to the buyer only.</td></tr>
+                  <tr><td><code>phone</code></td><td>No</td><td>Stored on the record. Not used for anything automatic.</td></tr>
+                  <tr><td><code>contactId</code></td><td>No</td><td>Links to an existing member record. Send <code>null</code> for public buyers.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h4 class="h6 mt-4">What comes back</h4>
+            <p class="mb-0">Just the envelope. There is no useful <code>data</code> — <code>success: true</code> is the answer.</p>
+          </div>
+        </article>
+
+        <!-- answers -->
+        <article id="ep-cart-answers" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-primary badge-method">POST</span>
+            <code class="path">/api/events/cart/{cartUniqueId}/answers</code>
+            <span class="badge text-bg-light border ms-auto">No login needed</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>
+              Saves the buyer's answers to the event's custom forms and questions. One call for the whole
+              order, not one per cart line — the organizer authored these against the event, so asking
+              the same questions again for every ticket would be noise.
+            </p>
+            <p>
+              It replaces everything previously saved for this order. Send the complete set every time;
+              anything you leave out is treated as cleared.
+            </p>
+
+            <h4 class="h6 mt-4">What do you send?</h4>
+<pre><code>{
+  "formResponses": [
+    { "fieldUniqueId": "9a8b7c6d-5544-4332-b110-fedcba987654", "value": "Peanuts", "fileStorageId": null },
+    { "fieldUniqueId": "1122aabb-3344-4c55-9d66-77e88f99a0b1", "value": null,      "fileStorageId": 88317 }
+  ],
+  "questionResponses": [
+    { "questionUniqueId": "e5d4c3b2-9988-4a1b-b7c6-112233445566",
+      "optionUniqueId":   "aa11bb22-cc33-4d44-9e55-6f7788990011",
+      "value": null, "fileStorageId": null },
+    { "questionUniqueId": "c7b6a5d4-3322-4f11-8e99-665544332211",
+      "optionUniqueId": null, "value": null, "fileStorageId": 88412 }
+  ]
+}</code></pre>
+
+            <h4 class="h6 mt-4">Which field do I fill in?</h4>
+            <p>This is the part people get wrong. It depends on the type of control:</p>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light"><tr><th style="width:32%">Control type</th><th>What to send</th></tr></thead>
+                <tbody>
+                  <tr><td>Text, textarea, number, date</td><td>Put the answer in <code>value</code>, as a string.</td></tr>
+                  <tr><td>Dropdown or radio, from <code>customQuestions</code></td><td>Put the chosen option's <code>uniqueId</code> in <code>optionUniqueId</code>. Leave <code>value</code> as <code>null</code>.</td></tr>
+                  <tr><td>Dropdown or radio, from a form <code>field</code></td><td>Put the chosen option's <code>value</code> in <code>value</code>. Form fields have no option ids.</td></tr>
+                  <tr><td>Checkbox</td><td><code>"true"</code> or <code>"false"</code> in <code>value</code>. A required checkbox counts as unanswered until it is <code>"true"</code>.</td></tr>
+                  <tr><td>File upload</td><td>Upload the file first (see below), then send the <code>fileStorageId</code> you got back.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="dont">
+              Sending the option's display text (<code>"Product"</code>) instead of its id or value. The
+              server matches on the identifier. The text is only for humans.
+            </div>
+
+            <h4 class="h6 mt-4">What can go wrong</h4>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light"><tr><th style="width:42%">The server says</th><th>Because</th></tr></thead>
+                <tbody>
+                  <tr><td>"'X' is required."</td><td>A mandatory field or question arrived empty. The organizer's own <code>requiredMessage</code> is used when they wrote one.</td></tr>
+                  <tr><td>"… is not part of this event."</td><td>You sent a field or question id that belongs to a different event.</td></tr>
+                  <tr><td>"'X' must be at most N characters."</td><td>The value is longer than the field's <code>maxLength</code>.</td></tr>
+                  <tr><td>"… is not an available choice for 'X'."</td><td>An option-backed field got a value that is not one of its options.</td></tr>
+                  <tr><td>"Cart is no longer open."</td><td>The order is already paid. Answers are no longer editable.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="mb-2"><strong>What comes back:</strong> just the envelope.</p>
+
+            <div class="dont">
+              Treating this call as optional. Every route that takes money re-checks it &mdash;
+              <code>POST …/checkout/intent</code>, <code>POST …/checkout/cheque</code> and, for a zero-total
+              order, <code>POST …/checkout/confirm</code>. Skip it while the event has a mandatory field or a
+              required question and payment is refused with that field's own message.
+            </div>
+          </div>
+        </article>
+
+        <!-- answer files -->
+        <article id="ep-cart-answer-files" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-primary badge-method">POST</span>
+            <code class="path">/api/events/cart/{cartUniqueId}/answers/files</code>
+            <span class="badge text-bg-light border ms-auto">No login needed</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>
+              Stores one attachment for a <code>file</code> control and hands back the
+              <code>fileStorageId</code> the answer call needs. Upload while the buyer is still filling
+              the form, so the answers call only ever carries ids.
+            </p>
+
+            <h4 class="h6 mt-4">What do you send?</h4>
+            <p>
+              <code>multipart/form-data</code> with two parts: <code>fieldUniqueId</code> (the form
+              field's or question's <code>uniqueId</code>) and <code>file</code>.
+            </p>
+            <p>
+              This call needs a bot-challenge token, exactly like creating a cart. See the Turnstile
+              section — an anonymous upload route is cheap to call and expensive to serve.
+            </p>
+
+            <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
+<pre><code>{ "fileStorageId": 88317, "fileName": "accreditation.pdf" }</code></pre>
+
+            <h4 class="h6 mt-4">What the server refuses</h4>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light"><tr><th style="width:42%">Rejected when</th><th>Why</th></tr></thead>
+                <tbody>
+                  <tr><td>Over 10 MB</td><td>Tighter than the platform-wide limit on purpose, because this route is anonymous.</td></tr>
+                  <tr><td>The extension is not in <code>acceptedFileTypes</code></td><td>The organizer decided what this field takes.</td></tr>
+                  <tr><td>Executable or scriptable extensions</td><td><code>.exe</code>, <code>.js</code>, <code>.html</code>, <code>.svg</code> and friends are refused whatever the organizer typed.</td></tr>
+                  <tr><td>The field is not on this event</td><td>The route is scoped to the cart's event.</td></tr>
+                  <tr><td>The cart is already paid</td><td>Answers are closed.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="plain">
+              An id from this call is not an answer yet. It only becomes one when the answers call
+              references it.
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 7. CHECKOUT -->
+      <section id="ep-checkout">
+        <h2 class="h3">7. Payment calls</h2>
+
+        <h3 class="h5">How Stripe payments work here, in plain terms</h3>
+        <p>
+          Stripe gives you ready-made card input components. Those components must appear on screen
+          <em>before</em> you know whether the buyer will actually press pay — so the payment record is
+          created late, only when they submit. Stripe calls this the "deferred intent" flow.
+        </p>
+        <p>Because the fields appear first, you need Stripe's public key before any payment exists. That is why there is a separate call just for the key.</p>
+
+        <div class="card border-primary mb-4">
+          <div class="card-header bg-primary-subtle fw-semibold">Card payment — the exact steps</div>
+          <div class="card-body">
+            <ol class="mb-0">
+              <li>Fetch the Stripe key: <code>GET /api/public/stripe/{paymentAccountUniqueId}/credentials</code></li>
+              <li>Mount Stripe's <code>&lt;Elements&gt;</code> with the <code>grandTotal</code> and currency you got from pricing.</li>
+              <li>Buyer presses pay ⇒ <code>await elements.submit()</code>. If it reports a validation problem, stop here.</li>
+              <li>Create the payment: <code>POST …/checkout/intent</code> ⇒ you get <code>clientSecret</code> and <code>invoiceUniqueId</code>.</li>
+              <li><strong>Save <code>invoiceUniqueId</code> now, before the next step.</strong> Explained below — this one really matters.</li>
+              <li>Hand off to Stripe: <code>stripe.confirmPayment({ elements, clientSecret, confirmParams: { return_url }, redirect: "if_required" })</code></li>
+              <li>If it finishes without redirecting (normal for cards) ⇒ call <code>POST …/checkout/confirm</code>, then go to the order page.</li>
+              <li>If it redirects (normal for bank transfers) ⇒ Stripe sends the buyer to your <code>return_url</code>, which is the order page. That page does step 7 itself.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="alert alert-danger">
+          <strong>Why step 5 matters.</strong> Once <code>confirmPayment</code> runs, the buyer's money
+          can leave their account. If their laptop dies at that exact moment and you did not save
+          <code>invoiceUniqueId</code> first, they have paid and there is <em>no way</em> for them to get
+          back to their order. Save it first. Every time.
+        </div>
+
+        <!-- stripe creds -->
+        <article id="ep-stripe-creds" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-success badge-method">GET</span>
+            <code class="path">/api/public/stripe/{paymentAccountUniqueId}/credentials</code>
+            <span class="badge text-bg-light border ms-auto">No login needed</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>Gives the browser the public Stripe key needed to draw the card fields. <code>paymentAccountUniqueId</code> came from the bootstrap call.</p>
+
+            <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
+<pre><code>{
+  "publishableKey": "pk_live_51NUwaU…",
+  "stripeAccount": "acct_1Q58Lz…"
+}</code></pre>
+
+            <div class="plain">
+              A "publishable key" is safe to have in the browser — it can only start payments, never read
+              or move money. That is different from a secret key, which lives on the server only and must
+              never reach frontend code.
+            </div>
+
+            <p class="mb-0">
+              <code>stripeAccount</code> is the organizer's own Stripe account. When it is present, pass
+              it to <code>loadStripe</code> as <code>{ stripeAccount }</code>. When it is <code>null</code>,
+              do not pass it. Getting this wrong makes payment fail with a confusing Stripe error, so
+              double-check it.
+            </p>
+          </div>
+        </article>
+
+        <!-- intent -->
+        <article id="ep-intent" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-primary badge-method">POST</span>
+            <code class="path">/api/events/cart/{cartUniqueId}/checkout/intent</code>
+            <span class="badge text-bg-warning-subtle text-warning-emphasis border ms-auto">Bot challenge</span>
+            <span class="badge text-bg-light border">No login needed</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>
+              Turns the cart into a real order and asks Stripe to prepare a payment for it. This is the
+              point of no return: after this, an order exists whether or not the buyer finishes paying.
+            </p>
+
+            <div class="plain">
+              You do not send an amount. The server works it out from the cart and the chosen method.
+              This is on purpose — if the browser could name its own price, anyone could pay one cent for
+              a hundred-dollar ticket.
+            </div>
+
+            <div class="plain">
+              The event's mandatory fields and required questions are re-checked here, against what
+              <code>POST …/answers</code> actually saved. The wizard's own questionnaire gate is a
+              convenience for the buyer; this is the one that decides. A missing answer fails the call with
+              that field's <code>requiredMessage</code>, and no order or payment is created.
+            </div>
+
+            <h4 class="h6 mt-4">What do you send?</h4>
+<pre><code>{
+  "paymentMethod": "CreditCard",
+  "buyerName": "Priya Raman",
+  "buyerEmail": "priya.raman@example.com"
+}</code></pre>
+            <p class="small text-secondary">
+              <code>paymentMethod</code> is one of: <code>CreditCard</code>, <code>ElectronicCheck</code>,
+              <code>Ach</code>, <code>Pad</code>, <code>TapToPay</code>, <code>WalletPay</code>,
+              <code>Cheque</code>. <code>buyerEmail</code> becomes the Stripe receipt address and
+              overrides whatever is on the cart.
+            </p>
+
+            <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
+<pre><code>{
+  "cartUniqueId": "5c1d8e2f-6b7a-4c39-9d80-1e2f3a4b5c6d",
+  "invoiceUniqueId": "9b0e7d61-4c2a-4f18-8e73-3d5b6a9c0e42",
+  "paymentIntentId": "pi_3Q7xKl2eZvKYlo2C1aBcDeFg",
+  "clientSecret": "pi_3Q7xKl2eZvKYlo2C1aBcDeFg_secret_9xY…",
+  "publishableKey": "pk_live_51NUwaU…",
+  "stripeAccount": "acct_1Q58Lz…",
+  "paymentMethod": "CreditCard",
+  "amount": 470.61,
+  "currency": "usd",
+  "processorFeeAmount": 13.00,
+  "status": "requires_payment_method"
+}</code></pre>
+
+            <div class="table-responsive mt-3">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light"><tr><th style="width:28%">Field</th><th>What it is for</th></tr></thead>
+                <tbody>
+                  <tr><td><code>invoiceUniqueId</code></td><td><strong>The most important field on this page.</strong> The permanent order id. Save it immediately. It is the buyer's only route back to their purchase.</td></tr>
+                  <tr><td><code>clientSecret</code></td><td>The one-time token you hand to Stripe's <code>confirmPayment</code>.</td></tr>
+                  <tr><td><code>stripeAccount</code></td><td>Present ⇒ load Stripe.js against that account. Null ⇒ do not.</td></tr>
+                  <tr><td><code>amount</code></td><td>Confirmation of what will be charged. Display it; do not modify it.</td></tr>
+                  <tr><td><code>status</code></td><td>Stripe's own wording, e.g. <code>requires_payment_method</code>. Useful in logs, not for buyers.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h4 class="h6 mt-4">Where does the buyer come back to?</h4>
+            <p class="mb-0">
+              Your <code>return_url</code> must point at the order confirmation page —
+              <code>/events/orders/{invoiceUniqueId}</code> — never back at the cart. By the time the
+              buyer returns, the cart is finished. Sending them there shows them an expired page after
+              they have paid.
+            </p>
+          </div>
+        </article>
+
+        <!-- confirm -->
+        <article id="ep-confirm" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-primary badge-method">POST</span>
+            <code class="path">/api/events/cart/{cartUniqueId}/checkout/confirm</code>
+            <span class="badge text-bg-light border ms-auto">No login needed</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>
+              Speed, and nothing else. It asks the server to finish the order right now instead of
+              waiting for Stripe's webhook to arrive. Without it, the buyer stares at "processing" for a
+              few seconds after a perfectly good card payment.
+            </p>
+
+            <div class="alert alert-info">
+              <strong>This call is optional, and it is allowed to fail.</strong> The real work — marking
+              the order paid, creating tickets, sending emails — happens on Stripe's webhook whether or
+              not you ever call this. It is safe to call twice. And if it errors, the payment still
+              succeeded.
+            </div>
+
+            <div class="dont">
+              Showing "Payment failed" because this call returned an error. The buyer's money is already
+              gone; telling them it failed is the worst possible message. If this call fails: go to the
+              order page anyway and let polling sort it out.
+            </div>
+
+            <h4 class="h6 mt-4">What do you send?</h4>
+<pre><code>{}</code></pre>
+
+            <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
+<pre><code>{
+  "cartUniqueId": "5c1d8e2f-6b7a-4c39-9d80-1e2f3a4b5c6d",
+  "invoiceUniqueId": "9b0e7d61-4c2a-4f18-8e73-3d5b6a9c0e42",
+  "invoiceStatus": "Paid",
+  "isSettled": true,
+  "lines": [
+    {
+      "lineUniqueId": "7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d",
+      "ticketCodes": ["GPS26-4X7K-2210", "GPS26-9M2B-2211"]
+    }
+  ]
+}</code></pre>
+
+            <div class="table-responsive mt-3">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light"><tr><th style="width:26%">Field</th><th>Meaning</th></tr></thead>
+                <tbody>
+                  <tr><td><code>invoiceStatus</code></td><td>The accounting status — one of <code>PendingPayment</code>, <code>PartiallyPaid</code>, <code>Paid</code>, <code>Cancelled</code>, <code>Refund</code>, <code>AdjustedInSystem</code>, <code>PartiallyRefunded</code>, <code>Failed</code>. <strong>Do not show these words to buyers.</strong> They are for accountants.</td></tr>
+                  <tr><td><code>isSettled</code></td><td><code>false</code> is a perfectly good answer, not an error. Bank transfers report "still processing" for days. Show the processing state and poll.</td></tr>
+                  <tr><td><code>lines[].ticketCodes</code></td><td>Empty until tickets are created. Empty for a moment after payment is normal — ticket creation happens in the background.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+
+        <!-- cheque -->
+        <article id="ep-cheque" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-primary badge-method">POST</span>
+            <code class="path">/api/events/cart/{cartUniqueId}/checkout/cheque</code>
+            <span class="badge text-bg-warning ms-auto">Login required — organizer only</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>
+              Someone handed the organizer a paper cheque. This records it and issues the tickets
+              straight away, while the invoice stays marked as owing until the cheque clears.
+            </p>
+
+            <div class="plain">
+              This is <strong>the only call in this whole guide that needs a login</strong>. It creates
+              tickets without any money having arrived. If it were public, anyone could mint themselves
+              free tickets. Note that <code>isOrganizerOnly</code> on a payment method is only about what
+              you display — this login requirement is the actual protection.
+            </div>
+
+            <h4 class="h6 mt-4">What do you send?</h4>
+<pre><code>{
+  "chequeReferenceNo": "CHQ-889210",
+  "notes": "Collected at the front desk, 5 Aug."
+}</code></pre>
+
+            <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
+<pre><code>{
+  "cartUniqueId": "5c1d8e2f-6b7a-4c39-9d80-1e2f3a4b5c6d",
+  "invoiceNo": "EV-2026-004183",
+  "amountDue": 470.61,
+  "ticketCodes": ["GPS26-4X7K-2210", "GPS26-9M2B-2211"]
+}</code></pre>
+            <p class="mt-3 mb-0"><code>amountDue</code> is what is still owed. It is <em>not</em> zero — that is the whole point of the cheque flow.</p>
+          </div>
+        </article>
+      </section>
+
+      <!-- 8. ORDER -->
+      <section id="ep-order">
+        <h2 class="h3">8. The order status call</h2>
+
+        <article class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="badge text-bg-success badge-method">GET</span>
+            <code class="path">/api/events/orders/{orderUniqueId}</code>
+            <span class="badge text-bg-light border ms-auto">No login · rate limited</span>
+          </div>
+          <div class="card-body">
+            <h4 class="h6">What is it for?</h4>
+            <p>
+              This builds the confirmation page. It is the only call that still works after the cart is
+              gone, and the only page a buyer can safely bookmark, refresh, or be sent back to.
+            </p>
+            <p><code>orderUniqueId</code> is the <code>invoiceUniqueId</code> you saved earlier.</p>
+
+            <div class="alert alert-warning">
+              <strong>Anyone with the link can see this page.</strong> There is no login. The id is long
+              and random, which is what keeps it private. That is also why the buyer's email arrives
+              already masked — <code>p*********@example.com</code>. Never display a full email address on
+              this page from any other source.
+            </div>
+
+            <h4 class="h6 mt-4">Rate limit</h4>
+            <p>60 requests per minute, per IP address. Go over and you get <code>429</code>. Since this page polls, respect the pacing rules below and you will never hit it.</p>
+
+            <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
+<pre><code>{
+  "orderUniqueId": "9b0e7d61-4c2a-4f18-8e73-3d5b6a9c0e42",
+  "invoiceNo": "EV-2026-004183",
+  "orderState": "Confirmed",
+  "invoiceStatus": "Paid",
+  "pollAfterSeconds": 0,
+  "buyerName": "Priya Raman",
+  "buyerEmailMasked": "p*********@example.com",
+  "totalAmount": 470.61,
+  "currencySymbol": "$",
+  "eventName": "Global Product Summit 2026",
+  "eventThemeColor": "#1F4FD8",
+  "eventStartDateUtc": "2026-09-14T13:00:00Z",
+  "eventEndDateUtc": "2026-09-15T22:00:00Z",
+  "venueName": "Metro Convention Centre",
+  "venueAddress": "255 Front St W, Toronto, ON M5V 2W6, Canada",
+  "venueMapUrl": "https://maps.google.com/?q=43.6426,-79.3871",
+  "tickets": [
+    {
+      "ticketUniqueId": "1122aabb-3344-4c55-9d66-7788eeff0011",
+      "ticketCode": "GPS26-4X7K-2210",
+      "ticketTypeName": "General Admission",
+      "sessionName": "Day One — Main Stage",
+      "sessionStartDateUtc": "2026-09-14T13:00:00Z",
+      "attendeeName": "Priya Raman",
+      "ticketStatus": "Issued"
+    }
+  ]
+}</code></pre>
+
+            <h4 class="h6 mt-4">Three states — this is the field you build the page around</h4>
+            <p>
+              Ignore <code>invoiceStatus</code> for display. Use <code>orderState</code>, which is
+              deliberately simple: a buyer deserves one of three clear answers, not an eight-way
+              accounting term.
+            </p>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light"><tr><th style="width:9rem">State</th><th>Means</th><th>What to show</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><span class="badge text-bg-success">Confirmed</span></td>
+                    <td>Paid, tickets are theirs.</td>
+                    <td>Success message, list of tickets, "sent to <code>p*****@example.com</code>", venue with map link. Stop polling.</td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge text-bg-warning">Processing</span></td>
+                    <td>Payment accepted, money not arrived yet. Completely normal for bank transfers, which take days.</td>
+                    <td>Calm, reassuring copy — <em>not</em> a scary spinner. Tell them the payment went through, tickets follow, and it is safe to close the page. Keep polling.</td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge text-bg-danger">Failed</span></td>
+                    <td>Finished without tickets — cancelled, failed, or refunded.</td>
+                    <td>A clear explanation and a way to contact support, quoting <code>invoiceNo</code>. Stop polling. <strong>Never offer a "try again" button here</strong> — you do not know whether they were charged.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h4 class="h6 mt-4">How to poll, exactly</h4>
+            <p>
+              <code>pollAfterSeconds</code> is the server telling you how long to wait before asking
+              again. <strong><code>0</code> means stop — you are done.</strong> Any other number is a
+              <em>minimum</em>: you may wait longer, never less.
+            </p>
+            <p>The existing implementation slows down over time, which is the right pattern:</p>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light"><tr><th>Time on page</th><th>Ask every</th></tr></thead>
+                <tbody>
+                  <tr><td>First 15 seconds</td><td>3 seconds</td></tr>
+                  <tr><td>15 – 45 seconds</td><td>5 seconds</td></tr>
+                  <tr><td>45 – 90 seconds</td><td>10 seconds</td></tr>
+                  <tr><td>After 90 seconds</td><td>30 seconds</td></tr>
+                  <tr><td>After 3 minutes</td><td>Stop, and show a "Check again" button</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="plain">
+              Why stop after three minutes? Because a spinner that never resolves feels broken. An honest
+              "still processing — check again" with a button feels like a system that knows what it is
+              doing. Bank payments genuinely take days; nobody is going to sit and watch.
+            </div>
+
+            <h4 class="h6 mt-4">Two things that surprise people</h4>
+            <ul class="mb-0">
+              <li><strong>A <code>404</code> is final.</strong> Show the "order not found" card and stop. Do not retry.</li>
+              <li><strong>Free orders reach <code>Confirmed</code> with no payment at all.</strong> Do not write code that assumes a payment record exists.</li>
+            </ul>
+          </div>
+        </article>
+      </section>
+
+      <!-- 9. CONDITIONAL -->
+      <section id="conditional">
+        <h2 class="h3">9. What to show, and when</h2>
+        <p>
+          Every branch in the UI, what drives it, and what must happen. Use this as your build list and
+          your test list.
+        </p>
+
+        <h3 class="h5" id="cond-gates">9.1 Before the wizard — check these in order, stop at the first match</h3>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:28%">If…</th><th>Show</th><th>Note</th></tr></thead>
+            <tbody>
+              <tr><td>No event id in the URL</td><td>Error: "the link is missing an event identifier"</td><td>Make no server call.</td></tr>
+              <tr><td>Bootstrap is loading</td><td>Skeleton of the real layout</td><td>A skeleton, not a spinner, and never a blank screen.</td></tr>
+              <tr><td>Bootstrap failed — event unavailable</td><td>"Unavailable" screen with Retry</td><td>Kept separate so the buyer is not told the site is broken.</td></tr>
+              <tr><td>Bootstrap failed — any other reason</td><td>Error screen with Retry</td><td>Message from <code>extractApiError</code>. Never a raw axios message.</td></tr>
+              <tr><td><code>bookingStartDate</code> is in the future</td><td>Countdown card</td><td>Refetch automatically once the time passes.</td></tr>
+              <tr><td><code>canRegister === false</code></td><td>"Cannot register" with <code>registrationBlockedReason</code></td><td>Full stop. No wizard, no cart, no more calls.</td></tr>
+              <tr><td>All checks passed</td><td>The wizard</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="plain">
+          Order is not cosmetic. The countdown check sits <em>above</em> the <code>canRegister</code> check on
+          purpose. An event whose sales have not opened yet also has <code>canRegister: false</code>, so if you
+          test <code>canRegister</code> first the buyer sees a dead "not available" screen instead of a
+          countdown telling them exactly when to come back.
+        </div>
+
+        <h4 class="h6 mt-4" id="cond-countdown">9.1.1 The "sales have not opened" countdown card</h4>
+        <p>
+          This is the screen a buyer sees when they arrive early. It is <strong>not</strong> the cart timer in
+          §9.6 — different data, different purpose, and they never appear at the same time.
+        </p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:24%">Question</th><th>Answer</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>What turns it on?</td>
+                <td>
+                  <code>bookingStartDate</code> from the bootstrap call is present <strong>and</strong> still in
+                  the future compared to the browser clock. Both conditions, not one.
+                </td>
+              </tr>
+              <tr>
+                <td>What if it is <code>null</code>?</td>
+                <td>No countdown at all. A null booking start means "sales were always open". Fall straight
+                  through to the <code>canRegister</code> check.</td>
+              </tr>
+              <tr>
+                <td>How much of the page does it take?</td>
+                <td>
+                  <strong>All of it.</strong> The countdown replaces the whole page — it is not a banner above
+                  the wizard. The wizard must not mount, no cart is created, and no cart or payment call is made
+                  while it is on screen.
+                </td>
+              </tr>
+              <tr>
+                <td>What does it contain?</td>
+                <td>
+                  Event banner (or a "Banner not available" placeholder), a "Registration opens soon" badge,
+                  organizer, venue, then four tiles — Days, Hours, Minutes, Seconds — plus the opening time
+                  written out in the buyer's own local time.
+                </td>
+              </tr>
+              <tr>
+                <td>How does it tick?</td>
+                <td>
+                  Once per second. Days is a plain number; hours, minutes and seconds are zero-padded to two
+                  digits so the tiles do not jump width as they count down. Never show a negative value — clamp
+                  the remaining milliseconds at zero.
+                </td>
+              </tr>
+              <tr>
+                <td>What happens at zero?</td>
+                <td>
+                  Stop the interval, then <strong>refetch the bootstrap call exactly once</strong>. The fresh
+                  response flips <code>canRegister</code> to true and the page renders the wizard by itself. The
+                  buyer never has to reload.
+                </td>
+              </tr>
+              <tr>
+                <td>Accessibility</td>
+                <td>
+                  Wrap the tiles in <code>role="timer"</code> with <code>aria-live="polite"</code> and
+                  <code>aria-atomic="true"</code>, so a screen reader announces the whole remaining time as one
+                  sentence rather than reading four separate numbers changing every second.
+                </td>
+              </tr>
+              <tr>
+                <td>Responsive</td>
+                <td>Tiles go 2-across on mobile, 4-across from <code>sm</code> up. Never a single row of four on
+                  a 375px screen — the numbers get clipped.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="dont">
+          Do not let the "refetch at zero" run on every tick. Guard it with a flag that is set the first time
+          the deadline passes, and reset only when the event id or the booking date itself changes. Without that
+          guard you fire one bootstrap request per second, forever.
+        </div>
+        <div class="dont">
+          Do not read <code>bookingStartDate</code> as local time. Like every date in this API it is UTC. If it
+          arrives without a <code>Z</code> or an offset on the end, append <code>Z</code> before parsing —
+          otherwise the browser treats it as local and the countdown is wrong by your timezone offset.
+        </div>
+
+        <h3 class="h5" id="cond-tabs">9.2 Which tabs to show</h3>
+        <p>Two things decide this together:</p>
+        <ol>
+          <li><code>visibleTabs</code> from the server. Empty array ⇒ you decide. Non-empty ⇒ only show tabs on that list.</li>
+          <li>What the buyer has selected. A tab that their selection makes <em>necessary</em> always appears, even if it is not on the list — because the server could not know in advance what they would pick.</li>
+        </ol>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:16rem">Tab</th><th>Appears when</th></tr></thead>
+            <tbody>
+              <tr><td>Description</td><td>Allowed <em>and</em> there is actually a <code>description</code> or <code>summary</code>. No copy ⇒ no empty tab.</td></tr>
+              <tr><td>Sessions</td><td>Always. They have to pick tickets somehow.</td></tr>
+              <tr><td>Buyer / Attendee info</td><td>Always. Somebody has to be billed.</td></tr>
+              <tr><td>Attendee Info</td><td>A selected session has <code>requiresAttendeeInfo: true</code>, or the tab is allowed and some session on the event needs it.</td></tr>
+              <tr><td>Questionnaire</td><td>The tab is allowed and the event carries <code>customForms</code> with fields, or <code>customQuestions</code>.</td></tr>
+              <tr><td>Payment</td><td>Always, and always last.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="plain">
+          Recalculate the tab list every time the selection changes. Adding a ticket that needs attendee
+          names should make that tab appear right away — and remember the step numbers shift when it does.
+        </div>
+
+        <h3 class="h5">9.3 The ticket picker</h3>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:32%">If…</th><th>Then…</th></tr></thead>
+            <tbody>
+              <tr><td><code>isActive: false</code></td><td>Do not render it.</td></tr>
+              <tr><td><code>availableForSale === 0</code></td><td>"Sold out" badge, buttons disabled, <code>not-allowed</code> cursor.</td></tr>
+              <tr><td><code>availableForSale === null</code></td><td>Unlimited — say nothing about stock.</td></tr>
+              <tr><td>Only a few left</td><td>Optional "Only 3 left" copy.</td></tr>
+              <tr><td>Outside the sales window</td><td>Disabled, with the reason shown.</td></tr>
+              <tr><td>A price period is <code>Active</code></td><td>Show its <code>amount</code> as the price; strike through <code>fullPrice</code> if higher.</td></tr>
+              <tr><td>Quantity hits <code>maxPurchase</code> or stock</td><td>Disable "+".</td></tr>
+              <tr><td>Quantity would drop below <code>minPurchase</code></td><td>"−" removes the line. Confirm first.</td></tr>
+              <tr><td>Session needs attendee names</td><td>Badge on the session card.</td></tr>
+              <tr><td><code>bookingStatus !== "Open"</code></td><td>Whole session read-only.</td></tr>
+              <tr><td>Nothing selected yet</td><td>"Continue" disabled <em>with a hint saying why</em>. Never a silent dead button.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="h5" id="cond-sessions">9.4 Session cards, expanding, and the description pop-up</h3>
+        <p>Each session on the Sessions tab is a card. Three separate things can happen on that card, and it helps to keep them apart in your head.</p>
+
+        <h4 class="h6 mt-3">The session title is sometimes a link, sometimes not</h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:34%">If…</th><th>Render the title as…</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><code>session.description</code> has content</td>
+                <td>
+                  A <strong>link</strong> — underlined, pointer cursor, <code>title="View description"</code>.
+                  Clicking it opens the description in a pop-up. It is a real button underneath, not an
+                  <code>&lt;a href&gt;</code>, because it navigates nowhere.
+                </td>
+              </tr>
+              <tr>
+                <td><code>session.description</code> is empty or <code>null</code></td>
+                <td>
+                  A <strong>plain heading</strong>. No underline, no pointer cursor, not clickable.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="plain">
+          This matters more than it sounds. An underlined title that opens an empty pop-up makes the page
+          feel broken. If there is nothing to show, do not invite the click in the first place.
+        </div>
+
+        <h4 class="h6 mt-4">Expand and collapse is a different control</h4>
+        <p>
+          The chevron button on the right expands the card to reveal the ticket list. It is
+          <strong>separate</strong> from the title link — clicking the title opens the description
+          pop-up, clicking the chevron opens the tickets. Do not merge them into one click target.
+        </p>
+        <ul>
+          <li>The chevron rotates 90° when expanded. Animate the rotation, not the whole card.</li>
+          <li>It needs <code>aria-expanded</code>, and an <code>aria-label</code> that names the session — "Expand Day One — Main Stage". A screen reader user hearing five identical "Expand" buttons has no idea which is which.</li>
+          <li>Ticket rows are only rendered while expanded. Do not render them hidden.</li>
+          <li>The card also shows a count badge — "2 tickets" / "1 ticket". Singular and plural, please.</li>
+        </ul>
+
+        <h4 class="h6 mt-4">The description pop-up</h4>
+        <p>One shared dialog component handles all read-only content in this flow. You pass it three things:</p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:22%">Prop</th><th>Example</th></tr></thead>
+            <tbody>
+              <tr><td><code>eyebrow</code></td><td>A small label above the title — <code>"Session Description"</code>.</td></tr>
+              <tr><td><code>title</code></td><td>The session name.</td></tr>
+              <tr><td><code>body</code></td><td>The description text or HTML.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>It handles the rest itself: full screen on mobile, <code>xl</code> above that, body scrolls inside a fixed maximum height, close button in the corner.</p>
+
+        <h4 class="h6 mt-4">Plain text or HTML? The dialog decides</h4>
+        <p>
+          Organizer content is sometimes typed as plain text and sometimes pasted as HTML. There is a
+          helper — <code>isHtmlContent(body)</code> — that checks which it is:
+        </p>
+        <ul class="mb-0">
+          <li>HTML ⇒ render through the shared rich-text block, which sanitises and styles it.</li>
+          <li>Plain text ⇒ render inside a normal <code>&lt;Text&gt;</code>, with comfortable line height.</li>
+          <li><code>null</code> ⇒ render nothing. Not the string "null", not an empty box.</li>
+        </ul>
+        <div class="dont">
+          Dropping raw organizer HTML into the page yourself instead of using the shared rich-text block.
+          That block is where sanitising happens. Bypassing it is how a security hole gets in.
+        </div>
+
+        <h3 class="h5" id="cond-terms">9.5 Terms and conditions, and the refund policy</h3>
+        <p>
+          These are two <strong>independent</strong> gates. An event might have terms and no refund
+          policy, both, or neither. Never assume they come as a pair.
+        </p>
+
+        <h4 class="h6 mt-3">When does each card appear?</h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:34%">If…</th><th>Then…</th></tr></thead>
+            <tbody>
+              <tr><td><code>termsConditions</code> has content</td><td>Show the terms acceptance card. The buyer must tick it before paying.</td></tr>
+              <tr><td><code>termsConditions</code> is empty or <code>null</code></td><td>Show nothing. No card, no checkbox, and <strong>no requirement to accept</strong>.</td></tr>
+              <tr><td><code>refundPolicy</code> has content</td><td>Show the refund policy acceptance card, with its own separate checkbox.</td></tr>
+              <tr><td><code>refundPolicy</code> is empty or <code>null</code></td><td>Show nothing, require nothing.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="plain">
+          The rule is the same both times: <strong>if there is no content, there is no gate.</strong>
+          Do not show a checkbox saying "I accept the refund policy" when the organizer never wrote one —
+          the buyer clicks "View refund policy", gets an empty box, and rightly loses trust.
+        </div>
+
+        <h4 class="h6 mt-4">What each card contains</h4>
+        <ul>
+          <li>A checkbox with a label — "I accept the registration terms and conditions."</li>
+          <li>A text button beside it — "View terms" / "View refund policy" — which opens the same pop-up component described in 9.4, with the eyebrow set to "Terms &amp; Conditions" or "Refund Policy".</li>
+          <li>The checkbox uses the event's brand colour when ticked.</li>
+          <li>On mobile the checkbox and the button stack vertically; side by side from tablet up.</li>
+        </ul>
+
+        <h4 class="h6 mt-4">What happens when they try to pay without ticking</h4>
+        <p>The card turns into its own error message. Specifically:</p>
+        <ul>
+          <li>Border goes from 1px grey to <strong>2px red</strong>.</li>
+          <li>Background turns pale red.</li>
+          <li>Label text goes red and bold.</li>
+          <li>The hidden input gets <code>aria-invalid</code>, so screen readers hear it too.</li>
+          <li>The page <strong>scrolls the card into view</strong>.</li>
+        </ul>
+        <div class="plain">
+          Why so much? Because a toast disappears after a few seconds, and the buyer is still reading the
+          page trying to work out what went wrong. The page itself has to point at the problem. Each
+          acceptance card holds a ref purely so it can be scrolled to.
+        </div>
+        <div class="dont">
+          Blocking payment with only a toast message. The buyer sees a flash of text, it vanishes, and
+          the pay button still refuses to work. They have no idea why.
+        </div>
+
+        <h3 class="h5">9.6 The cart countdown timer</h3>
+        <p>
+          The second of the two countdowns. This one runs <em>inside</em> the wizard and is driven by
+          <code>expiresAtUtc</code> on the cart — how long the buyer's reserved tickets are held. Not to be
+          confused with the sales-not-open countdown in <a href="#cond-countdown">§9.1.1</a>, which replaces the
+          whole page and is driven by <code>bookingStartDate</code>.
+        </p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:32%">If…</th><th>Then…</th></tr></thead>
+            <tbody>
+              <tr><td>A cart exists with <code>expiresAtUtc</code></td><td>Show the countdown, always visible.</td></tr>
+              <tr><td>Under 2 minutes left</td><td>Switch to a warning colour.</td></tr>
+              <tr><td>It hits zero</td><td>Blocking dialog, clear the cart, send them back to ticket selection.</td></tr>
+              <tr><td><strong>Payment succeeded</strong></td><td><strong>Remove the timer immediately.</strong> A countdown on an order they already paid for is alarming and meaningless.</td></tr>
+              <tr><td>No cart yet</td><td>No timer.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="h5">9.7 The payment step</h3>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:32%">If…</th><th>Then…</th></tr></thead>
+            <tbody>
+              <tr><td><code>isOrganizerOnly</code> is true and <code>isOrganizer</code> is false</td><td>Hide that method — from both the method list <em>and</em> the breakdown list.</td></tr>
+              <tr><td>No methods left to show</td><td>Explain that no payment method is available and give a support route. Never an empty box.</td></tr>
+              <tr><td><code>acceptsDiscountCoupons === false</code> and no coupon applied</td><td><strong>Hide the coupon box completely.</strong> Offering a field where no code can ever work is worse than offering nothing.</td></tr>
+              <tr><td>A coupon is already applied</td><td>Keep the box visible even if the flag is false — otherwise they cannot remove it.</td></tr>
+              <tr><td>Coupon rejected</td><td>Inline error, server's words exactly. Totals unchanged.</td></tr>
+              <tr><td>Coupon accepted</td><td>Code shown as a chip with a Remove button; discount row appears in the breakdown.</td></tr>
+              <tr><td>Card method chosen</td><td>Mount Stripe Elements, plus a cardholder-name field.</td></tr>
+              <tr><td>Non-card method chosen</td><td>Do not mount Elements. Explain how long that method takes to settle.</td></tr>
+              <tr><td>Prices are being refetched</td><td>Show totals as loading and disable pay. Never let anyone pay against an old number.</td></tr>
+              <tr><td>Payment is submitting</td><td>Button gets <code>disabled</code>, <code>loading</code> and <code>loadingText</code>. Chakra v3 uses <code>disabled</code>, not <code>isDisabled</code>.</td></tr>
+              <tr><td>Terms not accepted</td><td>Block, scroll to the checkbox, highlight it.</td></tr>
+              <tr><td>Refund policy not accepted</td><td>Same.</td></tr>
+              <tr><td>Attendee details incomplete</td><td>Block, scroll to the attendee that is missing something.</td></tr>
+              <tr><td>No payment method selected</td><td>Block, scroll to the method list.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="h5" id="cond-coupon">9.8 The discount coupon control, in full</h3>
+        <p>
+          This control caused a real bug once, so it is worth going through slowly. It has
+          <strong>three</strong> states, not two.
+        </p>
+
+        <h4 class="h6 mt-3">State 1 — the control is not there at all</h4>
+        <p>Show nothing when both of these are true:</p>
+        <ul>
+          <li><code>acceptsDiscountCoupons === false</code>, <em>and</em></li>
+          <li>no coupon is currently applied to the cart.</li>
+        </ul>
+        <p>
+          <code>acceptsDiscountCoupons</code> is <code>false</code> when the event has no coupon a buyer
+          could possibly redeem — either discounts are switched off for the event, or every coupon on it
+          is deactivated, or every coupon is fully used up.
+        </p>
+        <div class="dont">
+          Showing the coupon box anyway "just in case". This was the actual bug: buyers were offered a
+          coupon field on an event where no code could ever work. They typed codes, got
+          "Discount coupon not found." every time, and concluded the site was broken. If no code can
+          succeed, do not ask for one.
+        </div>
+
+        <h4 class="h6 mt-4">State 2 — empty, waiting for a code</h4>
+        <ul>
+          <li>Heading: "Have a coupon?"</li>
+          <li>A text input and an "Apply" button joined into one rounded control.</li>
+          <li>The Apply button is <strong>disabled while the input is empty or only spaces</strong>, and shows a <code>not-allowed</code> cursor when disabled.</li>
+          <li>Once enabled it takes the brand colour; while disabled it is grey.</li>
+          <li>Pressing <kbd>Enter</kbd> in the input applies the code — buyers expect this and it costs one line.</li>
+          <li>The code is trimmed before sending. A trailing space must not cause a rejection.</li>
+          <li>While the request is in flight the button shows <code>loading</code> with the text "Applying...".</li>
+          <li>The whole control is full width on mobile, capped around 420px from tablet up.</li>
+        </ul>
+
+        <h4 class="h6 mt-4">State 3 — a coupon is applied</h4>
+        <p>The input disappears and is replaced by a summary row:</p>
+        <ul>
+          <li>The code shown as a green badge — <code>SUMMIT10</code>.</li>
+          <li>The amount saved beside it — <code>-$49.80 applied</code> — but <strong>only when the discount is greater than zero</strong>. A "-$0.00 applied" label is noise.</li>
+          <li>A "Remove" button with an × icon, disabled while any cart request is in flight.</li>
+          <li>The row is outlined in the event's brand colour, so it reads as an active, successful state.</li>
+        </ul>
+
+        <div class="alert alert-warning">
+          <strong>The important exception.</strong> When a coupon <em>is</em> applied, keep the control
+          visible <strong>even if <code>acceptsDiscountCoupons</code> is <code>false</code></strong>.
+          That combination happens in real life — the organizer deactivates the coupon while a buyer
+          already has it on their cart. Hide the control then and the buyer is stuck with a discount they
+          can see but cannot remove.
+        </div>
+
+        <h4 class="h6 mt-4">Where does a rejection message appear?</h4>
+        <p>
+          <strong>Not inside this card.</strong> A rejected coupon fails like any other cart request, and
+          it surfaces through the cart's shared error banner — the same place a sold-out ticket or an
+          expired cart reports itself. One error location, not five.
+        </p>
+        <div class="plain">
+          This is a deliberate design choice, and a good habit generally: one shared place for a whole
+          feature's errors beats a bespoke error slot inside every component. Buyers learn where to look,
+          and you write the handling once.
+        </div>
+
+        <h4 class="h6 mt-4">Applying and removing both go through the same call</h4>
+        <p>
+          There is no "remove coupon" endpoint. Both actions call
+          <a href="#ep-cart-price">Price the cart</a>:
+        </p>
+        <ul class="mb-0">
+          <li><strong>Apply:</strong> <code>{ "couponCode": "SUMMIT10" }</code></li>
+          <li><strong>Remove:</strong> <code>{ "couponCode": null }</code></li>
+        </ul>
+
+        <h3 class="h5">9.9 The review dialog</h3>
+        <ul>
+          <li>Only opens when every check above has passed. It confirms; it does not validate.</li>
+          <li>Layout, top to bottom: ticket table → gross subtotal → discount → net subtotal → each fee → <strong>total to pay</strong>, visually set apart.</li>
+          <li>The button says the amount: <code>Pay $470.61</code>. Nobody should have to guess what pressing it costs.</li>
+          <li>Full screen on mobile, <code>xl</code> from tablet up. Ticket table scrolls sideways inside its own box.</li>
+        </ul>
+
+        <h3 class="h5">9.10 The confirmation page</h3>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:32%">If…</th><th>Then…</th></tr></thead>
+            <tbody>
+              <tr><td>Loading</td><td>Confirmation skeleton.</td></tr>
+              <tr><td><code>404</code></td><td>"Order not found" card. Stop polling.</td></tr>
+              <tr><td><code>orderState: "Confirmed"</code></td><td>Success header, ticket list, masked email, venue and map. Polling stops.</td></tr>
+              <tr><td><code>orderState: "Processing"</code></td><td>Processing header, reassuring copy, poll indicator. Say the page is safe to close.</td></tr>
+              <tr><td><code>orderState: "Failed"</code></td><td>Failure header and a support route quoting <code>invoiceNo</code>. No "pay again" button.</td></tr>
+              <tr><td>3 minutes passed, still Processing</td><td>Stop polling, show "Check again".</td></tr>
+              <tr><td><code>tickets: []</code> but state is Confirmed</td><td>Show the confirmation without a ticket list. This is valid — some organizers do not issue digital tickets.</td></tr>
+              <tr><td><code>venueMapUrl</code> present</td><td>Map link. Absent ⇒ plain address text.</td></tr>
+              <tr><td>URL has <code>?cart=…</code></td><td>Run the confirm call once, then remove the parameter from the URL so a refresh does not repeat it.</td></tr>
+              <tr><td>Arrived via bank redirect</td><td>Exactly the same page and the same handling. There is no separate landing route.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 class="h6 mt-4" id="cond-next-step">9.10.1 What happens after a successful registration</h4>
+        <p>
+          A settled order is the end of the buyer's journey, so the page asks them what they want next
+          instead of leaving them parked on a screen whose cart is already spent.
+        </p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:32%">Question</th><th>Answer</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>When does it open?</td>
+                <td>Once, the first time the order reads <code>orderState: "Confirmed"</code>. Never for <code>Processing</code> or <code>Failed</code> — a buyer whose money has not settled is not offered a second purchase.</td>
+              </tr>
+              <tr>
+                <td>What does it ask?</td>
+                <td>"Would you like to make another purchase?" over the event name, with two actions: <strong>Buy more tickets</strong> and <strong>Close this tab</strong>.</td>
+              </tr>
+              <tr>
+                <td>Buy more tickets</td>
+                <td>A full page load of <code>/events/{eventUniqueId}/register</code> — not a client-side route change. The reload is the point: it guarantees a fresh cart rather than the spent one.</td>
+              </tr>
+              <tr>
+                <td>How does it know the event?</td>
+                <td>The wizard passes the registration path in router state when it hands the buyer over. The order response carries no event id, so on a page the buyer reached by refreshing or a shared link that state is gone — then the action falls back to reloading the current page.</td>
+              </tr>
+              <tr>
+                <td>Close this tab</td>
+                <td>Calls <code>window.close()</code>. Browsers only honour that for a tab their own script opened, so check afterwards and, when the tab is still there, tell the buyer to close it themselves. Do not fail silently.</td>
+              </tr>
+              <tr>
+                <td>Dismissed without choosing</td>
+                <td>Escape, backdrop or the close button all reload the tab. Dismissal is not a third answer — it clears the screen the same way the reload path does.</td>
+              </tr>
+              <tr>
+                <td>Responsive</td>
+                <td>Full screen at <code>base</code>, a centred dialog from <code>md</code>. Actions stack in reverse order on mobile so the primary sits at the bottom, nearest the thumb.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="dont">
+          <strong>Common mistake:</strong> reusing the confirmation route for the second purchase — reloading
+          the order page is the fallback, not the intent. When the registration path is known, send the buyer
+          to it, or they will sit on a paid order wondering where the ticket picker went.
+        </div>
+
+        <h3 class="h5" id="cond-dialogs">9.11 Every dialog in the flow, and what opens it</h3>
+        <p>Seven dialogs exist. Knowing which is which saves you building an eighth by accident.</p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:20%">Dialog</th><th style="width:30%">Opened by</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Terms &amp; Conditions</td>
+                <td>"View terms" on the terms card</td>
+                <td>Read-only. Shared content dialog, eyebrow "Terms &amp; Conditions".</td>
+              </tr>
+              <tr>
+                <td>Refund Policy</td>
+                <td>"View refund policy" on the refund card</td>
+                <td>Same component, different eyebrow and body.</td>
+              </tr>
+              <tr>
+                <td>Session Description</td>
+                <td>Clicking a session title that is a link</td>
+                <td>Same component again. Open state is driven by "is there a session description selected", not a boolean.</td>
+              </tr>
+              <tr>
+                <td>Confirm removal</td>
+                <td>Removing a ticket line or a whole session</td>
+                <td>Destructive. Names what will be lost. Must be dismissible without removing anything.</td>
+              </tr>
+              <tr>
+                <td>Timer expired</td>
+                <td>The countdown reaching zero</td>
+                <td>Blocking — the buyer cannot carry on with a dead cart. Sends them back to ticket selection.</td>
+              </tr>
+              <tr>
+                <td>What next?</td>
+                <td>An order settling to <code>Confirmed</code> on the confirmation page</td>
+                <td>Offers another purchase or closing the tab. Dismissing it reloads the page — see <a href="#cond-next-step">§9.10.1</a>.</td>
+              </tr>
+              <tr>
+                <td>Buyer details missing</td>
+                <td>Trying to continue without a name or email</td>
+                <td>Points at what is missing rather than just refusing.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="mb-0">
+          The first three are the <em>same component</em> with different props. If you need another
+          read-only pop-up, use it again — do not write a fourth one.
+        </p>
+
+        <h3 class="h5">9.12 Responsive — not optional</h3>
+        <p>Check every screen at 320, 375, 768, 1024, 1440 and 1920 pixels wide.</p>
+        <ul class="mb-0">
+          <li>The page must never scroll sideways. Wide things (tables, breakdowns) scroll inside their own box instead.</li>
+          <li>Tables wrapped so they scroll horizontally on their own.</li>
+          <li>Modals go full screen on mobile.</li>
+          <li>Tabs collapse to a scrollable strip or a dropdown on narrow screens.</li>
+          <li>Anything tappable is at least 44 × 44 pixels — quantity buttons especially.</li>
+          <li>Pointer cursor on everything clickable; <code>not-allowed</code> on everything disabled.</li>
+        </ul>
+      </section>
+
+      <!-- 10. EMAILS -->
+      <section id="emails">
+        <h2 class="h3">10. Emails</h2>
+
+        <div class="alert alert-primary">
+          <strong>You do not send any of these.</strong> The server queues them in the background. There
+          is nothing to call and nothing to await. Your confirmation page reflects the state of the
+          <em>order</em>, never the state of an email.
+        </div>
+
+        <p>Two different emails leave the system for one order. They are genuinely different things:</p>
+
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <div class="card h-100 border-primary">
+              <div class="card-header bg-primary-subtle fw-semibold">① Registration confirmation</div>
+              <div class="card-body">
+                <p class="small">The organizer's own thank-you note, written by them in the event setup wizard.</p>
+                <dl class="row mb-0 small">
+                  <dt class="col-sm-4">Goes to</dt><dd class="col-sm-8"><strong>The buyer only.</strong></dd>
+                  <dt class="col-sm-4">CC</dt><dd class="col-sm-8">The organizer — only if they turned that on, and never if it is the same address as the buyer's.</dd>
+                  <dt class="col-sm-4">BCC</dt><dd class="col-sm-8">Any extra addresses the organizer listed. BCC so the buyer cannot see who else was copied.</dd>
+                  <dt class="col-sm-4">Subject</dt><dd class="col-sm-8">The organizer's, or <code>"{Event} - Registration confirmed"</code>.</dd>
+                  <dt class="col-sm-4">Attachments</dt><dd class="col-sm-8">None.</dd>
+                  <dt class="col-sm-4">How often</dt><dd class="col-sm-8"><strong>Exactly once per order</strong>, ever.</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card h-100 border-success">
+              <div class="card-header bg-success-subtle fw-semibold">② Ticket delivery</div>
+              <div class="card-body">
+                <p class="small">The actual tickets, as PDF files with QR codes.</p>
+                <dl class="row mb-0 small">
+                  <dt class="col-sm-4">Goes to</dt><dd class="col-sm-8">Every attendee who gave an email — their own tickets only. <strong>Plus the buyer, who gets every ticket on the order.</strong></dd>
+                  <dt class="col-sm-4">CC / BCC</dt><dd class="col-sm-8">None. Attendees must not see each other's addresses.</dd>
+                  <dt class="col-sm-4">Subject</dt><dd class="col-sm-8"><code>"{Event} - Your tickets"</code>. Fixed.</dd>
+                  <dt class="col-sm-4">Body</dt><dd class="col-sm-8">Written per person — the buyer's copy shows what the order cost, an attendee's does not.</dd>
+                  <dt class="col-sm-4">Attachments</dt><dd class="col-sm-8">One PDF per ticket that person is entitled to.</dd>
+                  <dt class="col-sm-4">How often</dt><dd class="col-sm-8">Once per ticket, and the organizer can resend later.</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="h5">10.1 A worked example — who gets what</h3>
+        <p>An order of 3 tickets. Buyer is <code>priya@example.com</code>. Attendees: Priya (<code>priya@example.com</code>), Sam (<code>sam@example.com</code>), and Dana (no email given).</p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th>Person</th><th>Emails they get</th><th>PDFs attached</th><th>Which version</th></tr></thead>
+            <tbody>
+              <tr><td>Priya (buyer + attendee)</td><td>1 confirmation + 1 ticket email</td><td>All 3</td><td>Buyer version — shows the cost</td></tr>
+              <tr><td>Sam</td><td>1 ticket email</td><td>Just his own</td><td>Attendee version — no cost shown</td></tr>
+              <tr><td>Dana</td><td>None</td><td>—</td><td>Her ticket goes to Priya, who forwards it</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="plain">
+          Priya is both the buyer and an attendee, so she gets <strong>one</strong> ticket email, not two.
+          The system merges her into a single recipient and gives her the buyer version.
+        </div>
+
+        <h3 class="h5">10.2 When each email is triggered</h3>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:24%">What happened</th><th>Confirmation?</th><th>Tickets?</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Payment settled, everything ticketed</td>
+                <td class="text-success fw-semibold">Yes</td>
+                <td class="text-success fw-semibold">Yes</td>
+                <td>The normal, happy path.</td>
+              </tr>
+              <tr>
+                <td>Payment settled but a line got no tickets</td>
+                <td class="text-danger fw-semibold">Held back</td>
+                <td class="text-success fw-semibold">Yes</td>
+                <td>The order may still end up refunded. Telling someone "you're confirmed!" and then refunding them is worse than a short delay. It gets sent once the order is whole.</td>
+              </tr>
+              <tr>
+                <td>Money arrived but the invoice did not reach Paid</td>
+                <td class="text-danger fw-semibold">No</td>
+                <td class="text-danger fw-semibold">No</td>
+                <td>The order goes into a recovery process instead.</td>
+              </tr>
+              <tr>
+                <td>Your confirm fast-path call</td>
+                <td class="text-success fw-semibold">Yes</td>
+                <td class="text-success fw-semibold">Yes</td>
+                <td>Both jobs are safe to trigger twice, so the webhook and this call can both do it.</td>
+              </tr>
+              <tr>
+                <td>Payment failed</td>
+                <td class="text-danger fw-semibold">No</td>
+                <td class="text-danger fw-semibold">No</td>
+                <td>Reserved stock is released. There is nothing to confirm.</td>
+              </tr>
+              <tr>
+                <td>Organizer recorded a cheque</td>
+                <td class="text-secondary">Follows the tickets</td>
+                <td class="text-success fw-semibold">Yes</td>
+                <td>Tickets go out while the money is still owed.</td>
+              </tr>
+              <tr>
+                <td>Organizer pressed "resend"</td>
+                <td class="text-danger fw-semibold">No</td>
+                <td class="text-success fw-semibold">Yes</td>
+                <td>Resending the thank-you would read like a second purchase.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="h5">10.3 When emails do not go out at all</h3>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:36%">Situation</th><th>What happens</th></tr></thead>
+            <tbody>
+              <tr><td>Buyer's email is missing or invalid</td><td>No confirmation. Logged as a warning.</td></tr>
+              <tr><td>Digital tickets switched off for every session</td><td>No ticket email at all — the organizer scans people in at the door instead. <strong>This is why a Confirmed order can legitimately show no tickets.</strong></td></tr>
+              <tr><td>Digital tickets off for some sessions</td><td>Only the enabled sessions' tickets get sent.</td></tr>
+              <tr><td>One recipient's email bounces</td><td>Only that one fails. Everyone else still gets theirs, and it is retried.</td></tr>
+              <tr><td>QR code generation fails</td><td>The PDF is still sent — the ticket code is printed as text too.</td></tr>
+              <tr><td>Already sent</td><td>Skipped. Both jobs remember what they already sent, so nobody gets duplicates.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="h5">10.4 What this means for your copy</h3>
+        <ul class="mb-0">
+          <li><strong>Do not write "we have sent your tickets".</strong> Write "your tickets are on their way to <code>p*****@example.com</code>". You genuinely do not know whether the email has landed yet.</li>
+          <li>There is no way for a buyer to check email delivery status. Do not build UI that implies there is.</li>
+          <li>A Confirmed order with an empty ticket list is normal. Handle it without an error state.</li>
+        </ul>
+      </section>
+
+      <!-- 11. ERRORS -->
+      <section id="errors">
+        <h2 class="h3">11. When things go wrong</h2>
+
+        <h3 class="h5">11.1 How to show an error</h3>
+        <ul>
+          <li>Show <code>message</code> from the envelope. It is already written for buyers.</li>
+          <li>Never show <code>error.message</code> from axios. It leaks technical detail and means nothing to a buyer.</li>
+          <li>Use the shared <code>extractApiError</code> helper — it handles this for you.</li>
+          <li><code>validationErrors</code> maps field names to messages. Show each one under its own input.</li>
+        </ul>
+        <div class="plain">
+          The server deliberately never sends stack traces, internal ids or framework details to the
+          browser. If you ever see one, that is a backend bug worth reporting — it is a small security
+          leak.
+        </div>
+
+        <h3 class="h5">11.2 Situations your UI must handle</h3>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:30%">Situation</th><th>What to do</th></tr></thead>
+            <tbody>
+              <tr><td>Cart expires while they are typing</td><td>Blocking dialog, clear the saved cart id, back to ticket selection. Never let them reach the pay button on a dead cart.</td></tr>
+              <tr><td>Tickets sell out between choosing and adding</td><td>You get a 400. Show the message and refetch sessions so the counts update.</td></tr>
+              <tr><td>Browser closes during payment</td><td>The saved <code>invoiceUniqueId</code> gets them back to their order on the next visit. This is exactly why you save it first.</td></tr>
+              <tr><td>They come back from a bank redirect</td><td>The order page handles it. Same page, same code.</td></tr>
+              <tr><td><strong>Confirm call fails after a successful payment</strong></td><td><strong>Do not say the payment failed.</strong> Go to the order page and let polling resolve it. Stripe's webhook is the real authority.</td></tr>
+              <tr><td>Coupon runs out between pricing and payment</td><td>Handled on the server; the order settles at the price you were quoted. Nothing for you to do.</td></tr>
+              <tr><td>Order polling returns 429</td><td>Slow down. Never poll faster than <code>pollAfterSeconds</code>.</td></tr>
+              <tr><td>A ticket is switched off while it sits in the cart</td><td>Pricing and cart fetch will reflect it. Surface any change <em>before</em> the pay button, not after.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="h5">11.3 Security rules you must not break</h3>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:34%">Rule</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Card and bank details go browser → Stripe only</td><td>They must never touch our API. Stripe's own components collect them, and Stripe carries the compliance burden.</td></tr>
+              <tr><td>No <code>localStorage</code> or <code>sessionStorage</code>, for anything</td><td>Project-wide rule. Use short-lived, path-scoped cookies. Helpers already exist.</td></tr>
+              <tr><td>Organizer-only flags are display only</td><td>The server checks permissions on its own. A client-side check protects nothing — it just tidies the UI.</td></tr>
+              <tr><td>Sanitise organizer HTML before rendering</td><td>Description, terms and refund policy are typed by other people. Unsanitised, they are a script-injection route into your buyers' browsers.</td></tr>
+              <tr><td>Show coupon errors word for word</td><td>Making them more specific turns a public page into a coupon-guessing tool.</td></tr>
+              <tr><td>Validate every response with Zod</td><td>If the server sends an unexpected shape, throw at the boundary rather than letting bad data flow into components and crash somewhere confusing.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 12. CHECKLIST -->
+      <section id="checklist">
+        <h2 class="h3">12. Final checklist before you call it done</h2>
+        <p>Go through this honestly. If a box is unchecked, the work is not finished.</p>
+
+        <h3 class="h5">Data and calls</h3>
+        <ul class="list-unstyled">
+          <li>☐ Every server call goes through a file in <code>src/api/</code> — no <code>axios</code> in a component.</li>
+          <li>☐ Every response is unwrapped from the envelope and validated with Zod.</li>
+          <li>☐ Every query handles all three states: loading, error, and data.</li>
+          <li>☐ Every loading state shows a skeleton, not a spinner and not a blank area.</li>
+          <li>☐ Every mutation handles both <code>onSuccess</code> and <code>onError</code>.</li>
+          <li>☐ No URL is hardcoded — all come from <code>API_ROUTES</code>.</li>
+        </ul>
+
+        <h3 class="h5">Money</h3>
+        <ul class="list-unstyled">
+          <li>☐ No total is calculated in JavaScript. <code>grandTotal</code> comes from the server.</li>
+          <li>☐ The pay button states the exact amount.</li>
+          <li>☐ Amounts are formatted with <code>Intl.NumberFormat</code>.</li>
+          <li>☐ The buyer cannot press pay while prices are being refetched.</li>
+        </ul>
+
+        <h3 class="h5">Payment safety</h3>
+        <ul class="list-unstyled">
+          <li>☐ <code>invoiceUniqueId</code> is saved <em>before</em> <code>confirmPayment</code> is called.</li>
+          <li>☐ <code>return_url</code> points at the order page, not the cart.</li>
+          <li>☐ A failing confirm call does not tell the buyer their payment failed.</li>
+          <li>☐ The countdown timer is removed the moment payment succeeds.</li>
+          <li>☐ No card or bank detail is ever sent to our API.</li>
+        </ul>
+
+        <h3 class="h5">Responsive and accessible</h3>
+        <ul class="list-unstyled">
+          <li>☐ Checked at 320, 375, 768, 1024, 1440 and 1920 pixels.</li>
+          <li>☐ The page never scrolls sideways at any width.</li>
+          <li>☐ Tables scroll inside their own container.</li>
+          <li>☐ Modals are full screen on mobile.</li>
+          <li>☐ Tap targets are at least 44 × 44 pixels.</li>
+          <li>☐ Every input has a real label; focus outlines are visible.</li>
+          <li>☐ Pointer cursor on clickable things; <code>not-allowed</code> on disabled things.</li>
+        </ul>
+
+        <h3 class="h5">Tests</h3>
+        <ul class="list-unstyled mb-0">
+          <li>☐ Tests are in the same change as the code, not "coming later".</li>
+          <li>☐ Each test name says which rule it protects.</li>
+          <li>☐ Failure paths are tested as thoroughly as success paths.</li>
+          <li>☐ <code>npm run lint</code> and <code>npm run build</code> are clean.</li>
+        </ul>
+      </section>
+
+      <!-- 13. GAPS -->
+      <section id="gaps">
+        <h2 class="h3">13. Not covered here</h2>
+        <p>Said plainly, so nobody builds on an assumption:</p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:30%">Topic</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Free (zero-cost) events</td>
+                <td>The order status call handles a free order correctly — it reaches <code>Confirmed</code> with no payment. But there is <strong>no dedicated free-checkout path</strong> in the payment flow or the UI yet. A genuinely free event has not been tested end to end.</td>
+              </tr>
+                            <tr><td>Organizer resend screens</td><td>They exist, under the organizer area. Not buyer-facing, so not here.</td></tr>
+              <tr><td>Seat maps (seats.io)</td><td>Sessions with a seating chart use a different selection flow. Not covered.</td></tr>
+              <tr><td>Refunds</td><td>Handled automatically on the server. There is no buyer-facing refund screen and no endpoint for one.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="mt-5 pt-4 border-top text-secondary small">
+        <p class="mb-1">
+          Written from the live controllers, services and client code on branch
+          <code>sohail/features/event/event-registration</code>. The JSON samples show the correct
+          <em>shape</em>; the values in them are made up.
+        </p>
+        <p class="mb-0">If the code and this guide ever disagree, the code is right — and this guide needs updating.</p>
+      </footer>
+
+    </main>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

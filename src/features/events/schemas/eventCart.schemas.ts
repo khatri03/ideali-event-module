@@ -358,22 +358,27 @@ export interface SubmitLineAttendeesRequest {
   attendees: LineAttendee[]
 }
 
-export interface EventLineCustomFormResponse {
-  fieldId: number
+export interface EventOrderFormResponse {
+  fieldUniqueId: string
   value?: string | null
   fileStorageId?: number | null
 }
 
-export interface EventLineCustomQuestionResponse {
+export interface EventOrderQuestionResponse {
   questionUniqueId: string
   optionUniqueId?: string | null
   value?: string | null
   fileStorageId?: number | null
 }
 
-export interface SubmitLineAnswersRequest {
-  formResponses: EventLineCustomFormResponse[]
-  questionResponses: EventLineCustomQuestionResponse[]
+export interface SubmitOrderAnswersRequest {
+  formResponses: EventOrderFormResponse[]
+  questionResponses: EventOrderQuestionResponse[]
+}
+
+export interface UploadedAnswerFile {
+  fileStorageId: number
+  fileName: string
 }
 
 export interface CreateEventPaymentIntentRequest {

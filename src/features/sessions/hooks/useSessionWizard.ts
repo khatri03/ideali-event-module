@@ -18,7 +18,6 @@ export interface SessionWizardStep {
     | "schedule"
     | "ticket"
     | "e-ticketing"
-    | "questions"
     | "review"
   label: string
   path: string
@@ -37,7 +36,6 @@ const SESSION_WIZARD_STEP_DEFINITIONS: Array<Omit<SessionWizardStep, "path">> = 
   { slug: "schedule", label: "Schedule" },
   { slug: "ticket", label: "Tickets" },
   { slug: "e-ticketing", label: "e-Ticketing" },
-  { slug: "questions", label: "Questions" },
   { slug: "review", label: "Review" },
 ]
 
@@ -73,7 +71,7 @@ const SESSION_WIZARD_STEP_NUMBER: Record<SessionWizardStep["slug"], number> = {
   schedule: 10,
   ticket: 11,
   "e-ticketing": 12,
-  questions: 13,
+  // 13 was the retired questions step; review keeps its number so saved progress still reads true.
   review: 14,
 }
 

@@ -76,6 +76,19 @@ describe("usePurchaseReviewValidation", () => {
     expect(result.current.scrollTarget).toBe("terms")
   })
 
+  it("SendsAnUnansweredQuestionToTheQuestionnaire_NotTheTermsCard", () => {
+    const { result } = renderHook(() => usePurchaseReviewValidation())
+
+    act(() =>
+      result.current.applyIssues([
+        { message: "Answer the required question before continuing.", target: "questionnaire" },
+      ]),
+    )
+
+    expect(result.current.scrollTarget).toBe("questionnaire")
+    expect(createToast).not.toHaveBeenCalled()
+  })
+
   it("ToastsNothing_WhenTheReviewPassesAndTheDialogOpens", () => {
     const { result } = renderHook(() => usePurchaseReviewValidation())
 

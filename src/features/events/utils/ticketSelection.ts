@@ -122,7 +122,6 @@ export function getSelectedSessionSummaries(
       selectedTickets,
       attendeeCount: selectedTickets.reduce((total, item) => total + item.quantity, 0),
       requiresAttendeeInfo: session.requiresAttendeeInfo,
-      hasQuestions: session.customForms.length > 0 || session.customQuestions.length > 0,
     })
 
     return summaries

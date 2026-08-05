@@ -1,107 +1,150 @@
 import { useCallback, useMemo, useState } from "react"
-import type { EventRegistrationQuestion, EventRegistrationSession } from "@/api/events"
-import type { EventLineCustomQuestionResponse } from "@/features/events/schemas/eventCart.schemas"
+import type {
+  SubmitOrderAnswersRequest,
+  UploadedAnswerFile,
+} from "@/features/events/schemas/eventCart.schemas"
+import {
+  buildFormSections,
+  buildQuestionDescriptors,
+  type QuestionnaireSource,
+  type RegistrationFieldDescriptor,
+} from "@/features/events/utils/registrationFields"
 
-/** Answer keys are scoped per session so the same question on two sessions stays independent. */
-function buildAnswerKey(sessionUniqueId: string, questionUniqueId: string) {
-  return `${sessionUniqueId}:${questionUniqueId}`
+function isFileControl(descriptor: RegistrationFieldDescriptor) {
+  return descriptor.controlType.trim().toLowerCase().replace(/[\s_-]/g, "") === "file"
 }
 
-function isAnswered(question: EventRegistrationQuestion, value: string | undefined) {
+function isAnswered(
+  descriptor: RegistrationFieldDescriptor,
+  value: string | undefined,
+  file: UploadedAnswerFile | undefined,
+) {
+  if (isFileControl(descriptor)) {
+    return file != null
+  }
+
   const trimmed = (value ?? "").trim()
 
-  if (question.controlType.trim().toLowerCase() === "checkbox") {
+  if (descriptor.controlType.trim().toLowerCase() === "checkbox") {
     return trimmed === "true"
   }
 
   return trimmed.length > 0
 }
 
-function isOptionBackedQuestion(question: EventRegistrationQuestion) {
-  return question.options.length > 0
-}
-
-export function useQuestionnaireAnswers(sessions: EventRegistrationSession[]) {
-  const [answersByKey, setAnswersByKey] = useState<Record<string, string>>({})
+/**
+ * Answers to the event's custom forms and questions. They are authored on the event and stored
+ * against the order, so a single flat map keyed by field/question id is the whole state - there is
+ * no per-session dimension to key by.
+ */
+export function useQuestionnaireAnswers(event: QuestionnaireSource | undefined) {
+  const [valuesByKey, setValuesByKey] = useState<Record<string, string>>({})
+  const [filesByKey, setFilesByKey] = useState<Record<string, UploadedAnswerFile>>({})
   const [showValidation, setShowValidation] = useState(false)
 
-  const setAnswer = useCallback((sessionUniqueId: string, questionUniqueId: string, value: string) => {
-    setAnswersByKey((current) => ({
-      ...current,
-      [buildAnswerKey(sessionUniqueId, questionUniqueId)]: value,
-    }))
-  }, [])
+  const formSections = useMemo(() => buildFormSections(event), [event])
+  const questions = useMemo(() => buildQuestionDescriptors(event), [event])
 
-  const getAnswer = useCallback(
-    (sessionUniqueId: string, questionUniqueId: string) => answersByKey[buildAnswerKey(sessionUniqueId, questionUniqueId)] ?? "",
-    [answersByKey],
+  const descriptors = useMemo(
+    () => [...formSections.flatMap((section) => section.fields), ...questions],
+    [formSections, questions],
   )
 
-  /** Every unanswered required question, keyed the same way the inputs are. */
-  const missingRequiredKeys = useMemo(() => {
-    const missing: string[] = []
+  const setAnswer = useCallback((key: string, value: string) => {
+    setValuesByKey((current) => ({ ...current, [key]: value }))
+  }, [])
 
-    sessions.forEach((session) => {
-      session.customQuestions.forEach((question) => {
-        if (!question.required || !question.isActive) {
-          return
-        }
+  const getAnswer = useCallback((key: string) => valuesByKey[key] ?? "", [valuesByKey])
 
-        const key = buildAnswerKey(session.uniqueId, question.uniqueId)
-        if (!isAnswered(question, answersByKey[key])) {
-          missing.push(key)
-        }
-      })
+  const setFile = useCallback((key: string, file: UploadedAnswerFile | null) => {
+    setFilesByKey((current) => {
+      if (file == null) {
+        return Object.fromEntries(Object.entries(current).filter(([entryKey]) => entryKey !== key))
+      }
+
+      return { ...current, [key]: file }
     })
+  }, [])
 
-    return missing
-  }, [answersByKey, sessions])
+  const getFile = useCallback((key: string) => filesByKey[key], [filesByKey])
+
+  const missingRequiredKeys = useMemo(
+    () =>
+      descriptors
+        .filter(
+          (descriptor) =>
+            descriptor.isRequired && !isAnswered(descriptor, valuesByKey[descriptor.key], filesByKey[descriptor.key]),
+        )
+        .map((descriptor) => descriptor.key),
+    [descriptors, filesByKey, valuesByKey],
+  )
 
   const getErrorMessage = useCallback(
-    (sessionUniqueId: string, question: EventRegistrationQuestion) => {
-      if (!showValidation) return null
+    (descriptor: RegistrationFieldDescriptor) => {
+      if (!showValidation || !missingRequiredKeys.includes(descriptor.key)) return null
 
-      const key = buildAnswerKey(sessionUniqueId, question.uniqueId)
-      if (!missingRequiredKeys.includes(key)) return null
-
-      return question.requiredMessage?.trim() || `${question.label} is required.`
+      return descriptor.requiredMessage?.trim() || `${descriptor.label} is required.`
     },
     [missingRequiredKeys, showValidation],
   )
 
   /**
-   * Maps collected answers into the request shape. Questions backed by options send the chosen
-   * option's id; free-text questions send the raw value.
+   * Option-backed controls send the option identifier the API keyed them by; everything else sends
+   * the raw value. Fields left empty are omitted so a blank answer clears the stored one.
    */
-  const buildQuestionResponses = useCallback(
-    (sessionUniqueId: string): EventLineCustomQuestionResponse[] => {
-      const session = sessions.find((item) => item.uniqueId === sessionUniqueId)
-      if (!session) return []
+  const buildAnswersRequest = useCallback((): SubmitOrderAnswersRequest => {
+    const formResponses = formSections
+      .flatMap((section) => section.fields)
+      .flatMap((field) => {
+        const value = valuesByKey[field.key] ?? ""
+        const file = filesByKey[field.key]
+        if (!value.trim() && !file) return []
 
-      return session.customQuestions.flatMap<EventLineCustomQuestionResponse>((question) => {
-        const value = answersByKey[buildAnswerKey(sessionUniqueId, question.uniqueId)] ?? ""
-        if (!value.trim()) return []
-
-        if (isOptionBackedQuestion(question)) {
-          return [{ questionUniqueId: question.uniqueId, optionUniqueId: value, value: null }]
-        }
-
-        return [{ questionUniqueId: question.uniqueId, optionUniqueId: null, value }]
+        return [
+          {
+            fieldUniqueId: field.key,
+            value: value.trim() ? value : null,
+            fileStorageId: file?.fileStorageId ?? null,
+          },
+        ]
       })
-    },
-    [answersByKey, sessions],
-  )
+
+    const questionResponses = questions.flatMap((question) => {
+      const value = valuesByKey[question.key] ?? ""
+      const file = filesByKey[question.key]
+      if (!value.trim() && !file) return []
+
+      const usesOptions = question.options.length > 0
+
+      return [
+        {
+          questionUniqueId: question.key,
+          optionUniqueId: usesOptions && value.trim() ? value : null,
+          value: !usesOptions && value.trim() ? value : null,
+          fileStorageId: file?.fileStorageId ?? null,
+        },
+      ]
+    })
+
+    return { formResponses, questionResponses }
+  }, [filesByKey, formSections, questions, valuesByKey])
 
   const resetAnswers = useCallback(() => {
-    setAnswersByKey({})
+    setValuesByKey({})
+    setFilesByKey({})
     setShowValidation(false)
   }, [])
 
   return {
+    formSections,
+    questions,
+    hasQuestionnaire: descriptors.length > 0,
     getAnswer,
     setAnswer,
+    getFile,
+    setFile,
     getErrorMessage,
-    buildQuestionResponses,
+    buildAnswersRequest,
     missingRequiredCount: missingRequiredKeys.length,
     showValidation,
     setShowValidation,
