@@ -27,7 +27,7 @@ export type { EventWizardSessionValues, EventWizardValues } from "./schemas/even
 export { defaultEventWizardValues, eventWizardFieldGroups, eventWizardSchema } from "./schemas/eventWizard.schemas"
 export { useCreateEventCart, useEventCart, useAddEventCartLine, useRemoveEventCartLine } from "./hooks/useEventCart"
 export { usePriceEventCart } from "./hooks/useEventCartPricing"
-export { useSubmitLineAttendees, useSubmitLineAnswers } from "./hooks/useEventCartAttendees"
+export { useSubmitLineAttendees, useSubmitOrderAnswers, useUploadAnswerFile } from "./hooks/useEventCartAttendees"
 export { useCreateEventPaymentIntent, useConfirmEventCheckout } from "./hooks/useEventCheckout"
 export type {
   EventCart,

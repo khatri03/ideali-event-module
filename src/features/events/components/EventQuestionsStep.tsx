@@ -23,6 +23,7 @@ import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } 
 import { Eye, GripVertical, PencilLine, Plus, Trash2 } from "lucide-react"
 import ReactSelect, { components, type MultiValue, type OptionProps, type StylesConfig } from "react-select"
 import { extractApiError } from "@/utils/errors"
+import { clampFormColumns, getFieldColumnSpan } from "@/features/events/utils/customFormLayout"
 import {
   fetchCustomFormControls,
   fetchCustomFormListItems,
@@ -272,22 +273,6 @@ function EventQuestionsEmpty({ title, description }: { title: string; descriptio
   )
 }
 
-function clampPreviewColumns(value: number | null | undefined) {
-  if (!value || value < 1) {
-    return 1
-  }
-
-  return Math.min(4, value)
-}
-
-function getPreviewColumnSpan(fieldColumn: number | null | undefined, formColumn: number) {
-  if (!fieldColumn || fieldColumn < 1) {
-    return 1
-  }
-
-  return Math.max(1, Math.min(fieldColumn, clampPreviewColumns(formColumn)))
-}
-
 function parseDelimitedValues(value: string | null | undefined) {
   if (!value) {
     return []
@@ -319,7 +304,7 @@ function CustomFormPreviewField({
   formLayoutColumn: number
 }) {
   const controlType = field.formControl?.controlType.toLowerCase() || "text"
-  const layoutSpan = getPreviewColumnSpan(field.layoutColumn, formLayoutColumn)
+  const layoutSpan = getFieldColumnSpan(field.layoutColumn, formLayoutColumn)
   const defaultOptionValue = getPreviewDefaultOptionValue(field.options, field.defaultValue)
   const previewMultiSelectValue = parseDelimitedValues(field.defaultValue).map((value) => {
     const match = field.options.find((option) => option.value === value)
@@ -1277,13 +1262,13 @@ function CustomFormPreviewModal({
                   </Box>
                 </SimpleGrid>
 
-                <SimpleGrid columns={{ base: 1, md: clampPreviewColumns(preview.layoutColumn || 2) }} gap={4}>
+                <SimpleGrid columns={{ base: 1, md: clampFormColumns(preview.layoutColumn || 2) }} gap={4}>
                   {preview.fields.length > 0 ? (
                     preview.fields.map((field) => (
                       <CustomFormPreviewField
                         key={field.uniqueId || `${field.id}-${field.displayOrder}`}
                         field={field}
-                        formLayoutColumn={clampPreviewColumns(preview.layoutColumn || 2)}
+                        formLayoutColumn={clampFormColumns(preview.layoutColumn || 2)}
                       />
                     ))
                   ) : (

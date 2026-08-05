@@ -24,6 +24,7 @@ interface PurchaseReviewValidation {
   message: string | null
   scrollTarget: PurchaseReviewValidationTarget | null
   buyerAttendeeRef: RefObject<HTMLDivElement | null>
+  questionnaireRef: RefObject<HTMLDivElement | null>
   paymentMethodRef: RefObject<HTMLDivElement | null>
   paymentCardRef: RefObject<HTMLDivElement | null>
   termsRef: RefObject<HTMLDivElement | null>
@@ -51,6 +52,7 @@ export function usePurchaseReviewValidation(): PurchaseReviewValidation {
   const [scrollRequestId, setScrollRequestId] = useState(0)
 
   const buyerAttendeeRef = useRef<HTMLDivElement | null>(null)
+  const questionnaireRef = useRef<HTMLDivElement | null>(null)
   const paymentMethodRef = useRef<HTMLDivElement | null>(null)
   const paymentCardRef = useRef<HTMLDivElement | null>(null)
   const termsRef = useRef<HTMLDivElement | null>(null)
@@ -60,16 +62,16 @@ export function usePurchaseReviewValidation(): PurchaseReviewValidation {
     if (!attempted || !message || isReviewOpen) return
     if (!scrollTarget) return
 
-    const targetRef =
-      scrollTarget === "buyer-attendee-info"
-        ? buyerAttendeeRef
-        : scrollTarget === "payment-method"
-          ? paymentMethodRef
-          : scrollTarget === "payment-card"
-            ? paymentCardRef
-            : scrollTarget === "refund-policy"
-              ? refundPolicyRef
-              : termsRef
+    // Exhaustive by type: a new target that forgets its section fails the build rather than silently
+    // scrolling the buyer to whichever branch happened to be last.
+    const targetRef: RefObject<HTMLDivElement | null> = {
+      "buyer-attendee-info": buyerAttendeeRef,
+      questionnaire: questionnaireRef,
+      "payment-method": paymentMethodRef,
+      "payment-card": paymentCardRef,
+      terms: termsRef,
+      "refund-policy": refundPolicyRef,
+    }[scrollTarget]
 
     const frame = window.requestAnimationFrame(() => {
       targetRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
@@ -129,6 +131,7 @@ export function usePurchaseReviewValidation(): PurchaseReviewValidation {
     message,
     scrollTarget,
     buyerAttendeeRef,
+    questionnaireRef,
     paymentMethodRef,
     paymentCardRef,
     termsRef,

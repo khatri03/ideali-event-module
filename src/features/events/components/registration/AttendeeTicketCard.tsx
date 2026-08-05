@@ -1,4 +1,4 @@
-import { Badge, Box, Flex, HStack, Separator, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
+import { Box, Flex, HStack, Separator, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
 import { ContactDetailsFields } from "@/features/events/components/registration/ContactDetailsFields"
 import {
   EMPTY_BUYER_INFO,
@@ -94,13 +94,6 @@ export function AttendeeTicketCard({
                   | {group.attendeeCount} {group.attendeeCount === 1 ? "attendee" : "attendees"}
                 </Text>
               </HStack>
-              {group.hasQuestions ? (
-                <HStack gap={2} flexWrap="wrap">
-                  <Badge colorPalette="orange" variant="subtle" borderRadius="full" px={3} py={1}>
-                    Questions
-                  </Badge>
-                </HStack>
-              ) : null}
             </Stack>
 
             <HStack

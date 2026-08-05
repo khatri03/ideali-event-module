@@ -86,7 +86,6 @@ export const APP_ROUTES = {
       schedule: "schedule",
       ticket: "ticket",
       eTicketing: "e-ticketing",
-      questions: "questions",
       review: "review",
     },
   },
@@ -151,8 +150,8 @@ export const API_ROUTES = {
   eventCartPrice: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/price`,
   eventCartLineAttendees: (cartUniqueId: string, lineUniqueId: string) =>
     `/api/events/cart/${cartUniqueId}/lines/${lineUniqueId}/attendees`,
-  eventCartLineAnswers: (cartUniqueId: string, lineUniqueId: string) =>
-    `/api/events/cart/${cartUniqueId}/lines/${lineUniqueId}/answers`,
+  eventCartAnswers: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/answers`,
+  eventCartAnswerFiles: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/answers/files`,
   eventCartCheckoutIntent: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/checkout/intent`,
   eventCartCheckoutConfirm: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/checkout/confirm`,
   eventTicketView: (ticketUniqueId: string) => `/api/events/tickets/${ticketUniqueId}/view`,
@@ -225,7 +224,6 @@ export const API_ROUTES = {
   sessionWizardBanner: (id: string) => `/api/organizer/sessions/${id}/banner`,
   sessionWizardGenre: (id: string) => `/api/organizer/sessions/${id}/genre`,
   sessionWizardGenreCreate: (id: string) => `/api/organizer/sessions/${id}/genre/create`,
-  sessionWizardQuestions: (id: string) => `/api/organizer/sessions/${id}/questions`,
   sessionWizardSkip: (id: string) => `/api/organizer/sessions/${id}/skip`,
   sessionWizardEvent: (id: string) => `/api/organizer/sessions/${id}/event`,
   sessionWizardVenue: (id: string) => `/api/organizer/sessions/${id}/venue`,

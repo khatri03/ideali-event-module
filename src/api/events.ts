@@ -207,7 +207,49 @@ const eventRegistrationQuestionSchema = z.object({
   options: z.array(eventRegistrationQuestionOptionSchema).optional(),
 })
 
-const eventRegistrationSessionFormSchema = z.object({
+const eventRegistrationFormFieldOptionSchema = z.object({
+  Value: z.string().optional(),
+  value: z.string().optional(),
+  DisplayText: z.string().optional(),
+  displayText: z.string().optional(),
+  IsDefault: z.boolean().optional(),
+  isDefault: z.boolean().optional(),
+})
+
+const eventRegistrationFormFieldSchema = z.object({
+  UniqueId: z.string().optional(),
+  uniqueId: z.string().optional(),
+  ControlType: z.string().optional(),
+  controlType: z.string().optional(),
+  ControlLabel: z.string().optional(),
+  controlLabel: z.string().optional(),
+  PlaceHolder: z.string().nullable().optional(),
+  placeHolder: z.string().nullable().optional(),
+  Tooltip: z.string().nullable().optional(),
+  tooltip: z.string().nullable().optional(),
+  IsMandatory: z.boolean().optional(),
+  isMandatory: z.boolean().optional(),
+  RequiredMessage: z.string().nullable().optional(),
+  requiredMessage: z.string().nullable().optional(),
+  AcceptedFileTypes: z.string().nullable().optional(),
+  acceptedFileTypes: z.string().nullable().optional(),
+  MinLength: z.number().int().nullable().optional(),
+  minLength: z.number().int().nullable().optional(),
+  MaxLength: z.number().int().nullable().optional(),
+  maxLength: z.number().int().nullable().optional(),
+  DefaultValue: z.string().nullable().optional(),
+  defaultValue: z.string().nullable().optional(),
+  LayoutColumn: z.number().int().nullable().optional(),
+  layoutColumn: z.number().int().nullable().optional(),
+  DisplayOrder: z.number().int().optional(),
+  displayOrder: z.number().int().optional(),
+  HasOptions: z.boolean().optional(),
+  hasOptions: z.boolean().optional(),
+  Options: z.array(eventRegistrationFormFieldOptionSchema).optional(),
+  options: z.array(eventRegistrationFormFieldOptionSchema).optional(),
+})
+
+const eventRegistrationFormSchema = z.object({
   UniqueId: z.string().optional(),
   uniqueId: z.string().optional(),
   Name: z.string().optional(),
@@ -216,6 +258,12 @@ const eventRegistrationSessionFormSchema = z.object({
   headerText: z.string().nullable().optional(),
   Description: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
+  DisplayOrder: z.number().int().optional(),
+  displayOrder: z.number().int().optional(),
+  LayoutColumn: z.number().int().nullable().optional(),
+  layoutColumn: z.number().int().nullable().optional(),
+  Fields: z.array(eventRegistrationFormFieldSchema).optional(),
+  fields: z.array(eventRegistrationFormFieldSchema).optional(),
 })
 
 const eventRegistrationPaymentMethodSchema = z.object({
@@ -284,10 +332,6 @@ const eventRegistrationSessionSchema = z.object({
   ticketTypes: z.array(eventRegistrationTicketSchema).optional(),
   RequiresAttendeeInfo: z.boolean().optional(),
   requiresAttendeeInfo: z.boolean().optional(),
-  CustomForms: z.array(eventRegistrationSessionFormSchema).optional(),
-  customForms: z.array(eventRegistrationSessionFormSchema).optional(),
-  CustomQuestions: z.array(eventRegistrationQuestionSchema).optional(),
-  customQuestions: z.array(eventRegistrationQuestionSchema).optional(),
 })
 
 const eventRegistrationResponseSchema = z.object({
@@ -345,6 +389,10 @@ const eventRegistrationResponseSchema = z.object({
   paymentMethods: z.array(eventRegistrationPaymentMethodSchema).optional(),
   PaymentBreakdowns: z.array(eventRegistrationPaymentBreakdownSchema).optional(),
   paymentBreakdowns: z.array(eventRegistrationPaymentBreakdownSchema).optional(),
+  CustomForms: z.array(eventRegistrationFormSchema).optional(),
+  customForms: z.array(eventRegistrationFormSchema).optional(),
+  CustomQuestions: z.array(eventRegistrationQuestionSchema).optional(),
+  customQuestions: z.array(eventRegistrationQuestionSchema).optional(),
   Sessions: z.array(eventRegistrationSessionSchema).optional(),
   sessions: z.array(eventRegistrationSessionSchema).optional(),
 })
@@ -773,11 +821,41 @@ export interface EventRegistrationTicketPricePeriod {
   currentStatus: string
 }
 
-export interface EventRegistrationSessionForm {
+export interface EventRegistrationFormFieldOption {
+  value: string
+  displayText: string
+  isDefault: boolean
+}
+
+export interface EventRegistrationFormField {
+  uniqueId: string
+  controlType: string
+  controlLabel: string
+  placeHolder: string | null
+  tooltip: string | null
+  isMandatory: boolean
+  requiredMessage: string | null
+  acceptedFileTypes: string | null
+  minLength: number | null
+  maxLength: number | null
+  defaultValue: string | null
+  /** How many of the form's columns this field spans; `null` means a single column. */
+  layoutColumn: number | null
+  displayOrder: number
+  hasOptions: boolean
+  options: EventRegistrationFormFieldOption[]
+}
+
+/** One event-to-form mapping. `uniqueId` identifies the mapping, not the shared library form. */
+export interface EventRegistrationForm {
   uniqueId: string
   name: string
   headerText: string | null
   description: string | null
+  displayOrder: number
+  /** Column count the organizer authored the form in. */
+  layoutColumn: number | null
+  fields: EventRegistrationFormField[]
 }
 
 export interface EventRegistrationQuestionOption {
@@ -820,8 +898,6 @@ export interface EventRegistrationSession {
   bookingStartDate: string | null
   bookingEndDate: string | null
   ticketTypes: EventRegistrationTicket[]
-  customForms: EventRegistrationSessionForm[]
-  customQuestions: EventRegistrationQuestion[]
 }
 
 export interface EventRegistrationPaymentMethod {
@@ -875,6 +951,9 @@ export interface EventRegistrationResponse {
   paymentAccountUniqueId: string | null
   /** False when the event has no coupon a buyer could redeem, which hides the coupon field entirely. */
   acceptsDiscountCoupons: boolean
+  /** Authored on the event and answered once per order, not once per selected session. */
+  customForms: EventRegistrationForm[]
+  customQuestions: EventRegistrationQuestion[]
   visibleTabs: string[]
   paymentMethods: EventRegistrationPaymentMethod[]
   paymentBreakdowns: EventRegistrationPaymentBreakdown[]
@@ -921,33 +1000,64 @@ function parseEventRegistrationSession(item: z.infer<typeof eventRegistrationSes
     bookingEndDate: item.BookingEndDate ?? item.bookingEndDate ?? null,
     ticketTypes: (item.TicketTypes ?? item.ticketTypes ?? []).map(parseEventRegistrationTicket),
     requiresAttendeeInfo: item.RequiresAttendeeInfo ?? item.requiresAttendeeInfo ?? false,
-    customForms: (item.CustomForms ?? item.customForms ?? []).map((form) => ({
-      uniqueId: form.UniqueId ?? form.uniqueId ?? "",
-      name: form.Name ?? form.name ?? "",
-      headerText: form.HeaderText ?? form.headerText ?? null,
-      description: form.Description ?? form.description ?? null,
+  }
+}
+
+function parseEventRegistrationQuestion(
+  question: z.infer<typeof eventRegistrationQuestionSchema>,
+): EventRegistrationQuestion {
+  return {
+    uniqueId: question.UniqueId ?? question.uniqueId ?? "",
+    controlId: question.ControlId ?? question.controlId ?? 0,
+    controlName: question.ControlName ?? question.controlName ?? "",
+    controlType: question.ControlType ?? question.controlType ?? "",
+    iconClass: question.IconClass ?? question.iconClass ?? "",
+    label: question.Label ?? question.label ?? "",
+    placeHolder: question.PlaceHolder ?? question.placeHolder ?? null,
+    tooltip: question.Tooltip ?? question.tooltip ?? null,
+    required: question.Required ?? question.required ?? false,
+    requiredMessage: question.RequiredMessage ?? question.requiredMessage ?? null,
+    acceptedFileTypes: question.AcceptedFileTypes ?? question.acceptedFileTypes ?? null,
+    minLength: question.MinLength ?? question.minLength ?? null,
+    maxLength: question.MaxLength ?? question.maxLength ?? null,
+    defaultValue: question.DefaultValue ?? question.defaultValue ?? null,
+    isActive: question.IsActive ?? question.isActive ?? false,
+    displayOrder: question.DisplayOrder ?? question.displayOrder ?? 0,
+    options: (question.Options ?? question.options ?? []).map((option) => ({
+      uniqueId: option.UniqueId ?? option.uniqueId ?? "",
+      displayText: option.DisplayText ?? option.displayText ?? "",
+      value: option.Value ?? option.value ?? "",
+      isDefault: option.IsDefault ?? option.isDefault ?? false,
     })),
-    customQuestions: (item.CustomQuestions ?? item.customQuestions ?? []).map((question) => ({
-      uniqueId: question.UniqueId ?? question.uniqueId ?? "",
-      controlId: question.ControlId ?? question.controlId ?? 0,
-      controlName: question.ControlName ?? question.controlName ?? "",
-      controlType: question.ControlType ?? question.controlType ?? "",
-      iconClass: question.IconClass ?? question.iconClass ?? "",
-      label: question.Label ?? question.label ?? "",
-      placeHolder: question.PlaceHolder ?? question.placeHolder ?? null,
-      tooltip: question.Tooltip ?? question.tooltip ?? null,
-      required: question.Required ?? question.required ?? false,
-      requiredMessage: question.RequiredMessage ?? question.requiredMessage ?? null,
-      acceptedFileTypes: question.AcceptedFileTypes ?? question.acceptedFileTypes ?? null,
-      minLength: question.MinLength ?? question.minLength ?? null,
-      maxLength: question.MaxLength ?? question.maxLength ?? null,
-      defaultValue: question.DefaultValue ?? question.defaultValue ?? null,
-      isActive: question.IsActive ?? question.isActive ?? false,
-      displayOrder: question.DisplayOrder ?? question.displayOrder ?? 0,
-      options: (question.Options ?? question.options ?? []).map((option) => ({
-        uniqueId: option.UniqueId ?? option.uniqueId ?? "",
-        displayText: option.DisplayText ?? option.displayText ?? "",
+  }
+}
+
+function parseEventRegistrationForm(form: z.infer<typeof eventRegistrationFormSchema>): EventRegistrationForm {
+  return {
+    uniqueId: form.UniqueId ?? form.uniqueId ?? "",
+    name: form.Name ?? form.name ?? "",
+    headerText: form.HeaderText ?? form.headerText ?? null,
+    description: form.Description ?? form.description ?? null,
+    displayOrder: form.DisplayOrder ?? form.displayOrder ?? 0,
+    layoutColumn: form.LayoutColumn ?? form.layoutColumn ?? null,
+    fields: (form.Fields ?? form.fields ?? []).map((field) => ({
+      uniqueId: field.UniqueId ?? field.uniqueId ?? "",
+      controlType: field.ControlType ?? field.controlType ?? "",
+      controlLabel: field.ControlLabel ?? field.controlLabel ?? "",
+      placeHolder: field.PlaceHolder ?? field.placeHolder ?? null,
+      tooltip: field.Tooltip ?? field.tooltip ?? null,
+      isMandatory: field.IsMandatory ?? field.isMandatory ?? false,
+      requiredMessage: field.RequiredMessage ?? field.requiredMessage ?? null,
+      acceptedFileTypes: field.AcceptedFileTypes ?? field.acceptedFileTypes ?? null,
+      minLength: field.MinLength ?? field.minLength ?? null,
+      maxLength: field.MaxLength ?? field.maxLength ?? null,
+      defaultValue: field.DefaultValue ?? field.defaultValue ?? null,
+      layoutColumn: field.LayoutColumn ?? field.layoutColumn ?? null,
+      displayOrder: field.DisplayOrder ?? field.displayOrder ?? 0,
+      hasOptions: field.HasOptions ?? field.hasOptions ?? false,
+      options: (field.Options ?? field.options ?? []).map((option) => ({
         value: option.Value ?? option.value ?? "",
+        displayText: option.DisplayText ?? option.displayText ?? "",
         isDefault: option.IsDefault ?? option.isDefault ?? false,
       })),
     })),
@@ -991,6 +1101,8 @@ function parseEventRegistrationResponse(payload: unknown): EventRegistrationResp
       response.AcceptsDiscountCoupons ?? response.acceptsDiscountCoupons ?? false,
     paymentAccountUniqueId:
       response.PaymentAccountUniqueId ?? response.paymentAccountUniqueId ?? null,
+    customForms: (response.CustomForms ?? response.customForms ?? []).map(parseEventRegistrationForm),
+    customQuestions: (response.CustomQuestions ?? response.customQuestions ?? []).map(parseEventRegistrationQuestion),
     visibleTabs: response.VisibleTabs ?? response.visibleTabs ?? [],
     paymentMethods: (response.PaymentMethods ?? response.paymentMethods ?? []).map((method) => ({
       paymentMethod: method.PaymentMethod ?? method.paymentMethod ?? "",

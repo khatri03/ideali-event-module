@@ -41,13 +41,18 @@ import { usePurchaseReviewValidation } from '@/features/events/hooks/usePurchase
 import { useBuyerAttendeeInfo } from '@/features/events/hooks/useBuyerAttendeeInfo'
 import { useQuestionnaireAnswers } from '@/features/events/hooks/useQuestionnaireAnswers'
 import { useCreateEventPaymentIntent } from '@/features/events/hooks/useEventCheckout'
-import { useSubmitLineAttendees, useSubmitLineAnswers } from '@/features/events/hooks/useEventCartAttendees'
+import {
+  useSubmitLineAttendees,
+  useSubmitOrderAnswers,
+  useUploadAnswerFile,
+} from '@/features/events/hooks/useEventCartAttendees'
 import { PurchaseTimerChip } from '@/features/events/components/registration/PurchaseTimerChip'
 import { CartSummaryPanel } from '@/features/events/components/registration/CartSummaryPanel'
 import { PaymentStep } from '@/features/events/components/registration/PaymentStep'
 import { RegistrationPaymentConfirmation } from '@/features/events/components/registration/RegistrationPaymentConfirmation'
 import { RegistrationStripeProvider } from '@/features/events/components/registration/RegistrationStripeProvider'
 import { QuestionnaireStep } from '@/features/events/components/registration/QuestionnaireStep'
+import type { RegistrationFieldDescriptor } from '@/features/events/utils/registrationFields'
 import {
   BuyerDetailsMissingDialog,
   ConfirmRemoveDialog,
@@ -93,7 +98,6 @@ function getVisibleTabs(event: EventRegisterWizardEvent, selectedTicketQuantitie
   const tabs: Array<{ id: WizardTabId; label: string; icon: typeof FileText }> = []
   const selectedSessionSummaries = getSelectedSessionSummaries(event.sessions, selectedTicketQuantities)
   const hasSelectedAttendeeInfo = selectedSessionSummaries.some((session) => session.requiresAttendeeInfo)
-  const hasSelectedQuestions = selectedSessionSummaries.some((session) => session.hasQuestions)
   const visibleTabs = event.visibleTabs ?? []
   const shouldHonorServerTabs = visibleTabs.length > 0
   const isVisible = (tabId: Exclude<WizardTabId, 'buyer-attendee-info'>) =>
@@ -111,7 +115,8 @@ function getVisibleTabs(event: EventRegisterWizardEvent, selectedTicketQuantitie
     tabs.push({ id: 'attendee-info', label: 'Attendee Info', icon: Users })
   }
 
-  if (hasSelectedQuestions || isVisible('questionnaire') && event.sessions.some((session) => session.customForms.length > 0 || session.customQuestions.length > 0)) {
+  // Event-scoped: the buyer answers these once regardless of which sessions they picked.
+  if (isVisible('questionnaire') && (event.customForms.length > 0 || event.customQuestions.length > 0)) {
     tabs.push({ id: 'questionnaire', label: 'Questionnaire', icon: MessageSquareText })
   }
 
@@ -170,6 +175,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     message: purchaseReviewMessage,
     scrollTarget: purchaseReviewScrollTarget,
     buyerAttendeeRef: buyerAttendeeValidationRef,
+    questionnaireRef: questionnaireValidationRef,
     paymentMethodRef: paymentMethodValidationRef,
     termsRef: termsValidationRef,
     refundPolicyRef: refundPolicyValidationRef,
@@ -225,8 +231,11 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     if (!pendingOrderUniqueId) return
 
     clearPendingOrderId()
-    navigate(buildOrderPath(pendingOrderUniqueId, null), { replace: true })
-  }, [navigate])
+    navigate(buildOrderPath(pendingOrderUniqueId, null), {
+      replace: true,
+      state: { registerPath: APP_ROUTES.eventRegister(event.uniqueId) },
+    })
+  }, [navigate, event.uniqueId])
 
   function restartPurchaseFlow() {
     // Drop the stored cart first, or the reload resumes the very cart that just expired.
@@ -255,7 +264,6 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     attendeeSlotEntries,
     attendeeSlotEntryByKey,
     requiresAttendeeInfo,
-    requiresQuestions,
   } = useTicketSelectionSummary(sessionsData, selectedTicketQuantities, cartPrice)
   const {
     buyerInfo,
@@ -300,6 +308,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       refundPolicy: descriptionData.refundPolicy ?? event.refundPolicy,
       sessions: sessionsData,
       paymentMethods: paymentMethodsData,
+      // The questionnaire endpoint carries the authoritative form and question definitions.
+      customForms: questionnaireQuery.data?.customForms ?? event.customForms,
+      customQuestions: questionnaireQuery.data?.customQuestions ?? event.customQuestions,
     }),
     [
       event,
@@ -309,21 +320,28 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       descriptionData.refundPolicy,
       sessionsData,
       paymentMethodsData,
+      questionnaireQuery.data,
     ],
   )
   const currentEvent = eventData
   const sessions = currentEvent.sessions
   const {
+    formSections,
+    questions: customQuestionFields,
+    hasQuestionnaire,
     getAnswer,
     setAnswer,
+    getFile,
+    setFile,
     getErrorMessage: getQuestionErrorMessage,
-    buildQuestionResponses,
+    buildAnswersRequest,
     missingRequiredCount,
     setShowValidation: setShowQuestionValidation,
     resetAnswers,
-  } = useQuestionnaireAnswers(sessions)
+  } = useQuestionnaireAnswers(currentEvent)
   const submitAttendeesMutation = useSubmitLineAttendees(cart?.cartUniqueId)
-  const submitAnswersMutation = useSubmitLineAnswers(cart?.cartUniqueId)
+  const submitAnswersMutation = useSubmitOrderAnswers(cart?.cartUniqueId)
+  const uploadAnswerFileMutation = useUploadAnswerFile(cart?.cartUniqueId)
   const createPaymentIntentMutation = useCreateEventPaymentIntent(cart?.cartUniqueId)
   const bannerSlides = useMemo(() => getSessionBannerSlides(currentEvent), [currentEvent])
   const sessionsLoading = sessionsQuery.isLoading || (sessionsQuery.isFetching && sessions.length === 0)
@@ -401,8 +419,15 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   }
   const isDescriptionStep = activeTab === 'description'
   const sessionsStepIndex = getStepIndex(tabs, 'sessions')
-  const effectiveHighestUnlockedIndex =
-    selectedTicketCount > 0 ? highestUnlockedIndex : Math.min(highestUnlockedIndex, sessionsStepIndex)
+  const questionnaireStepIndex = getStepIndex(tabs, 'questionnaire')
+  // An unanswered required question pins the buyer to the questionnaire: every later tab locks while
+  // earlier ones stay open, so they can go back and change a ticket without losing what they typed.
+  const questionnaireLockIndex =
+    questionnaireStepIndex >= 0 && missingRequiredCount > 0 ? questionnaireStepIndex : tabs.length - 1
+  const effectiveHighestUnlockedIndex = Math.min(
+    selectedTicketCount > 0 ? highestUnlockedIndex : Math.min(highestUnlockedIndex, sessionsStepIndex),
+    questionnaireLockIndex,
+  )
   const canContinueForward = !purchaseTimerExpired && (isDescriptionStep || selectedTicketCount > 0)
   const footerActionLabel = isFinalStep ? 'Review Purchase' : 'Continue'
   const FooterActionIcon = isFinalStep ? Check : ChevronRight
@@ -433,6 +458,15 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       clearBuyerAttendeeValidation()
     }
 
+    if (activeTab === 'questionnaire') {
+      const issues = getQuestionnaireIssues()
+
+      if (issues.length > 0) {
+        applyPurchaseReviewIssues(issues)
+        return
+      }
+    }
+
     const nextIndex = activeIndex + 1
     const nextTabId = tabs[nextIndex].id
     setHighestUnlockedIndex((current) => Math.max(current, nextIndex))
@@ -449,6 +483,28 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     }
   }
 
+  /**
+   * The questionnaire's own rule, asked both when leaving the step and again at review - the buyer can
+   * reach payment on a cart opened before the organizer added a required question.
+   */
+  function getQuestionnaireIssues(): PurchaseReviewIssue[] {
+    if (missingRequiredCount <= 0) {
+      return []
+    }
+
+    setShowQuestionValidation(true)
+
+    return [
+      {
+        message:
+          missingRequiredCount === 1
+            ? 'Answer the required question before continuing.'
+            : `Answer the ${missingRequiredCount} required questions before continuing.`,
+        target: 'questionnaire',
+      },
+    ]
+  }
+
   function getPurchaseReviewIssues() {
     const issues: PurchaseReviewIssue[] = []
 
@@ -460,16 +516,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     // already and told the buyer a completed form was incomplete.
     issues.push(...getBuyerAttendeeInfoIssues())
 
-    if (missingRequiredCount > 0) {
-      setShowQuestionValidation(true)
-      issues.push({
-        message:
-          missingRequiredCount === 1
-            ? 'Answer the required question before continuing.'
-            : `Answer the ${missingRequiredCount} required questions before continuing.`,
-        target: 'buyer-attendee-info',
-      })
-    }
+    issues.push(...getQuestionnaireIssues())
 
     // The Payment Element owns every card field it renders, so its own submit() is what reports an
     // incomplete card. The name is ours to check - the Element is told not to collect it.
@@ -532,8 +579,24 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   }
 
   /**
-   * Validates the review and writes attendees and questionnaire answers against their cart lines.
-   * Returns false when the purchase must not go ahead, leaving the complaint on screen.
+   * Uploads happen while the buyer is still filling the form so the answer only ever carries a
+   * stored file id. The upload is scoped to the open cart, which is why a ticket must be selected
+   * first.
+   */
+  async function handleUploadAnswerFile(descriptor: RegistrationFieldDescriptor, file: File) {
+    if (!cart) {
+      throw new Error('Add a ticket before attaching files.')
+    }
+
+    const uploaded = await uploadAnswerFileMutation.mutateAsync({ fieldUniqueId: descriptor.key, file })
+    setFile(descriptor.key, uploaded)
+    return uploaded
+  }
+
+  /**
+   * Validates the review, writes attendees against their cart lines and the questionnaire answers
+   * against the order. Returns false when the purchase must not go ahead, leaving the complaint on
+   * screen.
    */
   async function preparePurchaseAsync() {
     const issues = getPurchaseReviewIssues()
@@ -568,17 +631,13 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
               },
             })
           }
-
-          const questionResponses = buildQuestionResponses(line.sessionUniqueId)
-
-          if (questionResponses.length > 0) {
-            await submitAnswersMutation.mutateAsync({
-              lineUniqueId: line.lineUniqueId,
-              request: { formResponses: [], questionResponses },
-            })
-          }
         }),
       )
+
+      const answers = buildAnswersRequest()
+      if (answers.formResponses.length > 0 || answers.questionResponses.length > 0) {
+        await submitAnswersMutation.mutateAsync(answers)
+      }
 
       return true
     } catch (error) {
@@ -645,7 +704,11 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     }
 
     // Replaced, not pushed: back must never land on a live payment form for an order already paid.
-    navigate(buildOrderPath(paidOrderUniqueId, handoffCartUniqueId), { replace: true })
+    // The registration link travels with it so a buyer who wants more tickets is not left hunting.
+    navigate(buildOrderPath(paidOrderUniqueId, handoffCartUniqueId), {
+      replace: true,
+      state: { registerPath: APP_ROUTES.eventRegister(event.uniqueId) },
+    })
   }
 
   const purchaseReviewTicketRows = selectedTicketSummaryBySession.flatMap((sessionGroup) =>
@@ -995,7 +1058,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                 onChangeAttendeeField={updateAttendeeField}
                                 isLoading={attendeeInfoLoading}
                                 requiresAttendeeInfo={requiresAttendeeInfo}
-                                requiresQuestions={requiresQuestions}
+                                requiresQuestions={hasQuestionnaire}
                                 validationMessage={
                                   purchaseReviewAttempted && purchaseReviewScrollTarget === 'buyer-attendee-info'
                                     ? purchaseReviewMessage
@@ -1057,15 +1120,21 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                           ) : null}
 
                           {tab.id === 'questionnaire' ? (
-                            <SupportCard title='Questionnaire' subtitle='Custom forms and questions mapped to the selected sessions are rendered here.' icon={<MessageSquareText size={18} />}>
-                              <QuestionnaireStep
-                                sessionSummaries={selectedSessionSummaries}
-                                isLoading={questionnaireLoading}
-                                getAnswer={getAnswer}
-                                getErrorMessage={getQuestionErrorMessage}
-                                onChangeAnswer={setAnswer}
-                              />
-                            </SupportCard>
+                            <Box ref={questionnaireValidationRef}>
+                              <SupportCard title='Questionnaire' subtitle='Custom forms and questions this event asks every buyer to answer.' icon={<MessageSquareText size={18} />}>
+                                <QuestionnaireStep
+                                  formSections={formSections}
+                                  questions={customQuestionFields}
+                                  isLoading={questionnaireLoading}
+                                  getAnswer={getAnswer}
+                                  getFile={getFile}
+                                  getErrorMessage={getQuestionErrorMessage}
+                                  onChangeAnswer={setAnswer}
+                                  onUploadFile={handleUploadAnswerFile}
+                                  onClearFile={(key) => setFile(key, null)}
+                                />
+                              </SupportCard>
+                            </Box>
                           ) : null}
 
                           {tab.id === 'payment' ? (

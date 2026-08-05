@@ -25,7 +25,6 @@ interface TicketSelectionSummary {
   attendeeSlotEntries: AttendeeSlotEntry[]
   attendeeSlotEntryByKey: Record<string, AttendeeSlotEntry>
   requiresAttendeeInfo: boolean
-  requiresQuestions: boolean
 }
 
 /**
@@ -100,7 +99,6 @@ export function useTicketSelectionSummary(
         sessionName: sessionSummary.session.name,
         attendeeCount: sessionSummary.attendeeCount,
         requiresAttendeeInfo: sessionSummary.requiresAttendeeInfo,
-        hasQuestions: sessionSummary.hasQuestions,
         tickets: sessionSummary.selectedTickets.map((selectedTicket) => {
           const slots = Array.from({ length: selectedTicket.quantity }, (_, index) => ({
             key: `${sessionSummary.session.uniqueId}:${selectedTicket.ticket.uniqueId}:${index + 1}`,
@@ -115,7 +113,6 @@ export function useTicketSelectionSummary(
             ticketName: selectedTicket.ticket.name,
             attendeeCount: selectedTicket.quantity,
             requiresAttendeeInfo: sessionSummary.requiresAttendeeInfo,
-            hasQuestions: sessionSummary.hasQuestions,
             slots,
           }
         }),
@@ -135,7 +132,6 @@ export function useTicketSelectionSummary(
             ticketName: ticketGroup.ticketName,
             attendeeLabel: slot.attendeeLabel,
             requiresAttendeeInfo: sessionGroup.requiresAttendeeInfo,
-            hasQuestions: sessionGroup.hasQuestions,
           })),
         ),
       ),
@@ -168,6 +164,5 @@ export function useTicketSelectionSummary(
     attendeeSlotEntries,
     attendeeSlotEntryByKey,
     requiresAttendeeInfo: selectedSessionSummaries.some((session) => session.requiresAttendeeInfo),
-    requiresQuestions: selectedSessionSummaries.some((session) => session.hasQuestions),
   }
 }

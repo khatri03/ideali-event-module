@@ -14,8 +14,9 @@ import {
   type EventCheckoutConfirmation,
   type EventPaymentIntentResult,
   type PriceEventCartRequest,
-  type SubmitLineAnswersRequest,
   type SubmitLineAttendeesRequest,
+  type SubmitOrderAnswersRequest,
+  type UploadedAnswerFile,
 } from "@/features/events/schemas/eventCart.schemas"
 
 const serviceResponseSchema = z.object({
@@ -69,12 +70,38 @@ export async function submitLineAttendees(
   await client.post<unknown>(API_ROUTES.eventCartLineAttendees(cartUniqueId, lineUniqueId), request)
 }
 
-export async function submitLineAnswers(
+export async function submitOrderAnswers(
   cartUniqueId: string,
-  lineUniqueId: string,
-  request: SubmitLineAnswersRequest,
+  request: SubmitOrderAnswersRequest,
 ): Promise<void> {
-  await client.post<unknown>(API_ROUTES.eventCartLineAnswers(cartUniqueId, lineUniqueId), request)
+  await client.post<unknown>(API_ROUTES.eventCartAnswers(cartUniqueId), request)
+}
+
+const uploadedAnswerFileSchema = z.object({
+  FileStorageId: z.number().int().positive().optional(),
+  fileStorageId: z.number().int().positive().optional(),
+  FileName: z.string().optional(),
+  fileName: z.string().optional(),
+})
+
+export async function uploadAnswerFile(
+  cartUniqueId: string,
+  fieldUniqueId: string,
+  file: File,
+): Promise<UploadedAnswerFile> {
+  const body = new FormData()
+  body.append("fieldUniqueId", fieldUniqueId)
+  body.append("file", file)
+
+  const res = await client.post<unknown>(API_ROUTES.eventCartAnswerFiles(cartUniqueId), body)
+  const parsed = uploadedAnswerFileSchema.parse(readResponseData(res.data))
+  const fileStorageId = parsed.FileStorageId ?? parsed.fileStorageId
+
+  if (fileStorageId == null) {
+    throw new Error("Upload response carried no file id.")
+  }
+
+  return { fileStorageId, fileName: parsed.FileName ?? parsed.fileName ?? file.name }
 }
 
 export async function createEventPaymentIntent(

@@ -1,4 +1,10 @@
-import type { EventRegistrationPaymentMethod, EventRegistrationSession, EventRegistrationTicket } from "@/api/events"
+import type {
+  EventRegistrationForm,
+  EventRegistrationPaymentMethod,
+  EventRegistrationQuestion,
+  EventRegistrationSession,
+  EventRegistrationTicket,
+} from "@/api/events"
 
 export type WizardTabId =
   | "description"
@@ -10,6 +16,7 @@ export type WizardTabId =
 
 export type PurchaseReviewValidationTarget =
   | "buyer-attendee-info"
+  | "questionnaire"
   | "payment-method"
   | "payment-card"
   | "terms"
@@ -44,7 +51,6 @@ export interface SelectedSessionSummary {
   }>
   attendeeCount: number
   requiresAttendeeInfo: boolean
-  hasQuestions: boolean
 }
 
 export interface AttendeeTicketGroup {
@@ -55,7 +61,6 @@ export interface AttendeeTicketGroup {
   ticketName: string
   attendeeCount: number
   requiresAttendeeInfo: boolean
-  hasQuestions: boolean
   slots: Array<{
     key: string
     attendeeLabel: string
@@ -68,7 +73,6 @@ export interface AttendeeSessionGroup {
   sessionName: string
   attendeeCount: number
   requiresAttendeeInfo: boolean
-  hasQuestions: boolean
   tickets: AttendeeTicketGroup[]
 }
 
@@ -80,7 +84,6 @@ export interface AttendeeSlotEntry {
   ticketName: string
   attendeeLabel: string
   requiresAttendeeInfo: boolean
-  hasQuestions: boolean
 }
 
 export interface BannerSlide {
@@ -145,5 +148,8 @@ export interface EventRegisterWizardEvent {
   acceptsDiscountCoupons: boolean
   paymentMethods: EventRegistrationPaymentMethod[]
   sessions: EventRegistrationSession[]
+  /** Authored on the event and answered once per order, not per selected session. */
+  customForms: EventRegistrationForm[]
+  customQuestions: EventRegistrationQuestion[]
   visibleTabs?: string[]
 }

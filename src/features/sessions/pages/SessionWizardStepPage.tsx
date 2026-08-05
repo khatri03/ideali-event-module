@@ -26,7 +26,6 @@ import {
   SessionETicketingStep,
   SessionGenreStep,
   SessionMembershipAccessStep,
-  SessionQuestionsStep,
   SessionSeatSelectionStep,
   SessionTicketStep,
 } from "../components"
@@ -121,10 +120,6 @@ export function SessionWizardStepPage() {
 
   if (activeStep?.slug === "e-ticketing") {
     return <SessionETicketingStep sessionId={sessionId} />
-  }
-
-  if (activeStep?.slug === "questions") {
-    return <SessionQuestionsStep sessionId={sessionId} />
   }
 
   if (activeStep?.slug === "review") {
