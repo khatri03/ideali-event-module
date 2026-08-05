@@ -1,5 +1,6 @@
 import { isAxiosError } from "axios"
 import { ZodError } from "zod"
+import { TurnstileError } from "@/lib/turnstile"
 
 interface ProblemDetails {
   title: string
@@ -10,6 +11,11 @@ interface ProblemDetails {
 }
 
 export function extractApiError(err: unknown): string {
+  // Raised before the request leaves the browser, so it carries no server detail to leak.
+  if (err instanceof TurnstileError) {
+    return err.message
+  }
+
   if (err instanceof ZodError) {
     return err.issues.map((issue) => issue.message).join(" ")
   }
