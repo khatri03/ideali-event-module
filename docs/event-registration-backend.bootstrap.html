@@ -1,0 +1,1852 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Event Registration — Backend Guide</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root { --doc-max: 1240px; }
+    body { scroll-behavior: smooth; }
+    .doc-shell { max-width: var(--doc-max); }
+    .sidebar { position: sticky; top: 1rem; max-height: calc(100dvh - 2rem); overflow-y: auto; }
+    .sidebar .nav-link { padding: .28rem .6rem; font-size: .875rem; border-radius: .375rem; }
+    .sidebar .nav-link:hover { background: var(--bs-secondary-bg); }
+    .sidebar .nav-link.small { font-size: .8125rem; opacity: .85; }
+    .endpoint { scroll-margin-top: 1rem; }
+    .endpoint-head { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+    code.path { font-size: .875rem; word-break: break-all; }
+    pre { background: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color); border-radius: .5rem; padding: 1rem; overflow-x: auto; font-size: .8125rem; margin-bottom: 0; }
+    pre code { color: inherit; }
+    .badge-method { font-family: var(--bs-font-monospace); letter-spacing: .04em; }
+    h2 { scroll-margin-top: 1rem; border-bottom: 1px solid var(--bs-border-color); padding-bottom: .5rem; margin-top: 3rem; }
+    h3 { margin-top: 2rem; scroll-margin-top: 1rem; }
+    h4 { margin-top: 1.5rem; }
+    .table td, .table th { vertical-align: top; }
+    .plain { background: var(--bs-info-bg-subtle); border-left: 4px solid var(--bs-info); padding: .85rem 1rem; border-radius: .375rem; margin: 1rem 0; }
+    .plain::before { content: "In plain words"; display: block; font-weight: 600; font-size: .8125rem; text-transform: uppercase; letter-spacing: .04em; opacity: .75; margin-bottom: .3rem; }
+    .dont { background: var(--bs-danger-bg-subtle); border-left: 4px solid var(--bs-danger); padding: .85rem 1rem; border-radius: .375rem; margin: 1rem 0; }
+    .dont::before { content: "Trap"; display: block; font-weight: 600; font-size: .8125rem; text-transform: uppercase; letter-spacing: .04em; opacity: .75; margin-bottom: .3rem; }
+    .rule { background: var(--bs-success-bg-subtle); border-left: 4px solid var(--bs-success); padding: .85rem 1rem; border-radius: .375rem; margin: 1rem 0; }
+    .rule::before { content: "Rule"; display: block; font-weight: 600; font-size: .8125rem; text-transform: uppercase; letter-spacing: .04em; opacity: .75; margin-bottom: .3rem; }
+    .step-rail { counter-reset: step; list-style: none; padding-left: 0; }
+    .step-rail > li { position: relative; padding-left: 3rem; padding-bottom: 1.5rem; border-left: 2px solid var(--bs-border-color); margin-left: 1rem; }
+    .step-rail > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+    .step-rail > li::before { counter-increment: step; content: counter(step); position: absolute; left: -1.05rem; top: -.15rem; width: 2.1rem; height: 2.1rem; border-radius: 50%; background: var(--bs-primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: .875rem; }
+    .glossary dt { margin-top: .85rem; }
+    .lead-sm { font-size: 1.02rem; color: var(--bs-secondary-color); }
+    .action-doc { font-size: .8125rem; color: var(--bs-secondary-color); margin-top: .25rem; }
+    .param-source { display: inline-block; font-size: .6875rem; text-transform: uppercase; letter-spacing: .04em; padding: 0 .3rem; border-radius: .25rem; background: var(--bs-secondary-bg); color: var(--bs-secondary-color); }
+    .access-anon { color: var(--bs-danger) !important; border-color: var(--bs-danger-border-subtle) !important; }
+    .access-policy { font-family: var(--bs-font-monospace); font-size: .6875rem; }
+    .flag { font-size: .6875rem; }
+    .diagram { border: 1px solid var(--bs-border-color); border-radius: .5rem; padding: 1rem; margin: 1.25rem 0; overflow-x: auto; background: var(--bs-body-bg); }
+    .diagram svg { display: block; min-width: 640px; width: 100%; height: auto; color: var(--bs-body-color); }
+    .diagram text { fill: var(--bs-body-color); }
+    .diagram .muted { fill: var(--bs-secondary-color); font-size: 11px; }
+    .diagram rect { stroke-width: 1.25; }
+    .diagram .box-read { fill: var(--bs-primary-bg-subtle); stroke: var(--bs-primary-border-subtle); }
+    .diagram .box-write { fill: var(--bs-secondary-bg); stroke: var(--bs-border-color); }
+    .diagram .box-money { fill: var(--bs-warning-bg-subtle); stroke: var(--bs-warning-border-subtle); }
+    .diagram .box-auto { fill: var(--bs-success-bg-subtle); stroke: var(--bs-success-border-subtle); }
+    .layer { border: 1px solid var(--bs-border-color); border-radius: .5rem; padding: .75rem 1rem; margin-bottom: .5rem; }
+    .layer h5 { margin: 0 0 .25rem; font-size: .95rem; }
+    .layer p { margin: 0; font-size: .875rem; color: var(--bs-secondary-color); }
+    @media (max-width: 991.98px) { .sidebar { position: static; max-height: none; } }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand bg-body-tertiary border-bottom sticky-top">
+  <div class="container doc-shell">
+    <span class="navbar-brand fw-semibold mb-0">Event Registration — Backend Guide</span>
+    <span class="ms-auto badge text-bg-secondary">36 endpoints</span>
+  </div>
+</nav>
+
+<div class="container doc-shell my-4">
+  <div class="row g-4">
+    <div class="col-lg-3">
+      <nav class="sidebar nav flex-column">
+        <a class="nav-link fw-semibold" href="#start">1. What this covers</a>
+        <a class="nav-link fw-semibold" href="#model">2. The pieces involved</a>
+        <a class="nav-link fw-semibold" href="#reg-map">3. The journey at a glance</a>
+        <a class="nav-link fw-semibold" href="#reg-endpoints">4. Every endpoint in the journey</a>
+        <a class="nav-link fw-semibold" href="#reg-cart">5. How the cart actually works</a>
+        <a class="nav-link fw-semibold" href="#reg-pricing">6. How the total is calculated</a>
+        <a class="nav-link fw-semibold" href="#reg-questions">7. Attendees, questions and files</a>
+        <a class="nav-link fw-semibold" href="#reg-settlement">8. Payment and settlement, step by step</a>
+        <a class="nav-link fw-semibold" href="#reg-automatic">9. What runs without anybody asking</a>
+        <a class="nav-link fw-semibold" href="#reg-shapes">10. What comes back — every response, field by field</a>
+        <a class="nav-link fw-semibold" href="#reg-traps">11. Registration-specific traps</a>
+        <a class="nav-link fw-semibold" href="#appendix">12. Endpoint appendix</a>
+        <a class="nav-link ms-3 small" href="#ap-1-reading-the-event">Stage 1 — reading the event</a>
+        <a class="nav-link ms-3 small" href="#ap-2-the-cart">Stage 2 — the cart</a>
+        <a class="nav-link ms-3 small" href="#ap-3-payment">Stage 3 — payment</a>
+        <a class="nav-link ms-3 small" href="#ap-4-after-the-sale">Stage 4 — after the sale</a>
+        <a class="nav-link fw-semibold" href="#upkeep">13. Keeping this page true</a>
+      </nav>
+    </div>
+
+    <main class="col-lg-9">
+
+      <section id="start">
+        <h2>1. What this covers</h2>
+        <p class="lead-sm">
+          Everything the backend does between a visitor opening an event page and an attendee being
+          scanned in at the door. Every endpoint involved, the service method behind each one, how the
+          cart holds seats, exactly how each payment method's total is built, and what runs on its own
+          afterwards.
+        </p>
+
+        <h3>Who this is for</h3>
+        <p>
+          Backend developers working on the Event module, and frontend developers who need to know
+          what the server will and will not do for them. No prior knowledge of the codebase is
+          assumed — every term is defined in section 2 before it is used.
+        </p>
+
+        <h3>Where this sits</h3>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:24rem">Document</th><th>Answers</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>This page</strong></td>
+                <td>"What does the backend do during event registration?" Endpoints, services, money, background work.</td>
+              </tr>
+              <tr>
+                <td><code>backend-developer-handbook.bootstrap.html</code></td>
+                <td>"How does the whole backend work?" Architecture, authentication, database layer, and all 578 endpoints across every module. Registration appears there too, as section 14 — the same words as here, from one shared source.</td>
+              </tr>
+              <tr>
+                <td><code>event-registration-api.bootstrap.html</code></td>
+                <td>"How do I build the ticket-buying screens?" The frontend's call-by-call walkthrough of the same journey.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>The shape of it, in six sentences</h3>
+        <ol class="step-rail">
+          <li>A visitor opens an event page; the server returns the event and which steps this particular event has.</li>
+          <li>They create a <strong>cart</strong> — which is really an unpaid invoice — and add lines to it, each line taking a real hold on seats.</li>
+          <li>If the organizer asked for them, the buyer names each attendee and answers the questionnaire.</li>
+          <li>The cart is priced, producing a different total for each payment method.</li>
+          <li>They pay; Stripe confirms it to the server through a webhook, which is the only thing the server trusts.</li>
+          <li>Tickets are issued and emailed by background jobs — no browser required.</li>
+        </ol>
+
+        <div class="rule">
+          Two rules underpin everything below. The server prices the cart; a total supplied by the
+          browser is never trusted. And the Stripe webhook — not the buyer's redirect — is the
+          authority on whether money arrived.
+        </div>
+      </section>
+
+      <section id="model">
+        <h2>2. The pieces involved</h2>
+        <p class="lead-sm">
+          Every term used later, defined once. Skim it now and come back when a name is unfamiliar.
+        </p>
+
+        <h3>What the organizer sets up first</h3>
+        <dl class="glossary row">
+          <div class="col-md-6">
+            <dt>Organizer</dt>
+            <dd>The customer organisation running the event. Everything belongs to one.</dd>
+
+            <dt>Event</dt>
+            <dd>What is advertised. Owns the branding, the terms, the custom forms and questions, the payment methods and the charge rules.</dd>
+
+            <dt>Session</dt>
+            <dd>A dated occurrence of the event. Tickets are sold against a session, not the event, because an event may run over several days. Carries the <code>RequiresAttendeeInfo</code> flag.</dd>
+
+            <dt>Ticket type</dt>
+            <dd>A sellable class of seat inside a session — "Early bird", "Student". Holds the full price, the capacity, the per-order quantity limits and the sale window.</dd>
+
+            <dt>Ticket price period</dt>
+            <dd>A dated price for a ticket type, so the price can change on a schedule without editing the ticket type itself.</dd>
+          </div>
+          <div class="col-md-6">
+            <dt>Payment account</dt>
+            <dd>The organizer's connected Stripe account and currency. Which methods are offered comes from the event's own <code>EventPaymentMethod</code> rows.</dd>
+
+            <dt>Charge rule</dt>
+            <dd>An extra fee the organizer adds — a booking fee, a service charge. Defined once as an <code>OrganizerChargeRule</code> and switched on per event as an <code>EventChargeRule</code>.</dd>
+
+            <dt>Revenue plan</dt>
+            <dd>What the <em>platform</em> charges. Its rules say whether the buyer or the organizer pays. Assigned to an organizer per module.</dd>
+
+            <dt>Processor fee</dt>
+            <dd>What the organizer adds to cover the payment gateway's own cut. Configured per payment method, which is why totals differ between methods.</dd>
+
+            <dt>Discount coupon</dt>
+            <dd>A code the buyer can enter. Validated at pricing time and only actually spent when the order settles.</dd>
+          </div>
+        </dl>
+
+        <h3>What the buyer's journey creates</h3>
+        <dl class="glossary row">
+          <div class="col-md-6">
+            <dt>Cart</dt>
+            <dd>Not its own table. A cart <strong>is</strong> an <code>Invoice</code> with status <code>PendingPayment</code>. Its <code>uniqueId</code> is the buyer's only handle on it.</dd>
+
+            <dt>Cart line</dt>
+            <dd>Three rows together: an <code>InvoiceItem</code> for the money, an <code>EventInvoiceItem</code> for what was bought, and a <code>TicketReservation</code> for the actual seat hold.</dd>
+
+            <dt>Reservation</dt>
+            <dd>The stock hold. <code>Active</code> until it is confirmed, cancelled or expires. Everything that counts availability counts these.</dd>
+
+            <dt>Attendee</dt>
+            <dd>An <code>EventInvoiceItemAttendee</code>, one per seat, submitted before payment. Becomes the named holder of a ticket at issuance.</dd>
+          </div>
+          <div class="col-md-6">
+            <dt>Submission</dt>
+            <dd>The questionnaire answers for the whole order — one <code>EventPurchaseSubmission</code>, regardless of how many tickets.</dd>
+
+            <dt>Charge snapshot</dt>
+            <dd>A <code>PaymentChargeSnapshot</code> recording <em>why</em> a charge was made — the rule, its value, its label, the currency — frozen at that moment so later edits never rewrite history.</dd>
+
+            <dt>Payment attempt</dt>
+            <dd>An <code>InvoicePayment</code>. Its <code>ReferenceNo</code> is the Stripe payment intent id, which is how settlement finds the invoice again.</dd>
+
+            <dt>Ticket</dt>
+            <dd>An <code>EventTicket</code>, created only once payment is settled. Carries the code scanned at the door.</dd>
+          </div>
+        </dl>
+
+        <div class="plain">
+          The single most useful thing to internalise: <strong>a cart is an invoice, and a seat hold is
+          a reservation</strong>. Almost every question about registration resolves once those two
+          are clear.
+        </div>
+
+        <h3>The services you will be reading</h3>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:22rem">Service</th><th>Owns</th></tr></thead>
+            <tbody>
+              <tr><td><code>EventRegistrationService</code></td><td>The read-only registration page — tabs, sessions, questionnaire definitions.</td></tr>
+              <tr><td><code>EventCartService</code></td><td>Creating the cart and adding or removing lines, including the seat holds.</td></tr>
+              <tr><td><code>EventCartPricingService</code></td><td>Discounts, charges and the per-method totals.</td></tr>
+              <tr><td><code>EventCartAttendeeService</code></td><td>Per-seat attendee details.</td></tr>
+              <tr><td><code>EventCartAnswerService</code></td><td>Questionnaire answers and answer-file uploads.</td></tr>
+              <tr><td><code>EventCheckoutService</code></td><td>Payment intents, cheques, and the confirm fast-path.</td></tr>
+              <tr><td><code>EventPaymentSettlementService</code></td><td>What happens once the money is settled — or fails.</td></tr>
+              <tr><td><code>EventOrderStatusService</code></td><td>The buyer's confirmation page. A projection only.</td></tr>
+              <tr><td><code>TicketingShared</code></td><td>The rules every path shares: cart gates, availability, issuance, hold duration.</td></tr>
+              <tr><td><code>BuyerChargeCalculator</code></td><td>The arithmetic for every charge. One place, no duplicates.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <h2 id="reg-map">3. The journey at a glance</h2>
+
+
+        <div class="diagram">
+          <svg viewBox="0 0 980 300" role="img" aria-label="Event registration flow from browsing to tickets">
+            <defs>
+              <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L8,3 z" fill="currentColor" />
+              </marker>
+            </defs>
+            <g font-size="12" font-family="system-ui, sans-serif">
+              <rect x="8" y="20" width="150" height="58" rx="8" class="box-read" />
+              <text x="83" y="43" text-anchor="middle" font-weight="600">1. Browse</text>
+              <text x="83" y="61" text-anchor="middle" class="muted">register/bootstrap</text>
+
+              <rect x="186" y="20" width="150" height="58" rx="8" class="box-write" />
+              <text x="261" y="43" text-anchor="middle" font-weight="600">2. Create cart</text>
+              <text x="261" y="61" text-anchor="middle" class="muted">POST cart</text>
+
+              <rect x="364" y="20" width="150" height="58" rx="8" class="box-write" />
+              <text x="439" y="43" text-anchor="middle" font-weight="600">3. Add lines</text>
+              <text x="439" y="61" text-anchor="middle" class="muted">seats held here</text>
+
+              <rect x="542" y="20" width="150" height="58" rx="8" class="box-write" />
+              <text x="617" y="43" text-anchor="middle" font-weight="600">4. Attendees</text>
+              <text x="617" y="61" text-anchor="middle" class="muted">only if required</text>
+
+              <rect x="720" y="20" width="150" height="58" rx="8" class="box-write" />
+              <text x="795" y="43" text-anchor="middle" font-weight="600">5. Questionnaire</text>
+              <text x="795" y="61" text-anchor="middle" class="muted">only if authored</text>
+
+              <path d="M158,49 L182,49" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <path d="M336,49 L360,49" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <path d="M514,49 L538,49" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <path d="M692,49 L716,49" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <path d="M795,78 L795,110 L83,110 L83,142" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+
+              <rect x="8" y="146" width="150" height="58" rx="8" class="box-write" />
+              <text x="83" y="169" text-anchor="middle" font-weight="600">6. Price cart</text>
+              <text x="83" y="187" text-anchor="middle" class="muted">totals per method</text>
+
+              <rect x="186" y="146" width="150" height="58" rx="8" class="box-money" />
+              <text x="261" y="169" text-anchor="middle" font-weight="600">7. Pay</text>
+              <text x="261" y="187" text-anchor="middle" class="muted">intent / cheque / free</text>
+
+              <rect x="364" y="146" width="150" height="58" rx="8" class="box-money" />
+              <text x="439" y="169" text-anchor="middle" font-weight="600">8. Stripe webhook</text>
+              <text x="439" y="187" text-anchor="middle" class="muted">the real settlement</text>
+
+              <rect x="542" y="146" width="150" height="58" rx="8" class="box-auto" />
+              <text x="617" y="169" text-anchor="middle" font-weight="600">9. Tickets issued</text>
+              <text x="617" y="187" text-anchor="middle" class="muted">one per seat</text>
+
+              <rect x="720" y="146" width="150" height="58" rx="8" class="box-auto" />
+              <text x="795" y="169" text-anchor="middle" font-weight="600">10. Emails sent</text>
+              <text x="795" y="187" text-anchor="middle" class="muted">background jobs</text>
+
+              <path d="M158,175 L182,175" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <path d="M336,175 L360,175" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <path d="M514,175 L538,175" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <path d="M692,175 L716,175" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+
+              <rect x="186" y="236" width="330" height="44" rx="8" class="box-read" />
+              <text x="351" y="263" text-anchor="middle">Confirmation page polls <tspan font-family="monospace">GET /api/events/orders/{id}</tspan></text>
+              <path d="M617,204 L617,258 L520,258" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+
+              <g class="legend" font-size="11">
+                <rect x="600" y="240" width="12" height="12" rx="3" class="box-read" />
+                <text x="618" y="250">read</text>
+                <rect x="662" y="240" width="12" height="12" rx="3" class="box-write" />
+                <text x="680" y="250">write</text>
+                <rect x="724" y="240" width="12" height="12" rx="3" class="box-money" />
+                <text x="742" y="250">money</text>
+                <rect x="792" y="240" width="12" height="12" rx="3" class="box-auto" />
+                <text x="810" y="250">automatic</text>
+              </g>
+            </g>
+          </svg>
+        </div>
+
+        <div class="plain">
+          Steps 4 and 5 appear only when the organizer configured them. Step 8 is the authority on
+          payment; step 7 only starts it. Steps 9 and 10 need no browser at all — close the tab after
+          paying and the tickets still arrive.
+        </div>
+      <h2 id="reg-endpoints">4. Every endpoint in the journey</h2>
+
+        <p>
+          Grouped by the stage they belong to. Each row names the service method behind the route, so
+          you can go straight to the code.
+        </p>
+
+        <h4>Stage 1 — reading the event (nothing is created yet)</h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered align-middle">
+            <thead class="table-light"><tr><th style="width:26rem">Endpoint</th><th style="width:20rem">Service method</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/events/{id}/register</code></td>
+                <td><code>EventRegistrationService.GetEventRegistrationAsync</code></td>
+                <td>The whole registration page in one call — event details, sessions with ticket types, payment methods, which tabs to show. Heavy; prefer the bootstrap call below and load the rest per tab.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/events/{id}/register/bootstrap</code></td>
+                <td><code>GetEventRegistrationBootstrapAsync</code></td>
+                <td>The lightweight opener: branding, whether registration is open, the hold duration, and <code>visibleTabs</code>. Call this first.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/events/{id}/register/description</code></td>
+                <td><code>GetEventRegistrationDescriptionAsync</code></td>
+                <td>Just the long description and summary, for the description tab.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/events/{id}/register/sessions</code></td>
+                <td><code>GetEventRegistrationSessionsAsync</code></td>
+                <td>Sessions with their ticket types and prices — what the buyer picks from.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/events/{id}/register/attendee-info</code></td>
+                <td><code>GetEventRegistrationAttendeeInfoAsync</code></td>
+                <td>Returns <em>only</em> the sessions whose <code>RequiresAttendeeInfo</code> flag is set, so the page knows which lines need per-seat names.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/events/{id}/register/questionnaire</code></td>
+                <td><code>GetEventRegistrationQuestionnaireAsync</code></td>
+                <td>The organizer's custom forms and questions for this event, as field definitions to render.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/events/tickets/{e}/{s}/{t}/availability</code></td>
+                <td><code>TicketingService.GetAvailabilityAsync</code></td>
+                <td>Live remaining count for one ticket type. Read-only — it holds nothing.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Stage 2 — the cart</h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered align-middle">
+            <thead class="table-light"><tr><th style="width:26rem">Endpoint</th><th style="width:20rem">Service method</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart</code> <span class="badge text-bg-light border flag">BotMitigation</span></td>
+                <td><code>EventCartService.CreateCartAsync</code></td>
+                <td>Creates the <code>Invoice</code> (status <code>PendingPayment</code>) plus its <code>EventInvoice</code> row holding the buyer's name, email and phone. Requires either a contact id or a name-and-email pair. Bot-challenged because a cart eventually holds seats.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/events/cart/{cartId}</code></td>
+                <td><code>EventCartService.GetCartAsync</code></td>
+                <td>Reads the cart back — lines, subtotal, and when the hold expires. Safe to poll after a page refresh.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/lines</code></td>
+                <td><code>EventCartService.AddLineAsync</code></td>
+                <td>The important one. Validates the ticket type is on sale and the quantity is in range, locks the ticket type row, checks availability, resolves the price period, then writes three linked rows: <code>InvoiceItem</code>, <code>EventInvoiceItem</code> and an <strong>Active <code>TicketReservation</code></strong>. The reservation is the actual stock hold.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-danger">DELETE</span> <code>/api/events/cart/{cartId}/lines/{lineId}</code></td>
+                <td><code>EventCartService.RemoveLineAsync</code></td>
+                <td>Soft-deletes the line, cancels its reservation and refreshes the ticket-type counters so the seats are immediately back on sale.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/lines/{lineId}/attendees</code></td>
+                <td><code>EventCartAttendeeService.SubmitAttendeesAsync</code></td>
+                <td>Names the people in one line's seats. The count must equal the line quantity exactly, and every attendee needs a name. Replaces any previous submission for that line.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/answers</code></td>
+                <td><code>EventCartAnswerService.SubmitAnswersAsync</code></td>
+                <td>All questionnaire answers for the order in one call. Validates every answer against its field definition, then writes the <code>EventPurchaseSubmission</code> tree. Re-submittable — it updates in place rather than duplicating.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/answers/files</code> <span class="badge text-bg-light border flag">BotMitigation · 12 MB</span></td>
+                <td><code>EventCartAnswerService.UploadAnswerFileAsync</code></td>
+                <td>Stores one attachment and returns its <code>fileStorageId</code>, which the answers call then references. Also records the upload as in-flight so an abandoned one can be collected later.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/price</code></td>
+                <td><code>EventCartPricingService.PriceCartAsync</code></td>
+                <td>Prices the whole cart and returns a separate total per payment method. Also the coupon entry point. Covered in detail in <a href="#reg-pricing">the pricing section</a>.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Stage 3 — payment</h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered align-middle">
+            <thead class="table-light"><tr><th style="width:26rem">Endpoint</th><th style="width:20rem">Service method</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/public/stripe/{accountId}/credentials</code></td>
+                <td><code>StripeService.GetPublicCredentialsAsync</code></td>
+                <td>The publishable key the browser needs to mount Stripe's card fields, before any payment exists.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/checkout/intent</code> <span class="badge text-bg-light border flag">BotMitigation</span></td>
+                <td><code>EventCheckoutService.CreatePaymentIntentAsync</code></td>
+                <td>Locks in the processor fee for the chosen method, recomputes the total, calculates the platform's application fee, creates the Stripe payment intent and records a <code>Pending</code> <code>InvoicePayment</code> whose <code>ReferenceNo</code> is the intent id. Returns the client secret.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/checkout/cheque</code> <span class="badge text-bg-light border">Signed in</span></td>
+                <td><code>EventCheckoutService.RecordChequePaymentAsync</code></td>
+                <td>Organizer-only, and refused unless the caller's organizer owns the event. Records a pending cheque, clears any processor fee, and then <strong>issues the tickets immediately</strong> while the invoice stays owing.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/checkout/confirm</code></td>
+                <td><code>EventCheckoutService.ConfirmCheckoutAsync</code></td>
+                <td>The fast path the browser calls after paying, and the <em>only</em> path for a zero-total order. Decides nothing about money: it settles open attempts, reads whether issuance is authorised, and if so runs the same idempotent issuance the webhook runs.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/public/stripe/web-hook</code></td>
+                <td><code>StripeService.HandleWebHookAsync</code> → <code>EventPaymentSettlementService.HandlePaymentSucceededAsync</code></td>
+                <td><strong>The authority.</strong> Verifies Stripe's signature, settles the invoice, then routes to the owning module using the intent's metadata. Covered in <a href="#reg-settlement">the settlement section</a>.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/events/revenue-plans/applicable</code></td>
+                <td><code>RevenuePlanResolverService.GetApplicableRevenueChargesAsync</code></td>
+                <td>The platform's charges for an organizer. The pricing service calls the same method internally; this route exists so a page can show them before a cart exists.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Stage 4 — after the sale</h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered align-middle">
+            <thead class="table-light"><tr><th style="width:26rem">Endpoint</th><th style="width:20rem">Service method</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/events/orders/{orderId}</code> <span class="badge text-bg-light border flag">public-poll</span></td>
+                <td><code>EventOrderStatusService.GetOrderStatusAsync</code></td>
+                <td>The confirmation page. A pure projection — issues nothing, changes nothing. Returns <code>Confirmed</code>, <code>Processing</code> or <code>Failed</code> plus <code>pollAfterSeconds</code>, which reaches zero when the order is terminal. Rate-limited to 60 per minute per IP.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/events/tickets/{ticketId}/view</code></td>
+                <td><code>EventTicketViewService.GetTicketViewAsync</code></td>
+                <td>One ticket rendered for the attendee. Anonymous, guarded only by the unguessable id.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/organizer/events/invoices/list</code></td>
+                <td><code>EventInvoiceService.GetEventInvoiceListAsync</code></td>
+                <td>The organizer's list of orders for their events.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/organizer/events/invoices/{invoiceId}</code></td>
+                <td><code>EventInvoiceService.GetEventInvoiceDetailAsync</code></td>
+                <td>One order in full — lines, charges, payments, tickets, answers.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/invoices/{invoiceId}/resend</code></td>
+                <td><code>EventInvoiceService.ResendInvoiceAsync</code></td>
+                <td>Re-sends the whole order's confirmation and tickets. Use this when delivery failed — a failed email is never a reason to refund.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/invoices/{invoiceId}/tickets/{ticketId}/resend</code></td>
+                <td><code>EventInvoiceService.ResendTicketAsync</code></td>
+                <td>Re-sends one ticket only.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/tickets/check-in</code></td>
+                <td><code>TicketingService.CheckInAsync</code></td>
+                <td>Scans a ticket code at the door and writes a <code>TicketCheckInLog</code> row. Refuses a code that is already used, cancelled or refunded.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="dont">
+          <code>EventTicketSalesController</code> — <code>POST /api/events/tickets/reservations</code>,
+          <code>/checkout/invoice</code> and <code>/checkout/confirm</code> — is the earlier,
+          single-line purchase path that predates the cart. It still compiles and still works, but new
+          work belongs on the cart endpoints above. Do not mix the two in one journey.
+          <code>GET /api/events/{id}/register/payment</code> is superseded the same way: it takes a
+          subtotal from the caller, whereas <code>POST /cart/{id}/price</code> derives it from the
+          server-owned cart. Never trust a total the browser supplies.
+        </div>
+      <h2 id="reg-cart">5. How the cart actually works</h2>
+
+        <p>
+          There is no cart table. A cart is an <code>Invoice</code> with status
+          <code>PendingPayment</code>, and the stock hold behind each line is a
+          <code>TicketReservation</code>. Four rows per line:
+        </p>
+
+        <div class="diagram">
+          <svg viewBox="0 0 900 340" role="img" aria-label="Rows created when a cart line is added">
+            <g font-size="12" font-family="system-ui, sans-serif">
+              <rect x="20" y="16" width="240" height="86" rx="8" class="box-write" />
+              <text x="140" y="40" text-anchor="middle" font-weight="600">Invoice</text>
+              <text x="140" y="58" text-anchor="middle" class="muted">status = PendingPayment</text>
+              <text x="140" y="74" text-anchor="middle" class="muted">SubTotal, TotalAmount</text>
+              <text x="140" y="90" text-anchor="middle" class="muted">uniqueId = the cart id</text>
+
+              <rect x="330" y="16" width="240" height="86" rx="8" class="box-read" />
+              <text x="450" y="40" text-anchor="middle" font-weight="600">EventInvoice</text>
+              <text x="450" y="58" text-anchor="middle" class="muted">buyer name / email / phone</text>
+              <text x="450" y="74" text-anchor="middle" class="muted">event, organizer</text>
+              <text x="450" y="90" text-anchor="middle" class="muted">coupon applied</text>
+
+              <rect x="640" y="16" width="240" height="86" rx="8" class="box-read" />
+              <text x="760" y="40" text-anchor="middle" font-weight="600">EventPurchaseSubmission</text>
+              <text x="760" y="58" text-anchor="middle" class="muted">questionnaire answers</text>
+              <text x="760" y="74" text-anchor="middle" class="muted">one per order</text>
+              <text x="760" y="90" text-anchor="middle" class="muted">created on first submit</text>
+
+              <path d="M260,59 L326,59" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <path d="M570,59 L636,59" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+
+              <path d="M140,102 L140,140" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+
+              <rect x="20" y="144" width="240" height="76" rx="8" class="box-write" />
+              <text x="140" y="168" text-anchor="middle" font-weight="600">InvoiceItem</text>
+              <text x="140" y="186" text-anchor="middle" class="muted">quantity, unitPrice, lineTotal</text>
+              <text x="140" y="202" text-anchor="middle" class="muted">itemType = Regular</text>
+
+              <rect x="330" y="144" width="240" height="76" rx="8" class="box-write" />
+              <text x="450" y="168" text-anchor="middle" font-weight="600">EventInvoiceItem</text>
+              <text x="450" y="186" text-anchor="middle" class="muted">session, ticket type</text>
+              <text x="450" y="202" text-anchor="middle" class="muted">price period</text>
+
+              <rect x="640" y="144" width="240" height="76" rx="8" class="box-money" />
+              <text x="760" y="168" text-anchor="middle" font-weight="600">TicketReservation</text>
+              <text x="760" y="186" text-anchor="middle" class="muted">status = Active</text>
+              <text x="760" y="202" text-anchor="middle" class="muted">reservedUntilUtc</text>
+
+              <path d="M260,182 L326,182" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <path d="M570,182 L636,182" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+
+              <path d="M760,220 L760,258" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <rect x="640" y="262" width="240" height="60" rx="8" class="box-auto" />
+              <text x="760" y="286" text-anchor="middle" font-weight="600">EventTicket</text>
+              <text x="760" y="304" text-anchor="middle" class="muted">only after payment settles</text>
+
+              <rect x="330" y="262" width="240" height="60" rx="8" class="box-write" />
+              <text x="450" y="286" text-anchor="middle" font-weight="600">EventInvoiceItemAttendee</text>
+              <text x="450" y="304" text-anchor="middle" class="muted">one per seat, pre-payment</text>
+              <path d="M450,220 L450,258" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <path d="M570,292 L636,292" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+            </g>
+          </svg>
+        </div>
+
+        <h4>Why an Invoice and not a Draft status</h4>
+        <p>
+          <code>Invoice</code> is shared with Donation and Membership, and its status column carries a
+          database check constraint. Adding a <code>Draft</code> value would mean altering that
+          constraint on a table two live modules write to. So a cart reuses
+          <code>PendingPayment</code> instead — a deliberate trade, documented in the service itself.
+        </p>
+
+        <h4>The hold clock</h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <tbody>
+              <tr><th style="width:16rem">How long</th><td><code>Event.PurchaseTimeLimit</code> if the organizer set one, otherwise <code>AppSettings.PurchaseTimeLimitMinutes</code>, otherwise a built-in default. Resolved by <code>TicketingShared.GetEffectiveHoldMinutes</code>.</td></tr>
+              <tr><th>Counted from</th><td>The <em>cart's</em> creation time, not the line's. Every line shares one deadline, so adding a line late does not extend an already-aging cart.</td></tr>
+              <tr><th>Who enforces it</th><td><code>EventCartMaintenanceHostedService</code>, every minute. It flips expired Active reservations to <code>Expired</code> and refreshes the ticket-type counters.</td></tr>
+              <tr><th>What the buyer sees</th><td><code>expiresAtUtc</code> on the cart response. Once it passes, pricing refuses the line with "the hold has expired; remove and re-add this line".</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Two gates you will meet everywhere</h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <tbody>
+              <tr>
+                <th style="width:16rem"><code>EnsureCartOpen</code></th>
+                <td>Used before <em>editing</em>. Refuses if the invoice is not <code>PendingPayment</code>, or if any payment already succeeded.</td>
+              </tr>
+              <tr>
+                <th><code>EnsureCartPayable</code></th>
+                <td>Used before <em>paying</em>. Only checks the status — a live attempt does not block replacing it, because a buyer who abandoned Stripe's dialog cannot cancel it themselves.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Every editing call also runs <code>EventPaymentAttempts.ReleaseAbandonedAttemptsAsync</code>
+          first, which voids a stale Stripe attempt so the buyer is not locked out of their own cart.
+        </p>
+
+        <div class="dont">
+          Adding or removing a line calls <code>TicketingShared.ResetPricingAsync</code>, which throws
+          away the previously calculated charge lines. Any total the frontend is holding becomes stale
+          the moment the cart changes. Always call <code>/price</code> again before showing a total.
+        </div>
+      <h2 id="reg-pricing">6. How the total is calculated</h2>
+
+        <p>
+          This is the part people get wrong most often, so follow the order exactly. It is applied by
+          <code>EventCartPricingService.PriceCartAsync</code> and the arithmetic lives in
+          <code>BuyerChargeCalculator</code>.
+        </p>
+
+        <div class="diagram">
+          <svg viewBox="0 0 900 430" role="img" aria-label="How an event order total is built up">
+            <g font-size="12" font-family="system-ui, sans-serif">
+              <rect x="40" y="14" width="500" height="44" rx="8" class="box-read" />
+              <text x="60" y="41" font-weight="600">Subtotal</text>
+              <text x="530" y="41" text-anchor="end" class="muted">sum of unitPrice x quantity for every line</text>
+
+              <path d="M290,58 L290,76" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <rect x="40" y="80" width="500" height="44" rx="8" class="box-write" />
+              <text x="60" y="107" font-weight="600">− Membership discount</text>
+              <text x="530" y="107" text-anchor="end" class="muted">per line, if the signed-in member's type qualifies</text>
+
+              <path d="M290,124 L290,142" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <rect x="40" y="146" width="500" height="44" rx="8" class="box-write" />
+              <text x="60" y="173" font-weight="600">− Coupon discount</text>
+              <text x="530" y="173" text-anchor="end" class="muted">spread across lines, remainder on the last</text>
+
+              <path d="M290,190 L290,208" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <rect x="40" y="212" width="500" height="40" rx="8" class="box-money" />
+              <text x="60" y="237" font-weight="700">= Net subtotal</text>
+              <text x="530" y="237" text-anchor="end" class="muted">the base every charge below is calculated on</text>
+
+              <path d="M290,252 L290,270" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <rect x="40" y="274" width="500" height="44" rx="8" class="box-write" />
+              <text x="60" y="301" font-weight="600">+ Event charge rules</text>
+              <text x="530" y="301" text-anchor="end" class="muted">organizer's own fees — booking fee, service charge</text>
+
+              <path d="M290,318 L290,336" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <rect x="40" y="340" width="500" height="44" rx="8" class="box-write" />
+              <text x="60" y="367" font-weight="600">+ Revenue plan (buyer-target)</text>
+              <text x="530" y="367" text-anchor="end" class="muted">the platform's cut, charged to the buyer</text>
+
+              <path d="M290,384 L290,398" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <rect x="40" y="398" width="500" height="26" rx="6" class="box-money" />
+              <text x="60" y="416" font-weight="600">+ Processor fee</text>
+              <text x="530" y="416" text-anchor="end" class="muted">depends on the chosen payment method</text>
+
+              <rect x="580" y="274" width="290" height="110" rx="8" class="box-auto" />
+              <text x="725" y="298" text-anchor="middle" font-weight="600">Revenue plan (organizer-target)</text>
+              <text x="725" y="320" text-anchor="middle" class="muted">Snapshot only — no InvoiceItem.</text>
+              <text x="725" y="338" text-anchor="middle" class="muted">Never added to the buyer's total.</text>
+              <text x="725" y="356" text-anchor="middle" class="muted">Deducted from the organizer's</text>
+              <text x="725" y="374" text-anchor="middle" class="muted">payout at settlement.</text>
+              <path d="M540,362 L576,340" stroke="currentColor" fill="none" stroke-dasharray="4 3" marker-end="url(#arrow)" />
+            </g>
+          </svg>
+        </div>
+
+        <h4>Where each number comes from</h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:14rem">Component</th><th style="width:22rem">Source row and field</th><th>How it is calculated</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Line price</strong></td>
+                <td><code>TicketPricePeriod.Amount</code> if a period applies, otherwise <code>TicketType.FullPrice</code></td>
+                <td><code>unitPrice × quantity</code>, rounded to 2 decimals.</td>
+              </tr>
+              <tr>
+                <td><strong>Membership discount</strong></td>
+                <td><code>SessionMembershipDiscount.DiscountType</code>, <code>.DiscountValue</code>, <code>.MaxDiscountAmount</code> — reached through <code>SessionMembershipType</code> for the member's active membership type</td>
+                <td>Percentage of the line total, or a fixed amount. Capped at <code>MaxDiscountAmount</code> and never more than the line itself. Applies only when the caller is a signed-in member with an <code>Active</code> membership.</td>
+              </tr>
+              <tr>
+                <td><strong>Coupon discount</strong></td>
+                <td><code>DiscountCoupon</code>, validated by <code>DiscountCouponService.ValidateCouponForEventAsync</code>; recorded on <code>EventInvoice.DiscountCouponId</code> and <code>.CouponDiscountAmount</code></td>
+                <td>Calculated against the total <em>after</em> the membership discount, then spread across lines in proportion to each line's net. The last line absorbs the rounding remainder so the parts always sum exactly.</td>
+              </tr>
+              <tr>
+                <td><strong>Event charge rule</strong></td>
+                <td><code>EventChargeRule</code> joined to <code>OrganizerChargeRule</code> — fields <code>.CalculationType</code>, <code>.Value</code>, <code>.Label</code>, <code>.ChargeKind</code></td>
+                <td><code>Fixed</code> uses the value as-is; <code>Percent</code> is <code>netSubtotal × value ÷ 100</code>. Only rules where <code>EventChargeRule.IsEnabled</code> and the underlying <code>OrganizerChargeRule.IsActive</code> are counted. Ordered by <code>DisplayOrder</code>.</td>
+              </tr>
+              <tr>
+                <td><strong>Revenue plan — buyer</strong></td>
+                <td><code>AdminFeePlanRule</code> where <code>RuleAppliesTo = Buyer</code>, resolved via <code>AdminRevenuePlanAssignment</code> for the organizer and the Event module</td>
+                <td>Same Fixed/Percent formula, on the same net subtotal. Becomes a visible charge line on the invoice.</td>
+              </tr>
+              <tr>
+                <td><strong>Revenue plan — organizer</strong></td>
+                <td><code>AdminFeePlanRule</code> where <code>RuleAppliesTo = Organizer</code></td>
+                <td>Same formula, but written only as a <code>PaymentChargeSnapshot</code> with no <code>InvoiceItem</code>. The buyer never sees it and it never touches <code>TotalAmount</code>.</td>
+              </tr>
+              <tr>
+                <td><strong>Processor fee</strong></td>
+                <td><code>OrganizerPaymentProcessorFee</code> matched on organizer, merchant and <code>PaymentProductId</code> — fields <code>.ValueType</code>, <code>.Value</code>, <code>.Label</code></td>
+                <td>Method-dependent, so it differs per payment method. A <strong>percentage</strong> is charged on <code>netSubtotal + all other buyer charges</code>; a <strong>fixed</strong> amount is calculated on <code>netSubtotal</code> alone. Quoted per method by <code>/price</code>, and only written to the invoice once a method is chosen at <code>/checkout/intent</code>.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="plain">
+          Every charge is written twice: as an <code>InvoiceItem</code> with
+          <code>ItemType = Charge</code>, which is what makes up the money owed, and as a
+          <code>PaymentChargeSnapshot</code>, which records <em>why</em> that amount was charged — the
+          rule, its value, its label and the currency, frozen at that moment. Editing the rule later
+          never changes an existing order.
+        </div>
+
+        <h4>What each payment method's total looks like</h4>
+        <p>
+          <code>/price</code> returns one <code>paymentBreakdowns</code> entry per method the event
+          offers, sorted cheapest first. They differ only in the processor fee:
+        </p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:12rem">Method</th><th style="width:12rem">Charge topology</th><th>Total</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Card</strong></td><td>Direct charge on the connected account (<code>Stripe-Account</code> header sent)</td><td>net subtotal + charge rules + buyer revenue plan + the card processor fee</td></tr>
+              <tr><td><strong>ACH</strong> (US bank)</td><td>Destination charge on the platform account</td><td>Same, with the ACH processor fee — usually different from the card fee, which is why the totals differ per method</td></tr>
+              <tr><td><strong>PAD</strong> (Canadian bank)</td><td>Destination charge on the platform account</td><td>Same, with the PAD processor fee</td></tr>
+              <tr><td><strong>Cheque</strong></td><td>No Stripe involvement</td><td>Net subtotal + charge rules + buyer revenue plan. <strong>No processor fee at all</strong> — any fee left over from an earlier card attempt is cleared. Only visible to the event's own organizer.</td></tr>
+              <tr><td><strong>Free order</strong></td><td>No payment</td><td><code>TotalAmount</code> is zero, so there is no intent and no webhook. <code>/checkout/confirm</code> is the whole flow.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>The application fee</h4>
+        <p>
+          Separate from all of the above, and easy to confuse with it. When the payment intent is
+          created, <code>CalculateApplicationFeeAsync</code> sums the <code>PaymentChargeSnapshot</code>
+          rows whose <code>SourceType</code> is <code>RevenuePlanRule</code> — both buyer-target and
+          organizer-target — and passes that as Stripe's <code>ApplicationFeeAmount</code>. That is the
+          platform's revenue, taken from the transaction.
+        </p>
+        <div class="rule">
+          The organizer's own charge rules and the processor fee are <strong>never</strong> part of the
+          application fee. The processor fee exists to make the organizer whole for Stripe's cut;
+          handing it to the platform would take it twice. The figure is read from the persisted
+          snapshots, never recalculated.
+        </div>
+
+        <h4>Pricing is re-runnable</h4>
+        <p>
+          Calling <code>/price</code> twice must not double the charges, so it starts by calling
+          <code>ResetPricingAsync</code> to remove the previous run's charge lines and snapshots before
+          rebuilding them. Without that, the duplicate charge lines leave a balance the payment cannot
+          clear, the invoice lands on <code>PartiallyPaid</code>, and ticket issuance is then refused
+          on an order that was actually paid in full.
+        </p>
+      <h2 id="reg-questions">7. Attendees, questions and files</h2>
+
+
+        <h4>When are attendee details required?</h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <tbody>
+              <tr><th style="width:16rem">The flag</th><td><code>Session.RequiresAttendeeInfo</code>, set by the organizer in the session wizard.</td></tr>
+              <tr><th>How the page knows</th><td><code>visibleTabs</code> contains <code>"attendee-info"</code> when <em>any</em> session in the event has the flag. <code>GET /register/attendee-info</code> then returns only those sessions.</td></tr>
+              <tr><th>What is stored</th><td>One <code>EventInvoiceItemAttendee</code> per seat, with a <code>SlotIndex</code>. Submitted per line, before payment.</td></tr>
+              <tr><th>The rule at submit</th><td>The number of attendees must equal the line quantity exactly, and each needs a name. Email and phone are optional.</td></tr>
+              <tr><th>What happens at issuance</th><td>Slot <em>n</em> becomes ticket <em>n</em>'s attendee. A submitted slot owns all its fields — a blank email means "not provided", it does <strong>not</strong> fall back to the buyer's. If no attendees were submitted at all, the tickets carry no attendee name.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="dont">
+          Attendee details are not enforced at payment time. Only the questionnaire is. If a session
+          requires attendee info, the frontend must collect it — the server will happily issue
+          nameless tickets otherwise.
+        </div>
+
+        <h4>When does the questionnaire appear?</h4>
+        <p>
+          Two independent sources, both authored by the organizer against the event:
+        </p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:14rem">Source</th><th style="width:16rem">Where it comes from</th><th>Answered by</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Custom form</strong></td>
+                <td><code>EventForm</code> → <code>CustomForm</code> → <code>CustomFormField</code>. Forms are reusable and shared with Membership.</td>
+                <td><code>formResponses[]</code>, keyed by <code>fieldUniqueId</code>. Stored as <code>EventPurchaseSubmissionValue</code>.</td>
+              </tr>
+              <tr>
+                <td><strong>Custom question</strong></td>
+                <td><code>EventQuestion</code> with its <code>EventQuestionOption</code> rows, defined directly on the event.</td>
+                <td><code>questionResponses[]</code>, keyed by <code>questionUniqueId</code>. Stored as <code>EventQuestionResponse</code>.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          The tab appears when the event has at least one active question, or at least one form that
+          actually contains a field. A form with no fields renders nothing, so it deliberately does not
+          put an empty tab in front of the buyer.
+        </p>
+        <div class="rule">
+          Answers are <strong>per order, not per ticket</strong>. Ten tickets in one cart produce one
+          set of answers, because the organizer authored the questions against the event.
+        </div>
+
+        <h4>Where the requirement is enforced</h4>
+        <p>
+          Submitting answers is a separate call, so a caller could simply never make it.
+          <code>EventAnswerRequirement.EnsureRequiredAnswersPresentAsync</code> therefore runs at the
+          money, not at the answers — inside <code>/checkout/intent</code>,
+          <code>/checkout/cheque</code>, and inside <code>/checkout/confirm</code> for a zero-total
+          order. It refuses with the organizer's own <code>RequiredMessage</code> when one was written.
+        </p>
+        <p>
+          A mandatory field counts as answered when it has either a non-empty
+          <code>AnswerValue</code> or a <code>FileStorageId</code> — an uploaded file is an answer in
+          its own right.
+        </p>
+
+        <h4>Answer files, and why they are cleaned up</h4>
+        <p>
+          A file is uploaded the moment the buyer picks it, long before there is an answer to attach it
+          to. So the upload records an <code>EventAnswerFileUpload</code> row marking it in flight.
+        </p>
+        <ol class="step-rail">
+          <li><strong>Upload.</strong> <code>UploadAnswerFileAsync</code> validates the extension against the field's <code>AcceptedFileTypes</code>, refuses executables whatever the organizer typed, saves the blob, and writes the in-flight row.</li>
+          <li><strong>Submit.</strong> <code>SubmitAnswersAsync</code> binds the <code>fileStorageId</code> to the answer and deletes the in-flight row — the file now belongs to an order.</li>
+          <li><strong>Sweep.</strong> Anything still marked in flight 24 hours later was abandoned. <code>EventAnswerFileCleanupService</code> deletes the blob and soft-deletes the <code>FileStorage</code> row, unless an answer claims it after all.</li>
+        </ol>
+        <p>
+          The 24-hour grace is far longer than any ticket hold, so a buyer still filling in the form
+          never loses their file. The frontend has nothing to do here — no delete call, no cleanup on
+          unload.
+        </p>
+      <h2 id="reg-settlement">8. Payment and settlement, step by step</h2>
+
+
+        <div class="diagram">
+          <svg viewBox="0 0 940 420" role="img" aria-label="Sequence from paying to tickets being emailed">
+            <g font-size="12" font-family="system-ui, sans-serif">
+              <text x="90" y="20" text-anchor="middle" font-weight="600">Browser</text>
+              <text x="330" y="20" text-anchor="middle" font-weight="600">API</text>
+              <text x="570" y="20" text-anchor="middle" font-weight="600">Stripe</text>
+              <text x="820" y="20" text-anchor="middle" font-weight="600">Background jobs</text>
+              <line x1="90" y1="30" x2="90" y2="400" stroke="currentColor" stroke-dasharray="3 4" opacity=".4" />
+              <line x1="330" y1="30" x2="330" y2="400" stroke="currentColor" stroke-dasharray="3 4" opacity=".4" />
+              <line x1="570" y1="30" x2="570" y2="400" stroke="currentColor" stroke-dasharray="3 4" opacity=".4" />
+              <line x1="820" y1="30" x2="820" y2="400" stroke="currentColor" stroke-dasharray="3 4" opacity=".4" />
+
+              <path d="M90,56 L326,56" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <text x="208" y="50" text-anchor="middle" class="muted">POST /checkout/intent</text>
+
+              <path d="M330,86 L566,86" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <text x="448" y="80" text-anchor="middle" class="muted">create intent + application fee</text>
+
+              <path d="M566,116 L94,116" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <text x="330" y="110" text-anchor="middle" class="muted">clientSecret (via API; InvoicePayment = Pending)</text>
+
+              <path d="M90,150 L566,150" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <text x="328" y="144" text-anchor="middle" class="muted">buyer confirms the payment directly with Stripe</text>
+
+              <path d="M566,190 L334,190" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <text x="450" y="184" text-anchor="middle" class="muted">POST /api/public/stripe/web-hook</text>
+
+              <rect x="230" y="204" width="200" height="72" rx="8" class="box-money" />
+              <text x="330" y="226" text-anchor="middle" font-weight="600">Settlement</text>
+              <text x="330" y="244" text-anchor="middle" class="muted">invoice → Paid</text>
+              <text x="330" y="262" text-anchor="middle" class="muted">tickets issued, coupon spent</text>
+
+              <path d="M430,300 L816,300" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <text x="620" y="294" text-anchor="middle" class="muted">enqueue confirmation + ticket delivery</text>
+
+              <path d="M90,340 L326,340" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <text x="208" y="334" text-anchor="middle" class="muted">POST /checkout/confirm (fast path)</text>
+              <path d="M90,380 L326,380" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
+              <text x="208" y="374" text-anchor="middle" class="muted">GET /orders/{id} — polled until Confirmed</text>
+            </g>
+          </svg>
+        </div>
+
+        <h4>What the webhook does, in order</h4>
+        <ol class="step-rail">
+          <li><strong>Verifies the signature</strong> against the webhook secret from system settings. An unsigned or mismatched body is rejected.</li>
+          <li><strong>Reads the metadata</strong> on the payment intent. The intent was created carrying <code>ModuleId = Event</code> and <code>ModuleEntityUniqueId = the invoice's uniqueId</code>. Without that metadata the webhook returns success and does nothing — which is how other systems' intents are ignored.</li>
+          <li><strong>Settles the invoice</strong> through the shared invoice service: allocates the payment and moves the invoice to <code>Paid</code>.</li>
+          <li><strong>Routes to the module.</strong> For Event, <code>EventPaymentSettlementService.HandlePaymentSucceededAsync</code>.</li>
+          <li><strong>Records how it was paid</strong> — before the issuance gate, so even an order that ends up in recovery still has its payment source.</li>
+          <li><strong>Checks the issuance gate.</strong> If the invoice did not reach <code>Paid</code>, it logs loudly and queues the order for recovery rather than silently leaving a paid buyer with nothing.</li>
+          <li><strong>Issues tickets, one line at a time,</strong> each in its own transaction so one bad line cannot deny tickets to the rest of the order.</li>
+          <li><strong>Redeems the coupon</strong> — a coupon is only spent when an order actually settles.</li>
+          <li><strong>Queues the emails</strong> and returns. Never awaited: a slow handler makes Stripe time out and retry a payment that already succeeded.</li>
+        </ol>
+
+        <div class="plain">
+          A redelivered webhook is safe. Issuance is idempotent — a line that already has its full set
+          of tickets returns the existing codes instead of minting new ones — and the handler
+          deliberately re-enters settlement on a repeat success event, because the first delivery may
+          have settled the invoice and then failed before issuing.
+        </div>
+
+        <h4>Why /checkout/confirm exists as well</h4>
+        <p>
+          Webhooks are not instant and, in a local or test environment, may never arrive at all.
+          <code>ConfirmCheckoutAsync</code> gives the buyer their tickets without waiting: it settles
+          any open attempt, re-reads the invoice, and if issuance is authorised runs exactly the same
+          issuance code. Whichever path arrives first wins; the other finds the work already done.
+        </p>
+        <p>
+          Issuance is authorised when <strong>any</strong> of these is true
+          (<code>TicketingShared.IsTicketIssuanceAuthorised</code>):
+        </p>
+        <ul>
+          <li>the invoice status is <code>Paid</code>;</li>
+          <li><code>TotalAmount</code> is zero or less — a free order;</li>
+          <li>a cheque payment exists that has not failed — and only an organizer-authenticated endpoint can record one.</li>
+        </ul>
+
+        <h4>When payment fails</h4>
+        <p>
+          <code>HandlePaymentFailedAsync</code> cancels every still-<code>Active</code> reservation on
+          the order and refreshes the ticket-type counters, putting the seats straight back on sale.
+          Tickets that were already issued are never revoked here — reversing a fulfilled order is a
+          refund, not a side-effect of a failed attempt.
+        </p>
+      <h2 id="reg-automatic">9. What runs without anybody asking</h2>
+
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:16rem">Job</th><th style="width:10rem">Trigger</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><code>EventTicketDeliveryJob.DeliverAsync</code></td>
+                <td>Queued at settlement</td>
+                <td>Renders each ticket with its QR code and emails it. Attendees with their own email address get their own ticket; the buyer always receives every ticket. Each send is recorded in <code>TicketDelivery</code>, so a resend knows what already went out. A QR that fails to render does not cost the buyer their ticket — the code is printed as text too.</td>
+              </tr>
+              <tr>
+                <td><code>EventRegistrationConfirmationDispatcher</code></td>
+                <td>Queued at settlement</td>
+                <td>Sends the organizer's own wizard-authored confirmation email. Held back if the order is incomplete, because a buyer about to be refunded must not first be told their place is confirmed.</td>
+              </tr>
+              <tr>
+                <td><code>EventCartMaintenanceHostedService</code></td>
+                <td>Every minute</td>
+                <td>Expires stale reservations and returns the seats; then deletes abandoned answer files. Two isolated passes.</td>
+              </tr>
+              <tr>
+                <td><code>event-order-recovery-sweep</code></td>
+                <td>Every 10 minutes</td>
+                <td>Finds paid event orders with no tickets that the webhook never reported, retries issuance, and refunds the order if it cannot be fulfilled.</td>
+              </tr>
+              <tr>
+                <td><code>EventOrderRecoveryDispatcher</code></td>
+                <td>Queued at settlement, on failure</td>
+                <td>The same recovery, triggered immediately when settlement notices the order is short — either the gate refused or a line has no tickets.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      <h2 id="reg-shapes">10. What comes back — every response, field by field</h2>
+
+        <p>All of these arrive inside the standard envelope, in the <code>data</code> property.</p>
+
+        <h4><code>EventCartDto</code> — from create, add line, remove line, get cart</h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:14rem">Property</th><th style="width:8rem">Type</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><code>cartUniqueId</code></td><td>guid</td><td>The cart's handle, and the buyer's only credential for it. Every later cart call needs it.</td></tr>
+              <tr><td><code>invoiceNo</code></td><td>string</td><td>Human-readable order number, generated by the database.</td></tr>
+              <tr><td><code>eventUniqueId</code></td><td>guid</td><td>Which event this cart belongs to.</td></tr>
+              <tr><td><code>expiresAtUtc</code></td><td>datetime?</td><td>When the seat hold lapses. Counted from cart creation, shared by every line. Show a countdown from this.</td></tr>
+              <tr><td><code>subTotal</code></td><td>decimal</td><td>Sum of the lines before any discount.</td></tr>
+              <tr><td><code>discountAmount</code></td><td>decimal?</td><td>Total discount applied so far. Null until the cart has been priced.</td></tr>
+              <tr><td><code>netSubtotal</code></td><td>decimal</td><td><code>subTotal − discountAmount</code>. The base every charge is calculated on.</td></tr>
+              <tr><td><code>totalAmount</code></td><td>decimal</td><td>What is owed. Equals the subtotal until <code>/price</code> has run — do not present it as a final total before then.</td></tr>
+              <tr><td><code>lines[]</code></td><td>array</td><td>The cart lines, below.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4><code>EventCartLineDto</code></h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:14rem">Property</th><th style="width:8rem">Type</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><code>lineUniqueId</code></td><td>guid</td><td>The <code>EventInvoiceItem</code>'s id — this is what remove-line and submit-attendees expect, not the <code>InvoiceItem</code> id.</td></tr>
+              <tr><td><code>sessionUniqueId</code></td><td>guid</td><td>The session these seats are for.</td></tr>
+              <tr><td><code>ticketTypeUniqueId</code></td><td>guid</td><td>The ticket type bought.</td></tr>
+              <tr><td><code>ticketTypeName</code></td><td>string</td><td>Display name, for the cart summary.</td></tr>
+              <tr><td><code>quantity</code></td><td>int</td><td>Seats on this line. Also the exact number of attendees the attendee call will demand.</td></tr>
+              <tr><td><code>unitPrice</code></td><td>decimal</td><td>Price per seat, from the price period or the ticket type's full price.</td></tr>
+              <tr><td><code>lineTotal</code></td><td>decimal</td><td><code>unitPrice × quantity</code>.</td></tr>
+              <tr><td><code>discountAmount</code></td><td>decimal?</td><td>Membership and coupon discount landed on this line. Populated by <code>/price</code>.</td></tr>
+              <tr><td><code>reservationStatus</code></td><td>enum</td><td><code>Active</code> means the seats are held. Anything else means the hold is gone and the line must be removed and re-added.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4><code>EventCartPriceDto</code> — from <code>/price</code></h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:16rem">Property</th><th style="width:8rem">Type</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><code>cartUniqueId</code></td><td>guid</td><td>Echoed back.</td></tr>
+              <tr><td><code>subTotal</code></td><td>decimal</td><td>Before discounts.</td></tr>
+              <tr><td><code>discountAmount</code></td><td>decimal</td><td>Membership plus coupon, combined.</td></tr>
+              <tr><td><code>netSubtotal</code></td><td>decimal</td><td>The base for every charge.</td></tr>
+              <tr><td><code>paymentBreakdowns[]</code></td><td>array</td><td>One entry per payment method the buyer may use, cheapest first.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4><code>EventCartPaymentBreakdownDto</code></h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:16rem">Property</th><th style="width:8rem">Type</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><code>paymentMethod</code></td><td>string</td><td>The enum name — send this value back on <code>/checkout/intent</code>.</td></tr>
+              <tr><td><code>label</code></td><td>string</td><td>Human wording for the button.</td></tr>
+              <tr><td><code>isOrganizerOnly</code></td><td>bool</td><td>True for cheque. Only ever present when the caller is the event's own organizer.</td></tr>
+              <tr><td><code>merchantName</code></td><td>string?</td><td>Which gateway will process it.</td></tr>
+              <tr><td><code>subtotal</code></td><td>decimal</td><td>Net subtotal — identical across methods.</td></tr>
+              <tr><td><code>buyerChargeTotal</code></td><td>decimal</td><td>Every charge for this method, including its processor fee. This is what differs between methods.</td></tr>
+              <tr><td><code>grandTotal</code></td><td>decimal</td><td><code>subtotal + buyerChargeTotal</code>. The amount that will be charged.</td></tr>
+              <tr><td><code>charges[]</code></td><td>array</td><td>The itemised breakdown to display.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4><code>EventCartPaymentChargeDto</code></h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:14rem">Property</th><th style="width:8rem">Type</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><code>source</code></td><td>string</td><td>Where the charge came from: <code>EventChargeRule</code>, <code>RevenuePlanRule</code> or <code>processor-fee</code>. Useful for grouping, not for display.</td></tr>
+              <tr><td><code>title</code></td><td>string</td><td>The label the organizer or platform gave it — show this.</td></tr>
+              <tr><td><code>valueType</code></td><td>string</td><td><code>Fixed</code> or <code>Percent</code>.</td></tr>
+              <tr><td><code>value</code></td><td>decimal</td><td>The rule's configured number: 2.50 for a fixed fee, 2.9 for 2.9%.</td></tr>
+              <tr><td><code>amount</code></td><td>decimal</td><td>What it actually works out to on this order. Sum of these equals <code>buyerChargeTotal</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4><code>EventPaymentIntentResultDto</code> — from <code>/checkout/intent</code></h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:16rem">Property</th><th style="width:8rem">Type</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><code>cartUniqueId</code></td><td>guid</td><td>Echoed back.</td></tr>
+              <tr><td><code>invoiceUniqueId</code></td><td>guid</td><td>The order id. Needed <em>before</em> confirming, because a redirecting payment method must be given a return URL that points at the order, not at the cart.</td></tr>
+              <tr><td><code>paymentIntentId</code></td><td>string</td><td>Stripe's id. Also stored as the <code>InvoicePayment.ReferenceNo</code> that settlement matches on.</td></tr>
+              <tr><td><code>clientSecret</code></td><td>string</td><td>What the browser confirms the payment with.</td></tr>
+              <tr><td><code>publishableKey</code></td><td>string</td><td>The key to initialise Stripe.js with.</td></tr>
+              <tr><td><code>stripeAccount</code></td><td>string?</td><td>Set for card and wallet payments, which are charged on the connected account and must be confirmed against it. <strong>Null for ACH and PAD</strong>, which settle on the platform account. Pass it to Stripe.js exactly as given — do not invent one when it is null.</td></tr>
+              <tr><td><code>paymentMethod</code></td><td>enum</td><td>Echoed back.</td></tr>
+              <tr><td><code>amount</code></td><td>decimal</td><td>The final charge, including the processor fee for this method.</td></tr>
+              <tr><td><code>currency</code></td><td>string</td><td>Stripe currency code.</td></tr>
+              <tr><td><code>processorFeeAmount</code></td><td>decimal</td><td>The fee that was just added for the chosen method, so the page can show what changed.</td></tr>
+              <tr><td><code>status</code></td><td>string?</td><td>Stripe's intent status at creation.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4><code>EventCheckoutConfirmationDto</code> — from <code>/checkout/confirm</code></h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:16rem">Property</th><th style="width:8rem">Type</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><code>cartUniqueId</code></td><td>guid</td><td>Echoed back.</td></tr>
+              <tr><td><code>invoiceUniqueId</code></td><td>guid</td><td>The durable handle. The cart id dies with the cart; this is what survives to be polled, linked and quoted to support.</td></tr>
+              <tr><td><code>invoiceStatus</code></td><td>enum</td><td>The accounting status. Prefer <code>isSettled</code> for UI decisions.</td></tr>
+              <tr><td><code>isSettled</code></td><td>bool</td><td><strong>False is a normal answer, not an error</strong> — bank rails report "processing" for days. Send the buyer to the order page and let it poll.</td></tr>
+              <tr><td><code>lines[]</code></td><td>array</td><td>Per line, the issued ticket codes. Empty when nothing was issued yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4><code>EventChequePaymentResultDto</code> — from <code>/checkout/cheque</code></h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:14rem">Property</th><th style="width:8rem">Type</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><code>cartUniqueId</code></td><td>guid</td><td>Echoed back.</td></tr>
+              <tr><td><code>invoiceNo</code></td><td>string</td><td>The order number to write on the cheque record.</td></tr>
+              <tr><td><code>amountDue</code></td><td>decimal</td><td>Still owing — a cheque does not settle the invoice.</td></tr>
+              <tr><td><code>ticketCodes[]</code></td><td>string[]</td><td>Issued immediately, even though the money has not arrived, so the organizer can register someone on the spot.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4><code>EventOrderStatusDto</code> — from <code>/orders/{id}</code></h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:16rem">Property</th><th style="width:8rem">Type</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><code>orderUniqueId</code></td><td>guid</td><td>The order.</td></tr>
+              <tr><td><code>invoiceNo</code></td><td>string</td><td>Order number to show the buyer.</td></tr>
+              <tr><td><code>orderState</code></td><td>string</td><td><code>Confirmed</code>, <code>Processing</code> or <code>Failed</code>. Deliberately coarser than the invoice status — the buyer is owed one of three answers, not an eight-way accounting enum.</td></tr>
+              <tr><td><code>invoiceStatus</code></td><td>string</td><td>The underlying status, for support and debugging.</td></tr>
+              <tr><td><code>pollAfterSeconds</code></td><td>int</td><td>How long to wait before asking again. <strong>Zero means stop polling</strong> — the order is terminal. Obey this rather than choosing your own interval.</td></tr>
+              <tr><td><code>buyerName</code></td><td>string?</td><td>Who bought it.</td></tr>
+              <tr><td><code>buyerEmailMasked</code></td><td>string?</td><td>Masked past the first character. Anyone with the link reaches this page, so it may confirm where the tickets went without disclosing the address.</td></tr>
+              <tr><td><code>totalAmount</code> / <code>currencySymbol</code></td><td>decimal / string?</td><td>What was paid.</td></tr>
+              <tr><td><code>eventName</code>, <code>eventThemeColor</code>, <code>eventStartDateUtc</code>, <code>eventEndDateUtc</code></td><td>—</td><td>Enough to render a branded confirmation without a second call.</td></tr>
+              <tr><td><code>venueName</code>, <code>venueAddress</code>, <code>venueMapUrl</code></td><td>string?</td><td>Where to turn up.</td></tr>
+              <tr><td><code>tickets[]</code></td><td>array</td><td>Each with <code>ticketUniqueId</code>, <code>ticketCode</code>, <code>ticketTypeName</code>, <code>sessionName</code>, <code>sessionStartDateUtc</code>, <code>attendeeName</code> and <code>ticketStatus</code>. Empty while the order is still processing.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4><code>UploadAnswerFileResponse</code> — from <code>/answers/files</code></h4>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <tbody>
+              <tr><th style="width:14rem"><code>fileStorageId</code></th><td>int — the id to send back in <code>formResponses[].fileStorageId</code> or <code>questionResponses[].fileStorageId</code>. On its own it is not an answer yet.</td></tr>
+              <tr><th><code>fileName</code></th><td>string — the stored file's name, to display next to the field.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4><code>EventRegistrationResponse</code> — from every <code>/register/*</code> call</h4>
+        <p>
+          One class serves all six registration reads; each endpoint fills the parts its tab needs and
+          leaves the rest empty. The fields that drive behaviour rather than display:
+        </p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:18rem">Property</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><code>registrationStatus</code> / <code>canRegister</code> / <code>registrationBlockedReason</code></td><td>Whether the buyer may proceed, and if not, why — before the sale window opens, after it closes, event cancelled.</td></tr>
+              <tr><td><code>visibleTabs[]</code></td><td>Which steps this event actually has: <code>description</code>, <code>sessions</code>, <code>attendee-info</code>, <code>questionnaire</code>, <code>payment</code>. Build the wizard from this rather than assuming a fixed set.</td></tr>
+              <tr><td><code>purchaseTimeLimitMinutes</code> / <code>purchaseTimeLimitExpiresAtUtc</code></td><td>The hold duration for this event, so the countdown can be shown before a cart even exists.</td></tr>
+              <tr><td><code>isOrganizer</code></td><td>True when the caller owns the event. Cheque only appears in that case.</td></tr>
+              <tr><td><code>acceptsDiscountCoupons</code></td><td>Whether a redeemable coupon exists right now. Hides the coupon field when none does — and deliberately carries no codes: the page needs to know one exists, never which.</td></tr>
+              <tr><td><code>paymentAccountUniqueId</code> / <code>paymentAccountCurrency</code></td><td>What to pass to the Stripe credentials call, and which currency to format in.</td></tr>
+              <tr><td><code>sessions[]</code></td><td>Sessions with their ticket types. Each carries <code>requiresAttendeeInfo</code>.</td></tr>
+              <tr><td><code>forms[]</code> / <code>questions[]</code></td><td>The questionnaire definitions to render.</td></tr>
+              <tr><td><code>paymentMethods[]</code> / <code>paymentBreakdowns[]</code></td><td>Legacy preview of methods and totals. Prefer <code>/cart/{id}/price</code>, which prices the real cart.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      <h2 id="reg-traps">11. Registration-specific traps</h2>
+
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:22rem">The trap</th><th>What actually happens</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Showing a total without calling <code>/price</code></strong></td><td>The cart's <code>totalAmount</code> is only the subtotal until pricing runs. No charges, no processor fee.</td></tr>
+              <tr><td><strong>Caching the total across a cart edit</strong></td><td>Add or remove a line and the charge lines are wiped. The stale total will not match what the intent charges.</td></tr>
+              <tr><td><strong>Using the same total for every payment method</strong></td><td>Processor fees differ per method. That is the entire reason <code>/price</code> returns an array.</td></tr>
+              <tr><td><strong>Sending <code>stripeAccount</code> when it came back null</strong></td><td>ACH and PAD live on the platform account. Confirming against a connected account fails.</td></tr>
+              <tr><td><strong>Treating <code>isSettled: false</code> as a failure</strong></td><td>Bank payments are legitimately pending for days. Send the buyer to the order page.</td></tr>
+              <tr><td><strong>Polling the order page on your own timer</strong></td><td><code>pollAfterSeconds</code> reaching zero is the stop signal, and the endpoint is rate-limited to 60 per minute per IP.</td></tr>
+              <tr><td><strong>Passing the <code>InvoiceItem</code> id as the line id</strong></td><td>Routes expect the <code>EventInvoiceItem</code>'s <code>uniqueId</code> — the <code>lineUniqueId</code> the cart returned.</td></tr>
+              <tr><td><strong>Submitting fewer attendees than the line quantity</strong></td><td>Refused outright. It must be exact.</td></tr>
+              <tr><td><strong>Skipping the answers call</strong></td><td>It is not enforced at the answers endpoint — it is enforced at payment, where the buyer is refused with the organizer's own message.</td></tr>
+              <tr><td><strong>Refunding because a ticket email failed</strong></td><td>The order is intact. Use the organizer's resend endpoint.</td></tr>
+              <tr><td><strong>Pointing Stripe at <code>/webhooks/stripe</code></strong></td><td>That route only logs. The real one is <code>/api/public/stripe/web-hook</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      <section id="appendix">
+        <h2>12. Endpoint appendix</h2>
+        <p class="lead-sm">
+          Every endpoint on every controller the registration journey touches — not only the ones the
+          narrative highlights. Generated from the compiled controllers, so nothing can be missing.
+        </p>
+
+        <div class="table-responsive mb-4">
+          <table class="table table-sm table-bordered">
+            <tbody>
+              <tr><th style="width:12rem">Method</th><td>The HTTP verb.</td></tr>
+              <tr><th>Route</th><td>The full path, prefixes included. <code>{name:guid}</code> is a GUID you substitute.</td></tr>
+              <tr><th>What it does</th><td>The controller method's name in plain words, with its documentation comment underneath where the code carries one.</td></tr>
+              <tr><th>Who can call it</th><td><span class="badge text-bg-light border access-anon">Public</span> needs no login — most of the buyer journey. A monospace name is the authorization policy that must pass.</td></tr>
+              <tr><th>Inputs</th><td>Parameters and where each is read from: <span class="param-source">route</span>, <span class="param-source">query</span>, <span class="param-source">body</span>, <span class="param-source">form</span>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="ap-1-reading-the-event">1. Reading the event <span class="badge text-bg-secondary align-middle fs-6">11</span></h3>
+        
+        <article id="ep-eventregistrationcontroller" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="fw-semibold">EventRegistrationController</span>
+            <code class="path text-body-secondary">/api/events</code>
+            <span class="badge text-bg-secondary ms-auto">7 endpoints</span>
+          </div>
+          <div class="card-body">
+            <p class="mb-3">The six reads behind the registration wizard's tabs. Nothing is created by any of them.</p>
+            
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width:5.5rem">Method</th>
+                    <th>Route</th>
+                    <th style="width:13rem">What it does</th>
+                    <th style="width:10rem">Who can call it</th>
+                    <th style="width:17rem">Inputs</th>
+                  </tr>
+                </thead>
+                <tbody>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/events/{eventUniqueId:guid}/register</code></td>
+                <td>Get Event Registration</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>eventUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/events/{eventUniqueId:guid}/register/attendee-info</code></td>
+                <td>Get Event Registration Attendee Info</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>eventUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/events/{eventUniqueId:guid}/register/bootstrap</code></td>
+                <td>Get Event Registration Bootstrap</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>eventUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/events/{eventUniqueId:guid}/register/description</code></td>
+                <td>Get Event Registration Description</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>eventUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/events/{eventUniqueId:guid}/register/payment</code></td>
+                <td>Get Event Registration Payment</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>eventUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">query</span> <code>subtotal</code><span class="text-body-secondary"> : Decimal</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/events/{eventUniqueId:guid}/register/questionnaire</code></td>
+                <td>Get Event Registration Questionnaire</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>eventUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/events/{eventUniqueId:guid}/register/sessions</code></td>
+                <td>Get Event Registration Sessions</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>eventUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+        <article id="ep-eventticketsalescontroller" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="fw-semibold">EventTicketSalesController</span>
+            <code class="path text-body-secondary">/api/events/tickets</code>
+            <span class="badge text-bg-secondary ms-auto">4 endpoints</span>
+          </div>
+          <div class="card-body">
+            <p class="mb-3">Only <code>availability</code> belongs to the current journey. The three checkout routes are the earlier single-line purchase path, kept for compatibility.</p>
+            
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width:5.5rem">Method</th>
+                    <th>Route</th>
+                    <th style="width:13rem">What it does</th>
+                    <th style="width:10rem">Who can call it</th>
+                    <th style="width:17rem">Inputs</th>
+                  </tr>
+                </thead>
+                <tbody>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/events/tickets/{eventUniqueId:guid}/{sessionUniqueId:guid}/{ticketTypeUniqueId:guid}/availability</code></td>
+                <td>Get Availability</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>eventUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">route</span> <code>sessionUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">route</span> <code>ticketTypeUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/events/tickets/checkout/confirm</code></td>
+                <td>Confirm Purchase</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">body</span> <code>request</code><span class="text-body-secondary"> : TicketPurchaseConfirmationRequest</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/events/tickets/checkout/invoice</code></td>
+                <td>Create Checkout Invoice</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">body</span> <code>request</code><span class="text-body-secondary"> : TicketCheckoutInvoiceRequest</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/events/tickets/reservations</code></td>
+                <td>Create Reservation</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">body</span> <code>request</code><span class="text-body-secondary"> : TicketReservationRequest</span></td>
+              </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+        <h3 id="ap-2-the-cart">2. The cart <span class="badge text-bg-secondary align-middle fs-6">8</span></h3>
+        
+        <article id="ep-eventcartcontroller" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="fw-semibold">EventCartController</span>
+            <code class="path text-body-secondary">/api/events/cart</code>
+            <span class="badge text-bg-secondary ms-auto">8 endpoints</span>
+          </div>
+          <div class="card-body">
+            <p class="mb-3">The cart itself: create, read, add and remove lines, name attendees, answer the questionnaire, upload files, and price.</p>
+            
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width:5.5rem">Method</th>
+                    <th>Route</th>
+                    <th style="width:13rem">What it does</th>
+                    <th style="width:10rem">Who can call it</th>
+                    <th style="width:17rem">Inputs</th>
+                  </tr>
+                </thead>
+                <tbody>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/events/cart</code> <span class="badge text-bg-light border flag">BotMitigation</span><div class="action-doc">The only unauthenticated entry point into registration - every other cart route needs the cart id this returns. A cart holds seats, so unchallenged creation is a seat-denial vector, not just row spam.</div></td>
+                <td>Create Cart</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">body</span> <code>request</code><span class="text-body-secondary"> : CreateEventCartRequest</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/events/cart/{cartUniqueId:guid}</code></td>
+                <td>Get Cart</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>cartUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/events/cart/{cartUniqueId:guid}/answers</code><div class="action-doc">Custom forms and questions are authored on the event, so the buyer answers them once for the whole order rather than once per cart line.</div></td>
+                <td>Submit Answers</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>cartUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">body</span> <code>request</code><span class="text-body-secondary"> : SubmitOrderAnswersRequest</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/events/cart/{cartUniqueId:guid}/answers/files</code> <span class="badge text-bg-light border flag">BotMitigation · RequestSizeLimit</span><div class="action-doc">Anonymous by necessity - the buyer has no account until checkout - so the request budget is capped here as well as by the size and extension rules the service applies.</div></td>
+                <td>Upload Answer File</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>cartUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">form</span> <code>fieldUniqueId</code><span class="text-body-secondary"> : Guid</span><br><code>file</code><span class="text-body-secondary"> : IFormFile</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/events/cart/{cartUniqueId:guid}/lines</code></td>
+                <td>Add Line</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>cartUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">body</span> <code>request</code><span class="text-body-secondary"> : AddEventCartLineRequest</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-danger">DELETE</span></td>
+                <td><code class="path">/api/events/cart/{cartUniqueId:guid}/lines/{lineUniqueId:guid}</code></td>
+                <td>Remove Line</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>cartUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">route</span> <code>lineUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/events/cart/{cartUniqueId:guid}/lines/{lineUniqueId:guid}/attendees</code></td>
+                <td>Submit Attendees</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>cartUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">route</span> <code>lineUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">body</span> <code>request</code><span class="text-body-secondary"> : SubmitLineAttendeesRequest</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/events/cart/{cartUniqueId:guid}/price</code></td>
+                <td>Price Cart</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>cartUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">body</span> <code>request</code><span class="text-body-secondary"> : PriceEventCartRequest</span></td>
+              </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+        <h3 id="ap-3-payment">3. Payment <span class="badge text-bg-secondary align-middle fs-6">9</span></h3>
+        
+        <article id="ep-eventcheckoutcontroller" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="fw-semibold">EventCheckoutController</span>
+            <code class="path text-body-secondary">/api/events/cart/{cartUniqueId:guid}/checkout</code>
+            <span class="badge text-bg-secondary ms-auto">3 endpoints</span>
+          </div>
+          <div class="card-body">
+            <p class="mb-3">Turning a priced cart into money, and confirming the result.</p>
+            
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width:5.5rem">Method</th>
+                    <th>Route</th>
+                    <th style="width:13rem">What it does</th>
+                    <th style="width:10rem">Who can call it</th>
+                    <th style="width:17rem">Inputs</th>
+                  </tr>
+                </thead>
+                <tbody>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/events/cart/{cartUniqueId:guid}/checkout/cheque</code><div class="action-doc">Organizer-only: recording a cheque issues tickets while the invoice stays owing, so it must be authenticated rather than anonymous like the rest of checkout.</div></td>
+                <td>Record Cheque Payment</td>
+                <td><span class="badge text-bg-light border">Signed in</span></td>
+                <td class="small"><span class="param-source">route</span> <code>cartUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">body</span> <code>request</code><span class="text-body-secondary"> : RecordEventChequePaymentRequest</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/events/cart/{cartUniqueId:guid}/checkout/confirm</code></td>
+                <td>Confirm Checkout</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>cartUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/events/cart/{cartUniqueId:guid}/checkout/intent</code> <span class="badge text-bg-light border flag">BotMitigation</span><div class="action-doc">Reaches Stripe on an anonymous caller's behalf, so it is the card-testing surface of the flow. Challenged separately from cart creation because a wizard can sit open longer than a token lives.</div></td>
+                <td>Create Payment Intent</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>cartUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">body</span> <code>request</code><span class="text-body-secondary"> : CreateEventPaymentIntentRequest</span></td>
+              </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+        <article id="ep-stripecontroller" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="fw-semibold">StripeController</span>
+            <code class="path text-body-secondary">/api/public/stripe</code>
+            <span class="badge text-bg-secondary ms-auto">4 endpoints</span>
+          </div>
+          <div class="card-body">
+            <p class="mb-3">The publishable key the browser needs, the bank-payment intents, and the webhook that actually settles an order.</p>
+            
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width:5.5rem">Method</th>
+                    <th>Route</th>
+                    <th style="width:13rem">What it does</th>
+                    <th style="width:10rem">Who can call it</th>
+                    <th style="width:17rem">Inputs</th>
+                  </tr>
+                </thead>
+                <tbody>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/public/stripe/{paymentAccountUniqueId:guid}/credentials</code></td>
+                <td>Get Public Credentials</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><code>paymentAccountUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/public/stripe/{paymentAccountUniqueId:guid}/intent/create/ach</code></td>
+                <td>Create Ach Payment Intent</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><code>paymentAccountUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">body</span> <code>request</code><span class="text-body-secondary"> : AchPaymentIntentRequest</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/public/stripe/{paymentAccountUniqueId:guid}/intent/create/pad</code></td>
+                <td>Create Pad Payment Intent</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><code>paymentAccountUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">body</span> <code>request</code><span class="text-body-secondary"> : PadPaymentIntentRequest</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/public/stripe/web-hook</code></td>
+                <td>Web Hook</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="text-body-secondary">—</span></td>
+              </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+        <article id="ep-stripewebhookcontroller" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="fw-semibold">StripeWebhookController</span>
+            <code class="path text-body-secondary">/webhooks</code>
+            <span class="badge text-bg-secondary ms-auto">1 endpoint</span>
+          </div>
+          <div class="card-body">
+            <p class="mb-3">Logs and nothing else. Listed so nobody wires Stripe to it by mistake.</p>
+            
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width:5.5rem">Method</th>
+                    <th>Route</th>
+                    <th style="width:13rem">What it does</th>
+                    <th style="width:10rem">Who can call it</th>
+                    <th style="width:17rem">Inputs</th>
+                  </tr>
+                </thead>
+                <tbody>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/webhooks/stripe</code></td>
+                <td>Handle Webhook</td>
+                <td><span class="badge text-bg-light border">Signed in</span></td>
+                <td class="small"><span class="text-body-secondary">—</span></td>
+              </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+        <article id="ep-eventrevenueplancontroller" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="fw-semibold">EventRevenuePlanController</span>
+            <code class="path text-body-secondary">/api/events/revenue-plans</code>
+            <span class="badge text-bg-secondary ms-auto">1 endpoint</span>
+          </div>
+          <div class="card-body">
+            <p class="mb-3">The platform's charges for an organizer, readable before a cart exists.</p>
+            
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width:5.5rem">Method</th>
+                    <th>Route</th>
+                    <th style="width:13rem">What it does</th>
+                    <th style="width:10rem">Who can call it</th>
+                    <th style="width:17rem">Inputs</th>
+                  </tr>
+                </thead>
+                <tbody>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/events/revenue-plans/applicable</code></td>
+                <td>Get Applicable Revenue Charges</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">query</span> <code>organizerId</code><span class="text-body-secondary"> : Int32</span><br><span class="param-source">query</span> <code>module</code><span class="text-body-secondary"> : EnumModule</span></td>
+              </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+        <h3 id="ap-4-after-the-sale">4. After the sale <span class="badge text-bg-secondary align-middle fs-6">8</span></h3>
+        
+        <article id="ep-eventordercontroller" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="fw-semibold">EventOrderController</span>
+            <code class="path text-body-secondary">/api/events/orders</code>
+            <span class="badge text-bg-secondary ms-auto">1 endpoint</span>
+          </div>
+          <div class="card-body">
+            <p class="mb-3">The buyer's confirmation page, polled while a bank payment settles.</p>
+            <div class="plain">The buyer-facing view of one placed order. Anonymous and guarded only by the unguessable invoice id, matching the ticket view page. Rate limited because it is both anonymous and polled: the confirmation page asks again every few seconds while a bank payment settles.</div>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width:5.5rem">Method</th>
+                    <th>Route</th>
+                    <th style="width:13rem">What it does</th>
+                    <th style="width:10rem">Who can call it</th>
+                    <th style="width:17rem">Inputs</th>
+                  </tr>
+                </thead>
+                <tbody>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/events/orders/{orderUniqueId:guid}</code></td>
+                <td>Get Order Status</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>orderUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+        <article id="ep-eventticketviewcontroller" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="fw-semibold">EventTicketViewController</span>
+            <code class="path text-body-secondary">/api/events/tickets</code>
+            <span class="badge text-bg-secondary ms-auto">1 endpoint</span>
+          </div>
+          <div class="card-body">
+            <p class="mb-3">One issued ticket, rendered for its attendee.</p>
+            <div class="plain">The buyer-facing view of a single issued ticket. Anonymous and guarded only by the unguessable ticket id, matching how the membership invoice view already works - the same page is what the PDF renderer loads.</div>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width:5.5rem">Method</th>
+                    <th>Route</th>
+                    <th style="width:13rem">What it does</th>
+                    <th style="width:10rem">Who can call it</th>
+                    <th style="width:17rem">Inputs</th>
+                  </tr>
+                </thead>
+                <tbody>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/events/tickets/{ticketUniqueId:guid}/view</code></td>
+                <td>Get Ticket View</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>ticketUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+        <article id="ep-eventinvoicecontroller" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="fw-semibold">EventInvoiceController</span>
+            <code class="path text-body-secondary">/api/organizer/events/invoices</code>
+            <span class="badge text-bg-secondary ms-auto">5 endpoints</span>
+          </div>
+          <div class="card-body">
+            <p class="mb-3">The organizer's view of orders, and the resend paths used when an email did not arrive.</p>
+            
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width:5.5rem">Method</th>
+                    <th>Route</th>
+                    <th style="width:13rem">What it does</th>
+                    <th style="width:10rem">Who can call it</th>
+                    <th style="width:17rem">Inputs</th>
+                  </tr>
+                </thead>
+                <tbody>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/organizer/events/invoices/{invoiceUniqueId:guid}</code></td>
+                <td>Get Event Invoice Detail</td>
+                <td><span class="badge text-bg-light border access-policy">OrganizerModuleAccess</span></td>
+                <td class="small"><code>invoiceUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/organizer/events/invoices/{invoiceUniqueId:guid}/resend</code></td>
+                <td>Resend Invoice</td>
+                <td><span class="badge text-bg-light border access-policy">OrganizerModuleAccess</span></td>
+                <td class="small"><code>invoiceUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/organizer/events/invoices/{invoiceUniqueId:guid}/tickets/{ticketUniqueId:guid}/resend</code></td>
+                <td>Resend Ticket</td>
+                <td><span class="badge text-bg-light border access-policy">OrganizerModuleAccess</span></td>
+                <td class="small"><code>invoiceUniqueId</code><span class="text-body-secondary"> : Guid</span><br><code>ticketUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/organizer/events/invoices/filter-options</code></td>
+                <td>Get Event Invoice Filter Options</td>
+                <td><span class="badge text-bg-light border access-policy">OrganizerModuleAccess</span></td>
+                <td class="small"><span class="text-body-secondary">—</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/organizer/events/invoices/list</code></td>
+                <td>Get Event Invoice List</td>
+                <td><span class="badge text-bg-light border access-policy">OrganizerModuleAccess</span></td>
+                <td class="small"><span class="param-source">query</span> <code>request</code><span class="text-body-secondary"> : EventInvoiceListRequest</span></td>
+              </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+        <article id="ep-eventticketcheckincontroller" class="card mb-4 endpoint">
+          <div class="card-header endpoint-head">
+            <span class="fw-semibold">EventTicketCheckInController</span>
+            <code class="path text-body-secondary">/api/organizer/events/tickets</code>
+            <span class="badge text-bg-secondary ms-auto">1 endpoint</span>
+          </div>
+          <div class="card-body">
+            <p class="mb-3">Scanning a ticket at the door.</p>
+            
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width:5.5rem">Method</th>
+                    <th>Route</th>
+                    <th style="width:13rem">What it does</th>
+                    <th style="width:10rem">Who can call it</th>
+                    <th style="width:17rem">Inputs</th>
+                  </tr>
+                </thead>
+                <tbody>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/organizer/events/tickets/check-in</code></td>
+                <td>Check In</td>
+                <td><span class="badge text-bg-light border access-policy">OrganizerModuleAccess</span></td>
+                <td class="small"><span class="param-source">body</span> <code>request</code><span class="text-body-secondary"> : TicketCheckInRequest</span></td>
+              </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+
+        <h3 id="ap-adjacent">Adjacent endpoints</h3>
+        <p>
+          Not part of the journey, but called by pages that are part of it.
+        </p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:16rem">Route prefix</th><th style="width:14rem">Controller</th><th>Why it matters here</th></tr></thead>
+            <tbody>
+                  <tr>
+                    <td><code>/api/images</code></td>
+                    <td>ImageController</td>
+                    <td>Serves the event banner shown on the registration page.</td>
+                  </tr>
+                  <tr>
+                    <td><code>/api/pdf</code></td>
+                    <td>PdfController</td>
+                    <td>Renders a page to PDF; used for ticket and receipt output.</td>
+                  </tr>
+                  <tr>
+                    <td><code>/api/qr-code</code></td>
+                    <td>QrCodeController</td>
+                    <td>Generates the QR code printed on a ticket.</td>
+                  </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="upkeep">
+        <h2>13. Keeping this page true</h2>
+        <p class="lead-sm">
+          A stale document is worse than none, because people still trust it. This one is built so
+          drift is cheap to fix.
+        </p>
+
+        <h3>What is generated and what is written</h3>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:24rem">File</th><th>Role</th></tr></thead>
+            <tbody>
+              <tr><td><code>docs/tools/registration-copy.mjs</code></td><td>The narrative — sections 3 to 11. <strong>Edit this</strong> when the flow changes. Shared with the backend handbook, so one edit updates both documents.</td></tr>
+              <tr><td><code>docs/tools/endpoints.reflected.json</code></td><td>The route table, produced by reflecting over the compiled API. Generated — never edit.</td></tr>
+              <tr><td><code>docs/tools/summaries.json</code></td><td>Documentation comments harvested from the controllers. Generated — never edit.</td></tr>
+              <tr><td><code>docs/tools/build-registration-doc.mjs</code></td><td>Builds this page. The <code>REGISTRATION_CONTROLLERS</code> list at the top decides which controllers appear in the appendix — add to it when the journey grows a new controller.</td></tr>
+              <tr><td><code>docs/event-registration-backend.bootstrap.html</code></td><td>This page. Generated — never edit by hand.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>How to regenerate</h3>
+        <ol class="step-rail">
+          <li>
+            <strong>Refresh the route table</strong> if endpoints changed. In the backend repository,
+            remove the <code>Skip</code> from <code>tests/Ideas.API.Tests/EndpointInventoryDump.cs</code> and run:
+<pre><code>$env:ENDPOINT_DUMP_PATH = "&lt;this-repo&gt;/docs/tools/endpoints.reflected.json"
+dotnet test ./tests/Ideas.API.Tests/Ideas.API.Tests.csproj \
+  --filter FullyQualifiedName~EndpointInventoryDump</code></pre>
+            Put the <code>Skip</code> back afterwards.
+          </li>
+          <li>
+            <strong>Refresh the documentation comments:</strong>
+<pre><code>cd docs/tools
+node extract-summaries.mjs summaries.json</code></pre>
+          </li>
+          <li>
+            <strong>Rebuild both documents</strong> — they share the narrative, so always do both:
+<pre><code>node build-registration-doc.mjs ../event-registration-backend.bootstrap.html
+node build-backend-doc.mjs ../backend-developer-handbook.bootstrap.html</code></pre>
+          </li>
+        </ol>
+
+        <div class="plain">
+          Want a better one-line description beside a route? Do not edit the generated HTML — it will
+          be overwritten. Write a <code>/// &lt;summary&gt;</code> comment above the controller action
+          instead. It then serves the code and both documents at once, and can never disagree with the
+          code it sits on.
+        </div>
+
+        <div class="rule">
+          Regenerate in the same commit as the change that made it necessary. A separate "update the
+          docs" task is a task that does not happen.
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<footer class="border-top py-4">
+  <div class="container doc-shell text-body-secondary small">
+    Event registration backend guide · endpoint tables generated from the compiled controllers of
+    <code>Ideas.API</code> · 36 endpoints across 11 controllers.
+  </div>
+</footer>
+
+</body>
+</html>
