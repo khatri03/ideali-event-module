@@ -22,6 +22,8 @@ interface SessionsStepProps {
   onOpenDescription: (title: string, description: string) => void
   onChangeQuantity: (ticket: EventRegistrationTicket, quantity: number) => void
   onRequestRemoveAll: () => void
+  /** Fired when a ticket type's hold countdown reaches zero, so the caller can refetch availability. */
+  onHoldRelease?: () => void
 }
 
 function TicketSearchField({
@@ -98,6 +100,7 @@ export function SessionsStep({
   onOpenDescription,
   onChangeQuantity,
   onRequestRemoveAll,
+  onHoldRelease,
 }: SessionsStepProps) {
   if (isLoading) {
     return <SessionsStepSkeleton />
@@ -232,6 +235,7 @@ export function SessionsStep({
                           onDecrease={() => onChangeQuantity(ticket, getTicketQuantityAfterDecrement(ticket, quantity))}
                           onIncrease={() => onChangeQuantity(ticket, quantity + 1)}
                           onSelectQuantity={(value) => onChangeQuantity(ticket, value)}
+                          onHoldRelease={onHoldRelease}
                         />
                       )
                     })}

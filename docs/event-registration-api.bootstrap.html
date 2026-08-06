@@ -300,7 +300,7 @@
         <h3 class="h5" id="rules-bot">3.4 Two calls are challenged by Cloudflare Turnstile</h3>
         <p>
           Registration needs no login, so two calls sit wide open to anyone: <code>POST /api/events/cart</code>,
-          which takes seats off the shelf, and <code>POST …/checkout/intent</code>, which reaches Stripe. Both
+          which opens an order, and <code>POST …/checkout/intent</code>, which claims the seats and reaches Stripe. Both
           require a Cloudflare Turnstile token in a <code>Turnstile-Token</code> header. Every other cart call
           needs a cart id that only the first of those can hand out, so they are left alone.
         </p>
@@ -591,6 +591,24 @@ export function useEventRegistration(eventUniqueId: string) {
               <code>availableForSale</code> is a live number that changes as other people buy. Refetch
               when the buyer comes back to this tab, rather than trusting a copy from ten minutes ago —
               otherwise they will pick a ticket that is already gone and get a confusing error later.
+              <br><br>
+              <strong>Putting tickets in a cart does not reserve them.</strong> A cart is an intention;
+              seats only leave inventory when the buyer starts paying. So one buyer sitting on the ticket
+              picker with everything in their basket does not report the event sold out to anybody else,
+              and <code>availableForSale</code> can fall while a buyer is still filling in the form. The
+              order is measured against what is left at <code>POST .../checkout/intent</code>, and that
+              call is where a buyer learns something sold from under them.
+            </div>
+
+            <div class="plain">
+              <code>nextSeatsAvailableAtUtc</code> is only sent when a ticket type has nothing left to
+              sell, and it answers the question the buyer would otherwise have no way to ask: when do
+              the seats come back? It is the moment the earliest hold another buyer is sitting on runs
+              out. It is absent when the seats are committed to a payment and are not coming back.
+              <br><br>
+              Treat it as approximate. The housekeeping pass that actually returns the seats runs on its
+              own minute-long cycle, so they reappear at or shortly after that time, never before it —
+              poll rather than trusting the clock to be exact.
             </div>
 
             <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
@@ -622,6 +640,7 @@ export function useEventRegistration(eventUniqueId: string) {
           "totalQuantity": 500,
           "availableForSale": 118,
           "ticketsSold": 382,
+          "nextSeatsAvailableAtUtc": null,
           "isActive": true,
           "salesStartDateUtc": "2026-06-01T04:00:00Z",
           "salesEndDateUtc": "2026-09-13T03:59:00Z",
@@ -663,12 +682,17 @@ export function useEventRegistration(eventUniqueId: string) {
             </p>
 
             <h4 class="h6 mt-4">Rules the ticket picker must follow</h4>
+            <div class="plain">
+              None of these numbers is a promise. They say what is available right now, and the only
+              binding answer comes from starting payment.
+            </div>
             <div class="table-responsive">
               <table class="table table-sm table-bordered">
                 <thead class="table-light"><tr><th style="width:32%">If you see…</th><th>Then…</th></tr></thead>
                 <tbody>
                   <tr><td><code>isActive: false</code></td><td>Do not draw that ticket type at all.</td></tr>
-                  <tr><td><code>availableForSale: 0</code></td><td>Show "Sold out". Disable the quantity buttons and give them a <code>not-allowed</code> cursor.</td></tr>
+                  <tr><td><code>availableForSale: 0</code> with a <code>nextSeatsAvailableAtUtc</code></td><td>Not sold out — every seat is inside somebody else's checkout. Replace the quantity buttons with a countdown to that time and poll this endpoint until the seats come back. Saying "Sold out" here loses a sale that was only ever minutes away.</td></tr>
+                  <tr><td><code>availableForSale: 0</code> with <code>nextSeatsAvailableAtUtc: null</code></td><td>Show "Sold out". Disable the quantity buttons and give them a <code>not-allowed</code> cursor.</td></tr>
                   <tr><td><code>availableForSale: null</code></td><td>Unlimited. Say nothing about availability.</td></tr>
                   <tr><td><code>availableForSale</code> is a small number</td><td>Optional: "Only 3 left". Nice touch, not required.</td></tr>
                   <tr><td>Now is outside <code>salesStartDateUtc</code>–<code>salesEndDateUtc</code></td><td>Disable it, and say why.</td></tr>
@@ -1518,6 +1542,20 @@ export function useEventRegistration(eventUniqueId: string) {
               You do not send an amount. The server works it out from the cart and the chosen method.
               This is on purpose — if the browser could name its own price, anyone could pay one cent for
               a hundred-dollar ticket.
+            </div>
+
+            <div class="plain">
+              <strong>This is where the seats are claimed.</strong> Putting tickets in a cart reserves
+              nothing, so this call is the first and only moment the order is measured against what is
+              actually left. If something sold while the buyer was filling in the form, the order is
+              trimmed to fit and the call fails with a sentence naming exactly what changed — for
+              example <em>"2 of your 'General Admission' tickets sold while you were checking out; 8
+              remain on your order. Review your order and try again."</em>
+              <br><br>
+              That is a refusal, not an error: the cart has already been corrected and re-priced. Show
+              the message, send the buyer back through pricing, and let them pay again if they still
+              want the smaller order. Never retry the call automatically — the buyer agreed to a basket
+              and a price, and they get to agree to the new one.
             </div>
 
             <div class="plain">

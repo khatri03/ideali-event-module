@@ -16,6 +16,32 @@ export function getTicketPricePeriod(ticket: EventRegistrationTicket) {
   })
 }
 
+/**
+ * A ticket type with nothing left to sell, where what is holding the seats is another buyer's
+ * checkout rather than a genuine sell-out. Returns the moment the earliest of those holds runs out.
+ *
+ * Null covers both "there are seats" and "sold out for good" - the caller shows a waiting state only
+ * when there is a real moment to wait for.
+ */
+export function getTicketHoldRelease(ticket: EventRegistrationTicket, now = new Date()) {
+  if ((getTicketRemaining(ticket) ?? 0) > 0) return null
+
+  const releasesAt = parseUtcDateTime(ticket.nextSeatsAvailableAtUtc)
+  if (!releasesAt || releasesAt <= now) return null
+
+  return releasesAt
+}
+
+/**
+ * Whether the buyer is looking at a page that can change under them without an action of their own.
+ * Drives the poll: no held seats, no polling.
+ */
+export function hasTicketOnHold(sessions: EventRegistrationSession[], now = new Date()) {
+  return sessions.some((session) =>
+    session.ticketTypes.some((ticket) => getTicketHoldRelease(ticket, now) !== null),
+  )
+}
+
 export function getTicketRemaining(ticket: EventRegistrationTicket) {
   if (ticket.availableForSale !== null && ticket.availableForSale !== undefined) return ticket.availableForSale
   if (ticket.totalQuantity !== null && ticket.totalQuantity !== undefined) {
