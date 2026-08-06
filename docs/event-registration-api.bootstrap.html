@@ -827,7 +827,7 @@ export function useEventRegistration(eventUniqueId: string) {
                 <tbody>
                   <tr><td><code>isActive: false</code></td><td>Questions only. Skip it entirely: do not render it and do not send an answer for it.</td></tr>
                   <tr><td><code>displayOrder</code></td><td>Sort by this. Do not trust the array order.</td></tr>
-                  <tr><td><code>controlType</code></td><td>Picks the widget: <code>select</code>, <code>file</code>, <code>text</code>, and so on. Anything you do not recognise renders as a text input — never as nothing.</td></tr>
+                  <tr><td><code>controlType</code></td><td>Picks the widget: <code>select</code>, <code>multiselect</code>, <code>file</code>, <code>text</code>, and so on. <code>multiselect</code> is a checkbox group, not a dropdown, and its answer is comma-joined. Anything you do not recognise renders as a text input — never as nothing.</td></tr>
                   <tr><td><code>label</code> / <code>controlLabel</code></td><td>The visible label. Always attach it properly to the input with <code>htmlFor</code> — screen readers need it.</td></tr>
                   <tr><td><code>required</code> / <code>isMandatory</code></td><td>Block submission when it is empty. The server refuses too, so skipping this only produces a worse error later.</td></tr>
                   <tr><td><code>requiredMessage</code></td><td>The organizer's own wording for the error. Prefer it over your generic one.</td></tr>
@@ -1329,6 +1329,7 @@ export function useEventRegistration(eventUniqueId: string) {
                   <tr><td>Text, textarea, number, date</td><td>Put the answer in <code>value</code>, as a string.</td></tr>
                   <tr><td>Dropdown or radio, from <code>customQuestions</code></td><td>Put the chosen option's <code>uniqueId</code> in <code>optionUniqueId</code>. Leave <code>value</code> as <code>null</code>.</td></tr>
                   <tr><td>Dropdown or radio, from a form <code>field</code></td><td>Put the chosen option's <code>value</code> in <code>value</code>. Form fields have no option ids.</td></tr>
+                  <tr><td>Multi-select, from a form <code>field</code></td><td>Join the chosen options' <code>value</code>s with commas into one string: <code>"events,training"</code>. Order does not matter. Nothing chosen means an empty string, which a required field rejects.</td></tr>
                   <tr><td>Checkbox</td><td><code>"true"</code> or <code>"false"</code> in <code>value</code>. A required checkbox counts as unanswered until it is <code>"true"</code>.</td></tr>
                   <tr><td>File upload</td><td>Upload the file first (see below), then send the <code>fileStorageId</code> you got back.</td></tr>
                 </tbody>
@@ -1337,6 +1338,11 @@ export function useEventRegistration(eventUniqueId: string) {
             <div class="dont">
               Sending the option's display text (<code>"Product"</code>) instead of its id or value. The
               server matches on the identifier. The text is only for humans.
+            </div>
+            <div class="plain">
+              One exception, and it is the organizer's doing: an option saved with a
+              <code>displayText</code> but a blank <code>value</code> is answered under its display text.
+              There is nothing else to identify it by. An option with neither is not offered at all.
             </div>
 
             <h4 class="h6 mt-4">What can go wrong</h4>
@@ -1347,7 +1353,7 @@ export function useEventRegistration(eventUniqueId: string) {
                   <tr><td>"'X' is required."</td><td>A mandatory field or question arrived empty. The organizer's own <code>requiredMessage</code> is used when they wrote one.</td></tr>
                   <tr><td>"… is not part of this event."</td><td>You sent a field or question id that belongs to a different event.</td></tr>
                   <tr><td>"'X' must be at most N characters."</td><td>The value is longer than the field's <code>maxLength</code>.</td></tr>
-                  <tr><td>"… is not an available choice for 'X'."</td><td>An option-backed field got a value that is not one of its options.</td></tr>
+                  <tr><td>"… is not an available choice for 'X'."</td><td>An option-backed field got a value that is not one of its options. For a multi-select, every comma-separated part is checked on its own, and the message names the first one that does not match.</td></tr>
                   <tr><td>"Cart is no longer open."</td><td>The order is already paid. Answers are no longer editable.</td></tr>
                 </tbody>
               </table>
@@ -1408,6 +1414,20 @@ export function useEventRegistration(eventUniqueId: string) {
               An id from this call is not an answer yet. It only becomes one when the answers call
               references it.
             </div>
+
+            <h4 class="h6 mt-4">What happens if the buyer never finishes</h4>
+            <p>
+              Every upload is recorded as in-flight against the cart it came from. Submitting the
+              answers clears that record, because the file now belongs to an order. Anything still
+              recorded 24 hours later is treated as abandoned — the file is deleted and its record
+              removed by the cart maintenance pass that also releases expired seats.
+            </p>
+            <p class="mb-0">
+              So a buyer who closes the tab, lets the cart expire, or picks a file and walks away
+              leaves nothing behind. The only thing the frontend has to get right is sending the
+              <code>fileStorageId</code> in the answers call; there is no delete call to make and no
+              cleanup for the browser to perform on unload.
+            </p>
           </div>
         </article>
       </section>
