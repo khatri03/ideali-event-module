@@ -17,6 +17,19 @@ function normalizeControlType(controlType: string) {
   return controlType.trim().toLowerCase().replace(/[\s_-]/g, "")
 }
 
+/** Multi-value answers travel as one comma-joined string, the same shape the organizer authors defaults in. */
+function parseSelectedValues(value: string) {
+  return value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+}
+
+function toggleValue(selected: string[], value: string, isChecked: boolean) {
+  const remaining = selected.filter((entry) => entry !== value)
+  return isChecked ? [...remaining, value] : remaining
+}
+
 /**
  * Renders one custom form field or custom question as a real input. `controlType` is whatever the
  * organizer picked when building the form, so unknown types fall back to a single-line text input
@@ -61,6 +74,39 @@ export function RegistrationField({
             {placeholder || descriptor.label}
           </Checkbox.Label>
         </Checkbox.Root>
+      )
+    }
+
+    if (controlType === "multiselect" && descriptor.options.length > 0) {
+      const selected = parseSelectedValues(value)
+
+      return (
+        <Box
+          borderWidth="1px"
+          borderColor={borderColor}
+          borderRadius="14px"
+          px={4}
+          py={3}
+          display="flex"
+          flexDirection="column"
+          gap={2}
+        >
+          {descriptor.options.map((option) => (
+            <Checkbox.Root
+              key={option.value}
+              checked={selected.includes(option.value)}
+              onCheckedChange={(details) =>
+                onChange(toggleValue(selected, option.value, details.checked === true).join(","))
+              }
+            >
+              <Checkbox.HiddenInput />
+              <Checkbox.Control cursor="pointer" />
+              <Checkbox.Label cursor="pointer" fontSize="sm">
+                {option.displayText}
+              </Checkbox.Label>
+            </Checkbox.Root>
+          ))}
+        </Box>
       )
     }
 

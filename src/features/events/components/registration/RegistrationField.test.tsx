@@ -100,6 +100,40 @@ describe("RegistrationField", () => {
     expect(screen.getByRole("option", { name: "Large" })).toHaveValue("l")
   })
 
+  function createMultiSelectDescriptor() {
+    return createDescriptor({
+      controlType: "multiselect",
+      options: [
+        { value: "events", displayText: "Events" },
+        { value: "training", displayText: "Training" },
+      ],
+    })
+  }
+
+  it("MultiSelect_SecondChoicePicked_KeepsTheFirstOneInTheAnswer", async () => {
+    const { onChange } = renderField({ descriptor: createMultiSelectDescriptor(), value: "events" })
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Training" }))
+
+    expect(onChange).toHaveBeenCalledWith("events,training")
+  })
+
+  it("MultiSelect_ChoiceUnpicked_DropsOnlyThatChoice", async () => {
+    const { onChange } = renderField({ descriptor: createMultiSelectDescriptor(), value: "events,training" })
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Events" }))
+
+    expect(onChange).toHaveBeenCalledWith("training")
+  })
+
+  it("MultiSelect_NothingPicked_ReportsAnEmptyAnswerSoRequiredStillBites", async () => {
+    const { onChange } = renderField({ descriptor: createMultiSelectDescriptor(), value: "events" })
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Events" }))
+
+    expect(onChange).toHaveBeenCalledWith("")
+  })
+
   it("Checkbox_Ticked_ReportsTheStringTrueBecauseAnswersAreStoredAsText", async () => {
     const { onChange } = renderField({ descriptor: createDescriptor({ controlType: "checkbox" }) })
 
