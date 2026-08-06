@@ -149,6 +149,8 @@ const eventRegistrationTicketSchema = z.object({
   availableForSale: z.number().int().nullable().optional(),
   TicketsSold: z.number().int().nullable().optional(),
   ticketsSold: z.number().int().nullable().optional(),
+  NextSeatsAvailableAtUtc: z.string().nullable().optional(),
+  nextSeatsAvailableAtUtc: z.string().nullable().optional(),
   IsActive: z.boolean().optional(),
   isActive: z.boolean().optional(),
   SalesStartDateUtc: z.string().nullable().optional(),
@@ -806,6 +808,8 @@ export interface EventRegistrationTicket {
   totalQuantity: number | null
   availableForSale: number | null
   ticketsSold: number | null
+  /** When the earliest hold another buyer is sitting on runs out. Only sent for a sold-out ticket type. */
+  nextSeatsAvailableAtUtc: string | null
   isActive: boolean
   salesStartDateUtc: string | null
   salesEndDateUtc: string | null
@@ -972,6 +976,7 @@ function parseEventRegistrationTicket(item: z.infer<typeof eventRegistrationTick
     totalQuantity: item.TotalQuantity ?? item.totalQuantity ?? null,
     availableForSale: item.AvailableForSale ?? item.availableForSale ?? null,
     ticketsSold: item.TicketsSold ?? item.ticketsSold ?? null,
+    nextSeatsAvailableAtUtc: item.NextSeatsAvailableAtUtc ?? item.nextSeatsAvailableAtUtc ?? null,
     isActive: item.IsActive ?? item.isActive ?? false,
     salesStartDateUtc: item.SalesStartDateUtc ?? item.salesStartDateUtc ?? null,
     salesEndDateUtc: item.SalesEndDateUtc ?? item.salesEndDateUtc ?? null,

@@ -5,10 +5,12 @@ import type { EventRegistrationTicket } from "@/api/events"
 import { formatAmount } from "@/features/events/utils/registrationFormat"
 import {
   getTicketDisplayPrice,
+  getTicketHoldRelease,
   getTicketQuantityOptions,
   getTicketSavings,
   getTicketSelectableMax,
 } from "@/features/events/utils/ticketSelection"
+import { TicketHoldNotice } from "@/features/events/components/registration/TicketHoldNotice"
 
 interface TicketCardProps {
   ticket: EventRegistrationTicket
@@ -17,6 +19,8 @@ interface TicketCardProps {
   onIncrease: () => void
   onSelectQuantity: (quantity: number) => void
   currencyCode?: string | null
+  /** Called when a hold's clock runs out, so the page can go looking for the released seats. */
+  onHoldRelease?: () => void
 }
 
 export function TicketCard({
@@ -26,6 +30,7 @@ export function TicketCard({
   onIncrease,
   onSelectQuantity,
   currencyCode,
+  onHoldRelease,
 }: TicketCardProps) {
   const displayPrice = getTicketDisplayPrice(ticket)
   const savings = getTicketSavings(ticket)
@@ -33,6 +38,10 @@ export function TicketCard({
   const quantityOptions = useMemo(() => getTicketQuantityOptions(ticket, quantity), [ticket, quantity])
   const canDecrease = quantity > 0
   const canIncrease = selectableMax === null || quantity < selectableMax
+
+  // Recomputed on every render rather than memoised: it depends on the current time, and a memo keyed
+  // on the ticket alone would keep answering with a countdown that has already run out.
+  const holdReleasesAt = getTicketHoldRelease(ticket)
 
   return (
     <Box borderWidth="1px" borderColor="gray.200" borderRadius="20px" bg="white" p={{ base: 4, md: 4.5 }}>
@@ -60,6 +69,9 @@ export function TicketCard({
           ) : null}
         </Stack>
 
+        {holdReleasesAt ? (
+          <TicketHoldNotice releasesAtMs={holdReleasesAt.getTime()} onRelease={onHoldRelease} />
+        ) : (
         <Flex direction="column" gap={2} w="full">
           <Flex
             borderWidth="1px"
@@ -153,6 +165,7 @@ export function TicketCard({
             </Text>
           ) : null}
         </Flex>
+        )}
 
       </Stack>
     </Box>

@@ -88,11 +88,19 @@ import {
 import {
   getSelectedSessionSummaries,
   getSessionBannerSlides,
+  hasTicketOnHold,
   isCardPaymentMethod,
   isHtmlContent,
 } from '@/features/events/utils/ticketSelection'
 
 export type { EventRegisterWizardEvent }
+
+/**
+ * How often availability is re-read while another buyer is holding every seat. Short enough that the
+ * seats appear soon after they are released, long enough that a busy on-sale does not turn every
+ * waiting browser into a source of load.
+ */
+const HELD_SEAT_POLL_INTERVAL_MS = 15_000
 
 function getVisibleTabs(event: EventRegisterWizardEvent, selectedTicketQuantities: Record<string, number>) {
   const tabs: Array<{ id: WizardTabId; label: string; icon: typeof FileText }> = []
@@ -203,6 +211,11 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     queryFn: () => fetchEventRegistrationSessions(event.uniqueId),
     enabled: tabs.some((tab) => tab.id === 'sessions') && activeTab === 'sessions',
     retry: 1,
+    // Seats another buyer is holding come back without the buyer here doing anything, so the page has
+    // to go and look. Only while something is actually held: an event with seats on sale never polls,
+    // and a backgrounded tab does not poll at all (refetchIntervalInBackground stays off).
+    refetchInterval: (query) =>
+      hasTicketOnHold(query.state.data?.sessions ?? []) ? HELD_SEAT_POLL_INTERVAL_MS : false,
   })
   const attendeeInfoQuery = useQuery({
     queryKey: ['event-registration', event.uniqueId, 'attendee-info'],
@@ -1040,6 +1053,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                 onOpenDescription={(title, description) => setActiveSessionDescription({ title, description })}
                                 onChangeQuantity={handleTicketQuantityChange}
                                 onRequestRemoveAll={requestRemoveAllTickets}
+                                onHoldRelease={sessionsQuery.refetch}
                               />
                             </Stack>
                           ) : null}
