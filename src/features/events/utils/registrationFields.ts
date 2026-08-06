@@ -63,7 +63,7 @@ export function toFormFieldDescriptors(form: EventRegistrationForm): Registratio
       maxLength: field.maxLength,
       defaultValue: field.defaultValue,
       layoutColumn: getFieldColumnSpan(field.layoutColumn, formColumns),
-      options: field.options.map((option) => ({ value: option.value, displayText: option.displayText })),
+      options: toFieldOptions(field.options),
     }))
 }
 
@@ -109,6 +109,19 @@ export function buildQuestionDescriptors(event: QuestionnaireSource | undefined)
     .filter((question) => question.isActive)
     .sort((left, right) => left.displayOrder - right.displayOrder)
     .map(toQuestionDescriptor)
+}
+
+/**
+ * The organizer's builder keeps an option that has display text but no value, and an answer keyed by
+ * an empty string reads back as unanswered. Fall back to the display text so the choice survives.
+ */
+function toFieldOptions(options: EventRegistrationForm["fields"][number]["options"]): RegistrationFieldOption[] {
+  return options.flatMap((option) => {
+    const value = option.value.trim() || option.displayText.trim()
+    if (!value) return []
+
+    return [{ value, displayText: option.displayText.trim() || value }]
+  })
 }
 
 /** Question min/max arrive as free text from the organizer's builder; a non-number means no limit. */

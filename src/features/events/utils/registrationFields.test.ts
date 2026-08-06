@@ -176,6 +176,39 @@ describe("registration field descriptors", () => {
     expect(sections[0].fields[0].layoutColumn).toBe(1)
   })
 
+  it("Options_SavedWithoutAValue_AnswerUnderTheirDisplayText", () => {
+    const sections = buildFormSections(
+      createSource({
+        customForms: [
+          createForm({
+            fields: [
+              createField({
+                options: [{ value: "  ", displayText: "Workshops", isDefault: false }],
+              }),
+            ],
+          }),
+        ],
+      }),
+    )
+
+    // An option keyed by "" reads back as unanswered, so a required field could never be satisfied.
+    expect(sections[0].fields[0].options).toEqual([{ value: "Workshops", displayText: "Workshops" }])
+  })
+
+  it("Options_WithNeitherValueNorDisplayText_AreNotOffered", () => {
+    const sections = buildFormSections(
+      createSource({
+        customForms: [
+          createForm({
+            fields: [createField({ options: [{ value: "", displayText: "  ", isDefault: false }] })],
+          }),
+        ],
+      }),
+    )
+
+    expect(sections[0].fields[0].options).toEqual([])
+  })
+
   it("Questions_HaveNoAuthoredLayout_SoTheyAlwaysOccupyOneColumn", () => {
     const descriptor = toQuestionDescriptor(createQuestion())
 
