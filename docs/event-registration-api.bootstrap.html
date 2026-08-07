@@ -984,7 +984,7 @@ export function useEventRegistration(eventUniqueId: string) {
             <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
 <pre><code>{
   "cartUniqueId": "5c1d8e2f-6b7a-4c39-9d80-1e2f3a4b5c6d",
-  "invoiceNo": "EV-2026-004183",
+  "invoiceNo": null,
   "eventUniqueId": "8f2a1c44-3f0e-4b53-9a4a-7c0d1e5f22b1",
   "expiresAtUtc": "2026-08-05T09:29:41Z",
   "subTotal": 0.00,
@@ -998,6 +998,11 @@ export function useEventRegistration(eventUniqueId: string) {
             <ul>
               <li>Save <code>cartUniqueId</code> somewhere it survives a page refresh, so a reload does not orphan the buyer's reservation.</li>
               <li>Start the countdown from <code>expiresAtUtc</code>.</li>
+              <li>
+                Expect <code>invoiceNo</code> to be <code>null</code>. A cart is not an order: the order
+                number is minted when the buyer starts paying. Anything that prints an order number
+                before then has nothing to print.
+              </li>
             </ul>
             <div class="dont">
               Saving the cart id in <code>localStorage</code>. This project does not use web storage for
@@ -1028,7 +1033,7 @@ export function useEventRegistration(eventUniqueId: string) {
             <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
 <pre><code>{
   "cartUniqueId": "5c1d8e2f-6b7a-4c39-9d80-1e2f3a4b5c6d",
-  "invoiceNo": "EV-2026-004183",
+  "invoiceNo": null,
   "eventUniqueId": "8f2a1c44-3f0e-4b53-9a4a-7c0d1e5f22b1",
   "expiresAtUtc": "2026-08-05T09:29:41Z",
   "subTotal": 498.00,
