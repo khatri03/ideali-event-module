@@ -50,8 +50,9 @@ const eventCartLineSchema = z.object({
 const eventCartSchema = z.object({
   CartUniqueId: z.string().optional(),
   cartUniqueId: z.string().optional(),
-  InvoiceNo: z.string().optional(),
-  invoiceNo: z.string().optional(),
+  // Null until the buyer starts paying — the order number is minted with the invoice, not the cart.
+  InvoiceNo: z.string().nullable().optional(),
+  invoiceNo: z.string().nullable().optional(),
   EventUniqueId: z.string().optional(),
   eventUniqueId: z.string().optional(),
   ExpiresAtUtc: z.string().nullable().optional(),
