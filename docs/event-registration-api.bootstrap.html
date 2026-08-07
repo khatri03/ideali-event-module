@@ -1708,7 +1708,40 @@ export function useEventRegistration(eventUniqueId: string) {
   "amountDue": 470.61,
   "ticketCodes": ["GPS26-4X7K-2210", "GPS26-9M2B-2211"]
 }</code></pre>
-            <p class="mt-3 mb-0"><code>amountDue</code> is what is still owed. It is <em>not</em> zero — that is the whole point of the cheque flow.</p>
+            <p class="mt-3"><code>amountDue</code> is what is still owed. It is <em>not</em> zero — that is the whole point of the cheque flow.</p>
+
+            <h4 class="h6 mt-4">When the seat is gone by the time you pay</h4>
+            <p>
+              Seats leave inventory when payment starts, not when they were picked, so this call is the
+              first moment the order is measured against what is actually left. The same three answers come
+              back from <code>…/checkout/intent</code> and <code>…/checkout/confirm</code>, always as
+              <code>success: false</code> with the sentence in <code>message</code>.
+            </p>
+            <div class="table-responsive">
+              <table class="table table-sm align-middle">
+                <thead><tr><th>Message</th><th>What happened, and what to do</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td>"'X' sold out while you were checking out and has been removed from your order. Review your order and try again."</td>
+                    <td>The order was changed under the buyer, so it was not charged. Re-price the cart and show them the new total before letting them pay again. If the tail reads "There is nothing left to pay for." instead, the whole order is gone — send them back to the ticket picker.</td>
+                  </tr>
+                  <tr>
+                    <td>"'X' sold out before your payment could be taken. Your order was not charged."</td>
+                    <td>The buyer lost a rush for the last seats. Nothing on the order can still be bought. Treat it exactly like the sold-out case above — do not offer a retry.</td>
+                  </tr>
+                  <tr>
+                    <td>"Someone else is booking these tickets right now. Please try again."</td>
+                    <td>Only ever returned while seats genuinely remain. A retry can succeed, so offer one. Back off briefly first rather than re-firing immediately.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="dont mb-0">
+              Retrying on the two sold-out messages. They are final: the stock the buyer wanted is gone, and
+              a retry loop only spends their patience. The retry message is the only one that can succeed on
+              a second attempt, and the server decides which of the three you get by re-reading availability
+              — never by guessing from the HTTP status.
+            </div>
           </div>
         </article>
       </section>
