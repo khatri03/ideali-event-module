@@ -1718,9 +1718,11 @@ export function useEventRegistration(eventUniqueId: string) {
             <h4 class="h6 mt-4">When the seat is gone by the time you pay</h4>
             <p>
               Seats leave inventory when payment starts, not when they were picked, so this call is the
-              first moment the order is measured against what is actually left. The same three answers come
-              back from <code>…/checkout/intent</code> and <code>…/checkout/confirm</code>, always as
-              <code>success: false</code> with the sentence in <code>message</code>.
+              first moment the order is measured against what is actually left. The first three answers come
+              back from both <code>…/checkout/intent</code> and <code>…/checkout/confirm</code>; the last
+              three only from <code>…/checkout/intent</code>, which is the only call that reaches the payment
+              processor. All of them arrive as <code>success: false</code> with the sentence in
+              <code>message</code> — never as a 5xx, so do not branch on the status code.
             </p>
             <div class="table-responsive">
               <table class="table table-sm align-middle">
@@ -1738,14 +1740,26 @@ export function useEventRegistration(eventUniqueId: string) {
                     <td>"Someone else is booking these tickets right now. Please try again."</td>
                     <td>Only ever returned while seats genuinely remain. A retry can succeed, so offer one. Back off briefly first rather than re-firing immediately.</td>
                   </tr>
+                  <tr>
+                    <td>"Payments are busy right now. Please wait a moment and try again."</td>
+                    <td>The payment processor throttled us, which happens when a rush of buyers all start payment in the same second. The buyer's seats <em>are</em> claimed and stay held for the rest of the purchase window, so a retry is the right offer — wait a few seconds before firing it. Do not send the buyer back to the ticket picker; they would lose a seat they already hold.</td>
+                  </tr>
+                  <tr>
+                    <td>Any sentence about the card itself, e.g. "Your card was declined."</td>
+                    <td>Written by the payment processor for the cardholder to read, so show it as-is. The seats stay held, so let them try a different card without rebuilding the order.</td>
+                  </tr>
+                  <tr>
+                    <td>"Payment could not be started. Please try again."</td>
+                    <td>Every other payment failure collapses to this one sentence on purpose — the underlying reason carries account and request identifiers that are not the buyer's to see. Offer a retry; if it repeats, send them to support with the order reference rather than looping.</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
             <div class="dont mb-0">
               Retrying on the two sold-out messages. They are final: the stock the buyer wanted is gone, and
-              a retry loop only spends their patience. The retry message is the only one that can succeed on
-              a second attempt, and the server decides which of the three you get by re-reading availability
-              — never by guessing from the HTTP status.
+              a retry loop only spends their patience. Every other message here can succeed on a second
+              attempt, and the server decides which one you get by re-reading availability and by what the
+              payment processor answered — never by guessing from the HTTP status.
             </div>
           </div>
         </article>
