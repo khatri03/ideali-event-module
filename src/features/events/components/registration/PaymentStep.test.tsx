@@ -20,9 +20,14 @@ const BREAKDOWN: EventCartPaymentBreakdown = {
 interface PaymentStepOverrides {
   acceptsDiscountCoupons?: boolean
   appliedCouponCode?: string | null
+  isChequeMethodSelected?: boolean
 }
 
-function renderPaymentStep({ acceptsDiscountCoupons = true, appliedCouponCode = null }: PaymentStepOverrides = {}) {
+function renderPaymentStep({
+  acceptsDiscountCoupons = true,
+  appliedCouponCode = null,
+  isChequeMethodSelected = false,
+}: PaymentStepOverrides = {}) {
   return render(
     <ChakraProvider value={system}>
       <PaymentStep
@@ -50,6 +55,9 @@ function renderPaymentStep({ acceptsDiscountCoupons = true, appliedCouponCode = 
         isCardMethodSelected={false}
         cardHolderName=""
         onCardHolderNameChange={vi.fn()}
+        isChequeMethodSelected={isChequeMethodSelected}
+        chequeReferenceNo=""
+        onChequeReferenceNoChange={vi.fn()}
       />
     </ChakraProvider>,
   )
@@ -75,5 +83,25 @@ describe("PaymentStep coupon entry", () => {
 
     expect(screen.getByText("SAVE10")).toBeTruthy()
     expect(screen.getByRole("button", { name: /Remove/ })).toBeTruthy()
+  })
+})
+
+describe("PaymentStep cheque entry", () => {
+  it("ChequeFields_ChequeMethodSelected_AskForTheReferenceNumber", () => {
+    renderPaymentStep({ isChequeMethodSelected: true })
+
+    expect(screen.getByPlaceholderText("Enter the number printed on the cheque")).toBeTruthy()
+  })
+
+  it("ChequeFields_ChequeMethodSelected_SayTheOrderStaysOwing", () => {
+    renderPaymentStep({ isChequeMethodSelected: true })
+
+    expect(screen.getByText(/stays marked as owing/i)).toBeTruthy()
+  })
+
+  it("ChequeFields_AnotherMethodSelected_AreNotRendered", () => {
+    renderPaymentStep()
+
+    expect(screen.queryByPlaceholderText("Enter the number printed on the cheque")).toBeNull()
   })
 })

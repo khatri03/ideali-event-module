@@ -28,7 +28,11 @@ export { defaultEventWizardValues, eventWizardFieldGroups, eventWizardSchema } f
 export { useCreateEventCart, useEventCart, useAddEventCartLine, useRemoveEventCartLine } from "./hooks/useEventCart"
 export { usePriceEventCart } from "./hooks/useEventCartPricing"
 export { useSubmitLineAttendees, useSubmitOrderAnswers, useUploadAnswerFile } from "./hooks/useEventCartAttendees"
-export { useCreateEventPaymentIntent, useConfirmEventCheckout } from "./hooks/useEventCheckout"
+export {
+  useCreateEventPaymentIntent,
+  useRecordEventChequePayment,
+  useConfirmEventCheckout,
+} from "./hooks/useEventCheckout"
 export type {
   EventCart,
   EventCartLine,

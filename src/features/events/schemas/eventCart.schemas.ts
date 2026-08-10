@@ -280,6 +280,49 @@ export function normalizeEventPaymentIntentResult(payload: unknown): EventPaymen
   }
 }
 
+const eventChequePaymentResultSchema = z.object({
+  CartUniqueId: z.string().optional(),
+  cartUniqueId: z.string().optional(),
+  InvoiceUniqueId: z.string().optional(),
+  invoiceUniqueId: z.string().optional(),
+  InvoiceNo: z.string().nullable().optional(),
+  invoiceNo: z.string().nullable().optional(),
+  AmountDue: z.number().optional(),
+  amountDue: z.number().optional(),
+  TicketCodes: z.array(z.string()).nullable().optional(),
+  ticketCodes: z.array(z.string()).nullable().optional(),
+})
+
+export interface EventChequePaymentResult {
+  cartUniqueId: string
+  /** The order the cheque was recorded against — what the confirmation page is reached by. */
+  invoiceUniqueId: string
+  invoiceNo: string
+  /**
+   * What is still owed. Recording a cheque issues the tickets while the invoice stays open, so this is
+   * deliberately not zero and must be shown rather than hidden.
+   */
+  amountDue: number
+  ticketCodes: string[]
+}
+
+export function normalizeEventChequePaymentResult(payload: unknown): EventChequePaymentResult {
+  const parsed = eventChequePaymentResultSchema.parse(payload)
+
+  return {
+    cartUniqueId: parsed.CartUniqueId ?? parsed.cartUniqueId ?? "",
+    invoiceUniqueId: parsed.InvoiceUniqueId ?? parsed.invoiceUniqueId ?? "",
+    invoiceNo: parsed.InvoiceNo ?? parsed.invoiceNo ?? "",
+    amountDue: parsed.AmountDue ?? parsed.amountDue ?? 0,
+    ticketCodes: parsed.TicketCodes ?? parsed.ticketCodes ?? [],
+  }
+}
+
+export interface RecordEventChequePaymentRequest {
+  chequeReferenceNo: string
+  notes?: string
+}
+
 const eventCheckoutLineTicketsSchema = z.object({
   LineUniqueId: z.string().optional(),
   lineUniqueId: z.string().optional(),
