@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Badge, Box, Button, CloseButton, Dialog, Flex, Menu, Portal, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
-import { CalendarDays, Check, ChevronRight, Copy, MapPin, MoreHorizontal, PencilLine, UserPlus, Users } from "lucide-react"
+import { CalendarDays, Check, ChevronRight, Copy, MapPin, MoreHorizontal, PencilLine, Receipt, UserPlus, Users } from "lucide-react"
 import { format } from "date-fns"
 import { Link } from "react-router-dom"
 import { updateEventWizardSetupState } from "@/api/events"
 import type { OrganizerEventListItem } from "@/api/events"
 import { APP_ROUTES } from "@/utils/routes"
+import { hasEventInvoiceHistory } from "@/utils/eventLifecycle"
 
 const SETUP_STATE_LABELS: Record<string, string> = {
   InProgress: "In Progress",
@@ -70,6 +71,7 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
   const endDate = event.endDate ? format(new Date(event.endDate), "MMM d, yyyy") : "Not set"
   const normalizedSetupState = normalizeSetupStateToken(event.setupState)
   const canEdit = !event.isCancelled
+  const canViewInvoices = hasEventInvoiceHistory(event)
   const canShowStatusActions =
     normalizedSetupState === "readyforreview" ||
     normalizedSetupState === "readyforsale" ||
@@ -268,6 +270,28 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
                       Register
                     </Text>
                   </Menu.Item>
+
+                  {canViewInvoices ? (
+                    <Menu.Item value="event-invoices" asChild>
+                      <Link
+                        to={APP_ROUTES.eventInvoices.listForEvent(event.uniqueId)}
+                        style={{
+                          borderRadius: "10px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                          padding: "8px 12px",
+                          fontSize: "0.875rem",
+                          fontWeight: 600,
+                          color: "var(--chakra-colors-gray-700)",
+                          textDecoration: "none",
+                        }}
+                      >
+                        <Receipt size={14} />
+                        Invoice
+                      </Link>
+                    </Menu.Item>
+                  ) : null}
 
                   {canEdit && canShowStatusActions ? <Menu.Separator borderColor="gray.100" _dark={{ borderColor: "whiteAlpha.100" }} mx={1} my={1} /> : null}
 

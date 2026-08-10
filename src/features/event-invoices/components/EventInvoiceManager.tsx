@@ -42,14 +42,28 @@ function toFilters(draft: EventInvoiceDraftFilters): EventInvoiceFilters {
   }
 }
 
-export function EventInvoiceManager() {
+/**
+ * The event card links here with the event it was opened from, so the list lands already narrowed to
+ * that event instead of showing every invoice the organizer has.
+ */
+function draftForEvent(eventUniqueId: string): EventInvoiceDraftFilters {
+  return eventUniqueId ? { ...EMPTY_DRAFT, eventUniqueIds: [eventUniqueId] } : EMPTY_DRAFT
+}
+
+interface EventInvoiceManagerProps {
+  initialEventUniqueId?: string
+}
+
+export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceManagerProps) {
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE)
   const [sortBy, setSortBy] = useState<EventInvoiceSortBy>("invoiceDateUtc")
   const [sortOrder, setSortOrder] = useState<EventInvoiceSortOrder>("desc")
-  const [draft, setDraft] = useState<EventInvoiceDraftFilters>(EMPTY_DRAFT)
-  const [appliedFilters, setAppliedFilters] = useState<EventInvoiceFilters>(DEFAULT_FILTERS)
+  const [draft, setDraft] = useState<EventInvoiceDraftFilters>(() => draftForEvent(initialEventUniqueId))
+  const [appliedFilters, setAppliedFilters] = useState<EventInvoiceFilters>(() =>
+    toFilters(draftForEvent(initialEventUniqueId)),
+  )
 
   const invoicesQuery = useEventInvoices(appliedFilters, page, pageSize, sortBy, sortOrder)
   const invoicesPage = invoicesQuery.data

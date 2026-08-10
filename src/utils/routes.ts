@@ -128,6 +128,8 @@ export const APP_ROUTES = {
   alertInboxDetail: (recipientUniqueId: string) => `/alerts/${recipientUniqueId}`,
   eventInvoices: {
     list: "/organizer/events/invoices",
+    listForEvent: (eventUniqueId: string) =>
+      `/organizer/events/invoices?eventUniqueId=${encodeURIComponent(eventUniqueId)}`,
     detailRoute: "/organizer/events/invoices/:invoiceUniqueId",
     detail: (invoiceUniqueId: string) => `/organizer/events/invoices/${invoiceUniqueId}`,
   },

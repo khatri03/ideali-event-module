@@ -1,8 +1,12 @@
 import { Box, Heading, Stack, Text } from "@chakra-ui/react"
+import { useSearchParams } from "react-router-dom"
 import { Receipt } from "lucide-react"
 import { EventInvoiceManager } from "../components/EventInvoiceManager"
 
 export function EventInvoicesPage() {
+  const [searchParams] = useSearchParams()
+  const eventUniqueId = searchParams.get("eventUniqueId")?.trim() ?? ""
+
   return (
     <Stack gap={6}>
       <Box border="1px solid" borderColor="border.subtle" borderRadius="20px" bg="card.bg" boxShadow="card" p={{ base: 4, md: 6 }}>
@@ -32,7 +36,8 @@ export function EventInvoicesPage() {
         </Stack>
       </Box>
 
-      <EventInvoiceManager />
+      {/* Keyed so arriving from a different event card starts a clean filter state, not a merged one. */}
+      <EventInvoiceManager key={eventUniqueId} initialEventUniqueId={eventUniqueId} />
     </Stack>
   )
 }
