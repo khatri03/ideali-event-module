@@ -69,4 +69,20 @@ describe("OrganizerEventCard", () => {
     await screen.findByRole("menuitem", { name: /copy url/i })
     expect(screen.queryByRole("menuitem", { name: /invoice/i })).not.toBeInTheDocument()
   })
+
+  /** The event never went on sale, so the dates having passed does not mean anyone could buy. */
+  it("ReadyForReviewInsideBookingWindow_HidesInvoices", async () => {
+    await openActionsMenu(
+      buildEvent({ setupState: "ReadyForReview", bookingStartDate: "2020-01-01T00:00:00Z", startDate: "2999-01-01T00:00:00Z" }),
+    )
+
+    await screen.findByRole("menuitem", { name: /copy url/i })
+    expect(screen.queryByRole("menuitem", { name: /invoice/i })).not.toBeInTheDocument()
+  })
+
+  it("TakenOfflineAfterSellingTickets_StillOffersInvoices", async () => {
+    await openActionsMenu(buildEvent({ setupState: "ReadyForReview", ticketsSold: 3 }))
+
+    expect(await screen.findByRole("menuitem", { name: /invoice/i })).toBeInTheDocument()
+  })
 })

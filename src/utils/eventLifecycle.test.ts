@@ -1,14 +1,16 @@
 import { describe, expect, it } from "vitest"
-import { hasEventInvoiceHistory, type EventLifecycleWindow } from "./eventLifecycle"
+import { hasEventInvoiceHistory, type EventInvoiceEligibility } from "./eventLifecycle"
 
 const NOW = new Date("2026-06-15T12:00:00Z")
 
-function windowOf(overrides: Partial<EventLifecycleWindow>): EventLifecycleWindow {
+function windowOf(overrides: Partial<EventInvoiceEligibility>): EventInvoiceEligibility {
   return {
     startDate: null,
     endDate: null,
     bookingStartDate: null,
     bookingEndDate: null,
+    setupState: "ReadyForSale",
+    ticketsSold: 0,
     ...overrides,
   }
 }
@@ -71,6 +73,31 @@ describe("hasEventInvoiceHistory", () => {
 
   it("BookingOpenWithNoCloseDate_ShowsInvoices", () => {
     const event = windowOf({ bookingStartDate: "2026-06-01T00:00:00Z" })
+
+    expect(hasEventInvoiceHistory(event, NOW)).toBe(true)
+  })
+
+  it("StillInReview_HidesInvoicesEvenInsideTheBookingWindow", () => {
+    const event = windowOf({ setupState: "ReadyForReview", bookingStartDate: "2026-06-01T00:00:00Z" })
+
+    expect(hasEventInvoiceHistory(event, NOW)).toBe(false)
+  })
+
+  it("StillInProgress_HidesInvoicesAfterTheEventEnded", () => {
+    const event = windowOf({ setupState: "InProgress", startDate: "2026-05-01T00:00:00Z", endDate: "2026-05-02T00:00:00Z" })
+
+    expect(hasEventInvoiceHistory(event, NOW)).toBe(false)
+  })
+
+  /** An event that sold and was then taken offline still owns those invoices. */
+  it("TakenOfflineAfterSelling_StillShowsInvoices", () => {
+    const event = windowOf({ setupState: "ReadyForReview", ticketsSold: 4 })
+
+    expect(hasEventInvoiceHistory(event, NOW)).toBe(true)
+  })
+
+  it("SpacedSetupStateSpelling_IsTreatedAsOnSale", () => {
+    const event = windowOf({ setupState: "Ready For Sale", bookingStartDate: "2026-06-01T00:00:00Z" })
 
     expect(hasEventInvoiceHistory(event, NOW)).toBe(true)
   })
