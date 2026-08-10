@@ -45,7 +45,7 @@ export function EventInvoiceSummaryCard({ invoice }: EventInvoiceSummaryCardProp
           </Text>
         </Stack>
         <Badge alignSelf={{ base: "flex-start", md: "center" }} colorPalette="purple" variant="subtle" borderRadius="full" px={4} py={2} fontSize="sm">
-          {invoice.invoiceStatus}
+          {invoice.invoiceStatusLabel}
         </Badge>
       </Stack>
 

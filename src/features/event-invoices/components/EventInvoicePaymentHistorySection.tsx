@@ -58,7 +58,7 @@ export function EventInvoicePaymentHistorySection({ payments, currencySymbol }: 
                   </Table.Cell>
                   <Table.Cell>
                     <Badge colorPalette={STATUS_COLOR[payment.paymentStatus] ?? "gray"} variant="subtle" borderRadius="full" px={3} py={1}>
-                      {payment.paymentStatus}
+                      {payment.paymentStatusLabel}
                     </Badge>
                     {payment.errorMessage ? (
                       <Text mt={1} fontSize="xs" color="red.600">
