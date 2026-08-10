@@ -93,6 +93,12 @@ describe("PaymentStep cheque entry", () => {
     expect(screen.getByPlaceholderText("Enter the number printed on the cheque")).toBeTruthy()
   })
 
+  it("ChequeFields_ReferenceNumber_IsMarkedRequired", () => {
+    renderPaymentStep({ isChequeMethodSelected: true })
+
+    expect(screen.getByText(/Cheque reference number/).textContent).toContain("*")
+  })
+
   it("ChequeFields_ChequeMethodSelected_SayTheOrderStaysOwing", () => {
     renderPaymentStep({ isChequeMethodSelected: true })
 

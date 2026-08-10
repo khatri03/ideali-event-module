@@ -93,6 +93,7 @@ import {
   isChequePaymentMethod,
   isHtmlContent,
 } from '@/features/events/utils/ticketSelection'
+import { getPaymentFieldIssues } from '@/features/events/utils/paymentFieldIssues'
 
 export type { EventRegisterWizardEvent }
 
@@ -535,13 +536,15 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
     issues.push(...getQuestionnaireIssues())
 
-    // The Payment Element owns every card field it renders, so its own submit() is what reports an
-    // incomplete card. The name is ours to check - the Element is told not to collect it.
-    if (!selectedPaymentBreakdown) {
-      issues.push({ message: 'Select a payment method.', target: 'payment-method' })
-    } else if (isSelectedPaymentMethodCard && !cardHolderName.trim()) {
-      issues.push({ message: 'Enter the cardholder name.', target: 'payment-method' })
-    }
+    issues.push(
+      ...getPaymentFieldIssues({
+        hasSelectedMethod: Boolean(selectedPaymentBreakdown),
+        isCardMethod: isSelectedPaymentMethodCard,
+        cardHolderName,
+        isChequeMethod: isSelectedPaymentMethodCheque,
+        chequeReferenceNo,
+      }),
+    )
 
     if (currentEvent.termsConditions && !termsAccepted) {
       issues.push({ message: 'Accept the registration terms and conditions.', target: 'terms' })
