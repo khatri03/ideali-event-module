@@ -146,7 +146,7 @@ export function EventInvoiceTable({
                   </Table.Cell>
                   <Table.Cell px={4} py={4} textAlign="center">
                     <Badge colorPalette={STATUS_COLOR[invoice.invoiceStatus] ?? "gray"} variant="subtle" borderRadius="full" px={3} py={1}>
-                      {invoice.invoiceStatus}
+                      {invoice.invoiceStatusLabel}
                     </Badge>
                   </Table.Cell>
                   <Table.Cell px={4} py={4} textAlign="center">

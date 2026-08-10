@@ -37,7 +37,8 @@ const LINE_ITEMS: EventInvoiceLineItem[] = [
       {
         ticketUniqueId: "ticket-1",
         ticketCode: "EVT_ABC123",
-        ticketStatus: "Active",
+        ticketStatus: "CheckedIn",
+        ticketStatusLabel: "Checked In",
         deliveredAtUtc: "2026-08-01T18:00:00Z",
         checkedInAtUtc: null,
       },
@@ -60,6 +61,13 @@ describe("EventInvoiceLineItemsSection resend actions", () => {
   beforeEach(() => {
     resendEventInvoiceMock.mockReset().mockResolvedValue(undefined)
     resendEventInvoiceTicketMock.mockReset().mockResolvedValue(undefined)
+  })
+
+  it("TicketStatus_RendersTheApiLabelNotTheEnumName", () => {
+    renderSection()
+
+    expect(screen.getByText("Checked In")).toBeInTheDocument()
+    expect(screen.queryByText("CheckedIn")).not.toBeInTheDocument()
   })
 
   it("does not show a resend-all button when the invoice has no issued tickets yet", () => {

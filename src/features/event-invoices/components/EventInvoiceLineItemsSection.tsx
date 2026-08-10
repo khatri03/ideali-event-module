@@ -95,7 +95,7 @@ function LineItemCard({
                     {ticket.ticketCode}
                   </Text>
                   <Badge colorPalette={TICKET_STATUS_COLOR[ticket.ticketStatus] ?? "gray"} variant="subtle" borderRadius="full" px={2} py={0.5} fontSize="xs">
-                    {ticket.ticketStatus}
+                    {ticket.ticketStatusLabel}
                   </Badge>
                   {ticket.deliveredAtUtc ? (
                     <Text fontSize="xs" color="gray.500">

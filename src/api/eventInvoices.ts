@@ -80,6 +80,8 @@ const listItemSchema = z.object({
   buyerEmail: dual(z.string().nullable()),
   InvoiceStatus: dual(z.string()),
   invoiceStatus: dual(z.string()),
+  InvoiceStatusLabel: dual(z.string()),
+  invoiceStatusLabel: dual(z.string()),
   InvoiceDateUtc: dual(z.string()),
   invoiceDateUtc: dual(z.string()),
   TotalAmount: dual(money()),
@@ -110,6 +112,8 @@ const ticketSchema = z.object({
   ticketCode: dual(z.string()),
   TicketStatus: dual(z.string()),
   ticketStatus: dual(z.string()),
+  TicketStatusLabel: dual(z.string()),
+  ticketStatusLabel: dual(z.string()),
   DeliveredAtUtc: dual(z.string().nullable()),
   deliveredAtUtc: dual(z.string().nullable()),
   CheckedInAtUtc: dual(z.string().nullable()),
@@ -142,6 +146,8 @@ const paymentAttemptSchema = z.object({
   paymentMethod: dual(z.string()),
   PaymentStatus: dual(z.string()),
   paymentStatus: dual(z.string()),
+  PaymentStatusLabel: dual(z.string()),
+  paymentStatusLabel: dual(z.string()),
   Amount: dual(money()),
   amount: dual(money()),
   ReferenceNo: dual(z.string().nullable()),
@@ -159,6 +165,8 @@ const detailSchema = z.object({
   invoiceNo: dual(z.string()),
   InvoiceStatus: dual(z.string()),
   invoiceStatus: dual(z.string()),
+  InvoiceStatusLabel: dual(z.string()),
+  invoiceStatusLabel: dual(z.string()),
   InvoiceDateUtc: dual(z.string()),
   invoiceDateUtc: dual(z.string()),
   SubTotal: dual(money()),
@@ -215,6 +223,8 @@ export interface EventInvoiceListItem {
   buyerName: string
   buyerEmail: string | null
   invoiceStatus: string
+  /** Human-readable form of invoiceStatus - the raw value stays the key for colours and filters. */
+  invoiceStatusLabel: string
   invoiceDateUtc: string
   totalAmount: number
   balanceAmount: number | null
@@ -233,6 +243,7 @@ export interface EventInvoiceTicket {
   ticketUniqueId: string
   ticketCode: string
   ticketStatus: string
+  ticketStatusLabel: string
   deliveredAtUtc: string | null
   checkedInAtUtc: string | null
 }
@@ -252,6 +263,7 @@ export interface EventInvoiceLineItem {
 export interface EventInvoicePaymentAttempt {
   paymentMethod: string
   paymentStatus: string
+  paymentStatusLabel: string
   amount: number
   referenceNo: string | null
   errorMessage: string | null
@@ -262,6 +274,7 @@ export interface EventInvoiceDetail {
   invoiceUniqueId: string
   invoiceNo: string
   invoiceStatus: string
+  invoiceStatusLabel: string
   invoiceDateUtc: string
   subTotal: number
   discountAmount: number | null
@@ -325,7 +338,14 @@ function parseServicePayload(payload: unknown): unknown {
   return readResponseData(response)
 }
 
+/** The API sends the display text alongside the enum name; older responses may not, so fall back to it. */
+function statusLabelOr(label: string | undefined, rawStatus: string) {
+  return label?.trim() ? label : rawStatus
+}
+
 function normalizeListItem(raw: z.infer<typeof listItemSchema>): EventInvoiceListItem {
+  const invoiceStatus = raw.InvoiceStatus ?? raw.invoiceStatus ?? ""
+
   return {
     invoiceUniqueId: raw.InvoiceUniqueId ?? raw.invoiceUniqueId ?? "",
     invoiceNo: raw.InvoiceNo ?? raw.invoiceNo ?? "",
@@ -333,7 +353,8 @@ function normalizeListItem(raw: z.infer<typeof listItemSchema>): EventInvoiceLis
     eventName: raw.EventName ?? raw.eventName ?? "",
     buyerName: raw.BuyerName ?? raw.buyerName ?? "",
     buyerEmail: raw.BuyerEmail ?? raw.buyerEmail ?? null,
-    invoiceStatus: raw.InvoiceStatus ?? raw.invoiceStatus ?? "",
+    invoiceStatus,
+    invoiceStatusLabel: statusLabelOr(raw.InvoiceStatusLabel ?? raw.invoiceStatusLabel, invoiceStatus),
     invoiceDateUtc: raw.InvoiceDateUtc ?? raw.invoiceDateUtc ?? "",
     totalAmount: raw.TotalAmount ?? raw.totalAmount ?? 0,
     balanceAmount: raw.BalanceAmount ?? raw.balanceAmount ?? null,
@@ -352,10 +373,13 @@ function normalizeAttendee(raw: z.infer<typeof attendeeSchema>): EventInvoiceAtt
 }
 
 function normalizeTicket(raw: z.infer<typeof ticketSchema>): EventInvoiceTicket {
+  const ticketStatus = raw.TicketStatus ?? raw.ticketStatus ?? ""
+
   return {
     ticketUniqueId: raw.TicketUniqueId ?? raw.ticketUniqueId ?? "",
     ticketCode: raw.TicketCode ?? raw.ticketCode ?? "",
-    ticketStatus: raw.TicketStatus ?? raw.ticketStatus ?? "",
+    ticketStatus,
+    ticketStatusLabel: statusLabelOr(raw.TicketStatusLabel ?? raw.ticketStatusLabel, ticketStatus),
     deliveredAtUtc: raw.DeliveredAtUtc ?? raw.deliveredAtUtc ?? null,
     checkedInAtUtc: raw.CheckedInAtUtc ?? raw.checkedInAtUtc ?? null,
   }
@@ -376,9 +400,12 @@ function normalizeLineItem(raw: z.infer<typeof lineItemSchema>): EventInvoiceLin
 }
 
 function normalizePaymentAttempt(raw: z.infer<typeof paymentAttemptSchema>): EventInvoicePaymentAttempt {
+  const paymentStatus = raw.PaymentStatus ?? raw.paymentStatus ?? ""
+
   return {
     paymentMethod: raw.PaymentMethod ?? raw.paymentMethod ?? "",
-    paymentStatus: raw.PaymentStatus ?? raw.paymentStatus ?? "",
+    paymentStatus,
+    paymentStatusLabel: statusLabelOr(raw.PaymentStatusLabel ?? raw.paymentStatusLabel, paymentStatus),
     amount: raw.Amount ?? raw.amount ?? 0,
     referenceNo: raw.ReferenceNo ?? raw.referenceNo ?? null,
     errorMessage: raw.ErrorMessage ?? raw.errorMessage ?? null,
@@ -387,10 +414,13 @@ function normalizePaymentAttempt(raw: z.infer<typeof paymentAttemptSchema>): Eve
 }
 
 function normalizeDetail(raw: z.infer<typeof detailSchema>): EventInvoiceDetail {
+  const invoiceStatus = raw.InvoiceStatus ?? raw.invoiceStatus ?? ""
+
   return {
     invoiceUniqueId: raw.InvoiceUniqueId ?? raw.invoiceUniqueId ?? "",
     invoiceNo: raw.InvoiceNo ?? raw.invoiceNo ?? "",
-    invoiceStatus: raw.InvoiceStatus ?? raw.invoiceStatus ?? "",
+    invoiceStatus,
+    invoiceStatusLabel: statusLabelOr(raw.InvoiceStatusLabel ?? raw.invoiceStatusLabel, invoiceStatus),
     invoiceDateUtc: raw.InvoiceDateUtc ?? raw.invoiceDateUtc ?? "",
     subTotal: raw.SubTotal ?? raw.subTotal ?? 0,
     discountAmount: raw.DiscountAmount ?? raw.discountAmount ?? null,
