@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { render } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { MemoryRouter } from "react-router-dom"
 import { ChakraProvider } from "@chakra-ui/react"
 import { system } from "@/theme"
@@ -50,10 +51,25 @@ describe("EventInvoicesPage", () => {
     expect(appliedFilters().eventUniqueIds).toEqual(["event-1"])
   })
 
-  it("NoEventUniqueIdInTheUrl_ShowsEveryInvoice", () => {
+  it("NoEventUniqueIdInTheUrl_ShowsEveryEventsInvoices", () => {
     renderAt("/organizer/events/invoices")
 
     expect(appliedFilters().eventUniqueIds).toEqual([])
+  })
+
+  /** Unpaid and cancelled invoices are noise on arrival — the organizer opens this page for paid ones. */
+  it("FirstLoad_FiltersToPaidInvoices", () => {
+    renderAt("/organizer/events/invoices")
+
+    expect(appliedFilters().statuses).toEqual(["Paid"])
+  })
+
+  it("Clear_DropsTheDefaultPaidFilterSoEveryStatusShows", async () => {
+    renderAt("/organizer/events/invoices")
+
+    await userEvent.click(screen.getByRole("button", { name: /clear/i }))
+
+    expect(appliedFilters().statuses).toEqual([])
   })
 
   it("BlankEventUniqueId_ShowsEveryInvoiceRatherThanFilteringOnNothing", () => {

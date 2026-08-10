@@ -42,12 +42,19 @@ function toFilters(draft: EventInvoiceDraftFilters): EventInvoiceFilters {
   }
 }
 
+/** Paid invoices are what the organizer is normally after; the rest are reachable by clearing the filter. */
+const DEFAULT_STATUSES = ["Paid"]
+
 /**
  * The event card links here with the event it was opened from, so the list lands already narrowed to
  * that event instead of showing every invoice the organizer has.
  */
-function draftForEvent(eventUniqueId: string): EventInvoiceDraftFilters {
-  return eventUniqueId ? { ...EMPTY_DRAFT, eventUniqueIds: [eventUniqueId] } : EMPTY_DRAFT
+function initialDraft(eventUniqueId: string): EventInvoiceDraftFilters {
+  return {
+    ...EMPTY_DRAFT,
+    statuses: DEFAULT_STATUSES,
+    eventUniqueIds: eventUniqueId ? [eventUniqueId] : [],
+  }
 }
 
 interface EventInvoiceManagerProps {
@@ -60,9 +67,9 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE)
   const [sortBy, setSortBy] = useState<EventInvoiceSortBy>("invoiceDateUtc")
   const [sortOrder, setSortOrder] = useState<EventInvoiceSortOrder>("desc")
-  const [draft, setDraft] = useState<EventInvoiceDraftFilters>(() => draftForEvent(initialEventUniqueId))
+  const [draft, setDraft] = useState<EventInvoiceDraftFilters>(() => initialDraft(initialEventUniqueId))
   const [appliedFilters, setAppliedFilters] = useState<EventInvoiceFilters>(() =>
-    toFilters(draftForEvent(initialEventUniqueId)),
+    toFilters(initialDraft(initialEventUniqueId)),
   )
 
   const invoicesQuery = useEventInvoices(appliedFilters, page, pageSize, sortBy, sortOrder)
