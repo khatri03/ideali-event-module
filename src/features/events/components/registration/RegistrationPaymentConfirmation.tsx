@@ -25,6 +25,12 @@ interface RegistrationPaymentConfirmationProps {
   selectedTicketCount: number
   paymentMethodLabel: string
   isCardPayment: boolean
+  /**
+   * Cheque is not a slower card. It never reaches Stripe, only an organizer may record it, and the
+   * single call that records it also issues the tickets — so it finishes the checkout here rather
+   * than handing the caller on to a payment form with nothing left to do.
+   */
+  isChequePayment: boolean
   /** Collected outside the Payment Element, so it has to be supplied on confirm. */
   cardHolderName: string
   validationMessage: string | null
@@ -40,6 +46,8 @@ interface RegistrationPaymentConfirmationProps {
   onPrepare: () => Promise<boolean>
   /** Mints the PaymentIntent for the selected method and yields what confirming it needs. */
   onCreateIntent: () => Promise<PreparedPaymentIntent>
+  /** Records the cheque and takes the organizer to the order. Only called when isChequePayment. */
+  onRecordCheque: () => Promise<void>
   onPaid: () => Promise<void>
   onFailed: (message: string) => void
 }
@@ -53,9 +61,11 @@ interface RegistrationPaymentConfirmationProps {
 export function RegistrationPaymentConfirmation({
   isBusy,
   isCardPayment,
+  isChequePayment,
   cardHolderName,
   onPrepare,
   onCreateIntent,
+  onRecordCheque,
   onPaid,
   onFailed,
   onOpenChange,
@@ -70,12 +80,32 @@ export function RegistrationPaymentConfirmation({
       return
     }
 
+    // Checked before the card branch and before the off-card one: a cheque has no intent to mint, so
+    // reaching either of those would send it to an endpoint that refuses it and hold the seats anyway.
+    if (isChequePayment) {
+      await recordChequeAsync()
+      return
+    }
+
     if (!isCardPayment) {
       await createIntentForOffCardMethod()
       return
     }
 
     await payWithStripeAsync()
+  }
+
+  async function recordChequeAsync() {
+    setIsPaying(true)
+
+    try {
+      await onRecordCheque()
+      onOpenChange(false)
+    } catch (error) {
+      onFailed(extractApiError(error))
+    } finally {
+      setIsPaying(false)
+    }
   }
 
   /** Bank rails and cheques are carried on from here by their own flows, so only the intent is made. */

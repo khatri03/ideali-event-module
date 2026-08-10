@@ -5,6 +5,7 @@ import {
   normalizeEventCart,
   normalizeEventCartPrice,
   normalizeEventCheckoutConfirmation,
+  normalizeEventChequePaymentResult,
   normalizeEventPaymentIntentResult,
   type AddEventCartLineRequest,
   type CreateEventCartRequest,
@@ -12,8 +13,10 @@ import {
   type EventCart,
   type EventCartPrice,
   type EventCheckoutConfirmation,
+  type EventChequePaymentResult,
   type EventPaymentIntentResult,
   type PriceEventCartRequest,
+  type RecordEventChequePaymentRequest,
   type SubmitLineAttendeesRequest,
   type SubmitOrderAnswersRequest,
   type UploadedAnswerFile,
@@ -110,6 +113,18 @@ export async function createEventPaymentIntent(
 ): Promise<EventPaymentIntentResult> {
   const res = await client.post<unknown>(API_ROUTES.eventCartCheckoutIntent(cartUniqueId), request)
   return normalizeEventPaymentIntentResult(readResponseData(res.data))
+}
+
+/**
+ * The cheque counterpart to createEventPaymentIntent. Stripe is not involved: the call issues the
+ * tickets and returns the order, and the invoice stays owing by the amount it reports.
+ */
+export async function recordEventChequePayment(
+  cartUniqueId: string,
+  request: RecordEventChequePaymentRequest,
+): Promise<EventChequePaymentResult> {
+  const res = await client.post<unknown>(API_ROUTES.eventCartCheckoutCheque(cartUniqueId), request)
+  return normalizeEventChequePaymentResult(readResponseData(res.data))
 }
 
 export async function confirmEventCheckout(cartUniqueId: string): Promise<EventCheckoutConfirmation> {

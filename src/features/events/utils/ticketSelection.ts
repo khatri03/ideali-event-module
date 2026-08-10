@@ -115,6 +115,14 @@ export function isCardPaymentMethod(paymentMethod: string) {
   return /card/i.test(paymentMethod)
 }
 
+/**
+ * Cheque takes a different endpoint from every other method, so the check has to be a named rule
+ * rather than a string comparison scattered across the checkout.
+ */
+export function isChequePaymentMethod(paymentMethod: string) {
+  return /cheque|check/i.test(paymentMethod)
+}
+
 export function isHtmlContent(value: string | null | undefined) {
   return Boolean(value && /<[^>]+>/.test(value))
 }

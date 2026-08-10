@@ -40,7 +40,7 @@ import { useTicketSelectionSummary } from '@/features/events/hooks/useTicketSele
 import { usePurchaseReviewValidation } from '@/features/events/hooks/usePurchaseReviewValidation'
 import { useBuyerAttendeeInfo } from '@/features/events/hooks/useBuyerAttendeeInfo'
 import { useQuestionnaireAnswers } from '@/features/events/hooks/useQuestionnaireAnswers'
-import { useCreateEventPaymentIntent } from '@/features/events/hooks/useEventCheckout'
+import { useCreateEventPaymentIntent, useRecordEventChequePayment } from '@/features/events/hooks/useEventCheckout'
 import {
   useSubmitLineAttendees,
   useSubmitOrderAnswers,
@@ -90,6 +90,7 @@ import {
   getSessionBannerSlides,
   hasTicketOnHold,
   isCardPaymentMethod,
+  isChequePaymentMethod,
   isHtmlContent,
 } from '@/features/events/utils/ticketSelection'
 
@@ -197,6 +198,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
   const [pendingDeleteAction, setPendingDeleteAction] = useState<PendingDeleteAction | null>(null)
   const [cardHolderName, setCardHolderName] = useState('')
+  const [chequeReferenceNo, setChequeReferenceNo] = useState('')
   /** Set the moment an intent is minted, so the buyer can be sent to their order once it is paid. */
   const [orderUniqueId, setOrderUniqueId] = useState<string | null>(null)
   const navigate = useNavigate()
@@ -309,6 +311,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     paymentBreakdowns[0] ??
     null
   const isSelectedPaymentMethodCard = Boolean(selectedPaymentBreakdown && isCardPaymentMethod(selectedPaymentBreakdown.paymentMethod))
+  const isSelectedPaymentMethodCheque = Boolean(selectedPaymentBreakdown && isChequePaymentMethod(selectedPaymentBreakdown.paymentMethod))
   // Gross on purpose. A breakdown's own subtotal is already net of the coupon, and the table lists
   // the coupon on its own line underneath - showing the net figure above it reads as a second deduction.
   const paymentBreakdownGrossSubtotal = cartPrice?.subTotal ?? selectedPaymentBreakdown?.subtotal ?? 0
@@ -356,6 +359,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const submitAnswersMutation = useSubmitOrderAnswers(cart?.cartUniqueId)
   const uploadAnswerFileMutation = useUploadAnswerFile(cart?.cartUniqueId)
   const createPaymentIntentMutation = useCreateEventPaymentIntent(cart?.cartUniqueId)
+  const recordChequePaymentMutation = useRecordEventChequePayment(cart?.cartUniqueId)
   const bannerSlides = useMemo(() => getSessionBannerSlides(currentEvent), [currentEvent])
   const sessionsLoading = sessionsQuery.isLoading || (sessionsQuery.isFetching && sessions.length === 0)
   const attendeeInfoLoading = attendeeInfoQuery.isLoading && !attendeeInfoQuery.data
@@ -684,6 +688,30 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       clientSecret: intent.clientSecret,
       returnUrl: `${window.location.origin}${buildOrderPath(intent.invoiceUniqueId, cart?.cartUniqueId ?? null)}`,
     }
+  }
+
+  /**
+   * The cheque counterpart to createPaymentIntentAsync. One call records the payment and issues the
+   * tickets, so there is no Stripe step and nothing to poll for — the organizer goes straight to the
+   * order, which is where the ticket codes and the amount still owing are shown.
+   */
+  async function recordChequePaymentAsync() {
+    const receipt = await recordChequePaymentMutation.mutateAsync({
+      chequeReferenceNo: chequeReferenceNo.trim(),
+    })
+
+    // Written down before anything else can fail: the tickets already exist on the server, so a tab
+    // that dies here must still have a way back to the order.
+    setOrderUniqueId(receipt.invoiceUniqueId)
+    storePendingOrderId(receipt.invoiceUniqueId)
+
+    const handoffCartUniqueId = cart?.cartUniqueId ?? null
+    completeCart()
+
+    navigate(buildOrderPath(receipt.invoiceUniqueId, handoffCartUniqueId), {
+      replace: true,
+      state: { registerPath: APP_ROUTES.eventRegister(event.uniqueId) },
+    })
   }
 
   /** Stripe rejected the payment, so the buyer goes back to the fields to correct it. */
@@ -1159,6 +1187,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                 onSelectMethod={handleSelectPaymentMethod}
                                 isCardMethodSelected={isSelectedPaymentMethodCard}
                                 cardHolderName={cardHolderName}
+                                isChequeMethodSelected={isSelectedPaymentMethodCheque}
+                                chequeReferenceNo={chequeReferenceNo}
+                                onChequeReferenceNoChange={setChequeReferenceNo}
                                 onCardHolderNameChange={setCardHolderName}
                                 sessionGroups={selectedTicketSummaryBySession}
                                 grossSubtotal={paymentBreakdownGrossSubtotal}
@@ -1286,6 +1317,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
         selectedTicketCount={selectedTicketCount}
         paymentMethodLabel={selectedPaymentMethodLabel}
         isCardPayment={isSelectedPaymentMethodCard}
+        isChequePayment={isSelectedPaymentMethodCheque}
         cardHolderName={cardHolderName}
         validationMessage={purchaseReviewAttempted ? purchaseReviewMessage : null}
         ticketRows={purchaseReviewTicketRows}
@@ -1294,9 +1326,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
         netSubtotal={selectedPaymentBreakdown?.subtotal ?? paymentBreakdownGrossSubtotal}
         chargeRows={purchaseReviewChargeRows}
         grandTotal={selectedPaymentBreakdown?.grandTotal ?? selectedTicketTotal}
-        isBusy={createPaymentIntentMutation.isPending}
+        isBusy={createPaymentIntentMutation.isPending || recordChequePaymentMutation.isPending}
         onPrepare={preparePurchaseAsync}
         onCreateIntent={createPaymentIntentAsync}
+        onRecordCheque={recordChequePaymentAsync}
         onPaid={handlePaymentSucceeded}
         onFailed={handlePaymentFailed}
       />

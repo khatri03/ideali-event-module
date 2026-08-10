@@ -153,6 +153,7 @@ export const API_ROUTES = {
   eventCartAnswers: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/answers`,
   eventCartAnswerFiles: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/answers/files`,
   eventCartCheckoutIntent: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/checkout/intent`,
+  eventCartCheckoutCheque: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/checkout/cheque`,
   eventCartCheckoutConfirm: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/checkout/confirm`,
   eventTicketView: (ticketUniqueId: string) => `/api/events/tickets/${ticketUniqueId}/view`,
   eventOrderStatus: (orderUniqueId: string) => `/api/events/orders/${orderUniqueId}`,

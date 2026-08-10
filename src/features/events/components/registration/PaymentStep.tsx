@@ -7,6 +7,7 @@ import type { SelectedTicketSummaryItem } from "@/features/events/components/reg
 import { PaymentStepSkeleton } from "@/features/events/components/registration/PaymentStep.skeleton"
 import { CouponEntryCard } from "@/features/events/components/registration/CouponEntryCard"
 import { PaymentBreakdownTable } from "@/features/events/components/registration/PaymentBreakdownTable"
+import { ChequePaymentFields } from "@/features/events/components/registration/ChequePaymentFields"
 import { StripePaymentFields } from "@/features/events/components/registration/StripePaymentFields"
 import { formatAmount, hexToRgba } from "@/features/events/utils/registrationFormat"
 
@@ -45,6 +46,9 @@ interface PaymentStepProps {
   isCardMethodSelected: boolean
   cardHolderName: string
   onCardHolderNameChange: (value: string) => void
+  isChequeMethodSelected: boolean
+  chequeReferenceNo: string
+  onChequeReferenceNoChange: (value: string) => void
 }
 
 function PaymentMethodTile({
@@ -130,6 +134,9 @@ export function PaymentStep({
   onRequestRemove,
   isCardMethodSelected,
   cardHolderName,
+  isChequeMethodSelected,
+  chequeReferenceNo,
+  onChequeReferenceNoChange,
   onCardHolderNameChange,
 }: PaymentStepProps) {
   return (
@@ -191,6 +198,13 @@ export function PaymentStep({
             <StripePaymentFields
               cardHolderName={cardHolderName}
               onCardHolderNameChange={onCardHolderNameChange}
+            />
+          ) : null}
+
+          {isChequeMethodSelected ? (
+            <ChequePaymentFields
+              chequeReferenceNo={chequeReferenceNo}
+              onChequeReferenceNoChange={onChequeReferenceNoChange}
             />
           ) : null}
 
