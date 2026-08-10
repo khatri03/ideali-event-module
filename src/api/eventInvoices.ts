@@ -90,6 +90,8 @@ const listItemSchema = z.object({
   balanceAmount: dual(money().nullable()),
   PaymentMethod: dual(z.string().nullable()),
   paymentMethod: dual(z.string().nullable()),
+  PaymentSource: dual(z.string().nullable()),
+  paymentSource: dual(z.string().nullable()),
   CurrencySymbol: dual(z.string()),
   currencySymbol: dual(z.string()),
   TicketCount: dual(integer()),
@@ -229,6 +231,8 @@ export interface EventInvoiceListItem {
   totalAmount: number
   balanceAmount: number | null
   paymentMethod: string | null
+  /** Card brand and last four, or bank name, as the gateway described the instrument. */
+  paymentSource: string | null
   currencySymbol: string
   ticketCount: number
 }
@@ -359,6 +363,7 @@ function normalizeListItem(raw: z.infer<typeof listItemSchema>): EventInvoiceLis
     totalAmount: raw.TotalAmount ?? raw.totalAmount ?? 0,
     balanceAmount: raw.BalanceAmount ?? raw.balanceAmount ?? null,
     paymentMethod: raw.PaymentMethod ?? raw.paymentMethod ?? null,
+    paymentSource: raw.PaymentSource ?? raw.paymentSource ?? null,
     currencySymbol: raw.CurrencySymbol ?? raw.currencySymbol ?? "$",
     ticketCount: raw.TicketCount ?? raw.ticketCount ?? 0,
   }

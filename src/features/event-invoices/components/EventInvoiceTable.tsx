@@ -1,7 +1,7 @@
 import { Badge, Box, Button, Table, Text } from "@chakra-ui/react"
 import { format } from "date-fns"
 import type { EventInvoiceListItem, EventInvoiceSortBy, EventInvoiceSortOrder } from "@/api/eventInvoices"
-import { EVENT_INVOICE_PAYMENT_METHOD_OPTIONS } from "@/api/eventInvoices"
+import { PaymentPills } from "./PaymentPills"
 import { SortableColumnHeader } from "./SortableColumnHeader"
 import { TableBodySkeleton } from "./TableBodySkeleton"
 import { STICKY_HEADER_CSS, TABLE_MAX_HEIGHT } from "../constants"
@@ -36,12 +36,7 @@ function formatMoney(value: number, currencySymbol: string) {
   return `${currencySymbol}${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}`
 }
 
-function paymentMethodLabel(value: string | null) {
-  if (!value) return "—"
-  return EVENT_INVOICE_PAYMENT_METHOD_OPTIONS.find((option) => option.value === value)?.label ?? value
-}
-
-const COLUMN_COUNT = 7
+const COLUMN_COUNT = 6
 
 export function EventInvoiceTable({
   invoices,
@@ -83,9 +78,6 @@ export function EventInvoiceTable({
             <Table.ColumnHeader px={4} py={3} textAlign="right">
               <SortableColumnHeader label="Total" column="totalAmount" activeSortBy={sortBy} activeSortOrder={sortOrder} onSortChange={onSortChange} justify="flex-end" />
             </Table.ColumnHeader>
-            <Table.ColumnHeader px={4} py={3} textAlign="center">
-              Payment Method
-            </Table.ColumnHeader>
           </Table.Row>
         </Table.Header>
         {isFetching ? (
@@ -124,6 +116,7 @@ export function EventInvoiceTable({
                     >
                       {invoice.invoiceNo}
                     </Button>
+                    <PaymentPills paymentMethod={invoice.paymentMethod} paymentSource={invoice.paymentSource} />
                   </Table.Cell>
                   <Table.Cell px={4} py={4}>
                     <Text fontSize="sm" color="text.primary">
@@ -153,11 +146,6 @@ export function EventInvoiceTable({
                   <Table.Cell px={4} py={4} textAlign="right">
                     <Text fontSize="sm" fontWeight="700" color="text.primary">
                       {formatMoney(invoice.totalAmount, invoice.currencySymbol)}
-                    </Text>
-                  </Table.Cell>
-                  <Table.Cell px={4} py={4} textAlign="center">
-                    <Text fontSize="sm" color="text.secondary">
-                      {paymentMethodLabel(invoice.paymentMethod)}
                     </Text>
                   </Table.Cell>
                 </Table.Row>
