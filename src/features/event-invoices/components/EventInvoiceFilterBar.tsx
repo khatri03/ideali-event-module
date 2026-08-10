@@ -1,14 +1,9 @@
 import { useMemo } from "react"
 import { Box, Button, Field, Flex, Input, SimpleGrid } from "@chakra-ui/react"
-import ReactSelect from "react-select"
 import { Filter, RotateCcw, Search } from "lucide-react"
 import { EVENT_INVOICE_PAYMENT_METHOD_OPTIONS, EVENT_INVOICE_STATUS_OPTIONS } from "@/api/eventInvoices"
 import { useEventInvoiceFilterOptions } from "../hooks/useEventInvoices"
-
-interface SelectOption {
-  value: string
-  label: string
-}
+import { FilterMultiSelect, type FilterSelectOption } from "./FilterMultiSelect"
 
 export interface EventInvoiceDraftFilters {
   searchTerm: string
@@ -29,10 +24,6 @@ interface EventInvoiceFilterBarProps {
   onClear: () => void
 }
 
-function toOptions(select: readonly SelectOption[] | undefined, values: string[]) {
-  return (select ?? []).filter((option) => values.includes(option.value))
-}
-
 export function EventInvoiceFilterBar({
   draft,
   hasAppliedFilter,
@@ -43,12 +34,12 @@ export function EventInvoiceFilterBar({
 }: EventInvoiceFilterBarProps) {
   const filterOptionsQuery = useEventInvoiceFilterOptions()
 
-  const eventOptions = useMemo<SelectOption[]>(
+  const eventOptions = useMemo<FilterSelectOption[]>(
     () => (filterOptionsQuery.data?.events ?? []).map((option) => ({ value: option.uniqueId, label: option.name })),
     [filterOptionsQuery.data],
   )
 
-  const sessionOptions = useMemo<SelectOption[]>(() => {
+  const sessionOptions = useMemo<FilterSelectOption[]>(() => {
     const sessions = filterOptionsQuery.data?.sessions ?? []
     const scoped = draft.eventUniqueIds.length
       ? sessions.filter((session) => draft.eventUniqueIds.includes(session.eventUniqueId))
@@ -74,17 +65,12 @@ export function EventInvoiceFilterBar({
             Event
           </Field.Label>
           <Box w="full">
-            <ReactSelect
-              isMulti
+            <FilterMultiSelect
               options={eventOptions}
-              value={toOptions(eventOptions, draft.eventUniqueIds)}
-              onChange={(values) =>
-                onDraftChange((current) => ({ ...current, eventUniqueIds: values.map((option) => option.value) }))
-              }
+              selectedValues={draft.eventUniqueIds}
+              onChange={(eventUniqueIds) => onDraftChange((current) => ({ ...current, eventUniqueIds }))}
               placeholder={filterOptionsQuery.isLoading ? "Loading events..." : "All events"}
               isLoading={filterOptionsQuery.isLoading}
-              closeMenuOnSelect={false}
-              isClearable
             />
           </Box>
         </Field.Root>
@@ -94,17 +80,12 @@ export function EventInvoiceFilterBar({
             Session
           </Field.Label>
           <Box w="full">
-            <ReactSelect
-              isMulti
+            <FilterMultiSelect
               options={sessionOptions}
-              value={toOptions(sessionOptions, draft.sessionUniqueIds)}
-              onChange={(values) =>
-                onDraftChange((current) => ({ ...current, sessionUniqueIds: values.map((option) => option.value) }))
-              }
+              selectedValues={draft.sessionUniqueIds}
+              onChange={(sessionUniqueIds) => onDraftChange((current) => ({ ...current, sessionUniqueIds }))}
               placeholder={filterOptionsQuery.isLoading ? "Loading sessions..." : "All sessions"}
               isLoading={filterOptionsQuery.isLoading}
-              closeMenuOnSelect={false}
-              isClearable
             />
           </Box>
         </Field.Root>
@@ -114,16 +95,11 @@ export function EventInvoiceFilterBar({
             Status
           </Field.Label>
           <Box w="full">
-            <ReactSelect
-              isMulti
-              options={EVENT_INVOICE_STATUS_OPTIONS as unknown as SelectOption[]}
-              value={toOptions(EVENT_INVOICE_STATUS_OPTIONS as unknown as SelectOption[], draft.statuses)}
-              onChange={(values) =>
-                onDraftChange((current) => ({ ...current, statuses: values.map((option) => option.value) }))
-              }
+            <FilterMultiSelect
+              options={EVENT_INVOICE_STATUS_OPTIONS}
+              selectedValues={draft.statuses}
+              onChange={(statuses) => onDraftChange((current) => ({ ...current, statuses }))}
               placeholder="All statuses"
-              closeMenuOnSelect={false}
-              isClearable
             />
           </Box>
         </Field.Root>
@@ -133,16 +109,11 @@ export function EventInvoiceFilterBar({
             Payment method
           </Field.Label>
           <Box w="full">
-            <ReactSelect
-              isMulti
-              options={EVENT_INVOICE_PAYMENT_METHOD_OPTIONS as unknown as SelectOption[]}
-              value={toOptions(EVENT_INVOICE_PAYMENT_METHOD_OPTIONS as unknown as SelectOption[], draft.paymentMethods)}
-              onChange={(values) =>
-                onDraftChange((current) => ({ ...current, paymentMethods: values.map((option) => option.value) }))
-              }
+            <FilterMultiSelect
+              options={EVENT_INVOICE_PAYMENT_METHOD_OPTIONS}
+              selectedValues={draft.paymentMethods}
+              onChange={(paymentMethods) => onDraftChange((current) => ({ ...current, paymentMethods }))}
               placeholder="All methods"
-              closeMenuOnSelect={false}
-              isClearable
             />
           </Box>
         </Field.Root>
