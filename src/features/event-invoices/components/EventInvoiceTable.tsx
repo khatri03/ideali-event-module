@@ -32,8 +32,7 @@ function formatDate(value: string) {
   return Number.isNaN(parsed.getTime()) ? "—" : format(parsed, "MMM d, yyyy")
 }
 
-function formatMoney(value: number | null, currencySymbol: string) {
-  if (value === null) return "—"
+function formatMoney(value: number, currencySymbol: string) {
   return `${currencySymbol}${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}`
 }
 
@@ -42,7 +41,7 @@ function paymentMethodLabel(value: string | null) {
   return EVENT_INVOICE_PAYMENT_METHOD_OPTIONS.find((option) => option.value === value)?.label ?? value
 }
 
-const COLUMN_COUNT = 8
+const COLUMN_COUNT = 7
 
 export function EventInvoiceTable({
   invoices,
@@ -83,9 +82,6 @@ export function EventInvoiceTable({
             </Table.ColumnHeader>
             <Table.ColumnHeader px={4} py={3} textAlign="right">
               <SortableColumnHeader label="Total" column="totalAmount" activeSortBy={sortBy} activeSortOrder={sortOrder} onSortChange={onSortChange} justify="flex-end" />
-            </Table.ColumnHeader>
-            <Table.ColumnHeader px={4} py={3} textAlign="right">
-              <SortableColumnHeader label="Balance" column="balanceAmount" activeSortBy={sortBy} activeSortOrder={sortOrder} onSortChange={onSortChange} justify="flex-end" />
             </Table.ColumnHeader>
             <Table.ColumnHeader px={4} py={3} textAlign="center">
               Payment Method
@@ -157,11 +153,6 @@ export function EventInvoiceTable({
                   <Table.Cell px={4} py={4} textAlign="right">
                     <Text fontSize="sm" fontWeight="700" color="text.primary">
                       {formatMoney(invoice.totalAmount, invoice.currencySymbol)}
-                    </Text>
-                  </Table.Cell>
-                  <Table.Cell px={4} py={4} textAlign="right">
-                    <Text fontSize="sm" color="text.secondary">
-                      {formatMoney(invoice.balanceAmount, invoice.currencySymbol)}
                     </Text>
                   </Table.Cell>
                   <Table.Cell px={4} py={4} textAlign="center">
