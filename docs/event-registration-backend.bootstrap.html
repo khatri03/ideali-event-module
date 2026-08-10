@@ -117,7 +117,7 @@
               </tr>
               <tr>
                 <td><code>backend-developer-handbook.bootstrap.html</code></td>
-                <td>"How does the whole backend work?" Architecture, authentication, database layer, and all 578 endpoints across every module. Registration appears there too, as section 14 — the same words as here, from one shared source.</td>
+                <td>"How does the whole backend work?" Architecture, authentication, database layer, and all 580 endpoints across every module. Registration appears there too, as section 14 — the same words as here, from one shared source.</td>
               </tr>
               <tr>
                 <td><code>event-registration-api.bootstrap.html</code></td>
@@ -263,7 +263,7 @@
 
               <rect x="364" y="20" width="150" height="58" rx="8" class="box-write" />
               <text x="439" y="43" text-anchor="middle" font-weight="600">3. Add lines</text>
-              <text x="439" y="61" text-anchor="middle" class="muted">seats held here</text>
+              <text x="439" y="61" text-anchor="middle" class="muted">cart line only</text>
 
               <rect x="542" y="20" width="150" height="58" rx="8" class="box-write" />
               <text x="617" y="43" text-anchor="middle" font-weight="600">4. Attendees</text>
@@ -386,7 +386,7 @@
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart</code> <span class="badge text-bg-light border flag">BotMitigation</span></td>
                 <td><code>EventCartService.CreateCartAsync</code></td>
-                <td>Creates the <code>Invoice</code> (status <code>PendingPayment</code>) plus its <code>EventInvoice</code> row holding the buyer's name, email and phone. Requires either a contact id or a name-and-email pair. Bot-challenged because a cart eventually holds seats.</td>
+                <td>Creates only the event-module cart: an <code>EventInvoice</code> with <code>CartStatus = Open</code>, buyer identity snapshot, subtotal/total set to zero, and one fixed expiry for the whole cart. No shared <code>Invoice</code> row exists yet.</td>
               </tr>
               <tr>
                 <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/events/cart/{cartId}</code></td>
@@ -396,7 +396,7 @@
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/lines</code></td>
                 <td><code>EventCartService.AddLineAsync</code></td>
-                <td>The important one. Validates the ticket type is on sale and the quantity is in range, locks the ticket type row, checks availability, resolves the price period, then writes three linked rows: <code>InvoiceItem</code>, <code>EventInvoiceItem</code> and an <strong>Active <code>TicketReservation</code></strong>. The reservation is the actual stock hold.</td>
+                <td>Validates sale window, quantity and current availability, resolves the price period, then writes an <code>EventInvoiceItem</code> and an Active <code>TicketReservation</code> tied to the cart expiry. It does <strong>not</strong> lock or consume inventory; the real claim happens when payment starts.</td>
               </tr>
               <tr>
                 <td><span class="badge badge-method text-bg-danger">DELETE</span> <code>/api/events/cart/{cartId}/lines/{lineId}</code></td>
@@ -440,17 +440,17 @@
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/checkout/intent</code> <span class="badge text-bg-light border flag">BotMitigation</span></td>
                 <td><code>EventCheckoutService.CreatePaymentIntentAsync</code></td>
-                <td>Locks in the processor fee for the chosen method, recomputes the total, calculates the platform's application fee, creates the Stripe payment intent and records a <code>Pending</code> <code>InvoicePayment</code> whose <code>ReferenceNo</code> is the intent id. Returns the client secret.</td>
+                <td>First claims the seats under ticket-type locks. If the buyer won, it raises the shared <code>Invoice</code>, mirrors cart lines to <code>InvoiceItem</code>, recomputes charges for the chosen method, creates the Stripe intent, and records a <code>Pending</code> <code>InvoicePayment</code>. Returns the client secret.</td>
               </tr>
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/checkout/cheque</code> <span class="badge text-bg-light border">Signed in</span></td>
                 <td><code>EventCheckoutService.RecordChequePaymentAsync</code></td>
-                <td>Organizer-only, and refused unless the caller's organizer owns the event. Records a pending cheque, clears any processor fee, and then <strong>issues the tickets immediately</strong> while the invoice stays owing.</td>
+                <td>Organizer-only, and refused unless the caller's organizer owns the event. Claims seats first, raises the invoice, records a pending cheque with no processor fee, and then <strong>issues the tickets immediately</strong> while the invoice stays owing.</td>
               </tr>
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/checkout/confirm</code></td>
                 <td><code>EventCheckoutService.ConfirmCheckoutAsync</code></td>
-                <td>The fast path the browser calls after paying, and the <em>only</em> path for a zero-total order. Decides nothing about money: it settles open attempts, reads whether issuance is authorised, and if so runs the same idempotent issuance the webhook runs.</td>
+                <td>The fast path the browser calls after paying, and the <em>only</em> path for a zero-total order. It settles open attempts, reads whether issuance is authorised, and runs the same idempotent issuance the webhook runs. For free orders, this is where seats are claimed.</td>
               </tr>
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/public/stripe/web-hook</code></td>
@@ -522,25 +522,23 @@
       <h2 id="reg-cart">5. How the cart actually works</h2>
 
         <p>
-          There is no cart table. A cart is an <code>Invoice</code> with status
-          <code>PendingPayment</code>, and the stock hold behind each line is a
-          <code>TicketReservation</code>. Four rows per line:
+          The cart now lives in the event module before money exists. An <code>EventInvoice</code> is the cart, <code>EventInvoiceItem</code> rows are the lines, and <code>TicketReservation</code> rows remember what the buyer selected. A shared <code>Invoice</code> is raised only when checkout starts, because an abandoned cart is not an order. The important rows are:
         </p>
 
         <div class="diagram">
           <svg viewBox="0 0 900 340" role="img" aria-label="Rows created when a cart line is added">
             <g font-size="12" font-family="system-ui, sans-serif">
               <rect x="20" y="16" width="240" height="86" rx="8" class="box-write" />
-              <text x="140" y="40" text-anchor="middle" font-weight="600">Invoice</text>
-              <text x="140" y="58" text-anchor="middle" class="muted">status = PendingPayment</text>
-              <text x="140" y="74" text-anchor="middle" class="muted">SubTotal, TotalAmount</text>
+              <text x="140" y="40" text-anchor="middle" font-weight="600">EventInvoice</text>
+              <text x="140" y="58" text-anchor="middle" class="muted">CartStatus = Open</text>
+              <text x="140" y="74" text-anchor="middle" class="muted">buyer snapshot, expiry</text>
               <text x="140" y="90" text-anchor="middle" class="muted">uniqueId = the cart id</text>
 
               <rect x="330" y="16" width="240" height="86" rx="8" class="box-read" />
-              <text x="450" y="40" text-anchor="middle" font-weight="600">EventInvoice</text>
-              <text x="450" y="58" text-anchor="middle" class="muted">buyer name / email / phone</text>
-              <text x="450" y="74" text-anchor="middle" class="muted">event, organizer</text>
-              <text x="450" y="90" text-anchor="middle" class="muted">coupon applied</text>
+              <text x="450" y="40" text-anchor="middle" font-weight="600">Shared Invoice</text>
+              <text x="450" y="58" text-anchor="middle" class="muted">created at checkout</text>
+              <text x="450" y="74" text-anchor="middle" class="muted">status = PendingPayment</text>
+              <text x="450" y="90" text-anchor="middle" class="muted">order number minted here</text>
 
               <rect x="640" y="16" width="240" height="86" rx="8" class="box-read" />
               <text x="760" y="40" text-anchor="middle" font-weight="600">EventPurchaseSubmission</text>
@@ -555,8 +553,8 @@
 
               <rect x="20" y="144" width="240" height="76" rx="8" class="box-write" />
               <text x="140" y="168" text-anchor="middle" font-weight="600">InvoiceItem</text>
-              <text x="140" y="186" text-anchor="middle" class="muted">quantity, unitPrice, lineTotal</text>
-              <text x="140" y="202" text-anchor="middle" class="muted">itemType = Regular</text>
+              <text x="140" y="186" text-anchor="middle" class="muted">mirrored at checkout</text>
+              <text x="140" y="202" text-anchor="middle" class="muted">soft-deleted if line removed</text>
 
               <rect x="330" y="144" width="240" height="76" rx="8" class="box-write" />
               <text x="450" y="168" text-anchor="middle" font-weight="600">EventInvoiceItem</text>
@@ -565,8 +563,8 @@
 
               <rect x="640" y="144" width="240" height="76" rx="8" class="box-money" />
               <text x="760" y="168" text-anchor="middle" font-weight="600">TicketReservation</text>
-              <text x="760" y="186" text-anchor="middle" class="muted">status = Active</text>
-              <text x="760" y="202" text-anchor="middle" class="muted">reservedUntilUtc</text>
+              <text x="760" y="186" text-anchor="middle" class="muted">Active, cart-scoped</text>
+              <text x="760" y="202" text-anchor="middle" class="muted">consumes only after pay starts</text>
 
               <path d="M260,182 L326,182" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
               <path d="M570,182 L636,182" stroke="currentColor" fill="none" marker-end="url(#arrow)" />
@@ -585,12 +583,9 @@
           </svg>
         </div>
 
-        <h4>Why an Invoice and not a Draft status</h4>
+        <h4>Why EventInvoice comes before Invoice</h4>
         <p>
-          <code>Invoice</code> is shared with Donation and Membership, and its status column carries a
-          database check constraint. Adding a <code>Draft</code> value would mean altering that
-          constraint on a table two live modules write to. So a cart reuses
-          <code>PendingPayment</code> instead — a deliberate trade, documented in the service itself.
+          The shared <code>Invoice</code> table is used by Donation and Membership too, so the cart no longer writes there while a buyer is only browsing. <code>RaiseInvoiceAsync</code> creates the shared invoice at payment start, links it back to the <code>EventInvoice</code>, mirrors live cart lines to <code>InvoiceItem</code>, and marks the cart <code>Converted</code>.
         </p>
 
         <h4>The hold clock</h4>
@@ -599,7 +594,7 @@
             <tbody>
               <tr><th style="width:16rem">How long</th><td><code>Event.PurchaseTimeLimit</code> if the organizer set one, otherwise <code>AppSettings.PurchaseTimeLimitMinutes</code>, otherwise a built-in default. Resolved by <code>TicketingShared.GetEffectiveHoldMinutes</code>.</td></tr>
               <tr><th>Counted from</th><td>The <em>cart's</em> creation time, not the line's. Every line shares one deadline, so adding a line late does not extend an already-aging cart.</td></tr>
-              <tr><th>Who enforces it</th><td><code>EventCartMaintenanceHostedService</code>, every minute. It flips expired Active reservations to <code>Expired</code> and refreshes the ticket-type counters.</td></tr>
+              <tr><th>Who enforces it</th><td><code>EventCartMaintenanceHostedService</code>, every minute. It marks expired open carts <code>Abandoned</code>. <code>TicketingService.ExpireStaleReservationsAsync</code> owns reservation expiry and counter refresh, so the two background passes do not fight over stock.</td></tr>
               <tr><th>What the buyer sees</th><td><code>expiresAtUtc</code> on the cart response. Once it passes, pricing refuses the line with "the hold has expired; remove and re-add this line".</td></tr>
             </tbody>
           </table>
@@ -624,6 +619,20 @@
           Every editing call also runs <code>EventPaymentAttempts.ReleaseAbandonedAttemptsAsync</code>
           first, which voids a stale Stripe attempt so the buyer is not locked out of their own cart.
         </p>
+
+        <h4>Where oversell is prevented</h4>
+        <p>
+          Browsing cart lines are intentionally lightweight: they validate against current availability, but they do not queue every buyer behind the ticket type and they do not make the event look sold out. The real inventory claim happens in <code>EventCheckoutService.ClaimSeatsForPaymentAsync</code>, called by <code>/checkout/intent</code>, <code>/checkout/cheque</code>, and by <code>/checkout/confirm</code> for free orders.
+        </p>
+        <ol class="step-rail">
+          <li><strong>Apply a short SQL lock wait.</strong> <code>SET LOCK_TIMEOUT 3000</code> keeps a rush from tying up request threads and pooled connections for the full command timeout.</li>
+          <li><strong>Lock ticket types in sorted order.</strong> Each distinct ticket type is read with <code>UPDLOCK, HOLDLOCK</code>, so two buyers cannot both read the same last seat as available, and multi-ticket carts avoid lock-order deadlocks.</li>
+          <li><strong>Re-read availability inside the same transaction.</strong> The winner stamps <code>PaymentStartedUtc</code> and extends the hold into payment grace. Losers get a truthful sold-out or reduced-quantity message and no payment intent.</li>
+          <li><strong>Raise money only after the claim.</strong> The shared <code>Invoice</code>, charge rows and payment attempt are created only for carts whose seats survived the claim.</li>
+        </ol>
+        <div class="rule">
+          The guarantee is no oversell and no half-charged loser. A buyer can still lose the race, hit the 3-second contention cap, or be asked to retry; that is expected behaviour under load, not a blocker or a server failure.
+        </div>
 
         <div class="dont">
           Adding or removing a line calls <code>TicketingShared.ResetPricingAsync</code>, which throws
@@ -943,6 +952,61 @@
           <li>a cheque payment exists that has not failed — and only an organizer-authenticated endpoint can record one.</li>
         </ul>
 
+        <h4>What checkout refuses, and what each refusal means</h4>
+        <p>
+          None of these is a server error. Every one of them rolled its transaction back, so the buyer
+          was not charged and the call is safe to repeat. They arrive as an ordinary failed envelope —
+          <code>success: false</code> with a <code>message</code> written for the buyer to read.
+        </p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:22rem">The message</th><th style="width:14rem">Where it comes from</th><th>What the buyer should do</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>"Cheque payments are recorded through the cheque endpoint."</td>
+                <td><code>DescribeUnsupportedMethod</code> — a method this endpoint cannot start</td>
+                <td>Call <code>POST .../checkout/cheque</code> instead, signed in as the event's organizer. Checked <strong>before</strong> the seat claim, so nothing was held: a refusal decided by the method alone must not take seats out of circulation for a call that could never have succeeded.</td>
+              </tr>
+              <tr>
+                <td>"Someone else is booking these tickets right now. Please try again."</td>
+                <td><code>TicketingShared.ConcurrencyRetryMessage</code> — the seat claim lost the row lock, or was chosen as the deadlock victim</td>
+                <td>Press pay again. Stock still exists on every line; the request simply queued behind another buyer and gave up after the 3-second cap.</td>
+              </tr>
+              <tr>
+                <td>"'Early Bird' sold out before your payment could be taken. Your order was not charged."</td>
+                <td><code>DescribeSeatContentionAsync</code> — the same lost race, but the availability read afterwards found nothing left on that line</td>
+                <td>Nothing. Retrying cannot help. Send them back to the ticket picker.</td>
+              </tr>
+              <tr>
+                <td>The organizer's own message, or a validation sentence</td>
+                <td>Any <code>InvalidOperationException</code> raised inside the transaction — an expired hold, a missing required answer, a quantity no longer available</td>
+                <td>Fix what the sentence names, then price and pay again.</td>
+              </tr>
+              <tr>
+                <td>Stripe's decline message, quoted verbatim</td>
+                <td><code>DescribeStripeFailure</code> on a <code>card_error</code></td>
+                <td>Use a different card. Stripe writes these for cardholders, so the wording is already theirs.</td>
+              </tr>
+              <tr>
+                <td>"Payments are busy right now. Please wait a moment and try again."</td>
+                <td><code>DescribeStripeFailure</code> on a <code>rate_limit_error</code> or HTTP 429 from Stripe</td>
+                <td>Wait a few seconds and press pay again — and note that <strong>the seats are still held</strong>, because the claim committed before Stripe was called. Do not send this buyer back to the ticket picker.</td>
+              </tr>
+              <tr>
+                <td>"Payment could not be started. Please try again."</td>
+                <td>Any other <code>StripeException</code>, or a <code>DbUpdateException</code></td>
+                <td>Retry once. Stripe's own message is deliberately withheld here because it carries account, customer and request ids.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="rule">
+          The seat claim and the Stripe call are on opposite sides of a commit. A buyer refused by the
+          claim holds nothing; a buyer refused by Stripe holds their seats until the reservation expires
+          or <code>ReleaseAbandonedAttemptsAsync</code> clears the attempt on their next cart write. The
+          two refusals read alike and behave differently — do not collapse them into one handler.
+        </div>
+
         <h4>When payment fails</h4>
         <p>
           <code>HandlePaymentFailedAsync</code> cancels every still-<code>Active</code> reservation on
@@ -969,7 +1033,7 @@
               <tr>
                 <td><code>EventCartMaintenanceHostedService</code></td>
                 <td>Every minute</td>
-                <td>Expires stale reservations and returns the seats; then deletes abandoned answer files. Two isolated passes.</td>
+                <td>Three isolated passes: expire stale reservations and return the seats, mark expired open carts <code>Abandoned</code>, then delete answer files that never became part of an order. A failure in one pass does not stop the others.</td>
               </tr>
               <tr>
                 <td><code>event-order-recovery-sweep</code></td>
@@ -1019,7 +1083,7 @@
               <tr><td><code>unitPrice</code></td><td>decimal</td><td>Price per seat, from the price period or the ticket type's full price.</td></tr>
               <tr><td><code>lineTotal</code></td><td>decimal</td><td><code>unitPrice × quantity</code>.</td></tr>
               <tr><td><code>discountAmount</code></td><td>decimal?</td><td>Membership and coupon discount landed on this line. Populated by <code>/price</code>.</td></tr>
-              <tr><td><code>reservationStatus</code></td><td>enum</td><td><code>Active</code> means the seats are held. Anything else means the hold is gone and the line must be removed and re-added.</td></tr>
+              <tr><td><code>reservationStatus</code></td><td>enum</td><td><code>Active</code> means the line still has a live reservation record. For cart reservations, stock is not consumed until <code>PaymentStartedUtc</code> is stamped during checkout.</td></tr>
             </tbody>
           </table>
         </div>
@@ -1183,6 +1247,12 @@
               <tr><td><strong>Submitting fewer attendees than the line quantity</strong></td><td>Refused outright. It must be exact.</td></tr>
               <tr><td><strong>Skipping the answers call</strong></td><td>It is not enforced at the answers endpoint — it is enforced at payment, where the buyer is refused with the organizer's own message.</td></tr>
               <tr><td><strong>Refunding because a ticket email failed</strong></td><td>The order is intact. Use the organizer's resend endpoint.</td></tr>
+              <tr><td><strong>Sending a cheque to <code>/checkout/intent</code></strong></td><td>That route only starts Stripe payments. Cheque has its own organizer-authenticated endpoint, and one call there records the payment and issues the tickets — no intent, no confirm, no Payment Element.</td></tr>
+              <tr><td><strong>Showing a cheque order as fully paid</strong></td><td>The tickets are issued while the invoice stays owing. <code>amountDue</code> comes back non-zero on purpose and has to be shown.</td></tr>
+              <tr><td><strong>Treating a refusal as a server error</strong></td><td>Every refusal at <code>/checkout/intent</code> comes back as a normal failed envelope with a buyer-readable message. A 5xx from that route is a defect, not a busy ticket type.</td></tr>
+              <tr><td><strong>Sending a throttled buyer back to the ticket picker</strong></td><td>"Payments are busy right now" means Stripe refused after the seats were already claimed. The buyer still holds them; retrying payment is the whole fix.</td></tr>
+              <tr><td><strong>Retrying "sold out before your payment could be taken"</strong></td><td>That wording is only chosen once availability has been re-read and found empty. Retrying cannot succeed.</td></tr>
+              <tr><td><strong>Expecting a shared <code>Invoice</code> while the cart is open</strong></td><td>An open cart is an <code>EventInvoice</code> only. The shared invoice and its order number are minted at <code>/checkout/intent</code>, so <code>orderNumber</code> is null until payment starts.</td></tr>
               <tr><td><strong>Pointing Stripe at <code>/webhooks/stripe</code></strong></td><td>That route only logs. The real one is <code>/api/public/stripe/web-hook</code>.</td></tr>
             </tbody>
           </table>
