@@ -7,7 +7,7 @@ import { Link } from "react-router-dom"
 import { updateEventWizardSetupState } from "@/api/events"
 import type { OrganizerEventListItem } from "@/api/events"
 import { APP_ROUTES } from "@/utils/routes"
-import { hasEventInvoiceHistory } from "@/utils/eventLifecycle"
+import { hasEventInvoiceHistory, normalizeSetupStateToken } from "@/utils/eventLifecycle"
 
 const SETUP_STATE_LABELS: Record<string, string> = {
   InProgress: "In Progress",
@@ -27,10 +27,6 @@ function formatSetupState(setupState: string, isCancelled: boolean) {
   }
 
   return SETUP_STATE_LABELS[setupState] ?? setupState.replace(/([a-z])([A-Z])/g, "$1 $2")
-}
-
-function normalizeSetupStateToken(value: string) {
-  return value.replace(/[^a-z]/gi, "").toLowerCase()
 }
 
 const STATUS_TRANSITIONS = {

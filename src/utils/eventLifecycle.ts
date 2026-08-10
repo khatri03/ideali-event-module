@@ -5,6 +5,20 @@ export interface EventLifecycleWindow {
   bookingEndDate: string | null
 }
 
+export interface EventInvoiceEligibility extends EventLifecycleWindow {
+  setupState: string
+  ticketsSold: number
+}
+
+/** The API has spelled this state both `ReadyForSale` and `Ready For Sale`; compare on letters alone. */
+export function normalizeSetupStateToken(value: string) {
+  return value.replace(/[^a-z]/gi, "").toLowerCase()
+}
+
+export function isEventOnSale(setupState: string) {
+  return normalizeSetupStateToken(setupState) === "readyforsale"
+}
+
 function toDate(value: string | null) {
   if (!value) return null
 
@@ -38,9 +52,14 @@ export function hasEventEnded(event: EventLifecycleWindow, now = new Date()) {
 }
 
 /**
- * An event only has invoices worth opening once money could have moved: bookings are open, the event
- * is running, or it is over. A draft nobody could buy into has nothing to show.
+ * An event only has invoices worth opening once money could have moved. Tickets already sold settle
+ * it outright - an event taken back offline keeps the invoices it earned. Otherwise the event has to
+ * be on sale *and* past the point where a buyer could have reached it; dates alone would offer the
+ * invoice list on an event still sitting in review, where nothing was ever purchasable.
  */
-export function hasEventInvoiceHistory(event: EventLifecycleWindow, now = new Date()) {
+export function hasEventInvoiceHistory(event: EventInvoiceEligibility, now = new Date()) {
+  if (event.ticketsSold > 0) return true
+  if (!isEventOnSale(event.setupState)) return false
+
   return isEventBookingOpen(event, now) || isEventRunning(event, now) || hasEventEnded(event, now)
 }
