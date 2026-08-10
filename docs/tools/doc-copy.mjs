@@ -90,9 +90,11 @@ export const prose = {
 
   controllerNotes: {
     EventCartController:
-      "The heart of anonymous ticket buying. A cart is an <code>Invoice</code> in an unpaid state; the cart's <code>uniqueId</code> is the only credential the buyer has, which is why creating one is bot-challenged and everything else is scoped to that id.",
+      "The heart of anonymous ticket buying. A cart is an <code>EventInvoice</code> with <code>CartStatus = Open</code> — it lives entirely in the event module, so a buyer who never pays leaves nothing in the shared <code>Invoice</code> ledger Donation and Membership also use. The cart's <code>uniqueId</code> is the only credential the buyer has, which is why creating one is bot-challenged and everything else is scoped to that id.",
     EventCheckoutController:
-      "Turns a cart into money. Card payments use Stripe's deferred-intent flow, bank payments (ACH and PAD) settle later, and a zero-total order confirms immediately with no payment at all.",
+      "Turns a cart into money, and the only place the shared <code>Invoice</code> is raised. Seats are claimed under a row lock first; only a cart that survived the claim gets an invoice, an order number and a payment. Card payments use Stripe's deferred-intent flow, bank payments (ACH and PAD) settle later, and a zero-total order confirms immediately with no payment at all.",
+    LoadTestSeedController:
+      "Only exists during a load run. <code>LoadTestOnlyConvention</code> removes the controller from the route table unless the host has a truthy <code>LoadTest:Enabled</code> setting <em>and</em> is off production, so on a live host these routes are absent rather than merely refused — nothing to probe, nothing in Swagger, and no authorization attribute standing between a caller and a mistake.",
     EventWizardController:
       "The organizer's multi-step event builder. Each step saves independently, so a half-built event is a normal state rather than an error.",
     SessionWizardController:
@@ -354,7 +356,10 @@ public async Task&lt;IActionResult&gt; AddLine(
             <dd>A temporary hold on seats while a buyer completes checkout. Expires on a timer and returns the seats to inventory.</dd>
 
             <dt>Cart</dt>
-            <dd>Not a separate table. A cart <em>is</em> an <code>Invoice</code> that has not been paid yet. Its <code>uniqueId</code> is the buyer's only handle on it.</dd>
+            <dd>An <code>EventInvoice</code> with <code>CartStatus = Open</code>, and its lines are <code>EventInvoiceItem</code> rows. Event-module tables only — a browsing buyer writes nothing to the shared <code>Invoice</code>. Its <code>uniqueId</code> is the buyer's only handle on it.</dd>
+
+            <dt>Seat claim</dt>
+            <dd>The moment a cart's seats actually leave inventory, at the start of checkout rather than when a line is added. Adding a line reserves nothing another buyer can lose; the claim under a row lock is what decides who gets the last seat.</dd>
 
             <dt>Ticket</dt>
             <dd>Issued only after payment succeeds. One row per attendee, carrying the code that is scanned at the door.</dd>
@@ -615,6 +620,42 @@ await Uow.ExecuteInTransactionAsync(async token =&gt;
           <code>ISoftDelete</code> at all.
         </div>
 
+        <h3>Concurrency — when two requests want the same row</h3>
+        <p>
+          Most of the system never notices concurrency. The exception is anything selling a limited
+          quantity, where two requests read the same last unit as available and both sell it. The
+          pattern that prevents it lives in
+          <code>TicketingShared</code> and is worth copying rather than reinventing:
+        </p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <tbody>
+              <tr>
+                <th style="width:18rem"><code>ApplyLockWaitLimitAsync</code></th>
+                <td>Runs <code>SET LOCK_TIMEOUT 3000</code> on the current connection. Without it a request blocked on another request's row waits the full ADO.NET command timeout — sixty seconds on this connection string — and the caller's own request times out first and reaches them as a server error. The setting is connection-scoped and SQL Server resets it when the connection returns to the pool, so it cannot leak into whatever runs next. It also creates no lock of its own: it only governs how long <em>this</em> connection is willing to wait.</td>
+              </tr>
+              <tr>
+                <th><code>LockTicketTypeForUpdateAsync</code></th>
+                <td>Reads the row with <code>WITH (UPDLOCK, HOLDLOCK)</code> inside the transaction, so the second reader queues instead of reading a stale count. Lock every row the transaction needs <strong>in a sorted order</strong> — a cart holding two ticket types that locks them in arrival order will deadlock against a cart holding the same two in the other order.</td>
+              </tr>
+              <tr>
+                <th><code>IsConcurrencyConflict</code></th>
+                <td>Recognises SQL error <code>1205</code> (deadlock victim), <code>1222</code> (lock request timeout) and <code>-2</code> (command timeout), walking the inner exceptions because EF wraps them in a <code>DbUpdateException</code>. All three roll the whole transaction back, so nothing was half-written and the call is safe to repeat.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="rule">
+          A lost race is not a server error. Catch the three conflict codes and answer with a sentence
+          the caller can act on. Letting them escape produces a 500 for a request that changed nothing
+          and would have succeeded on a retry.
+        </div>
+        <div class="dont">
+          Do not raise the lock timeout to make contention go away. The wait cap is what keeps a rush
+          from holding request threads and pooled connections for a minute each; raising it converts a
+          busy ticket type into a thread-pool outage that reaches every module, not just Events.
+        </div>
+
         <h3>Migrations</h3>
         <p>
           Migrations live in <code>src/Modules/Identity/Ideas.Identity.Persistence/Migrations</code> —
@@ -628,6 +669,17 @@ await Uow.ExecuteInTransactionAsync(async token =&gt;
           A <code>DropColumn</code>, <code>AlterColumn</code>, <code>RenameTable</code> or index change
           on a table Donation or Membership uses is a production incident waiting to happen. Adding a
           table or a nullable column is safe; almost nothing else is.
+        </div>
+        <div class="dont">
+          The generated <code>Down()</code> is not a rollback plan. EF writes it as the literal inverse
+          of <code>Up()</code>, so it drops the columns and deletes the rows the release added —
+          including rows real users created after the deploy. Treat <code>Down()</code> as a local
+          development convenience only; a production rollback is a restore or a new forward migration.
+        </div>
+        <div class="rule">
+          A column added as <code>nullable: false</code> must carry a <code>defaultValue</code> that
+          satisfies every CHECK constraint on the table. Rows a backfill misses take that default, and
+          a default the constraint rejects fails the migration on the one database that matters.
         </div>
       </section>
 
@@ -647,7 +699,7 @@ await Uow.ExecuteInTransactionAsync(async token =&gt;
           <table class="table table-sm table-bordered">
             <thead class="table-light"><tr><th style="width:22rem">Service</th><th>Does</th></tr></thead>
             <tbody>
-              <tr><td><code>EventCartMaintenanceHostedService</code></td><td>Every minute: expires stale ticket reservations and returns the seats, then deletes answer files uploaded against carts that were abandoned. Each pass is isolated, so one failing does not stop the other.</td></tr>
+              <tr><td><code>EventCartMaintenanceHostedService</code></td><td>Every minute, three passes: expire stale ticket reservations and return the seats, mark expired open carts <code>Abandoned</code>, then delete answer files uploaded against carts that never became orders. Each pass is isolated, so one failing does not stop the others.</td></tr>
               <tr><td><code>AlertScheduleHostedService</code></td><td>Sends membership alerts that were scheduled for a future time.</td></tr>
               <tr><td><code>ScreenPermissionSyncHostedService</code></td><td>Keeps the permission catalogue in the database in step with the code.</td></tr>
               <tr><td><code>ContactSyncBackgroundService</code></td><td>Pushes contacts to external providers.</td></tr>
@@ -742,6 +794,43 @@ await Uow.ExecuteInTransactionAsync(async token =&gt;
           Always read a fee from the stored snapshot. Never recalculate one from the current rules —
           the rule may have been edited since, and recalculating silently rewrites history and
           produces a total that does not match what the customer actually paid.
+        </div>
+
+        <h3>When Stripe refuses</h3>
+        <p>
+          Every Stripe call can throw <code>StripeException</code>, and a call that is fine in
+          development throws in production for reasons that have nothing to do with the code. The two
+          that actually happen are a declined card and a rate limit — Stripe caps write operations, and
+          test mode caps them far lower than live, so a rush of buyers reaching the intent call in the
+          same second is enough to trip it.
+        </p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:14rem"><code>StripeError.Type</code></th><th style="width:16rem">What the caller is told</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><code>card_error</code></td>
+                <td>Stripe's own message, quoted verbatim</td>
+                <td>Stripe writes these for cardholders to read. "Your card was declined" is more use to the buyer than anything we would write.</td>
+              </tr>
+              <tr>
+                <td><code>rate_limit_error</code>, or HTTP 429</td>
+                <td>"Payments are busy right now. Please wait a moment and try again."</td>
+                <td>The one failure that clears on its own. Telling that caller to wait is honest; a flat "could not be started" reads as final and sends them away.</td>
+              </tr>
+              <tr>
+                <td>anything else</td>
+                <td>"Payment could not be started. Please try again."</td>
+                <td>Stripe's message on an <code>invalid_request_error</code> carries customer ids, account ids and request ids. None of that goes to a browser.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="rule">
+          Catch <code>StripeException</code> wherever you call Stripe, log the exception with its
+          <code>StripeError.Type</code>, and return a sentence. An uncaught one is a 500 for a buyer who
+          was never charged — the transaction rolled back, so there is nothing to reconcile and nothing
+          to explain except a server error that should have been a message.
         </div>
       </section>
 
@@ -880,6 +969,22 @@ var stored = await fileStorageService.SaveFileAsync(file);   // returns the File
               <tr>
                 <td><strong>Sending <code>Stripe-Account</code> on a bank payment</strong></td>
                 <td>ACH and PAD are destination charges on the platform account. The header sends Stripe looking in the wrong place.</td>
+              </tr>
+              <tr>
+                <td><strong>Letting a lost database race reach the caller as a 500</strong></td>
+                <td>Deadlock, lock timeout and command timeout all roll the transaction back and change nothing. Catch them with <code>IsConcurrencyConflict</code> and answer with a retryable sentence.</td>
+              </tr>
+              <tr>
+                <td><strong>Locking rows in whatever order they arrive</strong></td>
+                <td>Two requests holding the same two rows in opposite orders deadlock every time. Sort the ids before taking the locks.</td>
+              </tr>
+              <tr>
+                <td><strong>Calling Stripe without catching <code>StripeException</code></strong></td>
+                <td>A declined card or a rate limit becomes a server error. Both are ordinary outcomes that deserve a sentence.</td>
+              </tr>
+              <tr>
+                <td><strong>Returning Stripe's message straight to the browser</strong></td>
+                <td>Only <code>card_error</code> is written for the cardholder. The rest carry account, customer and request ids.</td>
               </tr>
               <tr>
                 <td><strong>Putting business logic in a controller</strong></td>

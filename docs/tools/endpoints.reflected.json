@@ -1,5 +1,5 @@
 {
-  "Total": 578,
+  "Total": 580,
   "Controllers": [
     {
       "Area": "Admin",
@@ -4680,6 +4680,50 @@
           "Policy": "OrganizerModuleAccess, SharedOrganizerModuleSubscription",
           "Flags": [],
           "Parameters": []
+        }
+      ]
+    },
+    {
+      "Area": "Event",
+      "Name": "LoadTestSeedController",
+      "BaseRoute": "/api/load-test/events",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "",
+      "Actions": [
+        {
+          "Verb": "POST",
+          "Path": "/api/load-test/events/seed",
+          "Name": "SeedEvent",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Body",
+              "Type": "SeedLoadTestEventRequest",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/load-test/events/ticket-types/{ticketTypeUniqueId:guid}/reset",
+          "Name": "ResetTicketType",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "ticketTypeUniqueId"
+            }
+          ]
         }
       ]
     },

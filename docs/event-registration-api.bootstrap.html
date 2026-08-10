@@ -1709,11 +1709,35 @@ export function useEventRegistration(eventUniqueId: string) {
             <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
 <pre><code>{
   "cartUniqueId": "5c1d8e2f-6b7a-4c39-9d80-1e2f3a4b5c6d",
+  "invoiceUniqueId": "9b0e7d61-4c2a-4f18-8e73-3d5b6a9c0e42",
   "invoiceNo": "EV-2026-004183",
   "amountDue": 470.61,
   "ticketCodes": ["GPS26-4X7K-2210", "GPS26-9M2B-2211"]
 }</code></pre>
             <p class="mt-3"><code>amountDue</code> is what is still owed. It is <em>not</em> zero — that is the whole point of the cheque flow.</p>
+
+            <h4 class="h6 mt-4">What you must do with it</h4>
+            <ul>
+              <li>
+                <strong>Do not send a cheque to <code>…/checkout/intent</code>.</strong> That route only
+                starts Stripe payments, and it refuses this one with <em>"Cheque payments are recorded
+                through the cheque endpoint."</em> Branch on the selected method before the call, not on
+                the refusal after it.
+              </li>
+              <li>
+                There is <strong>no Stripe step and nothing to confirm.</strong> This one call records the
+                payment and issues the tickets. Do not mount the Payment Element, and do not call
+                <code>…/checkout/confirm</code> afterwards.
+              </li>
+              <li>
+                Send the organizer to the order page using <code>invoiceUniqueId</code>. The cart id dies
+                with the cart, so that is the only handle that survives.
+              </li>
+              <li>
+                Show <code>amountDue</code>. The tickets exist but the money has not arrived, so a
+                confirmation that reads as fully paid is wrong.
+              </li>
+            </ul>
 
             <h4 class="h6 mt-4">When the seat is gone by the time you pay</h4>
             <p>
