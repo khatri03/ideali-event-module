@@ -2,6 +2,7 @@ import { Badge, Box, Heading, Table, Text } from "@chakra-ui/react"
 import { format } from "date-fns"
 import type { EventInvoicePaymentAttempt } from "@/api/eventInvoices"
 import { EVENT_INVOICE_PAYMENT_METHOD_OPTIONS } from "@/api/eventInvoices"
+import { parseUtcDateTime } from "@/utils/utcDates"
 
 interface EventInvoicePaymentHistorySectionProps {
   payments: EventInvoicePaymentAttempt[]
@@ -19,8 +20,8 @@ function paymentMethodLabel(value: string) {
 }
 
 function formatDate(value: string) {
-  const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime()) ? "—" : format(parsed, "MMM d, yyyy h:mm a")
+  const parsed = parseUtcDateTime(value)
+  return parsed ? format(parsed, "MMM d, yyyy h:mm a") : "—"
 }
 
 function formatMoney(value: number, currencySymbol: string) {

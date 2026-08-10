@@ -1,14 +1,15 @@
 import { Badge, Box, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { format } from "date-fns"
 import type { EventInvoiceDetail } from "@/api/eventInvoices"
+import { parseUtcDateTime } from "@/utils/utcDates"
 
 interface EventInvoiceSummaryCardProps {
   invoice: EventInvoiceDetail
 }
 
 function formatDate(value: string) {
-  const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime()) ? "—" : format(parsed, "MMM d, yyyy 'at' h:mm a")
+  const parsed = parseUtcDateTime(value)
+  return parsed ? format(parsed, "MMM d, yyyy 'at' h:mm a") : "—"
 }
 
 function formatMoney(value: number | null | undefined, currencySymbol: string) {
