@@ -10,7 +10,7 @@ interface ChequePaymentFieldsProps {
  * one call this feeds issues the tickets straight away and leaves the invoice owing, which is why the
  * panel says so rather than reading like a payment form.
  *
- * The reference is optional server-side, so it is not marked required — but it is the only trace of
+ * The reference is required: a cheque carries no gateway transaction id, so it is the only trace of
  * which cheque paid this order, and reconciling later without it means matching on amount and date.
  */
 export function ChequePaymentFields({ chequeReferenceNo, onChequeReferenceNoChange }: ChequePaymentFieldsProps) {
@@ -25,7 +25,10 @@ export function ChequePaymentFields({ chequeReferenceNo, onChequeReferenceNoChan
       <Stack gap={4} p={{ base: 3, md: 4 }}>
         <Box>
           <Text fontSize={{ base: "xs", md: "sm" }} fontWeight="600" color="gray.700" mb={2}>
-            Cheque reference number
+            Cheque reference number{" "}
+            <Text as="span" color="red.500">
+              *
+            </Text>
           </Text>
           <Input
             value={chequeReferenceNo}

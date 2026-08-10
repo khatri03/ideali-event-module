@@ -1705,6 +1705,14 @@ export function useEventRegistration(eventUniqueId: string) {
   "chequeReferenceNo": "CHQ-889210",
   "notes": "Collected at the front desk, 5 Aug."
 }</code></pre>
+            <p class="mt-3">
+              <code>chequeReferenceNo</code> is <strong>required</strong>. A cheque has no Stripe
+              transaction id, so this number is the only link between the deposit in the bank and the
+              invoice it settles. Send it blank and the call is refused with
+              <em>"Cheque reference number is required."</em> before any seat is claimed, so nothing is
+              held for an order that cannot go through. It is not checked for uniqueness — two banks can
+              legitimately print the same cheque number. <code>notes</code> stays optional.
+            </p>
 
             <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
 <pre><code>{
