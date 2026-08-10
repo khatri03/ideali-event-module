@@ -1,10 +1,11 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Box, Stack, Text } from "@chakra-ui/react"
+import { ConfirmDialog } from "@/features/custom-lists"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 import type { EventInvoiceFilters, EventInvoiceListItem, EventInvoiceSortBy, EventInvoiceSortOrder } from "@/api/eventInvoices"
-import { useEventInvoices } from "../hooks/useEventInvoices"
+import { useEventInvoices, useResendEventInvoice } from "../hooks/useEventInvoices"
 import { DEFAULT_PAGE_SIZE } from "../constants"
 import { EventInvoiceFilterBar, type EventInvoiceDraftFilters } from "./EventInvoiceFilterBar"
 import { EventInvoiceTable } from "./EventInvoiceTable"
@@ -71,6 +72,8 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
   const [appliedFilters, setAppliedFilters] = useState<EventInvoiceFilters>(() =>
     toFilters(initialDraft(initialEventUniqueId)),
   )
+  const [resendTarget, setResendTarget] = useState<EventInvoiceListItem | null>(null)
+  const resendMutation = useResendEventInvoice(resendTarget?.invoiceUniqueId ?? "")
 
   const invoicesQuery = useEventInvoices(appliedFilters, page, pageSize, sortBy, sortOrder)
   const invoicesPage = invoicesQuery.data
@@ -113,6 +116,20 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
     navigate(APP_ROUTES.eventInvoices.detail(invoice.invoiceUniqueId))
   }
 
+  function handleCloseResend() {
+    setResendTarget(null)
+    resendMutation.reset()
+  }
+
+  async function handleConfirmResend() {
+    try {
+      await resendMutation.mutateAsync()
+      handleCloseResend()
+    } catch {
+      // Left open on purpose so the dialog can show why it failed.
+    }
+  }
+
   return (
     <Stack gap={5}>
       <EventInvoiceFilterBar
@@ -140,6 +157,7 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
           isFetching={invoicesQuery.isFetching}
           onSortChange={handleSortChange}
           onOpenDetail={handleOpenDetail}
+          onResendTickets={setResendTarget}
         />
 
         <TablePagination
@@ -152,6 +170,25 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
           onPageSizeChange={handlePageSizeChange}
         />
       </Box>
+
+      {resendTarget ? (
+        <ConfirmDialog
+          title="Resend tickets"
+          description={
+            <Text>
+              Re-email every ticket on invoice <strong>{resendTarget.invoiceNo}</strong> to{" "}
+              {resendTarget.buyerEmail || resendTarget.buyerName || "the buyer"} and any attendee with their own address?
+            </Text>
+          }
+          confirmLabel="Resend tickets"
+          loadingLabel="Sending..."
+          tone="primary"
+          errorMessage={resendMutation.error ? extractApiError(resendMutation.error) : null}
+          isPending={resendMutation.isPending}
+          onConfirm={handleConfirmResend}
+          onClose={handleCloseResend}
+        />
+      ) : null}
     </Stack>
   )
 }
