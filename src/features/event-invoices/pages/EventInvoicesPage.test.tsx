@@ -7,14 +7,16 @@ import { system } from "@/theme"
 import type { EventInvoiceFilters } from "@/api/eventInvoices"
 import { EventInvoicesPage } from "./EventInvoicesPage"
 
-const { useEventInvoicesMock, useEventInvoiceFilterOptionsMock } = vi.hoisted(() => ({
+const { useEventInvoicesMock, useEventInvoiceFilterOptionsMock, useResendEventInvoiceMock } = vi.hoisted(() => ({
   useEventInvoicesMock: vi.fn(),
   useEventInvoiceFilterOptionsMock: vi.fn(),
+  useResendEventInvoiceMock: vi.fn(),
 }))
 
 vi.mock("../hooks/useEventInvoices", () => ({
   useEventInvoices: useEventInvoicesMock,
   useEventInvoiceFilterOptions: useEventInvoiceFilterOptionsMock,
+  useResendEventInvoice: useResendEventInvoiceMock,
 }))
 
 function renderAt(path: string) {
@@ -42,6 +44,12 @@ describe("EventInvoicesPage", () => {
       error: null,
     })
     useEventInvoiceFilterOptionsMock.mockReset().mockReturnValue({ data: { events: [], sessions: [] }, isLoading: false })
+    useResendEventInvoiceMock.mockReset().mockReturnValue({
+      mutateAsync: vi.fn(),
+      reset: vi.fn(),
+      isPending: false,
+      error: null,
+    })
   })
 
   /** The event card links here with the event it was opened from — the list must land narrowed. */

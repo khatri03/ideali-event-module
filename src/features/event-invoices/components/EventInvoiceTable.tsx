@@ -1,6 +1,7 @@
 import { Badge, Box, Button, Table, Text } from "@chakra-ui/react"
 import { format } from "date-fns"
 import type { EventInvoiceListItem, EventInvoiceSortBy, EventInvoiceSortOrder } from "@/api/eventInvoices"
+import { EventInvoiceRowActionsMenu } from "./EventInvoiceRowActionsMenu"
 import { PaymentPills } from "./PaymentPills"
 import { SortableColumnHeader } from "./SortableColumnHeader"
 import { TableBodySkeleton } from "./TableBodySkeleton"
@@ -13,6 +14,7 @@ interface EventInvoiceTableProps {
   isFetching: boolean
   onSortChange: (sortBy: EventInvoiceSortBy) => void
   onOpenDetail: (invoice: EventInvoiceListItem) => void
+  onResendTickets: (invoice: EventInvoiceListItem) => void
 }
 
 const STATUS_COLOR: Record<string, string> = {
@@ -36,7 +38,7 @@ function formatMoney(value: number, currencySymbol: string) {
   return `${currencySymbol}${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}`
 }
 
-const COLUMN_COUNT = 6
+const COLUMN_COUNT = 7
 
 export function EventInvoiceTable({
   invoices,
@@ -45,6 +47,7 @@ export function EventInvoiceTable({
   isFetching,
   onSortChange,
   onOpenDetail,
+  onResendTickets,
 }: EventInvoiceTableProps) {
   return (
     <Box overflow="auto" maxH={TABLE_MAX_HEIGHT}>
@@ -60,6 +63,11 @@ export function EventInvoiceTable({
       >
         <Table.Header>
           <Table.Row bg="app.bg">
+            <Table.ColumnHeader px={4} py={3} textAlign="center" w="1%">
+              <Text fontSize="xs" fontWeight="700" color="text.secondary" textTransform="uppercase" letterSpacing="0.06em">
+                Actions
+              </Text>
+            </Table.ColumnHeader>
             <Table.ColumnHeader px={4} py={3}>
               <SortableColumnHeader label="Invoice No" column="invoiceNo" activeSortBy={sortBy} activeSortOrder={sortOrder} onSortChange={onSortChange} />
             </Table.ColumnHeader>
@@ -100,6 +108,13 @@ export function EventInvoiceTable({
             ) : (
               invoices.map((invoice) => (
                 <Table.Row key={invoice.invoiceUniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
+                  <Table.Cell px={4} py={4} textAlign="center">
+                    <EventInvoiceRowActionsMenu
+                      invoice={invoice}
+                      onOpenDetail={onOpenDetail}
+                      onResendTickets={onResendTickets}
+                    />
+                  </Table.Cell>
                   <Table.Cell px={4} py={4}>
                     <Button
                       type="button"
