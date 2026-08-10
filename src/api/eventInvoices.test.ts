@@ -67,3 +67,51 @@ describe("fetchEventInvoices status labelling", () => {
     expect((await firstInvoice()).invoiceStatusLabel).toBe("PendingPayment")
   })
 })
+
+describe("fetchEventInvoices date range", () => {
+  beforeEach(() => {
+    getMock.mockReset()
+    getMock.mockResolvedValue(listResponse(PENDING_INVOICE))
+  })
+
+  async function sentParams(filters: Partial<EventInvoiceFilters>) {
+    await fetchEventInvoices({ ...NO_FILTERS, ...filters }, 1, 10, "invoiceDateUtc", "desc")
+    return getMock.mock.calls.at(-1)?.[1].params as URLSearchParams
+  }
+
+  /** The organizer picks a calendar date in their own zone; the API compares against UTC instants. */
+  it("DateFrom_IsSentAsTheUtcInstantOfLocalMidnight", async () => {
+    const params = await sentParams({ invoiceDateFrom: "2026-03-01" })
+
+    expect(params.get("invoiceDateFrom")).toBe(new Date(2026, 2, 1).toISOString())
+  })
+
+  /** Exclusive, so an invoice raised at 23:59 on the chosen day is still inside the range. */
+  it("DateTo_IsSentAsTheUtcInstantOfTheFollowingLocalMidnight", async () => {
+    const params = await sentParams({ invoiceDateTo: "2026-03-01" })
+
+    expect(params.get("invoiceDateTo")).toBe(new Date(2026, 2, 2).toISOString())
+  })
+
+  it("SameDayRange_CoversAnInvoiceRaisedLateThatEvening", async () => {
+    const params = await sentParams({ invoiceDateFrom: "2026-03-01", invoiceDateTo: "2026-03-01" })
+    const lateEvening = new Date(2026, 2, 1, 23, 59)
+
+    expect(lateEvening >= new Date(params.get("invoiceDateFrom") as string)).toBe(true)
+    expect(lateEvening < new Date(params.get("invoiceDateTo") as string)).toBe(true)
+  })
+
+  it("NoDatesChosen_SendsNeitherBound", async () => {
+    const params = await sentParams({})
+
+    expect(params.has("invoiceDateFrom")).toBe(false)
+    expect(params.has("invoiceDateTo")).toBe(false)
+  })
+
+  /** A value the picker could never produce must not become a bogus bound the API silently applies. */
+  it("MalformedDate_IsDroppedRatherThanSent", async () => {
+    const params = await sentParams({ invoiceDateFrom: "01/03/2026" })
+
+    expect(params.has("invoiceDateFrom")).toBe(false)
+  })
+})

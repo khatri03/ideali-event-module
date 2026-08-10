@@ -125,6 +125,7 @@ export function EventInvoiceFilterBar({
           <Input
             type="date"
             value={draft.invoiceDateFrom}
+            max={draft.invoiceDateTo || undefined}
             onChange={(event) => onDraftChange((current) => ({ ...current, invoiceDateFrom: event.target.value }))}
             minH="11"
             borderRadius="14px"
@@ -138,6 +139,7 @@ export function EventInvoiceFilterBar({
           <Input
             type="date"
             value={draft.invoiceDateTo}
+            min={draft.invoiceDateFrom || undefined}
             onChange={(event) => onDraftChange((current) => ({ ...current, invoiceDateTo: event.target.value }))}
             minH="11"
             borderRadius="14px"

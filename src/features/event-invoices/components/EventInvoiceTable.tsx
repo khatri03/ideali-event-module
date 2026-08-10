@@ -1,6 +1,7 @@
 import { Badge, Box, Button, Table, Text } from "@chakra-ui/react"
 import { format } from "date-fns"
 import type { EventInvoiceListItem, EventInvoiceSortBy, EventInvoiceSortOrder } from "@/api/eventInvoices"
+import { parseUtcDateTime } from "@/utils/utcDates"
 import { EventInvoiceRowActionsMenu } from "./EventInvoiceRowActionsMenu"
 import { PaymentPills } from "./PaymentPills"
 import { SortableColumnHeader } from "./SortableColumnHeader"
@@ -29,9 +30,8 @@ const STATUS_COLOR: Record<string, string> = {
 }
 
 function formatDate(value: string) {
-  if (!value) return "—"
-  const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime()) ? "—" : format(parsed, "MMM d, yyyy")
+  const parsed = parseUtcDateTime(value)
+  return parsed ? format(parsed, "MMM d, yyyy") : "—"
 }
 
 function formatMoney(value: number, currencySymbol: string) {

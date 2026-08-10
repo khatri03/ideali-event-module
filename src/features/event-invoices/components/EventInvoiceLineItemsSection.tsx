@@ -4,6 +4,7 @@ import { format } from "date-fns"
 import { Send } from "lucide-react"
 import { ConfirmDialog } from "@/features/custom-lists"
 import { extractApiError } from "@/utils/errors"
+import { parseUtcDateTime } from "@/utils/utcDates"
 import type { EventInvoiceLineItem, EventInvoiceTicket } from "@/api/eventInvoices"
 import { useResendEventInvoice, useResendEventInvoiceTicket } from "../hooks/useEventInvoices"
 
@@ -27,9 +28,8 @@ function formatMoney(value: number, currencySymbol: string) {
 }
 
 function formatTimestamp(value: string | null) {
-  if (!value) return null
-  const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime()) ? null : format(parsed, "MMM d, yyyy h:mm a")
+  const parsed = parseUtcDateTime(value)
+  return parsed ? format(parsed, "MMM d, yyyy h:mm a") : null
 }
 
 function LineItemCard({

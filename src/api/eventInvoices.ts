@@ -2,6 +2,7 @@ import { z } from "zod"
 import { client } from "@/api/client"
 import type { ServiceResponse } from "@/api/types"
 import { API_ROUTES } from "@/utils/routes"
+import { endOfLocalDayAsUtcIso, startOfLocalDayAsUtcIso } from "@/utils/utcDates"
 
 const serviceResponseSchema = z.object({
   success: z.boolean().optional(),
@@ -484,11 +485,16 @@ export async function fetchEventInvoices(
   appendArrayParams(params, "statuses", filters.statuses)
   appendArrayParams(params, "paymentMethods", filters.paymentMethods)
 
-  if (filters.invoiceDateFrom) {
-    params.set("invoiceDateFrom", filters.invoiceDateFrom)
+  // The picker gives a calendar date in the organizer's own zone; the API filters on UTC instants, so a
+  // late-evening purchase would otherwise land on the next UTC day and fall outside the chosen range.
+  const from = filters.invoiceDateFrom ? startOfLocalDayAsUtcIso(filters.invoiceDateFrom) : null
+  const to = filters.invoiceDateTo ? endOfLocalDayAsUtcIso(filters.invoiceDateTo) : null
+
+  if (from) {
+    params.set("invoiceDateFrom", from)
   }
-  if (filters.invoiceDateTo) {
-    params.set("invoiceDateTo", filters.invoiceDateTo)
+  if (to) {
+    params.set("invoiceDateTo", to)
   }
   if (filters.searchTerm.trim()) {
     params.set("searchTerm", filters.searchTerm.trim())

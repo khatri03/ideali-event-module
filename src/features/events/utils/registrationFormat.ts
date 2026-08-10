@@ -1,12 +1,8 @@
+import { parseUtcDateTime } from "@/utils/utcDates"
+
 const LOCAL_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
 
-export function parseUtcDateTime(value: string | null | undefined) {
-  if (!value) return null
-  const hasTimeZone = /([zZ]|[+-]\d{2}:?\d{2})$/.test(value)
-  const normalized = hasTimeZone ? value : `${value}Z`
-  const date = new Date(normalized)
-  return Number.isNaN(date.getTime()) ? null : date
-}
+export { parseUtcDateTime }
 
 export function formatRegistrationDateTime(value: string | null | undefined, timeZone = LOCAL_TIME_ZONE) {
   const date = parseUtcDateTime(value)
