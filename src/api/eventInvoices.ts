@@ -170,6 +170,31 @@ const invoiceNoteSchema = z.object({
   createdOnUtc: dual(z.string()),
 })
 
+const chargeSchema = z.object({
+  Label: dual(z.string()),
+  label: dual(z.string()),
+  ChargeKind: dual(z.string()),
+  chargeKind: dual(z.string()),
+  ChargeKindLabel: dual(z.string()),
+  chargeKindLabel: dual(z.string()),
+  SourceType: dual(z.string()),
+  sourceType: dual(z.string()),
+  SourceTypeLabel: dual(z.string()),
+  sourceTypeLabel: dual(z.string()),
+  CalculationType: dual(z.string()),
+  calculationType: dual(z.string()),
+  CalculationTypeLabel: dual(z.string()),
+  calculationTypeLabel: dual(z.string()),
+  SourceUniqueId: dual(z.string().nullable()),
+  sourceUniqueId: dual(z.string().nullable()),
+  Value: dual(money()),
+  value: dual(money()),
+  Amount: dual(money()),
+  amount: dual(money()),
+  DisplayOrder: dual(integer()),
+  displayOrder: dual(integer()),
+})
+
 const detailSchema = z.object({
   InvoiceUniqueId: dual(z.string()),
   invoiceUniqueId: dual(z.string()),
@@ -209,6 +234,8 @@ const detailSchema = z.object({
   buyerEmail: dual(z.string().nullable()),
   BuyerPhone: dual(z.string().nullable()),
   buyerPhone: dual(z.string().nullable()),
+  Charges: z.array(chargeSchema).nullable().optional(),
+  charges: z.array(chargeSchema).nullable().optional(),
   LineItems: z.array(lineItemSchema).nullable().optional(),
   lineItems: z.array(lineItemSchema).nullable().optional(),
   Notes: z.array(invoiceNoteSchema).nullable().optional(),
@@ -288,6 +315,20 @@ export interface EventInvoicePaymentAttempt {
   paymentDateUtc: string
 }
 
+export interface EventInvoiceCharge {
+  label: string
+  chargeKind: string
+  chargeKindLabel: string
+  sourceType: string
+  sourceTypeLabel: string
+  calculationType: string
+  calculationTypeLabel: string
+  sourceUniqueId: string | null
+  value: number
+  amount: number
+  displayOrder: number
+}
+
 export interface EventInvoiceNote {
   note: string
   createdBy: string
@@ -314,6 +355,7 @@ export interface EventInvoiceDetail {
   buyerName: string
   buyerEmail: string | null
   buyerPhone: string | null
+  charges: EventInvoiceCharge[]
   lineItems: EventInvoiceLineItem[]
   notes: EventInvoiceNote[]
   payments: EventInvoicePaymentAttempt[]
@@ -440,6 +482,22 @@ function normalizePaymentAttempt(raw: z.infer<typeof paymentAttemptSchema>): Eve
   }
 }
 
+function normalizeCharge(raw: z.infer<typeof chargeSchema>): EventInvoiceCharge {
+  return {
+    label: raw.Label ?? raw.label ?? "",
+    chargeKind: raw.ChargeKind ?? raw.chargeKind ?? "",
+    chargeKindLabel: raw.ChargeKindLabel ?? raw.chargeKindLabel ?? raw.ChargeKind ?? raw.chargeKind ?? "",
+    sourceType: raw.SourceType ?? raw.sourceType ?? "",
+    sourceTypeLabel: raw.SourceTypeLabel ?? raw.sourceTypeLabel ?? raw.SourceType ?? raw.sourceType ?? "",
+    calculationType: raw.CalculationType ?? raw.calculationType ?? "",
+    calculationTypeLabel: raw.CalculationTypeLabel ?? raw.calculationTypeLabel ?? raw.CalculationType ?? raw.calculationType ?? "",
+    sourceUniqueId: raw.SourceUniqueId ?? raw.sourceUniqueId ?? null,
+    value: raw.Value ?? raw.value ?? 0,
+    amount: raw.Amount ?? raw.amount ?? 0,
+    displayOrder: raw.DisplayOrder ?? raw.displayOrder ?? 0,
+  }
+}
+
 function normalizeInvoiceNote(raw: z.infer<typeof invoiceNoteSchema>): EventInvoiceNote {
   return {
     note: raw.Note ?? raw.note ?? "",
@@ -471,6 +529,7 @@ function normalizeDetail(raw: z.infer<typeof detailSchema>): EventInvoiceDetail 
     buyerName: raw.BuyerName ?? raw.buyerName ?? "",
     buyerEmail: raw.BuyerEmail ?? raw.buyerEmail ?? null,
     buyerPhone: raw.BuyerPhone ?? raw.buyerPhone ?? null,
+    charges: (raw.Charges ?? raw.charges ?? []).map(normalizeCharge),
     lineItems: (raw.LineItems ?? raw.lineItems ?? []).map(normalizeLineItem),
     notes: (raw.Notes ?? raw.notes ?? []).map(normalizeInvoiceNote),
     payments: (raw.Payments ?? raw.payments ?? []).map(normalizePaymentAttempt),

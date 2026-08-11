@@ -143,6 +143,21 @@ describe("fetchEventInvoiceDetail notes", () => {
           buyerName: "Jane Doe",
           buyerEmail: "jane@example.com",
           buyerPhone: null,
+          charges: [
+            {
+              label: "Sales Tax",
+              chargeKind: "Tax",
+              chargeKindLabel: "Tax",
+              sourceType: "EventChargeRule",
+              sourceTypeLabel: "Event Charge Rule",
+              calculationType: "Percent",
+              calculationTypeLabel: "Percent",
+              sourceUniqueId: "rule-1",
+              value: 17.99,
+              amount: 75.56,
+              displayOrder: 1,
+            },
+          ],
           lineItems: [],
           notes: [{ note: "Newest note", createdBy: "tester", createdOnUtc: "2026-08-02T10:00:00Z" }],
           payments: [],
@@ -155,6 +170,21 @@ describe("fetchEventInvoiceDetail notes", () => {
     expect(detail.taxAmount).toBe(75.56)
     expect(detail.platformCharges).toBe(4)
     expect(detail.serviceCharges).toBe(5)
+    expect(detail.charges).toEqual([
+      {
+        label: "Sales Tax",
+        chargeKind: "Tax",
+        chargeKindLabel: "Tax",
+        sourceType: "EventChargeRule",
+        sourceTypeLabel: "Event Charge Rule",
+        calculationType: "Percent",
+        calculationTypeLabel: "Percent",
+        sourceUniqueId: "rule-1",
+        value: 17.99,
+        amount: 75.56,
+        displayOrder: 1,
+      },
+    ])
     expect(detail.notes).toEqual([{ note: "Newest note", createdBy: "tester", createdOnUtc: "2026-08-02T10:00:00Z" }])
   })
 })

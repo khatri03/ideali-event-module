@@ -50,6 +50,47 @@ const INVOICE: EventInvoiceDetail = {
       tickets: [],
     },
   ],
+  charges: [
+    {
+      label: "Sales Tax",
+      chargeKind: "Tax",
+      chargeKindLabel: "Tax",
+      sourceType: "EventChargeRule",
+      sourceTypeLabel: "Event Charge Rule",
+      calculationType: "Percent",
+      calculationTypeLabel: "Percent",
+      sourceUniqueId: "charge-1",
+      value: 17.99,
+      amount: 75.56,
+      displayOrder: 1,
+    },
+    {
+      label: "Platform Charges",
+      chargeKind: "RevenuePlan",
+      chargeKindLabel: "Revenue Plan",
+      sourceType: "RevenuePlanRule",
+      sourceTypeLabel: "Revenue Plan Rule",
+      calculationType: "Fixed",
+      calculationTypeLabel: "Fixed",
+      sourceUniqueId: "charge-2",
+      value: 4,
+      amount: 4,
+      displayOrder: 2,
+    },
+    {
+      label: "Credit Card Fee",
+      chargeKind: "PaymentMethod",
+      chargeKindLabel: "Payment Method",
+      sourceType: "PaymentProcessorFeeRule",
+      sourceTypeLabel: "Payment Processor Fee Rule",
+      calculationType: "Percent",
+      calculationTypeLabel: "Percent",
+      sourceUniqueId: "charge-3",
+      value: 1,
+      amount: 5,
+      displayOrder: 3,
+    },
+  ],
   notes: [],
   payments: [],
 }
@@ -63,16 +104,18 @@ function renderCard(invoice: EventInvoiceDetail = INVOICE) {
 }
 
 describe("EventInvoiceSummaryCard", () => {
-  it("ChargeBreakdownPresent_RendersEachBucketSeparately", () => {
+  it("ChargeBreakdownPresent_RendersEachSavedChargeBelowSubtotal", () => {
     renderCard()
 
-    expect(screen.getByText("Tax")).toBeInTheDocument()
+    expect(screen.getByText("Subtotal")).toBeInTheDocument()
+    expect(screen.getByText("Sales Tax")).toBeInTheDocument()
+    expect(screen.getByText("Platform Charges")).toBeInTheDocument()
+    expect(screen.getByText("Credit Card Fee")).toBeInTheDocument()
     expect(screen.getByText("$75.56")).toBeInTheDocument()
-    expect(screen.getByText("Platform charges")).toBeInTheDocument()
     expect(screen.getByText("$4.00")).toBeInTheDocument()
-    expect(screen.getByText("Service charges")).toBeInTheDocument()
     expect(screen.getByText("$5.00")).toBeInTheDocument()
     expect(screen.getByText("$504.56")).toBeInTheDocument()
+    expect(screen.queryByText("Service charges")).not.toBeInTheDocument()
     expect(screen.getAllByText("-").length).toBeGreaterThan(0)
   })
 
