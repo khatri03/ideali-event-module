@@ -71,7 +71,22 @@ function TotalRow({ label, value, isStrong = false }: { label: string; value: st
   )
 }
 
+function ChargeRow({ label, value }: { label: string; value: string }) {
+  return (
+    <Flex justify="space-between" gap={4} py={1.5} pl={3}>
+      <Text fontSize="sm" fontWeight="600" color="text.secondary">
+        {label}
+      </Text>
+      <Text fontSize="sm" fontWeight="700" color="text.primary" textAlign="right">
+        {value}
+      </Text>
+    </Flex>
+  )
+}
+
 export function EventInvoiceSummaryCard({ invoice }: EventInvoiceSummaryCardProps) {
+  const charges = [...invoice.charges].sort((left, right) => left.displayOrder - right.displayOrder)
+
   return (
     <Box border="1px solid" borderColor="border.subtle" borderRadius="20px" bg="card.bg" boxShadow="card" overflow="hidden">
       <Box bg="brand.700" color="white" px={{ base: 4, md: 7 }} py={{ base: 5, md: 7 }}>
@@ -166,10 +181,14 @@ export function EventInvoiceSummaryCard({ invoice }: EventInvoiceSummaryCardProp
         <Flex justify="flex-end">
           <Box w={{ base: "full", md: "360px" }}>
             <TotalRow label="Subtotal" value={formatMoney(invoice.subTotal, invoice.currencySymbol)} />
+            {charges.length > 0 ? (
+              <Stack gap={0} mt={1} mb={2}>
+                {charges.map((charge) => (
+                  <ChargeRow key={`${charge.displayOrder}-${charge.label}-${charge.amount}`} label={charge.label} value={formatMoney(charge.amount, invoice.currencySymbol)} />
+                ))}
+              </Stack>
+            ) : null}
             <TotalRow label="Discount" value={formatMoney(invoice.discountAmount, invoice.currencySymbol)} />
-            <TotalRow label="Tax" value={formatMoney(invoice.taxAmount, invoice.currencySymbol)} />
-            <TotalRow label="Platform charges" value={formatMoney(invoice.platformCharges, invoice.currencySymbol)} />
-            <TotalRow label="Service charges" value={formatMoney(invoice.serviceCharges, invoice.currencySymbol)} />
             <Separator my={2} />
             <TotalRow label="Total" value={formatMoney(invoice.totalAmount, invoice.currencySymbol)} isStrong />
             <HStack justify="space-between" bg="brand.100" color="brand.700" borderRadius="14px" px={4} py={3} mt={2}>

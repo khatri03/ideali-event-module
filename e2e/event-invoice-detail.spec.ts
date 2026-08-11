@@ -51,6 +51,47 @@ function invoiceDetail(notes: Array<{ note: string; createdBy: string; createdOn
       buyerName: "Playwright Buyer",
       buyerEmail: "buyer@example.com",
       buyerPhone: "555-0100",
+      charges: [
+        {
+          label: "Sales Tax",
+          chargeKind: "Tax",
+          chargeKindLabel: "Tax",
+          sourceType: "EventChargeRule",
+          sourceTypeLabel: "Event Charge Rule",
+          calculationType: "Percent",
+          calculationTypeLabel: "Percent",
+          sourceUniqueId: "rule-1",
+          value: 17.99,
+          amount: 75.56,
+          displayOrder: 1,
+        },
+        {
+          label: "Platform Charges",
+          chargeKind: "RevenuePlan",
+          chargeKindLabel: "Revenue Plan",
+          sourceType: "RevenuePlanRule",
+          sourceTypeLabel: "Revenue Plan Rule",
+          calculationType: "Fixed",
+          calculationTypeLabel: "Fixed",
+          sourceUniqueId: "rule-2",
+          value: 4,
+          amount: 4,
+          displayOrder: 2,
+        },
+        {
+          label: "Credit Card Fee",
+          chargeKind: "PaymentMethod",
+          chargeKindLabel: "Payment Method",
+          sourceType: "PaymentProcessorFeeRule",
+          sourceTypeLabel: "Payment Processor Fee Rule",
+          calculationType: "Percent",
+          calculationTypeLabel: "Percent",
+          sourceUniqueId: "rule-3",
+          value: 1,
+          amount: 5,
+          displayOrder: 3,
+        },
+      ],
       lineItems: [
         {
           invoiceItemUniqueId: "line-1",
@@ -130,11 +171,12 @@ test("organizer can view, collapse, expand, and add invoice notes", async ({ pag
   await expect(eventLinks).toHaveCount(2)
   await expect(eventLinks.first()).toHaveAttribute("href", "/organizer/events/event-1")
   await expect(eventLinks.first()).toHaveAttribute("target", "_blank")
-  await expect(page.getByText("Tax")).toBeVisible()
+  await expect(page.getByText("Subtotal")).toBeVisible()
+  await expect(page.getByText("Sales Tax")).toBeVisible()
+  await expect(page.getByText("Platform Charges")).toBeVisible()
+  await expect(page.getByText("Credit Card Fee")).toBeVisible()
   await expect(page.getByText("$75.56")).toBeVisible()
-  await expect(page.getByText("Platform charges")).toBeVisible()
   await expect(page.getByText("$4.00")).toBeVisible()
-  await expect(page.getByText("Service charges")).toBeVisible()
   await expect(page.getByText("$5.00")).toBeVisible()
   await expect(page.getByText("$504.56")).toBeVisible()
   await expect(page.getByText("Existing newest note")).toBeVisible()
