@@ -1,4 +1,4 @@
-import { Box, Button, CloseButton, Dialog, Flex, Heading, Stack, Table, Text } from "@chakra-ui/react"
+import { Box, Button, CloseButton, Dialog, Flex, Heading, Stack, Table, Text, Textarea } from "@chakra-ui/react"
 import { CONTROL_BUTTON_OUTLINE, CONTROL_BUTTON_PRIMARY } from "@/components/common/controlStyles"
 import type { EventCartPaymentCharge } from "@/features/events/schemas/eventCart.schemas"
 import { formatAmount, formatChargeRate, hexToRgba } from "@/features/events/utils/registrationFormat"
@@ -30,7 +30,9 @@ interface PurchaseReviewDialogProps {
   chargeRows: EventCartPaymentCharge[]
   /** Server-priced amount that will be taken from the buyer. Nothing here is added up client-side. */
   grandTotal: number
+  invoiceNote: string
   isConfirming: boolean
+  onInvoiceNoteChange: (note: string) => void
   onConfirm: () => void
 }
 
@@ -187,7 +189,9 @@ export function PurchaseReviewDialog({
   netSubtotal,
   chargeRows,
   grandTotal,
+  invoiceNote,
   isConfirming,
+  onInvoiceNoteChange,
   onConfirm,
 }: PurchaseReviewDialogProps) {
   // Card details were already collected on the payment step, so confirming here is the pay action.
@@ -286,6 +290,21 @@ export function PurchaseReviewDialog({
                 />
                 <Box px={4} py={4} bg="gray.50" borderTopWidth="1px" borderTopColor="gray.200">
                   <CostRow label="Total to pay" amount={formatAmount(grandTotal, currencyCode)} isStrong />
+                </Box>
+              </ReviewSection>
+
+              <ReviewSection title="Invoice note">
+                <Box p={4}>
+                  <Textarea
+                    value={invoiceNote}
+                    onChange={(event) => onInvoiceNoteChange(event.target.value)}
+                    maxLength={400}
+                    rows={4}
+                    resize="vertical"
+                    placeholder="Add an optional note for this invoice"
+                    borderColor="gray.300"
+                    _focus={{ borderColor: accentColor, boxShadow: `0 0 0 1px ${accentColor}` }}
+                  />
                 </Box>
               </ReviewSection>
             </Stack>

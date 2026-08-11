@@ -40,8 +40,10 @@ interface RegistrationPaymentConfirmationProps {
   netSubtotal: number
   chargeRows: EventCartPaymentCharge[]
   grandTotal: number
+  invoiceNote: string
   /** True while the wizard is persisting the order or reporting settlement back to the server. */
   isBusy: boolean
+  onInvoiceNoteChange: (note: string) => void
   /** Validates and persists the order. Returning false leaves the dialog open with the complaint. */
   onPrepare: () => Promise<boolean>
   /** Mints the PaymentIntent for the selected method and yields what confirming it needs. */

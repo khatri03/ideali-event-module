@@ -284,7 +284,7 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
                         }}
                       >
                         <Receipt size={14} />
-                        Invoice
+                        Invoices
                       </Link>
                     </Menu.Item>
                   ) : null}

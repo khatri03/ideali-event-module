@@ -200,6 +200,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [pendingDeleteAction, setPendingDeleteAction] = useState<PendingDeleteAction | null>(null)
   const [cardHolderName, setCardHolderName] = useState('')
   const [chequeReferenceNo, setChequeReferenceNo] = useState('')
+  const [chequeNotes, setChequeNotes] = useState('')
+  const [invoiceNote, setInvoiceNote] = useState('')
   /** Set the moment an intent is minted, so the buyer can be sent to their order once it is paid. */
   const [orderUniqueId, setOrderUniqueId] = useState<string | null>(null)
   const navigate = useNavigate()
@@ -682,6 +684,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       paymentMethod: selectedPaymentBreakdown.paymentMethod as PaymentProduct,
       buyerName: `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim() || null,
       buyerEmail: buyerInfo.email || null,
+      invoiceNote: invoiceNote.trim() || null,
     })
 
     setOrderUniqueId(intent.invoiceUniqueId)
@@ -701,6 +704,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   async function recordChequePaymentAsync() {
     const receipt = await recordChequePaymentMutation.mutateAsync({
       chequeReferenceNo: chequeReferenceNo.trim(),
+      notes: chequeNotes.trim() || undefined,
+      invoiceNote: invoiceNote.trim() || null,
     })
 
     // Written down before anything else can fail: the tickets already exist on the server, so a tab
@@ -1193,6 +1198,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                 isChequeMethodSelected={isSelectedPaymentMethodCheque}
                                 chequeReferenceNo={chequeReferenceNo}
                                 onChequeReferenceNoChange={setChequeReferenceNo}
+                                chequeNotes={chequeNotes}
+                                onChequeNotesChange={setChequeNotes}
                                 onCardHolderNameChange={setCardHolderName}
                                 sessionGroups={selectedTicketSummaryBySession}
                                 grossSubtotal={paymentBreakdownGrossSubtotal}
@@ -1329,7 +1336,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
         netSubtotal={selectedPaymentBreakdown?.subtotal ?? paymentBreakdownGrossSubtotal}
         chargeRows={purchaseReviewChargeRows}
         grandTotal={selectedPaymentBreakdown?.grandTotal ?? selectedTicketTotal}
+        invoiceNote={invoiceNote}
         isBusy={createPaymentIntentMutation.isPending || recordChequePaymentMutation.isPending}
+        onInvoiceNoteChange={setInvoiceNote}
         onPrepare={preparePurchaseAsync}
         onCreateIntent={createPaymentIntentAsync}
         onRecordCheque={recordChequePaymentAsync}

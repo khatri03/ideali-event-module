@@ -164,6 +164,7 @@ describe("EventOrderConfirmationPage", () => {
     renderPage()
 
     await waitFor(() => expect(screen.getByText("Registration complete")).toBeTruthy())
+    expect(screen.getByTestId("order-next-step-dialog-content")).toBeTruthy()
     expect(screen.getByRole("button", { name: "Buy more tickets" })).toBeTruthy()
     expect(screen.getByRole("button", { name: "Close this tab" })).toBeTruthy()
   })

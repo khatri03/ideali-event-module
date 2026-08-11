@@ -29,12 +29,20 @@ export function OrderNextStepDialog({
       onOpenChange={(details) => {
         if (!details.open) onDismiss()
       }}
-      size={{ base: "full", md: "md" }}
+      size="md"
       role="alertdialog"
     >
       <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.650" />
-      <Dialog.Positioner alignItems="center" justifyContent="center" px={{ base: 0, md: 6 }} py={{ base: 0, md: 8 }}>
-        <Dialog.Content borderRadius={{ base: "0", md: "24px" }} bg="white" overflow="hidden">
+      <Dialog.Positioner alignItems="center" justifyContent="center" minH="100dvh" px={4} py={4}>
+        <Dialog.Content
+          data-testid="order-next-step-dialog-content"
+          borderRadius="24px"
+          bg="white"
+          overflow="hidden"
+          w="full"
+          maxW="md"
+          maxH="calc(100dvh - 32px)"
+        >
           <Box px={{ base: 4, md: 6 }} py={4} borderBottomWidth="1px" borderBottomColor="gray.200">
             <Flex justify="space-between" align="start" gap={4}>
               <Stack gap={1} minW={0}>
