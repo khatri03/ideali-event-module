@@ -111,10 +111,13 @@ export async function enterCardDetails(page: Page, card: { number: string; expir
 }
 
 /** Opens the review dialog and confirms, which mints the PaymentIntent and charges it in one go. */
-export async function confirmPurchase(page: Page) {
+export async function confirmPurchase(page: Page, invoiceNote?: string) {
   await page.getByRole("button", { name: /Review Purchase/i }).click()
-  const confirmButton = page.getByRole("button", { name: /Confirm (Purchase|& Pay)/i })
+  const confirmButton = page.getByRole("button", { name: /^(Confirm (Purchase|& Pay)|Pay\b)/i })
   await expect(confirmButton).toBeVisible({ timeout: 30_000 })
+  if (invoiceNote) {
+    await page.getByPlaceholder(/Add an optional note for this invoice/i).fill(invoiceNote)
+  }
   await confirmButton.click()
 }
 

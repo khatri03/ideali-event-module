@@ -58,6 +58,8 @@ function renderPaymentStep({
         isChequeMethodSelected={isChequeMethodSelected}
         chequeReferenceNo=""
         onChequeReferenceNoChange={vi.fn()}
+        chequeNotes=""
+        onChequeNotesChange={vi.fn()}
       />
     </ChakraProvider>,
   )

@@ -321,6 +321,7 @@ export function normalizeEventChequePaymentResult(payload: unknown): EventCheque
 export interface RecordEventChequePaymentRequest {
   chequeReferenceNo: string
   notes?: string
+  invoiceNote?: string | null
 }
 
 const eventCheckoutLineTicketsSchema = z.object({
@@ -429,4 +430,5 @@ export interface CreateEventPaymentIntentRequest {
   paymentMethod: PaymentProduct
   buyerName?: string | null
   buyerEmail?: string | null
+  invoiceNote?: string | null
 }

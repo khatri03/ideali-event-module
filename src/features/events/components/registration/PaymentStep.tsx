@@ -49,6 +49,8 @@ interface PaymentStepProps {
   isChequeMethodSelected: boolean
   chequeReferenceNo: string
   onChequeReferenceNoChange: (value: string) => void
+  chequeNotes: string
+  onChequeNotesChange: (value: string) => void
 }
 
 function PaymentMethodTile({
@@ -137,6 +139,8 @@ export function PaymentStep({
   isChequeMethodSelected,
   chequeReferenceNo,
   onChequeReferenceNoChange,
+  chequeNotes,
+  onChequeNotesChange,
   onCardHolderNameChange,
 }: PaymentStepProps) {
   return (
@@ -205,6 +209,8 @@ export function PaymentStep({
             <ChequePaymentFields
               chequeReferenceNo={chequeReferenceNo}
               onChequeReferenceNoChange={onChequeReferenceNoChange}
+              notes={chequeNotes}
+              onNotesChange={onChequeNotesChange}
             />
           ) : null}
 

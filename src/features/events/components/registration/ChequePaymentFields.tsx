@@ -1,8 +1,10 @@
-import { Box, Input, Stack, Text } from "@chakra-ui/react"
+import { Box, Input, Stack, Text, Textarea } from "@chakra-ui/react"
 
 interface ChequePaymentFieldsProps {
   chequeReferenceNo: string
   onChequeReferenceNoChange: (value: string) => void
+  notes: string
+  onNotesChange: (value: string) => void
 }
 
 /**
@@ -13,7 +15,12 @@ interface ChequePaymentFieldsProps {
  * The reference is required: a cheque carries no gateway transaction id, so it is the only trace of
  * which cheque paid this order, and reconciling later without it means matching on amount and date.
  */
-export function ChequePaymentFields({ chequeReferenceNo, onChequeReferenceNoChange }: ChequePaymentFieldsProps) {
+export function ChequePaymentFields({
+  chequeReferenceNo,
+  onChequeReferenceNoChange,
+  notes,
+  onNotesChange,
+}: ChequePaymentFieldsProps) {
   return (
     <Box borderWidth="1px" borderColor="gray.200" borderRadius="18px" bg="white" overflow="hidden">
       <Box px={4} py={3} bg="gray.50" borderBottomWidth="1px" borderBottomColor="gray.200">
@@ -39,6 +46,23 @@ export function ChequePaymentFields({ chequeReferenceNo, onChequeReferenceNoChan
             h="12"
             px={4}
             fontSize={{ base: "sm", md: "md" }}
+          />
+        </Box>
+
+        <Box>
+          <Text fontSize={{ base: "xs", md: "sm" }} fontWeight="600" color="gray.700" mb={2}>
+            Notes (optional)
+          </Text>
+          <Textarea
+            value={notes}
+            onChange={(event) => onNotesChange(event.currentTarget.value)}
+            placeholder="Bank, cheque date, or anything else worth recording"
+            borderColor="gray.200"
+            borderRadius="14px"
+            px={4}
+            py={3}
+            fontSize={{ base: "sm", md: "md" }}
+            rows={2}
           />
         </Box>
 

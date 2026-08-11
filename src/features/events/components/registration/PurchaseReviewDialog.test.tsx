@@ -34,7 +34,9 @@ function renderDialog(overrides: Partial<Parameters<typeof PurchaseReviewDialog>
         netSubtotal={200}
         chargeRows={CHARGES}
         grandTotal={239.98}
+        invoiceNote=""
         isConfirming={false}
+        onInvoiceNoteChange={vi.fn()}
         onConfirm={vi.fn()}
         {...overrides}
       />
@@ -89,5 +91,11 @@ describe("PurchaseReviewDialog", () => {
     renderDialog({ isCardPayment: false })
 
     expect(screen.getByRole("button", { name: "Confirm purchase" })).toBeTruthy()
+  })
+
+  it("Review_AnyPaymentMethod_OffersOneInvoiceNote", () => {
+    renderDialog()
+
+    expect(screen.getByPlaceholderText("Add an optional note for this invoice")).toBeTruthy()
   })
 })
