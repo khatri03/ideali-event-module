@@ -5,6 +5,7 @@ import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 import { useEventInvoiceDetail } from "../hooks/useEventInvoices"
 import { EventInvoiceSummaryCard } from "../components/EventInvoiceSummaryCard"
+import { EventInvoiceNotesSection } from "../components/EventInvoiceNotesSection"
 import { EventInvoiceLineItemsSection } from "../components/EventInvoiceLineItemsSection"
 import { EventInvoicePaymentHistorySection } from "../components/EventInvoicePaymentHistorySection"
 import { EventInvoiceDetailPageSkeleton } from "./EventInvoiceDetailPage.skeleton"
@@ -42,6 +43,7 @@ export default function EventInvoiceDetailPage() {
       ) : (
         <>
           <EventInvoiceSummaryCard invoice={invoice} />
+          <EventInvoiceNotesSection invoiceUniqueId={invoice.invoiceUniqueId} notes={invoice.notes} />
           <EventInvoiceLineItemsSection
             invoiceUniqueId={invoice.invoiceUniqueId}
             lineItems={invoice.lineItems}

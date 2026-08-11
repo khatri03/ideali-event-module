@@ -1,0 +1,1707 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Ten structurally different, professional Bootstrap invoice formats">
+  <title>Professional Invoice Format Gallery</title>
+
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+    integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+    crossorigin="anonymous">
+
+  <style>
+    :root {
+      --sidebar-width: 300px;
+      --app-bg: #eef2f6;
+      --ink: #172033;
+      --muted: #667085;
+      --border: #dfe5ec;
+      --primary: #2457a7;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background: var(--app-bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+    }
+
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 1030;
+      width: var(--sidebar-width);
+      overflow-y: auto;
+      border-right: 1px solid #243044;
+      background: #111827;
+      color: #fff;
+    }
+
+    .sidebar-header {
+      padding: 1.4rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    }
+
+    .sidebar-logo {
+      display: grid;
+      place-items: center;
+      width: 2.8rem;
+      height: 2.8rem;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 0.8rem;
+      background: rgba(255, 255, 255, 0.08);
+      font-weight: 850;
+    }
+
+    .format-nav {
+      display: grid;
+      gap: 0.35rem;
+      padding: 1rem;
+    }
+
+    .format-nav button {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      width: 100%;
+      padding: 0.78rem 0.85rem;
+      border: 0;
+      border-radius: 0.75rem;
+      background: transparent;
+      color: #c4cfdd;
+      text-align: left;
+      transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+    }
+
+    .format-nav button:hover {
+      background: rgba(255, 255, 255, 0.07);
+      color: #fff;
+      transform: translateX(2px);
+    }
+
+    .format-nav button.active {
+      background: #fff;
+      color: #111827;
+      box-shadow: 0 0.55rem 1.4rem rgba(0, 0, 0, 0.2);
+    }
+
+    .nav-number {
+      display: grid;
+      place-items: center;
+      width: 1.8rem;
+      height: 1.8rem;
+      flex: 0 0 1.8rem;
+      border-radius: 0.5rem;
+      background: rgba(255, 255, 255, 0.1);
+      font-size: 0.7rem;
+      font-weight: 850;
+    }
+
+    .format-nav button.active .nav-number {
+      background: #e8eef8;
+      color: #1e40af;
+    }
+
+    .nav-copy strong {
+      display: block;
+      font-size: 0.9rem;
+    }
+
+    .nav-copy small {
+      display: block;
+      margin-top: 0.15rem;
+      color: inherit;
+      opacity: 0.68;
+      line-height: 1.3;
+    }
+
+    .main {
+      min-height: 100vh;
+      margin-left: var(--sidebar-width);
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 1020;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(12px);
+    }
+
+    .content { padding: 2rem; }
+
+    .format-view { display: none; }
+    .format-view.active { display: block; }
+
+    .invoice {
+      max-width: 1120px;
+      margin: 0 auto;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      background: #fff;
+      box-shadow: 0 1.4rem 3rem rgba(16, 24, 40, 0.09);
+    }
+
+    .invoice-section { padding: 2rem; }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 3.25rem;
+      height: 3.25rem;
+      border-radius: 0.85rem;
+      background: #1f4f99;
+      color: #fff;
+      font-weight: 850;
+      letter-spacing: 0.04em;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.38rem;
+      padding: 0.42rem 0.72rem;
+      border: 1px solid #bde7cc;
+      border-radius: 999px;
+      background: #eaf8ef;
+      color: #197447;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+
+    .status::before {
+      width: 0.45rem;
+      height: 0.45rem;
+      border-radius: 50%;
+      background: currentColor;
+      content: "";
+    }
+
+    .panel {
+      height: 100%;
+      padding: 1.15rem;
+      border: 1px solid var(--border);
+      border-radius: 0.8rem;
+      background: #fff;
+    }
+
+    address {
+      margin: 0;
+      color: var(--muted);
+      font-style: normal;
+      line-height: 1.65;
+    }
+
+    .table-shell {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 0.85rem;
+    }
+
+    .invoice-table {
+      min-width: 760px;
+      margin-bottom: 0;
+    }
+
+    .invoice-table thead th {
+      padding: 0.82rem 0.9rem;
+      border-bottom-color: var(--border);
+      background: #f8fafc;
+      color: var(--muted);
+      font-size: 0.68rem;
+      font-weight: 850;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .invoice-table tbody td {
+      padding: 0.92rem;
+      border-color: #edf0f3;
+      vertical-align: middle;
+    }
+
+    .item-title { font-weight: 750; }
+    .item-note {
+      max-width: 38rem;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .totals {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 0.8rem;
+    }
+
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.72rem 0.95rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .totals-row:last-child { border-bottom: 0; }
+    .totals-row.total {
+      background: #edf4ff;
+      color: #173b78;
+      font-size: 1.06rem;
+      font-weight: 850;
+    }
+
+    .note-box {
+      padding: 1rem;
+      border: 1px dashed #c8d0dc;
+      border-radius: 0.8rem;
+      background: #fcfcfd;
+      color: var(--muted);
+    }
+
+    .footer-line {
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    /* 1. Standard business invoice */
+    .format-standard .invoice-head {
+      padding: 2.2rem;
+      background: linear-gradient(135deg, #2457a7, #173b78);
+      color: #fff;
+    }
+
+    .format-standard .brand-mark {
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.13);
+    }
+
+    .meta-band {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border: 1px solid var(--border);
+      border-radius: 0.8rem;
+      background: #f8fafc;
+      overflow: hidden;
+    }
+
+    .meta-band > div {
+      padding: 0.95rem 1rem;
+      border-right: 1px solid var(--border);
+    }
+
+    .meta-band > div:last-child { border-right: 0; }
+
+    /* 2. Tax / VAT invoice */
+    .format-tax {
+      border-top: 0.45rem solid #087f5b;
+    }
+
+    .tax-title {
+      color: #087f5b;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+    }
+
+    .tax-registration {
+      padding: 0.75rem 1rem;
+      border-left: 4px solid #087f5b;
+      background: #ecfdf5;
+    }
+
+    .tax-summary {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .tax-summary th,
+    .tax-summary td {
+      padding: 0.7rem;
+      border: 1px solid var(--border);
+    }
+
+    .tax-summary th { background: #f5fbf8; }
+
+    /* 3. Service invoice */
+    .format-service {
+      --service: #7c3aed;
+    }
+
+    .service-hero {
+      padding: 2.2rem;
+      background:
+        radial-gradient(circle at top right, rgba(255,255,255,.16), transparent 30%),
+        linear-gradient(135deg, #7c3aed, #4c1d95);
+      color: #fff;
+    }
+
+    .service-project {
+      border-left: 4px solid var(--service);
+      background: #f5f3ff;
+    }
+
+    .deliverable-list {
+      display: grid;
+      gap: 0.7rem;
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+
+    .deliverable-list li {
+      display: flex;
+      gap: 0.6rem;
+      align-items: flex-start;
+    }
+
+    .deliverable-list li::before {
+      margin-top: 0.15rem;
+      color: var(--service);
+      font-weight: 900;
+      content: "✓";
+    }
+
+    /* 4. Time and materials */
+    .format-time {
+      border-radius: 0.35rem;
+    }
+
+    .time-header {
+      padding: 1.8rem 2rem;
+      border-bottom: 3px solid #111827;
+      background: #fff;
+    }
+
+    .time-header .brand-mark {
+      border-radius: 0.2rem;
+      background: #111827;
+    }
+
+    .time-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    .time-summary .panel {
+      text-align: center;
+      background: #f9fafb;
+    }
+
+    .time-value {
+      font-size: 1.4rem;
+      font-weight: 850;
+    }
+
+    /* 5. Proforma */
+    .format-proforma {
+      border: 2px solid #b45309;
+      box-shadow: none;
+    }
+
+    .proforma-head {
+      padding: 2rem;
+      background: #fff7ed;
+      color: #78350f;
+    }
+
+    .proforma-stamp {
+      display: inline-block;
+      padding: 0.5rem 0.8rem;
+      border: 2px solid #b45309;
+      color: #b45309;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transform: rotate(-2deg);
+    }
+
+    .validity-box {
+      border: 1px solid #fed7aa;
+      background: #fff7ed;
+    }
+
+    /* 6. Progress / milestone */
+    .format-progress {
+      --progress: #0e7490;
+    }
+
+    .progress-header {
+      padding: 2rem;
+      background: #ecfeff;
+      border-bottom: 1px solid #a5f3fc;
+    }
+
+    .contract-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      border: 1px solid #bae6fd;
+      background: #f0fdfa;
+    }
+
+    .contract-grid > div {
+      padding: 1rem;
+      border-right: 1px solid #bae6fd;
+    }
+
+    .contract-grid > div:last-child { border-right: 0; }
+
+    .progress-track {
+      height: 0.65rem;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #dbeafe;
+    }
+
+    .progress-track span {
+      display: block;
+      width: 68%;
+      height: 100%;
+      background: var(--progress);
+    }
+
+    /* 7. Subscription */
+    .format-subscription {
+      --sub: #4f46e5;
+      background: #f8f9ff;
+    }
+
+    .subscription-head {
+      padding: 2rem;
+      background: #111827;
+      color: #fff;
+    }
+
+    .plan-card {
+      padding: 1.3rem;
+      border: 1px solid #c7d2fe;
+      border-radius: 1rem;
+      background: #fff;
+      box-shadow: 0 0.8rem 1.8rem rgba(79, 70, 229, 0.08);
+    }
+
+    .plan-name {
+      color: var(--sub);
+      font-size: 1.15rem;
+      font-weight: 850;
+    }
+
+    .next-charge {
+      padding: 0.95rem 1rem;
+      border-radius: 0.75rem;
+      background: #eef2ff;
+      color: #3730a3;
+    }
+
+    /* 8. Commercial / export */
+    .format-commercial {
+      border-radius: 0;
+      box-shadow: 0 1rem 2rem rgba(0,0,0,.08);
+    }
+
+    .commercial-head {
+      padding: 1.6rem 2rem;
+      border-bottom: 2px solid #0f172a;
+      background: #fff;
+    }
+
+    .commercial-title {
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .shipping-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border: 1px solid var(--border);
+    }
+
+    .shipping-grid > div {
+      padding: 0.85rem;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .shipping-grid > div:nth-child(4n) { border-right: 0; }
+    .shipping-grid > div:nth-last-child(-n+4) { border-bottom: 0; }
+
+    /* 9. Retail / POS */
+    .receipt-frame {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      border: 1px solid #d1d5db;
+      background: #fff;
+      box-shadow: 0 1rem 2.4rem rgba(0,0,0,.08);
+      font-family: "Courier New", monospace;
+    }
+
+    .receipt-rule {
+      overflow: hidden;
+      color: #9ca3af;
+      white-space: nowrap;
+    }
+
+    .receipt-rule::before {
+      content: "----------------------------------------------------------------";
+    }
+
+    .receipt-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .receipt-table td {
+      padding: 0.42rem 0;
+      vertical-align: top;
+    }
+
+    .receipt-total {
+      font-size: 1.12rem;
+      font-weight: 900;
+    }
+
+    .barcode {
+      height: 52px;
+      margin: 1rem auto 0.3rem;
+      background:
+        repeating-linear-gradient(
+          90deg,
+          #111 0 2px,
+          transparent 2px 4px,
+          #111 4px 5px,
+          transparent 5px 8px,
+          #111 8px 11px,
+          transparent 11px 13px
+        );
+    }
+
+    /* 10. Credit note */
+    .format-credit {
+      --credit: #c2410c;
+    }
+
+    .credit-head {
+      padding: 2rem;
+      background: #fff7ed;
+      border-bottom: 1px solid #fed7aa;
+    }
+
+    .credit-badge {
+      display: inline-flex;
+      padding: 0.45rem 0.75rem;
+      border-radius: 999px;
+      background: #ffedd5;
+      color: #9a3412;
+      font-weight: 850;
+    }
+
+    .negative {
+      color: #c2410c;
+      font-weight: 800;
+    }
+
+    .reason-box {
+      border-left: 4px solid var(--credit);
+      background: #fff7ed;
+    }
+
+    @media (max-width: 991.98px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .content { padding: 1rem; }
+      .invoice-section,
+      .format-standard .invoice-head,
+      .service-hero,
+      .time-header,
+      .proforma-head,
+      .progress-header,
+      .subscription-head,
+      .commercial-head,
+      .credit-head { padding: 1.35rem; }
+
+      .meta-band { grid-template-columns: repeat(2, 1fr); }
+      .meta-band > div:nth-child(2) { border-right: 0; }
+      .meta-band > div:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
+
+      .contract-grid { grid-template-columns: repeat(2, 1fr); }
+      .contract-grid > div { border-bottom: 1px solid #bae6fd; }
+      .contract-grid > div:nth-child(2n) { border-right: 0; }
+      .contract-grid > div:last-child {
+        grid-column: 1 / -1;
+        border-bottom: 0;
+      }
+
+      .shipping-grid { grid-template-columns: repeat(2, 1fr); }
+      .shipping-grid > div:nth-child(2n) { border-right: 0; }
+      .shipping-grid > div:nth-child(odd) { border-right: 1px solid var(--border); }
+      .shipping-grid > div:nth-last-child(-n+4) { border-bottom: 1px solid var(--border); }
+      .shipping-grid > div:nth-last-child(-n+2) { border-bottom: 0; }
+    }
+
+    @media (max-width: 575.98px) {
+      .content { padding: 0; }
+      .invoice {
+        border-left: 0;
+        border-right: 0;
+        border-radius: 0;
+      }
+
+      .meta-band,
+      .time-summary,
+      .contract-grid,
+      .shipping-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .meta-band > div,
+      .contract-grid > div,
+      .shipping-grid > div {
+        border-right: 0 !important;
+        border-bottom: 1px solid var(--border) !important;
+      }
+
+      .meta-band > div:last-child,
+      .contract-grid > div:last-child,
+      .shipping-grid > div:last-child {
+        border-bottom: 0 !important;
+      }
+
+      .contract-grid > div:last-child { grid-column: auto; }
+    }
+
+    @media print {
+      @page { size: A4; margin: 10mm; }
+
+      body {
+        background: #fff !important;
+        color: #000 !important;
+        font-size: 10.5px;
+      }
+
+      .no-print,
+      .sidebar,
+      .toolbar,
+      .offcanvas { display: none !important; }
+
+      .main { margin: 0 !important; }
+      .content { padding: 0 !important; }
+      .format-view { display: none !important; }
+      .format-view.active { display: block !important; }
+
+      .invoice,
+      .receipt-frame {
+        max-width: none !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: #fff !important;
+        box-shadow: none !important;
+      }
+
+      .panel,
+      .table-shell,
+      .totals,
+      .note-box,
+      .plan-card,
+      .tax-registration,
+      .validity-box,
+      .reason-box {
+        break-inside: avoid;
+        box-shadow: none !important;
+      }
+
+      .invoice-table thead { display: table-header-group; }
+      .invoice-table tr { break-inside: avoid; }
+      a { color: inherit !important; text-decoration: none !important; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <aside class="sidebar no-print" aria-label="Invoice format navigation">
+    <div class="sidebar-header">
+      <div class="d-flex align-items-center gap-3">
+        <div class="sidebar-logo">IF</div>
+        <div>
+          <div class="fw-bold">Invoice Formats</div>
+          <div class="small text-white-50">10 production-ready layouts</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="format-nav" id="desktopNav">
+      <button type="button" class="active" data-format="standard" aria-pressed="true">
+        <span class="nav-number">01</span>
+        <span class="nav-copy"><strong>Standard Invoice</strong><small>General business billing</small></span>
+      </button>
+      <button type="button" data-format="tax" aria-pressed="false">
+        <span class="nav-number">02</span>
+        <span class="nav-copy"><strong>Tax / VAT Invoice</strong><small>Registered tax businesses</small></span>
+      </button>
+      <button type="button" data-format="service" aria-pressed="false">
+        <span class="nav-number">03</span>
+        <span class="nav-copy"><strong>Service Invoice</strong><small>Projects and deliverables</small></span>
+      </button>
+      <button type="button" data-format="time" aria-pressed="false">
+        <span class="nav-number">04</span>
+        <span class="nav-copy"><strong>Time & Materials</strong><small>Hourly professional work</small></span>
+      </button>
+      <button type="button" data-format="proforma" aria-pressed="false">
+        <span class="nav-number">05</span>
+        <span class="nav-copy"><strong>Proforma Invoice</strong><small>Pre-sale quotation</small></span>
+      </button>
+      <button type="button" data-format="progress" aria-pressed="false">
+        <span class="nav-number">06</span>
+        <span class="nav-copy"><strong>Progress Invoice</strong><small>Milestones and retention</small></span>
+      </button>
+      <button type="button" data-format="subscription" aria-pressed="false">
+        <span class="nav-number">07</span>
+        <span class="nav-copy"><strong>Subscription Invoice</strong><small>Recurring and usage billing</small></span>
+      </button>
+      <button type="button" data-format="commercial" aria-pressed="false">
+        <span class="nav-number">08</span>
+        <span class="nav-copy"><strong>Commercial Invoice</strong><small>International shipping</small></span>
+      </button>
+      <button type="button" data-format="retail" aria-pressed="false">
+        <span class="nav-number">09</span>
+        <span class="nav-copy"><strong>Retail / POS Invoice</strong><small>Receipt-style transaction</small></span>
+      </button>
+      <button type="button" data-format="credit" aria-pressed="false">
+        <span class="nav-number">10</span>
+        <span class="nav-copy"><strong>Credit Note</strong><small>Refunds and adjustments</small></span>
+      </button>
+    </nav>
+  </aside>
+
+  <div class="offcanvas offcanvas-start text-bg-dark no-print" tabindex="-1" id="mobileNav"
+       aria-labelledby="mobileNavLabel">
+    <div class="offcanvas-header border-bottom border-secondary">
+      <div>
+        <h2 class="offcanvas-title h5 mb-0" id="mobileNavLabel">Invoice Formats</h2>
+        <div class="small text-white-50">Choose a format</div>
+      </div>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"
+              aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+      <nav class="format-nav" id="mobileNavItems"></nav>
+    </div>
+  </div>
+
+  <main class="main">
+    <header class="toolbar no-print">
+      <div class="container-fluid px-3 px-lg-4 py-3">
+        <div class="d-flex justify-content-between align-items-center gap-3">
+          <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary d-lg-none" type="button"
+                    data-bs-toggle="offcanvas" data-bs-target="#mobileNav">
+              Formats
+            </button>
+            <div>
+              <div class="small text-secondary">Current format</div>
+              <div class="fw-bold" id="currentFormatName">Standard Invoice</div>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary" type="button" id="copyLink">
+              Copy link
+            </button>
+            <button class="btn btn-primary" type="button" onclick="window.print()">
+              Print / Save PDF
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- 01 Standard business invoice -->
+      <section class="format-view active" data-format-view="standard" aria-hidden="false">
+        <article class="invoice format-standard">
+          <header class="invoice-head">
+            <div class="row g-4 align-items-center">
+              <div class="col-md-7">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="brand-mark">AC</div>
+                  <div>
+                    <div class="fs-5 fw-bold">Acme Digital Solutions</div>
+                    <div class="small opacity-75">Software, design and cloud services</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-5 text-md-end">
+                <div class="status mb-2">Paid</div>
+                <h1 class="h2 fw-bold mb-0">Invoice #INV-2026-0042</h1>
+              </div>
+            </div>
+          </header>
+
+          <div class="invoice-section">
+            <div class="meta-band mb-4">
+              <div><div class="label">Issue date</div><strong>August 4, 2026</strong></div>
+              <div><div class="label">Due date</div><strong>August 18, 2026</strong></div>
+              <div><div class="label">Terms</div><strong>Net 14</strong></div>
+              <div><div class="label">Reference</div><strong>PO-78435</strong></div>
+            </div>
+
+            <div class="row g-4 mb-4">
+              <div class="col-md-6">
+                <div class="panel">
+                  <div class="label mb-2">From</div>
+                  <h2 class="h6 fw-bold">Acme Digital Solutions</h2>
+                  <address>
+                    Office 804, Business Avenue<br>
+                    Shahrah-e-Faisal, Karachi 75350<br>
+                    billing@acmedigital.example<br>
+                    +92 21 1234 5678
+                  </address>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="panel">
+                  <div class="label mb-2">Bill to</div>
+                  <h2 class="h6 fw-bold">Northstar Commerce Ltd.</h2>
+                  <address>
+                    Attn: Sarah Ahmed<br>
+                    Suite 12, Clifton Business Centre<br>
+                    accounts@northstar.example<br>
+                    +92 21 9876 5432
+                  </address>
+                </div>
+              </div>
+            </div>
+
+            <div class="table-responsive table-shell mb-4">
+              <table class="table invoice-table">
+                <thead>
+                  <tr>
+                    <th>Description</th><th class="text-end">Qty</th>
+                    <th class="text-end">Rate</th><th class="text-end">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><div class="item-title">UX planning</div><div class="item-note">Discovery, flows and delivery roadmap.</div></td>
+                    <td class="text-end">24 hrs</td><td class="text-end">5,000</td><td class="text-end fw-semibold">120,000</td>
+                  </tr>
+                  <tr>
+                    <td><div class="item-title">Web application development</div><div class="item-note">Frontend, API integration, testing and deployment.</div></td>
+                    <td class="text-end">80 hrs</td><td class="text-end">6,250</td><td class="text-end fw-semibold">500,000</td>
+                  </tr>
+                  <tr>
+                    <td><div class="item-title">Cloud setup</div><div class="item-note">Production environment, HTTPS and monitoring.</div></td>
+                    <td class="text-end">1</td><td class="text-end">75,000</td><td class="text-end fw-semibold">75,000</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="row g-4 align-items-start">
+              <div class="col-lg-7">
+                <div class="note-box">
+                  Payment by bank transfer to PK00 EXMP 0000 0000 1234 5678.
+                  Use invoice number as the payment reference.
+                </div>
+              </div>
+              <div class="col-lg-5">
+                <div class="totals">
+                  <div class="totals-row"><span>Subtotal</span><strong>PKR 695,000</strong></div>
+                  <div class="totals-row"><span>Discount</span><strong>− PKR 25,000</strong></div>
+                  <div class="totals-row total"><span>Total</span><span>PKR 670,000</span></div>
+                  <div class="totals-row"><span>Paid</span><strong>− PKR 670,000</strong></div>
+                  <div class="totals-row"><strong>Balance due</strong><strong>PKR 0</strong></div>
+                </div>
+              </div>
+            </div>
+
+            <footer class="footer-line mt-4 d-flex justify-content-between flex-wrap gap-2">
+              <span>Thank you for your business.</span>
+              <span>billing@acmedigital.example</span>
+            </footer>
+          </div>
+        </article>
+      </section>
+
+      <!-- 02 Tax / VAT invoice -->
+      <section class="format-view" data-format-view="tax" aria-hidden="true">
+        <article class="invoice format-tax">
+          <div class="invoice-section">
+            <header class="d-flex justify-content-between align-items-start gap-4 flex-wrap mb-4">
+              <div class="d-flex align-items-center gap-3">
+                <div class="brand-mark" style="background:#087f5b">AC</div>
+                <div>
+                  <h1 class="tax-title h3 mb-1">TAX INVOICE</h1>
+                  <div class="text-secondary">Acme Digital Solutions (Pvt.) Ltd.</div>
+                </div>
+              </div>
+              <div class="text-md-end">
+                <div class="status mb-2">Paid</div>
+                <div><strong>Invoice:</strong> TX-2026-0814</div>
+                <div><strong>Date:</strong> August 4, 2026</div>
+                <div><strong>Tax period:</strong> August 2026</div>
+              </div>
+            </header>
+
+            <div class="tax-registration mb-4">
+              <div class="row g-3">
+                <div class="col-md-4"><div class="label">Supplier tax ID</div><strong>PK-NTN-1234567</strong></div>
+                <div class="col-md-4"><div class="label">Sales tax registration</div><strong>STRN-3277876112345</strong></div>
+                <div class="col-md-4"><div class="label">Place of supply</div><strong>Sindh, Pakistan</strong></div>
+              </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+              <div class="col-md-6">
+                <div class="panel">
+                  <div class="label mb-2">Supplier</div>
+                  <h2 class="h6 fw-bold">Acme Digital Solutions</h2>
+                  <address>Office 804, Business Avenue<br>Karachi 75350, Pakistan<br>billing@acmedigital.example</address>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="panel">
+                  <div class="label mb-2">Tax customer</div>
+                  <h2 class="h6 fw-bold">Northstar Commerce Ltd.</h2>
+                  <address>NTN: PK-NTN-7654321<br>Suite 12, Clifton Business Centre<br>Karachi 75600, Pakistan</address>
+                </div>
+              </div>
+            </div>
+
+            <div class="table-responsive table-shell mb-4">
+              <table class="table invoice-table">
+                <thead>
+                  <tr>
+                    <th>Taxable supply</th><th>Tax code</th><th class="text-end">Qty</th>
+                    <th class="text-end">Net value</th><th class="text-end">Tax rate</th>
+                    <th class="text-end">Tax</th><th class="text-end">Gross</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Software implementation services</td><td>998314</td><td class="text-end">1</td>
+                    <td class="text-end">500,000</td><td class="text-end">15%</td>
+                    <td class="text-end">75,000</td><td class="text-end fw-semibold">575,000</td>
+                  </tr>
+                  <tr>
+                    <td>Cloud configuration services</td><td>998315</td><td class="text-end">1</td>
+                    <td class="text-end">75,000</td><td class="text-end">15%</td>
+                    <td class="text-end">11,250</td><td class="text-end fw-semibold">86,250</td>
+                  </tr>
+                  <tr>
+                    <td>Training services</td><td>998313</td><td class="text-end">1</td>
+                    <td class="text-end">50,000</td><td class="text-end">0%</td>
+                    <td class="text-end">0</td><td class="text-end fw-semibold">50,000</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="row g-4">
+              <div class="col-lg-7">
+                <h2 class="h6 fw-bold">Tax summary</h2>
+                <div class="table-responsive">
+                  <table class="tax-summary">
+                    <thead><tr><th>Rate</th><th>Taxable amount</th><th>Tax amount</th></tr></thead>
+                    <tbody>
+                      <tr><td>15%</td><td>PKR 575,000</td><td>PKR 86,250</td></tr>
+                      <tr><td>0%</td><td>PKR 50,000</td><td>PKR 0</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="col-lg-5">
+                <div class="totals">
+                  <div class="totals-row"><span>Net total</span><strong>PKR 625,000</strong></div>
+                  <div class="totals-row"><span>Total tax</span><strong>PKR 86,250</strong></div>
+                  <div class="totals-row total"><span>Invoice total</span><span>PKR 711,250</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 03 Service invoice -->
+      <section class="format-view" data-format-view="service" aria-hidden="true">
+        <article class="invoice format-service">
+          <header class="service-hero">
+            <div class="row g-4 align-items-center">
+              <div class="col-lg-7">
+                <div class="label text-white-50">Professional services invoice</div>
+                <h1 class="display-6 fw-bold mb-2">Website redesign engagement</h1>
+                <p class="mb-0 text-white-50">Project WD-2026-18 · July 1–31, 2026</p>
+              </div>
+              <div class="col-lg-5 text-lg-end">
+                <div class="status mb-2">Paid</div>
+                <div class="fs-4 fw-bold">INV-SVC-1198</div>
+                <div class="text-white-50">Issued August 4, 2026</div>
+              </div>
+            </div>
+          </header>
+
+          <div class="invoice-section">
+            <div class="row g-4 mb-4">
+              <div class="col-lg-8">
+                <div class="panel service-project">
+                  <div class="label mb-2">Project summary</div>
+                  <h2 class="h5 fw-bold">Northstar customer portal redesign</h2>
+                  <p class="text-secondary mb-3">
+                    UX research, interaction design, responsive UI system and production handoff.
+                  </p>
+                  <ul class="deliverable-list">
+                    <li>Discovery workshop and stakeholder interviews</li>
+                    <li>Approved wireframes for 16 key screens</li>
+                    <li>Responsive UI design system and component specifications</li>
+                    <li>Developer handoff and implementation review</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="col-lg-4">
+                <div class="panel">
+                  <div class="label mb-2">Client</div>
+                  <h2 class="h6 fw-bold">Northstar Commerce Ltd.</h2>
+                  <address>Sarah Ahmed<br>Finance Manager<br>accounts@northstar.example</address>
+                  <hr>
+                  <div class="label mb-1">Payment terms</div>
+                  <strong>50% advance · 50% on delivery</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="table-responsive table-shell mb-4">
+              <table class="table invoice-table">
+                <thead><tr><th>Service phase</th><th>Deliverable</th><th class="text-end">Fee</th></tr></thead>
+                <tbody>
+                  <tr><td><strong>Discovery</strong></td><td>Research, interviews and requirements synthesis</td><td class="text-end">PKR 120,000</td></tr>
+                  <tr><td><strong>UX design</strong></td><td>User flows and high-fidelity wireframes</td><td class="text-end">PKR 180,000</td></tr>
+                  <tr><td><strong>UI system</strong></td><td>Visual design, responsive components and handoff</td><td class="text-end">PKR 250,000</td></tr>
+                  <tr><td><strong>Review</strong></td><td>Implementation QA and final revisions</td><td class="text-end">PKR 75,000</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="row g-4 align-items-start">
+              <div class="col-lg-7">
+                <div class="note-box">
+                  This invoice represents the final 50% payment after approval of all contracted deliverables.
+                </div>
+              </div>
+              <div class="col-lg-5">
+                <div class="totals">
+                  <div class="totals-row"><span>Project value</span><strong>PKR 625,000</strong></div>
+                  <div class="totals-row"><span>Advance received</span><strong>− PKR 312,500</strong></div>
+                  <div class="totals-row total"><span>Final payment</span><span>PKR 312,500</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 04 Time & materials invoice -->
+      <section class="format-view" data-format-view="time" aria-hidden="true">
+        <article class="invoice format-time">
+          <header class="time-header">
+            <div class="d-flex justify-content-between align-items-start gap-4 flex-wrap">
+              <div class="d-flex align-items-center gap-3">
+                <div class="brand-mark">AC</div>
+                <div>
+                  <h1 class="h3 fw-bold mb-1">Time & Materials Invoice</h1>
+                  <div class="text-secondary">Engineering support · July 2026</div>
+                </div>
+              </div>
+              <div class="text-end">
+                <div><strong>#T&M-2026-071</strong></div>
+                <div class="text-secondary">Due August 18, 2026</div>
+              </div>
+            </div>
+          </header>
+
+          <div class="invoice-section">
+            <div class="time-summary mb-4">
+              <div class="panel"><div class="label">Billable hours</div><div class="time-value">92.5</div></div>
+              <div class="panel"><div class="label">Average rate</div><div class="time-value">PKR 6,000</div></div>
+              <div class="panel"><div class="label">Expenses</div><div class="time-value">PKR 18,500</div></div>
+            </div>
+
+            <div class="row g-4 mb-4">
+              <div class="col-md-6"><div class="panel"><div class="label mb-2">Consultant</div><strong>Acme Digital Solutions</strong><address>Lead engineer: Ali Khan<br>ali@acmedigital.example</address></div></div>
+              <div class="col-md-6"><div class="panel"><div class="label mb-2">Client / project</div><strong>Northstar Commerce Ltd.</strong><address>Project: Platform stabilization<br>Cost centre: ENG-042</address></div></div>
+            </div>
+
+            <div class="table-responsive table-shell mb-4">
+              <table class="table invoice-table">
+                <thead>
+                  <tr><th>Date</th><th>Resource</th><th>Work performed</th><th class="text-end">Hours</th><th class="text-end">Rate</th><th class="text-end">Amount</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Jul 03</td><td>Senior engineer</td><td>Production incident analysis and remediation</td><td class="text-end">8.0</td><td class="text-end">7,500</td><td class="text-end">60,000</td></tr>
+                  <tr><td>Jul 08–12</td><td>Backend engineer</td><td>API performance profiling and database tuning</td><td class="text-end">32.5</td><td class="text-end">6,000</td><td class="text-end">195,000</td></tr>
+                  <tr><td>Jul 15–24</td><td>Frontend engineer</td><td>Checkout reliability fixes and automated tests</td><td class="text-end">40.0</td><td class="text-end">5,500</td><td class="text-end">220,000</td></tr>
+                  <tr><td>Jul 28</td><td>Cloud engineer</td><td>Monitoring dashboard and alert thresholds</td><td class="text-end">12.0</td><td class="text-end">6,500</td><td class="text-end">78,000</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="row g-4 align-items-start">
+              <div class="col-lg-7">
+                <div class="panel">
+                  <div class="label mb-2">Reimbursable expenses</div>
+                  <div class="d-flex justify-content-between"><span>Cloud testing resources</span><strong>PKR 12,500</strong></div>
+                  <div class="d-flex justify-content-between mt-2"><span>Local travel</span><strong>PKR 6,000</strong></div>
+                </div>
+              </div>
+              <div class="col-lg-5">
+                <div class="totals">
+                  <div class="totals-row"><span>Professional fees</span><strong>PKR 553,000</strong></div>
+                  <div class="totals-row"><span>Expenses</span><strong>PKR 18,500</strong></div>
+                  <div class="totals-row total"><span>Total due</span><span>PKR 571,500</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 05 Proforma invoice -->
+      <section class="format-view" data-format-view="proforma" aria-hidden="true">
+        <article class="invoice format-proforma">
+          <header class="proforma-head">
+            <div class="row g-4 align-items-center">
+              <div class="col-md-7">
+                <div class="proforma-stamp mb-3">Proforma</div>
+                <h1 class="h2 fw-bold mb-1">Pre-sale Invoice</h1>
+                <div>This document is not a tax invoice or payment receipt.</div>
+              </div>
+              <div class="col-md-5 text-md-end">
+                <div><strong>Proforma #PF-2026-118</strong></div>
+                <div>Issued: August 4, 2026</div>
+                <div>Valid until: August 18, 2026</div>
+              </div>
+            </div>
+          </header>
+
+          <div class="invoice-section">
+            <div class="row g-4 mb-4">
+              <div class="col-md-6"><div class="panel"><div class="label mb-2">Seller</div><h2 class="h6 fw-bold">Acme Digital Solutions</h2><address>Karachi, Pakistan<br>sales@acmedigital.example</address></div></div>
+              <div class="col-md-6"><div class="panel"><div class="label mb-2">Prospective buyer</div><h2 class="h6 fw-bold">Northstar Commerce Ltd.</h2><address>Karachi, Pakistan<br>procurement@northstar.example</address></div></div>
+            </div>
+
+            <div class="panel validity-box mb-4">
+              <div class="row g-3">
+                <div class="col-md-4"><div class="label">Validity</div><strong>14 calendar days</strong></div>
+                <div class="col-md-4"><div class="label">Delivery estimate</div><strong>6–8 weeks after approval</strong></div>
+                <div class="col-md-4"><div class="label">Payment terms</div><strong>40% advance</strong></div>
+              </div>
+            </div>
+
+            <div class="table-responsive table-shell mb-4">
+              <table class="table invoice-table">
+                <thead><tr><th>Proposed item</th><th>Scope</th><th class="text-end">Qty</th><th class="text-end">Unit price</th><th class="text-end">Estimated total</th></tr></thead>
+                <tbody>
+                  <tr><td><strong>Discovery package</strong></td><td>Workshops, requirements and technical plan</td><td class="text-end">1</td><td class="text-end">150,000</td><td class="text-end">150,000</td></tr>
+                  <tr><td><strong>Application build</strong></td><td>Responsive portal and API integration</td><td class="text-end">1</td><td class="text-end">650,000</td><td class="text-end">650,000</td></tr>
+                  <tr><td><strong>Launch support</strong></td><td>Deployment, training and 30-day warranty</td><td class="text-end">1</td><td class="text-end">100,000</td><td class="text-end">100,000</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="row g-4 align-items-start">
+              <div class="col-lg-7">
+                <div class="note-box">
+                  Acceptance requires a signed statement of work and advance payment.
+                  Prices may change after the validity date.
+                </div>
+              </div>
+              <div class="col-lg-5">
+                <div class="totals">
+                  <div class="totals-row"><span>Estimated subtotal</span><strong>PKR 900,000</strong></div>
+                  <div class="totals-row"><span>Estimated tax</span><strong>PKR 135,000</strong></div>
+                  <div class="totals-row total"><span>Estimated total</span><span>PKR 1,035,000</span></div>
+                  <div class="totals-row"><span>Advance required</span><strong>PKR 414,000</strong></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 06 Progress / milestone invoice -->
+      <section class="format-view" data-format-view="progress" aria-hidden="true">
+        <article class="invoice format-progress">
+          <header class="progress-header">
+            <div class="row g-4 align-items-center">
+              <div class="col-md-8">
+                <div class="label">Progress billing</div>
+                <h1 class="h2 fw-bold mb-1">Milestone Invoice #3</h1>
+                <div class="text-secondary">Enterprise platform implementation · Contract CT-2026-09</div>
+              </div>
+              <div class="col-md-4 text-md-end">
+                <div class="status mb-2">Approved</div>
+                <div>Billing period: July 2026</div>
+              </div>
+            </div>
+          </header>
+
+          <div class="invoice-section">
+            <div class="contract-grid mb-4">
+              <div><div class="label">Contract value</div><strong>PKR 4,000,000</strong></div>
+              <div><div class="label">Completion</div><strong>68%</strong></div>
+              <div><div class="label">Earned to date</div><strong>PKR 2,720,000</strong></div>
+              <div><div class="label">Previously billed</div><strong>PKR 1,950,000</strong></div>
+              <div><div class="label">Current claim</div><strong>PKR 770,000</strong></div>
+            </div>
+
+            <div class="mb-4">
+              <div class="d-flex justify-content-between mb-2"><strong>Overall project completion</strong><span>68%</span></div>
+              <div class="progress-track"><span></span></div>
+            </div>
+
+            <div class="table-responsive table-shell mb-4">
+              <table class="table invoice-table">
+                <thead>
+                  <tr><th>Milestone</th><th class="text-end">Contract value</th><th class="text-end">Complete</th><th class="text-end">Earned to date</th><th class="text-end">Previous</th><th class="text-end">Current</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Discovery and architecture</td><td class="text-end">600,000</td><td class="text-end">100%</td><td class="text-end">600,000</td><td class="text-end">600,000</td><td class="text-end">0</td></tr>
+                  <tr><td>Core platform development</td><td class="text-end">2,000,000</td><td class="text-end">75%</td><td class="text-end">1,500,000</td><td class="text-end">1,100,000</td><td class="text-end">400,000</td></tr>
+                  <tr><td>Integrations</td><td class="text-end">900,000</td><td class="text-end">55%</td><td class="text-end">495,000</td><td class="text-end">250,000</td><td class="text-end">245,000</td></tr>
+                  <tr><td>Testing and launch</td><td class="text-end">500,000</td><td class="text-end">25%</td><td class="text-end">125,000</td><td class="text-end">0</td><td class="text-end">125,000</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="row g-4">
+              <div class="col-lg-7">
+                <div class="panel">
+                  <div class="label mb-2">Certification</div>
+                  <p class="mb-0 text-secondary">
+                    The work claimed above has been completed and reviewed according to
+                    the approved milestone acceptance criteria.
+                  </p>
+                </div>
+              </div>
+              <div class="col-lg-5">
+                <div class="totals">
+                  <div class="totals-row"><span>Current earned amount</span><strong>PKR 770,000</strong></div>
+                  <div class="totals-row"><span>Retention 5%</span><strong>− PKR 38,500</strong></div>
+                  <div class="totals-row"><span>Tax 15%</span><strong>PKR 109,725</strong></div>
+                  <div class="totals-row total"><span>Amount due</span><span>PKR 841,225</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 07 Subscription invoice -->
+      <section class="format-view" data-format-view="subscription" aria-hidden="true">
+        <article class="invoice format-subscription">
+          <header class="subscription-head">
+            <div class="row g-4 align-items-center">
+              <div class="col-md-8">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="brand-mark" style="background:#4f46e5">AC</div>
+                  <div>
+                    <h1 class="h3 fw-bold mb-1">Subscription Invoice</h1>
+                    <div class="text-white-50">Billing cycle: August 1–31, 2026</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4 text-md-end">
+                <div class="status mb-2">Auto-paid</div>
+                <div>#SUB-2026-0804</div>
+              </div>
+            </div>
+          </header>
+
+          <div class="invoice-section">
+            <div class="row g-4 mb-4">
+              <div class="col-lg-8">
+                <div class="plan-card">
+                  <div class="d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                      <div class="label">Current plan</div>
+                      <div class="plan-name">Business Cloud Pro</div>
+                      <div class="text-secondary">25 users · annual commitment · monthly billing</div>
+                    </div>
+                    <div class="text-end">
+                      <div class="label">Base fee</div>
+                      <strong>PKR 125,000 / month</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-lg-4">
+                <div class="panel">
+                  <div class="label mb-2">Account</div>
+                  <strong>Northstar Commerce Ltd.</strong>
+                  <div class="text-secondary">Customer ID: CUS-19482</div>
+                  <div class="text-secondary">Payment method: Visa •••• 4242</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="table-responsive table-shell mb-4">
+              <table class="table invoice-table">
+                <thead><tr><th>Charge</th><th>Billing basis</th><th class="text-end">Quantity</th><th class="text-end">Rate</th><th class="text-end">Amount</th></tr></thead>
+                <tbody>
+                  <tr><td><strong>Business Cloud Pro</strong></td><td>Monthly base subscription</td><td class="text-end">1</td><td class="text-end">125,000</td><td class="text-end">125,000</td></tr>
+                  <tr><td><strong>Additional user seats</strong></td><td>5 seats above plan allowance</td><td class="text-end">5</td><td class="text-end">3,500</td><td class="text-end">17,500</td></tr>
+                  <tr><td><strong>API usage</strong></td><td>1.2M requests above included usage</td><td class="text-end">1.2M</td><td class="text-end">0.018</td><td class="text-end">21,600</td></tr>
+                  <tr><td><strong>Storage overage</strong></td><td>180 GB-month</td><td class="text-end">180</td><td class="text-end">75</td><td class="text-end">13,500</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="row g-4 align-items-start">
+              <div class="col-lg-7">
+                <div class="next-charge">
+                  <div class="label mb-1">Next billing date</div>
+                  <strong>September 1, 2026</strong>
+                  <div class="small mt-1">Usage charges may vary based on actual consumption.</div>
+                </div>
+              </div>
+              <div class="col-lg-5">
+                <div class="totals">
+                  <div class="totals-row"><span>Subscription and usage</span><strong>PKR 177,600</strong></div>
+                  <div class="totals-row"><span>Tax</span><strong>PKR 26,640</strong></div>
+                  <div class="totals-row total"><span>Amount charged</span><span>PKR 204,240</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 08 Commercial invoice -->
+      <section class="format-view" data-format-view="commercial" aria-hidden="true">
+        <article class="invoice format-commercial">
+          <header class="commercial-head">
+            <div class="row g-4 align-items-start">
+              <div class="col-md-7">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="brand-mark" style="background:#0f172a">AC</div>
+                  <div>
+                    <h1 class="commercial-title h3 mb-1">Commercial Invoice</h1>
+                    <div class="text-secondary">For customs and international trade use</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-5 text-md-end">
+                <div><strong>Invoice CI-2026-0048</strong></div>
+                <div>Date: August 4, 2026</div>
+                <div>Currency: USD</div>
+              </div>
+            </div>
+          </header>
+
+          <div class="invoice-section">
+            <div class="row g-4 mb-4">
+              <div class="col-md-6">
+                <div class="panel">
+                  <div class="label mb-2">Exporter / shipper</div>
+                  <strong>Acme Digital Hardware Pvt. Ltd.</strong>
+                  <address>Plot 18, Export Processing Zone<br>Karachi, Pakistan<br>Exporter registration: EXP-88219</address>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="panel">
+                  <div class="label mb-2">Consignee / importer</div>
+                  <strong>Northstar Systems GmbH</strong>
+                  <address>Industriestrasse 22<br>60314 Frankfurt, Germany<br>VAT ID: DE123456789</address>
+                </div>
+              </div>
+            </div>
+
+            <div class="shipping-grid mb-4">
+              <div><div class="label">Incoterms</div><strong>DAP Frankfurt</strong></div>
+              <div><div class="label">Country of origin</div><strong>Pakistan</strong></div>
+              <div><div class="label">Transport</div><strong>Air freight</strong></div>
+              <div><div class="label">AWB / tracking</div><strong>176-88201945</strong></div>
+              <div><div class="label">Packages</div><strong>4 cartons</strong></div>
+              <div><div class="label">Gross weight</div><strong>48.5 kg</strong></div>
+              <div><div class="label">Net weight</div><strong>42.0 kg</strong></div>
+              <div><div class="label">Payment terms</div><strong>Wire transfer, Net 30</strong></div>
+            </div>
+
+            <div class="table-responsive table-shell mb-4">
+              <table class="table invoice-table">
+                <thead>
+                  <tr><th>Description</th><th>HS code</th><th>Origin</th><th class="text-end">Qty</th><th class="text-end">Unit value</th><th class="text-end">Customs value</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Industrial IoT gateway model IG-400</td><td>8517.62</td><td>Pakistan</td><td class="text-end">20</td><td class="text-end">$420.00</td><td class="text-end">$8,400.00</td></tr>
+                  <tr><td>DIN rail mounting kits</td><td>8538.90</td><td>Pakistan</td><td class="text-end">20</td><td class="text-end">$18.00</td><td class="text-end">$360.00</td></tr>
+                  <tr><td>Configuration and export documentation</td><td>Service</td><td>Pakistan</td><td class="text-end">1</td><td class="text-end">$650.00</td><td class="text-end">$650.00</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="row g-4">
+              <div class="col-lg-7">
+                <div class="note-box">
+                  I certify that the information in this invoice is true and correct and
+                  that the goods are of Pakistani origin unless otherwise stated.
+                </div>
+              </div>
+              <div class="col-lg-5">
+                <div class="totals">
+                  <div class="totals-row"><span>Goods and services</span><strong>USD 9,410.00</strong></div>
+                  <div class="totals-row"><span>Freight</span><strong>USD 690.00</strong></div>
+                  <div class="totals-row"><span>Insurance</span><strong>USD 95.00</strong></div>
+                  <div class="totals-row total"><span>Total invoice value</span><span>USD 10,195.00</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 09 Retail / POS -->
+      <section class="format-view" data-format-view="retail" aria-hidden="true">
+        <article class="receipt-frame">
+          <header class="text-center">
+            <div class="fw-bold fs-4">ACME TECH STORE</div>
+            <div>Shahrah-e-Faisal, Karachi</div>
+            <div>Tel: +92 21 1234 5678</div>
+            <div>NTN: 1234567-8</div>
+          </header>
+
+          <div class="receipt-rule my-3"></div>
+
+          <div class="d-flex justify-content-between"><span>Receipt:</span><strong>POS-084294</strong></div>
+          <div class="d-flex justify-content-between"><span>Date:</span><span>04-Aug-2026 18:42</span></div>
+          <div class="d-flex justify-content-between"><span>Cashier:</span><span>Umer</span></div>
+
+          <div class="receipt-rule my-3"></div>
+
+          <table class="receipt-table">
+            <tr><td colspan="2"><strong>Mechanical Keyboard</strong><br><small>1 × 18,500.00</small></td><td class="text-end">18,500.00</td></tr>
+            <tr><td colspan="2"><strong>Wireless Mouse</strong><br><small>1 × 7,250.00</small></td><td class="text-end">7,250.00</td></tr>
+            <tr><td colspan="2"><strong>USB-C Cable</strong><br><small>2 × 1,250.00</small></td><td class="text-end">2,500.00</td></tr>
+          </table>
+
+          <div class="receipt-rule my-3"></div>
+
+          <div class="d-flex justify-content-between"><span>Subtotal</span><span>28,250.00</span></div>
+          <div class="d-flex justify-content-between"><span>Discount</span><span>-1,250.00</span></div>
+          <div class="d-flex justify-content-between"><span>Sales tax</span><span>4,050.00</span></div>
+          <div class="d-flex justify-content-between receipt-total mt-2"><span>TOTAL</span><span>31,050.00</span></div>
+
+          <div class="receipt-rule my-3"></div>
+
+          <div class="d-flex justify-content-between"><span>Card payment</span><span>31,050.00</span></div>
+          <div class="d-flex justify-content-between"><span>Visa</span><span>•••• 4242</span></div>
+          <div class="d-flex justify-content-between"><span>Auth code</span><span>846219</span></div>
+
+          <div class="barcode" aria-label="Receipt barcode"></div>
+          <div class="text-center small">POS08429404082026</div>
+
+          <div class="receipt-rule my-3"></div>
+
+          <footer class="text-center">
+            <strong>THANK YOU</strong><br>
+            Returns accepted within 7 days with receipt.<br>
+            support@acmetech.example
+          </footer>
+        </article>
+      </section>
+
+      <!-- 10 Credit note -->
+      <section class="format-view" data-format-view="credit" aria-hidden="true">
+        <article class="invoice format-credit">
+          <header class="credit-head">
+            <div class="row g-4 align-items-center">
+              <div class="col-md-8">
+                <div class="credit-badge mb-2">Credit Note</div>
+                <h1 class="h2 fw-bold mb-1">Credit Note #CN-2026-0092</h1>
+                <div class="text-secondary">Adjustment against invoice INV-2026-0042</div>
+              </div>
+              <div class="col-md-4 text-md-end">
+                <div><strong>Issued:</strong> August 4, 2026</div>
+                <div><strong>Original invoice:</strong> July 20, 2026</div>
+              </div>
+            </div>
+          </header>
+
+          <div class="invoice-section">
+            <div class="row g-4 mb-4">
+              <div class="col-md-6">
+                <div class="panel">
+                  <div class="label mb-2">Issued by</div>
+                  <strong>Acme Digital Solutions</strong>
+                  <address>billing@acmedigital.example<br>NTN: PK-NTN-1234567</address>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="panel">
+                  <div class="label mb-2">Credited to</div>
+                  <strong>Northstar Commerce Ltd.</strong>
+                  <address>accounts@northstar.example<br>Customer ID: CUS-19482</address>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel reason-box mb-4">
+              <div class="label mb-2">Reason for credit</div>
+              <strong>Partial cancellation of unused cloud configuration services</strong>
+              <p class="text-secondary mb-0 mt-1">
+                The customer cancelled the optional disaster-recovery configuration before work started.
+              </p>
+            </div>
+
+            <div class="table-responsive table-shell mb-4">
+              <table class="table invoice-table">
+                <thead><tr><th>Adjustment</th><th>Reference</th><th class="text-end">Original amount</th><th class="text-end">Credit</th></tr></thead>
+                <tbody>
+                  <tr><td>Disaster-recovery configuration</td><td>INV-2026-0042 / Line 4</td><td class="text-end">PKR 85,000</td><td class="text-end negative">− PKR 85,000</td></tr>
+                  <tr><td>Related sales tax reversal</td><td>Tax rate 15%</td><td class="text-end">PKR 12,750</td><td class="text-end negative">− PKR 12,750</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="row g-4 align-items-start">
+              <div class="col-lg-7">
+                <div class="note-box">
+                  This credit will be applied to the customer’s next invoice.
+                  No cash refund is currently scheduled.
+                </div>
+              </div>
+              <div class="col-lg-5">
+                <div class="totals">
+                  <div class="totals-row"><span>Service credit</span><strong class="negative">− PKR 85,000</strong></div>
+                  <div class="totals-row"><span>Tax credit</span><strong class="negative">− PKR 12,750</strong></div>
+                  <div class="totals-row total"><span>Total credit</span><span>− PKR 97,750</span></div>
+                </div>
+              </div>
+            </div>
+
+            <footer class="footer-line mt-4">
+              This credit note should be retained with the original invoice for accounting and tax records.
+            </footer>
+          </div>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+    crossorigin="anonymous"></script>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const formats = [
+        { id: "standard", name: "Standard Invoice" },
+        { id: "tax", name: "Tax / VAT Invoice" },
+        { id: "service", name: "Service Invoice" },
+        { id: "time", name: "Time & Materials Invoice" },
+        { id: "proforma", name: "Proforma Invoice" },
+        { id: "progress", name: "Progress / Milestone Invoice" },
+        { id: "subscription", name: "Subscription Invoice" },
+        { id: "commercial", name: "Commercial Invoice" },
+        { id: "retail", name: "Retail / POS Invoice" },
+        { id: "credit", name: "Credit Note" }
+      ];
+
+      const desktopNav = document.getElementById("desktopNav");
+      const mobileNavItems = document.getElementById("mobileNavItems");
+      const currentFormatName = document.getElementById("currentFormatName");
+      const copyLink = document.getElementById("copyLink");
+
+      mobileNavItems.innerHTML = desktopNav.innerHTML;
+
+      function activateFormat(id, updateHash = true) {
+        const selected = formats.find((item) => item.id === id) || formats[0];
+
+        document.querySelectorAll("[data-format-view]").forEach((view) => {
+          const active = view.dataset.formatView === selected.id;
+          view.classList.toggle("active", active);
+          view.setAttribute("aria-hidden", active ? "false" : "true");
+        });
+
+        document.querySelectorAll("[data-format]").forEach((button) => {
+          const active = button.dataset.format === selected.id;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+
+        currentFormatName.textContent = selected.name;
+        document.title = `${selected.name} — Invoice Format Gallery`;
+
+        if (updateHash) {
+          history.replaceState(null, "", `#${selected.id}`);
+        }
+
+        const mobileNav = document.getElementById("mobileNav");
+        const instance = bootstrap.Offcanvas.getInstance(mobileNav);
+        if (instance) instance.hide();
+
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      document.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-format]");
+        if (!button) return;
+        activateFormat(button.dataset.format);
+      });
+
+      copyLink.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          copyLink.textContent = "Copied";
+          copyLink.classList.replace("btn-outline-secondary", "btn-success");
+          setTimeout(() => {
+            copyLink.textContent = "Copy link";
+            copyLink.classList.replace("btn-success", "btn-outline-secondary");
+          }, 1400);
+        } catch {
+          window.prompt("Copy this link:", window.location.href);
+        }
+      });
+
+      const hash = window.location.hash.replace("#", "");
+      activateFormat(formats.some((item) => item.id === hash) ? hash : "standard", false);
+
+      window.addEventListener("hashchange", () => {
+        const next = window.location.hash.replace("#", "");
+        if (formats.some((item) => item.id === next)) {
+          activateFormat(next, false);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

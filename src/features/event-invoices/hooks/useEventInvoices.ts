@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
+  addEventInvoiceNote,
   fetchEventInvoiceDetail,
   fetchEventInvoiceFilterOptions,
   fetchEventInvoices,
@@ -51,6 +52,16 @@ export function useResendEventInvoice(invoiceUniqueId: string) {
   return useMutation({
     mutationFn: () => resendEventInvoice(invoiceUniqueId),
     onSuccess: () => toaster.create({ type: "success", title: "Tickets queued for resend." }),
+    onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] }),
+  })
+}
+
+export function useAddEventInvoiceNote(invoiceUniqueId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (note: string) => addEventInvoiceNote(invoiceUniqueId, note),
+    onSuccess: () => toaster.create({ type: "success", title: "Invoice note added." }),
     onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] }),
   })

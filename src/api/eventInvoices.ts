@@ -161,6 +161,15 @@ const paymentAttemptSchema = z.object({
   paymentDateUtc: dual(z.string()),
 })
 
+const invoiceNoteSchema = z.object({
+  Note: dual(z.string()),
+  note: dual(z.string()),
+  CreatedBy: dual(z.string().nullable()),
+  createdBy: dual(z.string().nullable()),
+  CreatedOnUtc: dual(z.string()),
+  createdOnUtc: dual(z.string()),
+})
+
 const detailSchema = z.object({
   InvoiceUniqueId: dual(z.string()),
   invoiceUniqueId: dual(z.string()),
@@ -180,6 +189,8 @@ const detailSchema = z.object({
   discountCouponCode: dual(z.string().nullable()),
   TaxAmount: dual(money().nullable()),
   taxAmount: dual(money().nullable()),
+  PlatformCharges: dual(money().nullable()),
+  platformCharges: dual(money().nullable()),
   ServiceCharges: dual(money().nullable()),
   serviceCharges: dual(money().nullable()),
   TotalAmount: dual(money()),
@@ -200,6 +211,8 @@ const detailSchema = z.object({
   buyerPhone: dual(z.string().nullable()),
   LineItems: z.array(lineItemSchema).nullable().optional(),
   lineItems: z.array(lineItemSchema).nullable().optional(),
+  Notes: z.array(invoiceNoteSchema).nullable().optional(),
+  notes: z.array(invoiceNoteSchema).nullable().optional(),
   Payments: z.array(paymentAttemptSchema).nullable().optional(),
   payments: z.array(paymentAttemptSchema).nullable().optional(),
 })
@@ -275,6 +288,12 @@ export interface EventInvoicePaymentAttempt {
   paymentDateUtc: string
 }
 
+export interface EventInvoiceNote {
+  note: string
+  createdBy: string
+  createdOnUtc: string
+}
+
 export interface EventInvoiceDetail {
   invoiceUniqueId: string
   invoiceNo: string
@@ -285,6 +304,7 @@ export interface EventInvoiceDetail {
   discountAmount: number | null
   discountCouponCode: string | null
   taxAmount: number | null
+  platformCharges: number | null
   serviceCharges: number | null
   totalAmount: number
   balanceAmount: number | null
@@ -295,6 +315,7 @@ export interface EventInvoiceDetail {
   buyerEmail: string | null
   buyerPhone: string | null
   lineItems: EventInvoiceLineItem[]
+  notes: EventInvoiceNote[]
   payments: EventInvoicePaymentAttempt[]
 }
 
@@ -419,6 +440,14 @@ function normalizePaymentAttempt(raw: z.infer<typeof paymentAttemptSchema>): Eve
   }
 }
 
+function normalizeInvoiceNote(raw: z.infer<typeof invoiceNoteSchema>): EventInvoiceNote {
+  return {
+    note: raw.Note ?? raw.note ?? "",
+    createdBy: raw.CreatedBy ?? raw.createdBy ?? "System",
+    createdOnUtc: raw.CreatedOnUtc ?? raw.createdOnUtc ?? "",
+  }
+}
+
 function normalizeDetail(raw: z.infer<typeof detailSchema>): EventInvoiceDetail {
   const invoiceStatus = raw.InvoiceStatus ?? raw.invoiceStatus ?? ""
 
@@ -432,6 +461,7 @@ function normalizeDetail(raw: z.infer<typeof detailSchema>): EventInvoiceDetail 
     discountAmount: raw.DiscountAmount ?? raw.discountAmount ?? null,
     discountCouponCode: raw.DiscountCouponCode ?? raw.discountCouponCode ?? null,
     taxAmount: raw.TaxAmount ?? raw.taxAmount ?? null,
+    platformCharges: raw.PlatformCharges ?? raw.platformCharges ?? null,
     serviceCharges: raw.ServiceCharges ?? raw.serviceCharges ?? null,
     totalAmount: raw.TotalAmount ?? raw.totalAmount ?? 0,
     balanceAmount: raw.BalanceAmount ?? raw.balanceAmount ?? null,
@@ -442,6 +472,7 @@ function normalizeDetail(raw: z.infer<typeof detailSchema>): EventInvoiceDetail 
     buyerEmail: raw.BuyerEmail ?? raw.buyerEmail ?? null,
     buyerPhone: raw.BuyerPhone ?? raw.buyerPhone ?? null,
     lineItems: (raw.LineItems ?? raw.lineItems ?? []).map(normalizeLineItem),
+    notes: (raw.Notes ?? raw.notes ?? []).map(normalizeInvoiceNote),
     payments: (raw.Payments ?? raw.payments ?? []).map(normalizePaymentAttempt),
   }
 }
@@ -535,4 +566,8 @@ export async function resendEventInvoice(invoiceUniqueId: string): Promise<void>
 
 export async function resendEventInvoiceTicket(invoiceUniqueId: string, ticketUniqueId: string): Promise<void> {
   await client.post(API_ROUTES.eventInvoiceTicketResend(invoiceUniqueId, ticketUniqueId))
+}
+
+export async function addEventInvoiceNote(invoiceUniqueId: string, note: string): Promise<void> {
+  await client.post(API_ROUTES.eventInvoiceAddNote(invoiceUniqueId), { note: note.trim() })
 }
