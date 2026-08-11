@@ -1,277 +1,146 @@
-# Handoff — Event Registration (card payment verified; refund + charge rules next)
+# Handoff — Cheque notes shipped; per-method invoice notes scoped, unbuilt
 
 ## Current objective
 
-Card payment processing (create → confirm → decline → 3DS → webhook settlement) is implemented
-and e2e-verified against real backend + real Stripe test mode. Refund processing for events does
-**not exist** — confirmed by code audit, not assumption. Next planned work: build out refund
-handling (including graceful failure/partial-refund/seat-release) and revisit charge rules
-(`OrganizerChargeRule`, `AdminRevenuePlanRule`) together, per user direction. Neither has started.
-
-## Repos and branch
-
-Both repos, same branch: `sohail/features/event/event-registration`.
-
-| Repo | Path | Remote | Local HEAD | Matches origin |
-|---|---|---|---|---|
-| Frontend | `d:\V4Ideas\Ideali\UpcomingDevelopment\ideali-events` | `khatri03/ideali-event-module` | `8692814` | **ahead by 1** (`8692814` unpushed) |
-| Backend | `D:\V4Ideas\Ideali\ideali.api` | `ideasregistrationdevelopers/ideali.api` | `42bb6c37` | yes |
-
-Working tree: backend clean. Frontend has `docs/HANDOFF.md` modified (this rewrite) plus 3
-untracked scratch files, not part of any active plan — leave as is unless told to remove:
-`HANDOFF_INSTRUCTIONS.md`, `docs/registration-flow-plan.bootstrap.html`,
-`docs/registration-flow-plan.html`.
+Extend "invoice notes" capability from Cheque-only to every payment method. User corrected the
+target table mid-investigation: it is **`InvoiceNote`** (one Invoice has many `InvoiceNote` rows),
+not `InvoicePayment.Notes` (the column the already-shipped Cheque feature uses). No frontend code
+for `InvoiceNote` exists yet — investigation only, nothing implemented.
 
 ## Completed work
 
-Phases 1-5 and P6 (ticket PDF delivery, coupon/refund-policy UI at checkout) are done from prior
-sessions — see git history before `107d248` (frontend) / `c5114a6b` (backend) for that detail if
-needed. This stretch's work, in order:
+**Cheque notes (done, tested, uncommitted on this branch):**
+Optional `notes` textarea added to the cheque payment flow, wired end to end:
+`ChequePaymentFields.tsx` (textarea) → `PaymentStep.tsx` (prop passthrough) →
+`EventRegisterWizard.tsx` (`chequeNotes` state, trimmed to `undefined` when empty, sent in
+`recordChequePaymentMutation` payload) → backend `InvoicePayment.Notes` (already had the column,
+cheque endpoint already accepted it — confirmed before wiring, not assumed).
 
-**Backend, `c5114a6b..42bb6c37`:**
-- `e69f4515` — organizer resend for event tickets (`POST events/invoices/{id}/resend` and
-  per-ticket resend), 60-second double-click guard, reuses the auto-delivery render/send path.
-- `697d3404` — `TicketDelivery` audit table, one row per send attempt (success or failure).
-- `38b887b9` — ticket PDF prints price paid, refund policy, organizer contact; word-wraps long
-  names instead of mid-word truncation.
-- `2b97594d` — ticket PDF session time converted to event time zone (was printing UTC unlabeled).
-- `2a13803f` — fixed `MissingMethodException` on every ticket QR render (PdfSharpCore/ImageSharp
-  version mismatch); pinned ImageSharp 3.1.11, bypassed the broken decode path.
-- `4eadec92` — card/wallet orders settle at confirm (reads Stripe intent status server-side)
-  instead of waiting on the webhook; ACH/PAD still wait, since only Stripe's own status
-  distinguishes "settles instantly" from "settles in days."
-- `97df58b0` — fixed Payment Element never mounting: credentials endpoint was returning the
-  connected account's own publishable key instead of the platform key Stripe.js needs paired with
-  `stripeAccount`.
-- `f06d6483` — cart edits now void an abandoned Pending payment attempt instead of locking the
-  buyer out of their own cart until the hold expired.
-- `d322dcd5` — stopped event payment paths from mutating the process-wide `StripeConfiguration.ApiKey`
-  (donation/membership/refund paths have the same defect, untouched here — flagged, not fixed).
-- `0a426812` — organizer-facing event invoice list/detail/filter-options endpoints (mirrors
-  Membership's list conventions).
-- `8dfab2db` — reselecting the same payment method reuses the invoice's existing pending
-  PaymentIntent instead of cancelling and re-minting one every time.
-- `28bc64ee` + `e3dc7cf3` — **oversell fix**: availability was counting reservation *rows* instead
-  of summing `Quantity`, and released a hold the instant its browsing timer lapsed even though the
-  reclaim job kept it alive through the payment grace window. Both now read one shared predicate
-  (`TicketingShared.StillHoldsStockRule`); ticket-type row is locked for the reservation
-  transaction's lifetime, capped at a 3-second wait so a rush can't pin a connection for the full
-  command timeout.
-- `6502bc84` — cart pricing validation was checking `ReservedUntilUtc` directly instead of the
-  shared `StillHoldsStock` predicate, so a buyer paying inside their grace window was told their
-  own held seats had expired. Fixed to use the shared rule.
-- `42bb6c37` — added a 50-concurrent-buyer load test against real SQL Server (20 seats); prior
-  coverage only proved no-oversell at 2 threads. Passed: successes never exceed stock, active
-  reservation total matches successes exactly.
+Also uncommitted on this branch: `OrganizerEventCard.tsx` — three-dot menu item renamed "Invoice"
+→ "Invoices".
 
-**Frontend, `107d248..8692814`:**
-- `e5a73a8` — confirm dialogs no longer forced full-screen on mobile.
-- `60a5813` — moved card entry into the purchase review dialog as a flat tile selector (dropped the
-  accordion); Stripe fields mount once the PaymentIntent exists, with a skeleton in between;
-  switching payment method clears any in-flight intent so a reselect always gets a fresh one.
-- `9a729ca` — Event Invoices browse (paginated, filterable) + detail screens, wired to the new
-  backend list/detail endpoints.
-- `663d72e` — e2e fix for a stale payment-tile click hidden behind the review dialog.
-- `88aa6ec` — replaced hand-rolled card fields with the Stripe Payment Element on the deferred-intent
-  flow (form renders before a PaymentIntent exists; intent minted only on confirm). Stripe.js
-  initialised with platform publishable key + connected account id. e2e specs retargeted at the
-  current test event.
-- `a22e950` — dropped the Stripe Link "save my info" checkbox from the card form (asked the buyer
-  to make an unrelated decision — save card with Stripe — mid-checkout).
-- `8692814` — organizer resend-tickets UI (invoice detail page, per-ticket and "resend all," each
-  behind a confirm dialog). Installed `@testing-library/react`, `@testing-library/user-event`,
-  `@testing-library/jest-dom`, `@testing-library/dom`, `msw` as dev dependencies — first
-  component-test tooling in this repo; wired a vitest setup file for jest-dom matchers + RTL
-  cleanup. **Not yet pushed.**
+**Invoice-notes-per-method (investigation only, nothing built):**
+- Confirmed correct target is `InvoiceNote` entity (`Id`, `Note`, `InvoiceId` FK,
+  `BaseAuditEntity<int>`), not `InvoicePayment.Notes`. User's explicit correction — treat as
+  binding.
+- Confirmed a generic, module-agnostic backend API for it already exists and is NOT new work:
+  - `IInvoiceService.AddInvoiceNoteAsync(Guid uniqueId, InvoiceNoteDto dto)` /
+    `GetInvoiceNotesAsync(Guid uniqueId)`, implemented in
+    `Invoice.DonationService.cs` (write) / `Invoice.PresentationService.cs` (read), under
+    `Ideas.Invoice.Infrastructure\Services`.
+  - Exposed via generic `InvoiceController.cs`:
+    `POST /invoice/{invoiceUniqueId:guid}/add-note`, `GET /invoice/{invoiceUniqueId:guid}/notes`,
+    `[Authorize(Policy = AuthorizationPolicies.OrganizerModuleAccess)]`.
+  - The underlying query has no module filter, so it should already work against Event-module
+    invoices with zero backend changes — **unverified assumption, not yet tested against a real
+    Event invoice.**
+- Open, unresolved: `DonationInvoiceController.cs` also exposes its own `AddInvoiceNote` route
+  hitting the same service method. Unclear whether Event frontend should call the generic
+  `InvoiceController` route or whether a parallel Event-specific route is expected. Not
+  investigated further.
+- Confirmed via full-repo grep (`add-note`, `InvoiceNote`, `invoiceNote`): **zero matches**
+  anywhere in `ideali-events/src`. No `api/` function, hook, schema, or UI exists for this.
+- Open, unresolved: where in the registration flow the notes input should live for non-Cheque
+  methods. User proposed a "Review Purchase" modal — pushed back on, since no such modal exists
+  ("Review Purchase" is just the final wizard-step button label, confirmed at
+  `EventRegisterWizard.tsx:451`). User overrode the "should we even do per-method notes" question
+  but did not confirm an alternative UI placement.
+- Open, unresolved: invoice does not exist until checkout completes — exact point `Invoice`
+  `UniqueId` becomes available mid-wizard (which response, which step) not yet traced. Needed
+  before deciding when the `add-note` call can fire.
 
 ## Architectural decisions and reasons
 
-- **Settlement source of truth is Stripe's own intent status, read server-side at confirm** —
-  never trust the client's claim that a card cleared. Card/wallet report `succeeded` immediately;
-  ACH/PAD report `processing` and stay owing until the webhook. If Stripe can't be reached, the
-  attempt stays pending — an outage must never look like a paid order.
-- **One live PaymentIntent per invoice, ever.** Reselecting the same method reuses the pending
-  intent (refreshing its amount) rather than cancelling/re-minting; selecting a different method
-  retires the old one first.
-- **Cart-edit vs payment-lock boundary**: editing the cart voids an abandoned Pending attempt
-  automatically. The only edits still refused are the ones that protect money already committed —
-  a settled payment, an organizer-recorded cheque, or an intent Stripe won't let you cancel because
-  it's already collecting.
-- **Oversell prevention is one shared predicate**, not two independently-computed rules. Both
-  availability and the reclaim job call `TicketingShared.StillHoldsStockRule`; the reclaim job's
-  filter is the logical negation of the same expression, so they cannot drift apart the way they
-  did before `e3dc7cf3`/`6502bc84`.
-- **Refund does not exist as a feature yet — confirmed by audit, not assumed.**
-  `StripePaymentRefundService` exists and is generic across Donation/Membership/Event, but no
-  controller or service anywhere calls it for events (or any module — it's fully unwired dead
-  code). Where it would matter for events specifically: it never touches `TicketReservation` or
-  `EventTicket`, so a refund would leave issued tickets valid and seats never returned to stock;
-  the Stripe call and the local DB write are not in one transaction, so a DB failure after a
-  successful Stripe refund leaves Stripe and the local invoice disagreeing with no reconciliation;
-  it hardcodes `RefundApplicationFee = false`; and it hard-blocks more than one refund per invoice
-  (no successive partial refunds). None of this is patched — it needs a real design pass, not a
-  quick fix, which is why it's queued as the next body of work rather than touched piecemeal.
-- Earlier-phase decisions (server-authoritative payment amount, charge-model split card/wallet vs
-  ACH/PAD, application fee read-never-recomputed, no `Draft` invoice status, cheque authority as a
-  row not a flag, per-line transaction at settlement, server-owned cart cookie storing only the
-  cart id) are unchanged and still governing — see commits `51566350` and `cc3972a2` for the
-  original reasoning if touching payment/settlement code.
+- **`InvoiceNote` is invoice-level, not payment-method-level.** One invoice, many notes,
+  independent of `PaymentProduct`. This means the eventual UI does not need to branch per method —
+  one note input, fired once an invoice exists, regardless of Card/Cheque/ACH. Confirmed by entity
+  shape, not yet reflected in any code.
+- **Cheque notes correctly stayed on `InvoicePayment.Notes`.** That field is one row per payment
+  attempt and was already wired for cheque before this session's new request — not to be touched
+  or migrated to `InvoiceNote`; the two are separate concepts serving separate rows.
+- Standing rules (CLAUDE.md, unchanged): API layer thin (fetch + Zod parse only, `src/api/`),
+  TanStack Query hooks in `features/[domain]/hooks/`, components never call `src/api/` directly,
+  Zod schema is single source of truth for forms, no mock-data expansion, no new dependency without
+  approval.
 
-## Files changed
+## Files changed (this branch, uncommitted)
 
-Backend (`c5114a6b..42bb6c37`, 21 commits): `TicketingShared.cs`, `TicketingService.cs`,
-`EventCartService.cs`, `EventCartPricingService.cs`, `EventCheckoutService.cs`,
-`EventTicketDeliveryJob.cs` (new `TicketDelivery` table + resend path), `EventTicketPdfModel.cs` /
-`SessionTimeFormatter.cs` (new) / PDF drawing code, `StripeService.cs` (publishable-key fix,
-`ApiKey` write removal), event invoice list/detail service + controller (new), plus test files:
-`EventCartPricingServiceTests.cs`, `TicketingServiceSqlServerTests.cs` (new 50-thread load test),
-and others per commit list above.
+- `src/features/events/components/registration/ChequePaymentFields.tsx` — notes textarea (+28/-2)
+- `src/features/events/components/registration/PaymentStep.tsx` — `chequeNotes` /
+  `onChequeNotesChange` prop passthrough (+6)
+- `src/features/events/components/registration/PaymentStep.test.tsx` — prop added to test harness
+  (+2)
+- `src/features/events/pages/EventRegisterWizard.tsx` — `chequeNotes` state, trimmed into mutation
+  payload, prop wiring (+4)
+- `src/components/events/OrganizerEventCard.tsx` — menu label "Invoice" → "Invoices" (1 line)
 
-Frontend (`107d248..8692814`, 7 commits): `RegistrationStripeProvider.tsx` (new),
-`StripePaymentFields.tsx` (new, replaces deleted `StripeCardFields.tsx`),
-`RegistrationPaymentConfirmation.tsx` (new), `src/api/stripe.ts`, `useStripeCredentials.ts` (new),
-`PurchaseReviewDialog.tsx`, `PaymentStep.tsx`, `EventRegisterWizard.tsx`, the new
-`features/event-invoices/` folder (list/detail pages, hooks, `api/eventInvoices.ts`), e2e specs
-(`event-payment.spec.ts`, `event-payment-failures.spec.ts`, `event-registration.spec.ts`,
-`event-registration-persistence.spec.ts`, `registrationFlow.ts`), plus new component-test
-dependencies in `package.json`.
+No backend changes this session. No files created yet for `InvoiceNote`.
 
-## Important commands and test results (this session)
+## Important commands and test results
 
-- Backend `dotnet test tests/Ideas.API.Tests/Ideas.API.Tests.csproj` with
-  `IDEALI_TEST_SQLSERVER="Server=localhost;Trusted_Connection=True;"` set — **458/458 passed**,
-  ~5m8s. No leaked `IdealiPhase0_%` test databases afterward (checked via `sys.databases`).
-- Playwright e2e, frontend dev server on **port 3000** (hardcoded in `playwright.config.ts` — CORS
-  allow-list in dev DB `dbo.OrgAllowedOrigins` only seeds `localhost:3000`, not 3001):
-  - `event-payment.spec.ts` + `event-payment-failures.spec.ts` — **4/4 passed** (card create/confirm,
-    declined card, 3DS challenge, terms-acceptance gate).
-  - `event-registration-persistence.spec.ts` — **4/4 passed**.
-  - `event-registration.spec.ts` — **2/3 passed**; `payment step renders the server-priced
-    breakdown` **fails** waiting for text `Third Charge Rule`. Root cause confirmed by direct query
-    against dev DB `ideali_testing-20260803`: `dbo.OrganizerChargeRule` has exactly one row for
-    organizer 1 (`Tax`, 17.99) — the second charge rule the test expects was never seeded. This is
-    a dev-data gap, not a payment-processing regression; the breakdown the UI rendered exactly
-    matched what the server actually has configured. Left unfixed, parked with the charge-rule work
-    below.
-- `npm run lint` — not re-run this session (no frontend source changed beyond `docs/HANDOFF.md`
-  this turn).
+- `npm run lint` — **1 warning, 0 errors**, pre-existing and unrelated
+  (`SeatsIoChartCategoriesCard.tsx:98`, React Compiler skip on RHF's `watch()`, not touched this
+  session).
+- `npx vitest run src/features/events/components/registration/PaymentStep.test.tsx` —
+  **7/7 passed**.
+- Backend not re-tested this session (no backend changes made).
 
 ## Known bugs or limitations
 
-- **Refund is fully unbuilt for every module, event included** — see architectural decision above.
-  This is the primary open item.
-- `dbo.OrganizerChargeRule` for organizer 1 (dev DB) has only a `Tax` rule; whatever second rule
-  `event-registration.spec.ts:132` expects (`Third Charge Rule`) needs to be seeded, or the
-  assertion needs to be updated if that rule was deliberately renamed/removed.
-- `d322dcd5` fixed the shared `StripeConfiguration.ApiKey` race for event paths only — the same
-  defect is still live in donation, membership, and the refund service paths.
-- `EnumAdminFeeTarget.Organizer` revenue-plan rules still don't become an application fee
-  (`PaymentChargeSnapshot.InvoiceItemId` would need to become nullable) — carried from P4/P5, now
-  explicitly bundled with the "charge rules" work the user wants to revisit.
-- `OrganizerPaymentAccount.UniqueId` still has no unique index (carried, unaddressed).
-- Dead `POST /webhooks/stripe` controller still present alongside the live
-  `POST api/public/stripe/web-hook` path (carried, unaddressed).
-- `PdfService`'s cached-browser-never-checked-for-liveness issue still affects donation/membership
-  PDFs (event ticket PDFs avoid it — they draw server-side with PdfSharpCore, per `38b887b9`).
-
-## Refund plan (next up — concrete, not just "go design it")
-
-Verified schema facts this session, in `D:\V4Ideas\Ideali\ideali.api`:
-
-- `EventTicketStatus` (`src/Shared/Ideas.Shared.Domain/Enums/EventTicketStatus.cs`) already has a
-  `Refunded` member — `Active, CheckedIn, Cancelled, Refunded`. Nothing writes it today. The schema
-  already anticipated this; only the write path is missing.
-- `InvoiceRefund` (`src/Shared/Ideas.Shared.Domain/Entities/InvoiceRefund.cs`) has `InvoiceId`,
-  `InvoiceItemId`, `Amount`, `Reason` — no `StripeRefundId`, no status field of its own (status
-  lives on `Invoice`/`InvoiceItem`).
-- `TicketReservation.ReservationStatus` (`TicketReservationStatus`) and
-  `EventTicket.TicketStatus`/`CancelledAtUtc`/`CancelledBy` exist and are unused by refund today.
-- `StripePaymentRefundService.RefundAsync`
-  (`src/Shared/Ideas.PaymentGateway/Services/Refunds/StripePaymentRefundService.cs:25`) is
-  constructor-injected with `IUnitOfWork<BaseDbContext>`, `IEmailSender`, `IOutgoingEmailService`,
-  `IImageUrlResolverService`, `Serilog.ILogger` — shared across every module via the generic
-  `Invoice`/`InvoiceItem`/`InvoicePayment` chain. `IUnitOfWork<T>` exposes
-  `Database.BeginTransactionAsync` (confirmed in `UnitOfWork.cs`) but this method never calls it.
-
-Plan, in build order:
-
-1. **Wrap Stripe call + DB write in one transaction boundary** in `StripePaymentRefundService`.
-   Stripe's refund call itself can't be transactional with SQL Server, so the actual fix is:
-   catch every exception (not just `StripeException`) around the DB write that follows a
-   successful Stripe refund, and on failure write a `Failed`/`NeedsReconciliation` marker rather
-   than letting it propagate uncaught — today a post-Stripe DB failure leaves Stripe showing
-   refunded and the local invoice still `Paid` with no record of the mismatch.
-2. **Event-specific seat release**, additive to the shared service or as an `IEventModule`-only
-   hook called after refund succeeds: set `EventTicket.TicketStatus = Refunded`,
-   `CancelledAtUtc`/`CancelledBy`; flip `TicketReservation.ReservationStatus` so the seat is no
-   longer counted `Active` by `TicketingShared.StillHoldsStockRule` — reuse that same predicate,
-   do not write a second one.
-3. **Decide and document application-fee reversal** (`RefundApplicationFee`, currently hardcoded
-   `false`) — needs a product decision (does the organizer eat the processor fee on a refund?)
-   before code changes; flag to user before touching, since this is shared with
-   Donation/Membership.
-4. **Decide on successive partial refunds** — today `alreadyRefundedAmount > 0` hard-blocks a
-   second refund on the same invoice. If partial refunds must be supported for events (e.g.
-   refunding one ticket out of three), this guard needs to change to a running-total check instead
-   of a boolean gate — again shared code, flag before touching.
-5. **Wire an actual Event refund endpoint** — none exists today, in any module. Needs an
-   organizer-authenticated controller action (mirrors `EventInvoiceController` conventions) plus a
-   frontend action on the Event Invoices detail page (`features/event-invoices/`), guarded the same
-   way the new resend actions are (confirm dialog, backend org-ownership check).
-6. **Tests**: unit + SQL Server integration covering — Stripe refund succeeds, DB write fails after
-   (reconciliation marker written, not silent); Stripe declines/errors (no DB rows written, no
-   crash); partial refund arithmetic; seat/ticket status flips correctly; a second refund attempt
-   on an already-refunded invoice.
-7. Extend the refund notification email to Events — currently Membership-only
-   (comment in `StripePaymentRefundService.cs` around line 209 says Donation/Events are "skipped
-   for now").
-
-This is money-movement touching a service shared with two live modules — plan-mode sign-off
-required before writing any code here, per the assumptions section below.
+- None newly introduced. Cheque notes feature has no known gaps — optional field, trimmed,
+  matches backend contract.
+- Per-method invoice notes: entirely unbuilt on the frontend. Backend readiness for Event invoices
+  specifically is assumed, not verified.
 
 ## Unfinished tasks, priority order
 
-1. **Refund handling** (see plan above, user-flagged, next up).
-2. **Charge rules** (bundled with the above, per user direction): revisit `OrganizerChargeRule`
-   and `AdminRevenuePlanRule` together — includes seeding/fixing the missing second charge rule
-   that `event-registration.spec.ts` expects, and the still-open `EnumAdminFeeTarget.Organizer`
-   application-fee gap.
-3. Push frontend `8692814` (currently local-only, 1 commit ahead of origin) once you're ready.
-4. Carried, not prioritized: unique index on `OrganizerPaymentAccount.UniqueId`; fix the shared
-   `StripeConfiguration.ApiKey` race on donation/membership/refund paths; clean up the dead
-   `/webhooks/stripe` controller; delete `HANDOFF_INSTRUCTIONS.md` and the planning HTML files once
-   no longer needed.
-5. **P7 — organizer check-in**: not started, no plan exists yet.
+1. Verify `POST /invoice/{invoiceUniqueId}/add-note` and `GET .../notes` actually work against an
+   Event-module invoice (call it manually or add an integration test) — the one backend unknown
+   blocking frontend work.
+2. Resolve the generic-`InvoiceController` vs `DonationInvoiceController`-route ambiguity — confirm
+   which route Event should call, or whether a third Event-specific route is expected.
+3. Decide UI placement for the notes input (works for all methods, since `InvoiceNote` isn't
+   method-specific) — needs user confirmation, "Review Purchase modal" idea already rejected as
+   nonexistent.
+4. Trace exactly when `Invoice.UniqueId` becomes available in the wizard flow, to know when the
+   add-note call can fire.
+5. Build frontend wiring: `api/invoiceNotes.ts` (fetch + Zod parse), TanStack Query hook(s)
+   (`useAddInvoiceNote`, `useInvoiceNotes`), UI component, tests (success + failure paths) — per
+   CLAUDE.md, ships in the same change, not after.
+6. Commit the already-completed, currently-uncommitted work (cheque notes + menu label rename) —
+   not committed yet in this session; needs explicit user go-ahead per repo rule (never commit
+   unasked).
+7. Carried, unscheduled: manual browser verification of the cheque flow as Organizer 1 at
+   `/events/b1825109-3ec5-4fec-85a0-3694508a1008/register` — never done.
+8. Carried, unscheduled, separate initiative: `EventOrderRecovery` / `EventRefundService` /
+   Hangfire sweeper plan at `C:\Users\khatr\.claude\plans\piped-meandering-waffle.md` — full design
+   exists, not started, not part of this thread of work.
 
 ## Exact next action
 
-Scope the refund-handling + charge-rules work into a plan (plan mode) before writing any code —
-this touches money-movement and a shared service (`StripePaymentRefundService`), so needs explicit
-design sign-off first, same bar as the original payment-intent work.
+Answer priority-1 above: confirm (by testing, not re-reading code) whether
+`GetInvoiceNotesAsync`/`AddInvoiceNoteAsync` actually return/accept data for an Event invoice's
+`UniqueId`, since the whole "no backend work needed" plan rests on that being true.
 
 ## Assumptions that must not be changed
 
-- Donation and membership are live in production. `StripePaymentRefundService` is shared — any
-  change to it must be flagged to the user before touching it, and tested against all three
-  modules, not just Event.
-- Migrations are additive only — no drops, renames, or type/constraint/index changes on tables live
-  modules use.
-- The application fee is read from persisted `RevenuePlanRule` snapshots, never recomputed. No
-  Event code path may reach `IPlatformChargeService`.
-- Card and bank credentials must never reach this API.
+- Target table for per-method notes is `InvoiceNote`, not `InvoicePayment.Notes` — user's explicit
+  correction, binding.
+- Cheque's existing `InvoicePayment.Notes` wiring stays as-is; do not fold it into the new
+  `InvoiceNote` feature or remove it.
+- No `npm install` without explicit approval. Chakra UI v3 only. `date-fns` for dates. No
+  `localStorage`/`sessionStorage`.
+- Never commit or push without an explicit ask in that message. No `Co-Authored-By` trailer.
+- `mock.ts` is temporary — do not expand it; this feature has a real backend, so mock data is not
+  an option here regardless.
 - Event registration UI stays in this repo (`ideali-events`), never in the membership checkout
-  repo — per project routing rule.
-- Buyer/attendee identity is intentionally not persisted across a refresh — not a bug.
-- Never commit or push without an explicit ask in that message, in either repo. No
-  `Co-Authored-By` trailer, ever.
-- No `npm install` without explicit approval. Frontend: Chakra UI v3 only, no
-  `localStorage`/`sessionStorage`, `date-fns` for dates.
-- Playwright e2e must run against the frontend dev server on port 3000 — CORS allow-list in the
-  dev DB does not include 3001.
+  repo.
 
 ## Branch and commit status
 
-- **Backend**: `sohail/features/event/event-registration`, HEAD `42bb6c37`, matches origin, clean.
-- **Frontend**: `sohail/features/event/event-registration`, HEAD `8692814`, **1 commit ahead of
-  origin** (unpushed), plus the 3 untracked scratch files noted above and this `docs/HANDOFF.md`
-  rewrite.
+- **Frontend**: `sohail/features/event/event-registration-cart-table`, working tree has 5 modified
+  files (listed above), none staged or committed. HEAD at `84a850a`.
+- **Backend**: `sohail/features/event/event-registration` (different branch name than frontend —
+  pre-existing, not something to reconcile here), working tree clean, HEAD at `83370573`. No
+  backend changes needed yet for this task; verification (priority 1 above) doesn't require code
+  changes, just a call against a real Event invoice.

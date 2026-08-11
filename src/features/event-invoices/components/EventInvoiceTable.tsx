@@ -1,6 +1,8 @@
-import { Badge, Box, Button, Table, Text } from "@chakra-ui/react"
+import { Badge, Box, Link, Table, Text } from "@chakra-ui/react"
 import { format } from "date-fns"
+import { Link as RouterLink } from "react-router-dom"
 import type { EventInvoiceListItem, EventInvoiceSortBy, EventInvoiceSortOrder } from "@/api/eventInvoices"
+import { APP_ROUTES } from "@/utils/routes"
 import { parseUtcDateTime } from "@/utils/utcDates"
 import { EventInvoiceRowActionsMenu } from "./EventInvoiceRowActionsMenu"
 import { PaymentPills } from "./PaymentPills"
@@ -116,21 +118,21 @@ export function EventInvoiceTable({
                     />
                   </Table.Cell>
                   <Table.Cell px={4} py={4}>
-                    <Button
-                      type="button"
-                      variant="plain"
-                      h="auto"
-                      p={0}
+                    <Link
+                      as={RouterLink}
+                      href={APP_ROUTES.eventInvoices.detail(invoice.invoiceUniqueId)}
+                      to={APP_ROUTES.eventInvoices.detail(invoice.invoiceUniqueId)}
                       fontSize="sm"
                       fontWeight="700"
                       color="brand.600"
                       cursor="pointer"
-                      justifyContent="flex-start"
+                      display="inline-flex"
+                      minH="11"
+                      alignItems="center"
                       _hover={{ textDecoration: "underline" }}
-                      onClick={() => onOpenDetail(invoice)}
                     >
                       {invoice.invoiceNo}
-                    </Button>
+                    </Link>
                     <PaymentPills paymentMethod={invoice.paymentMethod} paymentSource={invoice.paymentSource} />
                   </Table.Cell>
                   <Table.Cell px={4} py={4}>

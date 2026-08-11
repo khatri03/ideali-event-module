@@ -160,7 +160,7 @@ export function EventInvoiceLineItemsSection({ invoiceUniqueId, lineItems, curre
     <Box border="1px solid" borderColor="border.subtle" borderRadius="20px" bg="card.bg" boxShadow="card" p={{ base: 4, md: 6 }}>
       <HStack justify="space-between" wrap="wrap" gap={2} mb={4}>
         <Heading fontSize="lg" fontWeight="800" color="gray.900">
-          Ticket line items
+          Ticket delivery
         </Heading>
         {hasAnyTicket ? (
           <Button

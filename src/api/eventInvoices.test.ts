@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { fetchEventInvoices, type EventInvoiceFilters } from "./eventInvoices"
+import { addEventInvoiceNote, fetchEventInvoiceDetail, fetchEventInvoices, type EventInvoiceFilters } from "./eventInvoices"
 
-const { getMock } = vi.hoisted(() => ({ getMock: vi.fn() }))
+const { getMock, postMock } = vi.hoisted(() => ({ getMock: vi.fn(), postMock: vi.fn() }))
 
-vi.mock("./client", () => ({ client: { get: getMock } }))
+vi.mock("./client", () => ({ client: { get: getMock, post: postMock } }))
 
 const NO_FILTERS: EventInvoiceFilters = {
   eventUniqueIds: [],
@@ -113,5 +113,58 @@ describe("fetchEventInvoices date range", () => {
     const params = await sentParams({ invoiceDateFrom: "01/03/2026" })
 
     expect(params.has("invoiceDateFrom")).toBe(false)
+  })
+})
+
+describe("fetchEventInvoiceDetail notes", () => {
+  beforeEach(() => getMock.mockReset())
+
+  it("NotesSentByApi_AreNormalizedInTheReturnedDetail", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          invoiceUniqueId: "invoice-1",
+          invoiceNo: "INV-1",
+          invoiceStatus: "Paid",
+          invoiceStatusLabel: "Paid",
+          invoiceDateUtc: "2026-08-01T10:00:00Z",
+          subTotal: 210,
+          discountAmount: null,
+          discountCouponCode: null,
+          taxAmount: 75.56,
+          platformCharges: 4,
+          serviceCharges: 5,
+          totalAmount: 294.56,
+          balanceAmount: 294.56,
+          currencySymbol: "$",
+          eventUniqueId: "event-1",
+          eventName: "Annual Summit",
+          buyerName: "Jane Doe",
+          buyerEmail: "jane@example.com",
+          buyerPhone: null,
+          lineItems: [],
+          notes: [{ note: "Newest note", createdBy: "tester", createdOnUtc: "2026-08-02T10:00:00Z" }],
+          payments: [],
+        },
+      },
+    })
+
+    const detail = await fetchEventInvoiceDetail("invoice-1")
+
+    expect(detail.taxAmount).toBe(75.56)
+    expect(detail.platformCharges).toBe(4)
+    expect(detail.serviceCharges).toBe(5)
+    expect(detail.notes).toEqual([{ note: "Newest note", createdBy: "tester", createdOnUtc: "2026-08-02T10:00:00Z" }])
+  })
+})
+
+describe("addEventInvoiceNote", () => {
+  beforeEach(() => postMock.mockReset().mockResolvedValue({}))
+
+  it("PostsATrimmedNoteToTheInvoiceAddNoteEndpoint", async () => {
+    await addEventInvoiceNote("invoice-1", "  Call finance.  ")
+
+    expect(postMock).toHaveBeenCalledWith("/api/organizer/events/invoices/invoice-1/add-note", { note: "Call finance." })
   })
 })
