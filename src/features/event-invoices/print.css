@@ -1,0 +1,66 @@
+/*
+ * Print rules for the invoice detail page. An organizer asked for a paper copy wants the order, not a
+ * photograph of the application it was read in, so the surrounding chrome stops painting and the controls
+ * that only mean something to a pointer are dropped outright.
+ */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    background: #fff;
+    overflow: visible;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  [data-print-region],
+  [data-print-region] * {
+    visibility: visible;
+  }
+
+  [data-print-region] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  /*
+   * Browsers drop backgrounds when printing, which would leave the header's white type on a white sheet.
+   * Forcing ink to black rather than asking for exact colour keeps the page readable on any printer.
+   */
+  [data-print-region] *,
+  [data-print-region] *::before,
+  [data-print-region] *::after {
+    color: #000 !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  [data-print-region] > * {
+    break-inside: avoid;
+    border: 1px solid #999 !important;
+    border-radius: 0 !important;
+  }
+
+  /* A status chip loses its fill above; the outline is what keeps it reading as a chip rather than stray text. */
+  [data-print-region] [data-status-tone],
+  [data-print-region] [data-balance-tone] {
+    border: 1px solid #666 !important;
+  }
+
+  [data-print-region] a {
+    text-decoration: none;
+  }
+}

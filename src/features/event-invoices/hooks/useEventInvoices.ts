@@ -8,12 +8,14 @@ import {
   markEventInvoiceAsPaid,
   resendEventInvoice,
   resendEventInvoiceTicket,
+  updateEventInvoiceBuyer,
+  type EventInvoiceBuyerUpdate,
   type EventInvoiceFilters,
   type EventInvoiceSortBy,
   type EventInvoiceSortOrder,
 } from "@/api/eventInvoices"
 import { toaster } from "@/lib/toaster"
-import { extractApiError } from "@/utils/errors"
+import { extractApiError, isNotFoundError } from "@/utils/errors"
 
 export function useEventInvoices(
   filters: EventInvoiceFilters,
@@ -46,6 +48,9 @@ export function useEventInvoiceDetail(invoiceUniqueId: string | undefined) {
     queryFn: () => fetchEventInvoiceDetail(invoiceUniqueId!),
     enabled: Boolean(invoiceUniqueId),
     refetchOnMount: "always",
+    // An invoice the organizer cannot reach will not appear on a second attempt; retrying only delays
+    // the message. Anything else gets one more try before the page gives up and offers the button.
+    retry: (failureCount, error) => !isNotFoundError(error) && failureCount < 1,
   })
 }
 
@@ -93,6 +98,16 @@ export function useAddEventInvoiceNote(invoiceUniqueId: string) {
   return useMutation({
     mutationFn: (note: string) => addEventInvoiceNote(invoiceUniqueId, note),
     onSuccess: () => toaster.create({ type: "success", title: "Invoice note added." }),
+    onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] }),
+  })
+}
+
+export function useUpdateEventInvoiceBuyer(invoiceUniqueId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (buyer: EventInvoiceBuyerUpdate) => updateEventInvoiceBuyer(invoiceUniqueId, buyer),
+    onSuccess: () => toaster.create({ type: "success", title: "Buyer details updated." }),
     onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] }),
   })

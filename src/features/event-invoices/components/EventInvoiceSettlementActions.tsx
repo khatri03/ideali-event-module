@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Box, Button, Heading, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Button, Stack, Text } from "@chakra-ui/react"
 import { Ban, CheckCircle2 } from "lucide-react"
 import { ConfirmDialog } from "@/features/custom-lists"
 import { extractApiError } from "@/utils/errors"
@@ -15,6 +15,10 @@ interface EventInvoiceSettlementActionsProps {
   canCancel: boolean
 }
 
+/**
+ * A bare row of buttons, no card of its own: it is mounted inside the invoice header so the decision
+ * sits with the order's identity and status rather than partway down the page.
+ */
 export function EventInvoiceSettlementActions({
   invoiceUniqueId,
   invoiceNo,
@@ -41,55 +45,39 @@ export function EventInvoiceSettlementActions({
   }
 
   return (
-    <Box
-      border="1px solid"
-      borderColor="border.subtle"
-      borderRadius="20px"
-      bg="card.bg"
-      boxShadow="card"
-      p={{ base: 4, md: 6 }}
-    >
-      <Stack gap={1} mb={4}>
-        <Heading fontSize="lg" fontWeight="800" color="gray.900">
-          Settle this order
-        </Heading>
-        <Text fontSize={{ base: "xs", md: "sm" }} color="gray.600">
-          This order is still awaiting payment. Record the money as received, or call the order off.
-        </Text>
-      </Stack>
+    <Stack direction={{ base: "column", sm: "row" }} gap={3} align={{ base: "stretch", sm: "center" }} wrap="wrap">
+      {canMarkAsPaid ? (
+        <Button
+          colorPalette="green"
+          borderRadius="14px"
+          minH="11"
+          px={5}
+          w={{ base: "full", sm: "auto" }}
+          cursor="pointer"
+          onClick={() => setPendingAction("mark-paid")}
+        >
+          <CheckCircle2 size={16} />
+          Mark as paid
+        </Button>
+      ) : null}
 
-      <SimpleGrid columns={{ base: 1, md: 2 }} gap={3} maxW={{ md: "520px" }}>
-        {canMarkAsPaid ? (
-          <Button
-            colorPalette="green"
-            borderRadius="14px"
-            minH="11"
-            px={5}
-            w="full"
-            cursor="pointer"
-            onClick={() => setPendingAction("mark-paid")}
-          >
-            <CheckCircle2 size={16} />
-            Mark as paid
-          </Button>
-        ) : null}
-
-        {canCancel ? (
-          <Button
-            variant="outline"
-            colorPalette="red"
-            borderRadius="14px"
-            minH="11"
-            px={5}
-            w="full"
-            cursor="pointer"
-            onClick={() => setPendingAction("cancel")}
-          >
-            <Ban size={16} />
-            Mark as cancelled
-          </Button>
-        ) : null}
-      </SimpleGrid>
+      {canCancel ? (
+        <Button
+          variant="outline"
+          color="white"
+          borderColor="whiteAlpha.500"
+          borderRadius="14px"
+          minH="11"
+          px={5}
+          w={{ base: "full", sm: "auto" }}
+          cursor="pointer"
+          _hover={{ bg: "status.error.bg", color: "status.error.fg", borderColor: "transparent" }}
+          onClick={() => setPendingAction("cancel")}
+        >
+          <Ban size={16} />
+          Mark as cancelled
+        </Button>
+      ) : null}
 
       {pendingAction ? (
         <ConfirmDialog
@@ -116,6 +104,6 @@ export function EventInvoiceSettlementActions({
           onClose={() => setPendingAction(null)}
         />
       ) : null}
-    </Box>
+    </Stack>
   )
 }

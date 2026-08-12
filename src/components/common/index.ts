@@ -1,4 +1,5 @@
 export { ColorModeToggle } from "./ColorModeToggle"
+export { ErrorState } from "./ErrorState"
 export { PageHeader } from "./PageHeader"
 export { RichText } from "./RichText"
 export { StyledSelect } from "./StyledSelect"

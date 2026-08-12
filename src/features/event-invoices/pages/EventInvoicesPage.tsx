@@ -18,17 +18,17 @@ export function EventInvoicesPage() {
             display="flex"
             alignItems="center"
             justifyContent="center"
-            style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+            bg="brand.gradient"
             flexShrink={0}
           >
             <Receipt size={28} color="white" />
           </Box>
 
           <Box flex={1}>
-            <Heading fontSize={{ base: "2xl", md: "3xl" }} fontWeight="800" letterSpacing="-0.03em" color="gray.900">
+            <Heading fontSize={{ base: "2xl", md: "3xl" }} fontWeight="800" letterSpacing="-0.03em" color="text.primary">
               Event Invoices
             </Heading>
-            <Text mt={2} fontSize={{ base: "sm", md: "md" }} color="gray.600" maxW="3xl">
+            <Text mt={2} fontSize={{ base: "sm", md: "md" }} color="text.secondary" maxW="3xl">
               Browse every registration invoice across your events - filter by event, session, status or payment
               method, then open one to see its line items, attendees, issued tickets and payment history.
             </Text>

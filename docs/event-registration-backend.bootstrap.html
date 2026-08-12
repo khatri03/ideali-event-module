@@ -512,6 +512,11 @@
                 <td>Closes the order unpaid and emails the buyer. Same status guard as mark-paid. Everything the order was occupying goes back: holds it never took up are cancelled, tickets it had already been issued (a cheque order) are moved to <code>Cancelled</code>, and the ticket-type counters are rebuilt so the seats return to sale. Afterwards the order's tickets can neither be resent nor viewed — <code>TicketIssuanceRule.IsAuthorised</code> refuses a cancelled invoice outright, ahead of the cheque and zero-total allowances.</td>
               </tr>
               <tr>
+                <td><span class="badge badge-method text-bg-warning">PUT</span> <code>/api/organizer/events/invoices/{invoiceId}/buyer</code></td>
+                <td><code>EventInvoiceService.UpdateBuyerAsync</code></td>
+                <td>Corrects the name, email and phone the order is billed to. Name and a routable email are required; the phone is optional and blanks out to <code>null</code>. Allowed only while the order is live (<code>PendingPayment</code>, <code>PartiallyPaid</code>, <code>Paid</code>, <code>Failed</code>) — <code>EventInvoiceActionRule.AllowsBuyerEdit</code> refuses a cancelled, refunded, partially refunded or adjusted order, whose buyer is part of a settled record. Every field that actually changed is written to the invoice's note trail as an audited <code>InvoiceNote</code>, so who changed what and when sits where the organizer already looks; an unchanged submit answers <code>false</code> and leaves no trail. Changing the email does not move tickets that have already gone out — the caller resends them separately.</td>
+              </tr>
+              <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/tickets/check-in</code></td>
                 <td><code>TicketingService.CheckInAsync</code></td>
                 <td>Scans a ticket code at the door and writes a <code>TicketCheckInLog</code> row. Refuses a code that is already used, cancelled or refunded.</td>
@@ -1794,6 +1799,13 @@
                 <td>Cancel Invoice</td>
                 <td><span class="badge text-bg-light border access-policy">OrganizerModuleAccess</span></td>
                 <td class="small"><code>invoiceUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-warning">PUT</span></td>
+                <td><code class="path">/api/organizer/events/invoices/{invoiceUniqueId:guid}/buyer</code></td>
+                <td>Update Invoice Buyer</td>
+                <td><span class="badge text-bg-light border access-policy">OrganizerModuleAccess</span></td>
+                <td class="small"><code>invoiceUniqueId</code><span class="text-body-secondary"> : Guid</span>, <code>dto</code><span class="text-body-secondary"> : EventInvoiceBuyerDto</span></td>
               </tr>
               <tr>
                 <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>

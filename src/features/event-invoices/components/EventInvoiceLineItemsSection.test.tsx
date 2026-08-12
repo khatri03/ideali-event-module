@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event"
 import { ChakraProvider } from "@chakra-ui/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { system } from "@/theme"
+import { APP_ROUTES } from "@/utils/routes"
 import type { EventInvoiceLineItem } from "@/api/eventInvoices"
 import { EventInvoiceLineItemsSection } from "./EventInvoiceLineItemsSection"
 
@@ -30,8 +31,8 @@ const LINE_ITEMS: EventInvoiceLineItem[] = [
     sessionName: "Friday Dinner",
     ticketTypeName: "General Admission",
     quantity: 1,
-    unitPrice: 100,
-    lineTotal: 100,
+    unitPrice: "100",
+    lineTotal: "100",
     attendees: [{ name: "Jane Doe", email: "jane@example.com", phone: null }],
     tickets: [
       {
@@ -75,6 +76,22 @@ describe("EventInvoiceLineItemsSection resend actions", () => {
     expect(screen.queryByText("CheckedIn")).not.toBeInTheDocument()
   })
 
+  it("TicketIssued_LinksItsCodeToTheTicketView", () => {
+    renderSection()
+
+    const link = screen.getByRole("link", { name: /EVT_ABC123/ })
+
+    expect(link).toHaveAttribute("href", APP_ROUTES.eventTicketView("ticket-1"))
+    expect(link).toHaveAttribute("target", "_blank")
+    expect(link).toHaveAttribute("rel", "noopener noreferrer")
+  })
+
+  it("PerTicketResendButton_NamesTheTicketItWouldSend", () => {
+    renderSection()
+
+    expect(screen.getByRole("button", { name: "Resend ticket EVT_ABC123" })).toBeInTheDocument()
+  })
+
   it("does not show a resend-all button when the invoice has no issued tickets yet", () => {
     renderSection([{ ...LINE_ITEMS[0], tickets: [] }])
 
@@ -85,7 +102,7 @@ describe("EventInvoiceLineItemsSection resend actions", () => {
     renderSection(LINE_ITEMS, false)
 
     expect(screen.queryByRole("button", { name: /resend all tickets/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: /resend$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /resend ticket EVT_ABC123/i })).not.toBeInTheDocument()
     expect(screen.getByText("EVT_ABC123")).toBeInTheDocument()
   })
 
@@ -93,7 +110,7 @@ describe("EventInvoiceLineItemsSection resend actions", () => {
     const user = userEvent.setup()
     renderSection()
 
-    await user.click(screen.getByRole("button", { name: /resend$/i }))
+    await user.click(screen.getByRole("button", { name: /resend ticket EVT_ABC123/i }))
 
     const dialog = await screen.findByRole("alertdialog")
     expect(within(dialog).getByText("EVT_ABC123")).toBeInTheDocument()
@@ -108,7 +125,7 @@ describe("EventInvoiceLineItemsSection resend actions", () => {
     const user = userEvent.setup()
     renderSection()
 
-    await user.click(screen.getByRole("button", { name: /resend$/i }))
+    await user.click(screen.getByRole("button", { name: /resend ticket EVT_ABC123/i }))
     const dialog = await screen.findByRole("alertdialog")
 
     await user.click(within(dialog).getByRole("button", { name: /cancel/i }))
@@ -134,7 +151,7 @@ describe("EventInvoiceLineItemsSection resend actions", () => {
     const user = userEvent.setup()
     renderSection()
 
-    await user.click(screen.getByRole("button", { name: /resend$/i }))
+    await user.click(screen.getByRole("button", { name: /resend ticket EVT_ABC123/i }))
     const dialog = await screen.findByRole("alertdialog")
     await user.click(within(dialog).getByRole("button", { name: /resend ticket/i }))
 

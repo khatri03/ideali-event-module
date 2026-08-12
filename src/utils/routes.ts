@@ -313,6 +313,7 @@ export const API_ROUTES = {
   eventInvoiceDetail: (invoiceUniqueId: string) => `/api/organizer/events/invoices/${invoiceUniqueId}`,
   eventInvoiceResend: (invoiceUniqueId: string) => `/api/organizer/events/invoices/${invoiceUniqueId}/resend`,
   eventInvoiceAddNote: (invoiceUniqueId: string) => `/api/organizer/events/invoices/${invoiceUniqueId}/add-note`,
+  eventInvoiceBuyer: (invoiceUniqueId: string) => `/api/organizer/events/invoices/${invoiceUniqueId}/buyer`,
   eventInvoiceMarkPaid: (invoiceUniqueId: string) => `/api/organizer/events/invoices/${invoiceUniqueId}/mark-paid`,
   eventInvoiceCancel: (invoiceUniqueId: string) => `/api/organizer/events/invoices/${invoiceUniqueId}/cancel`,
   eventInvoiceTicketResend: (invoiceUniqueId: string, ticketUniqueId: string) =>
