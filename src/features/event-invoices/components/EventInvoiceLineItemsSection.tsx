@@ -12,6 +12,8 @@ interface EventInvoiceLineItemsSectionProps {
   invoiceUniqueId: string
   lineItems: EventInvoiceLineItem[]
   currencySymbol: string
+  /** A cancelled order keeps its ticket history on screen but is never posted out again. */
+  canResendTickets: boolean
 }
 
 type ResendTarget = { kind: "invoice" } | { kind: "ticket"; ticket: EventInvoiceTicket }
@@ -35,10 +37,12 @@ function formatTimestamp(value: string | null) {
 function LineItemCard({
   item,
   currencySymbol,
+  canResend,
   onResendTicket,
 }: {
   item: EventInvoiceLineItem
   currencySymbol: string
+  canResend: boolean
   onResendTicket: (ticket: EventInvoiceTicket) => void
 }) {
   return (
@@ -111,19 +115,21 @@ function LineItemCard({
                       Checked in {formatTimestamp(ticket.checkedInAtUtc)}
                     </Text>
                   ) : null}
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    colorPalette="brand"
-                    borderRadius="10px"
-                    minH="11"
-                    px={2}
-                    cursor="pointer"
-                    onClick={() => onResendTicket(ticket)}
-                  >
-                    <Send size={14} />
-                    Resend
-                  </Button>
+                  {canResend ? (
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      colorPalette="brand"
+                      borderRadius="10px"
+                      minH="11"
+                      px={2}
+                      cursor="pointer"
+                      onClick={() => onResendTicket(ticket)}
+                    >
+                      <Send size={14} />
+                      Resend
+                    </Button>
+                  ) : null}
                 </HStack>
               ))
             )}
@@ -134,7 +140,12 @@ function LineItemCard({
   )
 }
 
-export function EventInvoiceLineItemsSection({ invoiceUniqueId, lineItems, currencySymbol }: EventInvoiceLineItemsSectionProps) {
+export function EventInvoiceLineItemsSection({
+  invoiceUniqueId,
+  lineItems,
+  currencySymbol,
+  canResendTickets,
+}: EventInvoiceLineItemsSectionProps) {
   const [resendTarget, setResendTarget] = useState<ResendTarget | null>(null)
   const resendInvoiceMutation = useResendEventInvoice(invoiceUniqueId)
   const resendTicketMutation = useResendEventInvoiceTicket(invoiceUniqueId)
@@ -162,7 +173,7 @@ export function EventInvoiceLineItemsSection({ invoiceUniqueId, lineItems, curre
         <Heading fontSize="lg" fontWeight="800" color="gray.900">
           Ticket delivery
         </Heading>
-        {hasAnyTicket ? (
+        {hasAnyTicket && canResendTickets ? (
           <Button
             size="sm"
             variant="outline"
@@ -190,6 +201,7 @@ export function EventInvoiceLineItemsSection({ invoiceUniqueId, lineItems, curre
               key={item.invoiceItemUniqueId}
               item={item}
               currencySymbol={currencySymbol}
+              canResend={canResendTickets}
               onResendTicket={(ticket) => setResendTarget({ kind: "ticket", ticket })}
             />
           ))}

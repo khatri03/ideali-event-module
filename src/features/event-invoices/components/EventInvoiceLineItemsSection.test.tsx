@@ -46,12 +46,17 @@ const LINE_ITEMS: EventInvoiceLineItem[] = [
   },
 ]
 
-function renderSection(lineItems: EventInvoiceLineItem[] = LINE_ITEMS) {
+function renderSection(lineItems: EventInvoiceLineItem[] = LINE_ITEMS, canResendTickets = true) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   return render(
     <ChakraProvider value={system}>
       <QueryClientProvider client={queryClient}>
-        <EventInvoiceLineItemsSection invoiceUniqueId={INVOICE_UNIQUE_ID} lineItems={lineItems} currencySymbol="$" />
+        <EventInvoiceLineItemsSection
+          invoiceUniqueId={INVOICE_UNIQUE_ID}
+          lineItems={lineItems}
+          currencySymbol="$"
+          canResendTickets={canResendTickets}
+        />
       </QueryClientProvider>
     </ChakraProvider>,
   )
@@ -74,6 +79,14 @@ describe("EventInvoiceLineItemsSection resend actions", () => {
     renderSection([{ ...LINE_ITEMS[0], tickets: [] }])
 
     expect(screen.queryByRole("button", { name: /resend all tickets/i })).not.toBeInTheDocument()
+  })
+
+  it("offers no resend at all when the order no longer allows it", () => {
+    renderSection(LINE_ITEMS, false)
+
+    expect(screen.queryByRole("button", { name: /resend all tickets/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /resend$/i })).not.toBeInTheDocument()
+    expect(screen.getByText("EVT_ABC123")).toBeInTheDocument()
   })
 
   it("resending a single ticket asks for confirmation before calling the API", async () => {

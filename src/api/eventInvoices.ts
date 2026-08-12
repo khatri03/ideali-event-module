@@ -242,6 +242,12 @@ const detailSchema = z.object({
   notes: z.array(invoiceNoteSchema).nullable().optional(),
   Payments: z.array(paymentAttemptSchema).nullable().optional(),
   payments: z.array(paymentAttemptSchema).nullable().optional(),
+  CanMarkAsPaid: dual(z.boolean()),
+  canMarkAsPaid: dual(z.boolean()),
+  CanCancel: dual(z.boolean()),
+  canCancel: dual(z.boolean()),
+  CanResendTickets: dual(z.boolean()),
+  canResendTickets: dual(z.boolean()),
 })
 
 const pageSchema = <T extends z.ZodTypeAny>(item: T) =>
@@ -359,6 +365,10 @@ export interface EventInvoiceDetail {
   lineItems: EventInvoiceLineItem[]
   notes: EventInvoiceNote[]
   payments: EventInvoicePaymentAttempt[]
+  /** The server decides which manual actions the order still admits - never inferred from the role. */
+  canMarkAsPaid: boolean
+  canCancel: boolean
+  canResendTickets: boolean
 }
 
 export interface EventInvoiceFilterOption {
@@ -404,6 +414,16 @@ function parseServicePayload(payload: unknown): unknown {
     | ServiceResponse<unknown>
     | { Data?: unknown; data?: unknown }
   return readResponseData(response)
+}
+
+const AWAITING_PAYMENT_STATUSES = ["PendingPayment", "PartiallyPaid"]
+
+/**
+ * What the server would allow if it did not say. A response predating these flags still has to render
+ * a usable page, and the endpoints enforce the same rule regardless of what the buttons show.
+ */
+function actionAllowance(raw: boolean | undefined, fallback: boolean) {
+  return raw ?? fallback
 }
 
 /** The API sends the display text alongside the enum name; older responses may not, so fall back to it. */
@@ -508,6 +528,7 @@ function normalizeInvoiceNote(raw: z.infer<typeof invoiceNoteSchema>): EventInvo
 
 function normalizeDetail(raw: z.infer<typeof detailSchema>): EventInvoiceDetail {
   const invoiceStatus = raw.InvoiceStatus ?? raw.invoiceStatus ?? ""
+  const isAwaitingPayment = AWAITING_PAYMENT_STATUSES.includes(invoiceStatus)
 
   return {
     invoiceUniqueId: raw.InvoiceUniqueId ?? raw.invoiceUniqueId ?? "",
@@ -533,6 +554,9 @@ function normalizeDetail(raw: z.infer<typeof detailSchema>): EventInvoiceDetail 
     lineItems: (raw.LineItems ?? raw.lineItems ?? []).map(normalizeLineItem),
     notes: (raw.Notes ?? raw.notes ?? []).map(normalizeInvoiceNote),
     payments: (raw.Payments ?? raw.payments ?? []).map(normalizePaymentAttempt),
+    canMarkAsPaid: actionAllowance(raw.CanMarkAsPaid ?? raw.canMarkAsPaid, isAwaitingPayment),
+    canCancel: actionAllowance(raw.CanCancel ?? raw.canCancel, isAwaitingPayment),
+    canResendTickets: actionAllowance(raw.CanResendTickets ?? raw.canResendTickets, invoiceStatus !== "Cancelled"),
   }
 }
 
@@ -625,6 +649,14 @@ export async function resendEventInvoice(invoiceUniqueId: string): Promise<void>
 
 export async function resendEventInvoiceTicket(invoiceUniqueId: string, ticketUniqueId: string): Promise<void> {
   await client.post(API_ROUTES.eventInvoiceTicketResend(invoiceUniqueId, ticketUniqueId))
+}
+
+export async function markEventInvoiceAsPaid(invoiceUniqueId: string): Promise<void> {
+  await client.post(API_ROUTES.eventInvoiceMarkPaid(invoiceUniqueId))
+}
+
+export async function cancelEventInvoice(invoiceUniqueId: string): Promise<void> {
+  await client.post(API_ROUTES.eventInvoiceCancel(invoiceUniqueId))
 }
 
 export async function addEventInvoiceNote(invoiceUniqueId: string, note: string): Promise<void> {
