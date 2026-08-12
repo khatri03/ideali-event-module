@@ -1,11 +1,13 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Box, Stack, Text } from "@chakra-ui/react"
+import { ErrorState } from "@/components/common"
 import { ConfirmDialog } from "@/features/custom-lists"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 import type { EventInvoiceFilters, EventInvoiceListItem, EventInvoiceSortBy, EventInvoiceSortOrder } from "@/api/eventInvoices"
 import { useEventInvoices, useResendEventInvoice } from "../hooks/useEventInvoices"
+import { useInvoiceListReturnState } from "../hooks/useInvoiceListReturnState"
 import { DEFAULT_PAGE_SIZE } from "../constants"
 import { EventInvoiceFilterBar, type EventInvoiceDraftFilters } from "./EventInvoiceFilterBar"
 import { EventInvoiceTable } from "./EventInvoiceTable"
@@ -64,6 +66,7 @@ interface EventInvoiceManagerProps {
 
 export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceManagerProps) {
   const navigate = useNavigate()
+  const returnState = useInvoiceListReturnState()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE)
   const [sortBy, setSortBy] = useState<EventInvoiceSortBy>("invoiceDateUtc")
@@ -113,7 +116,7 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
   }
 
   function handleOpenDetail(invoice: EventInvoiceListItem) {
-    navigate(APP_ROUTES.eventInvoices.detail(invoice.invoiceUniqueId))
+    navigate(APP_ROUTES.eventInvoices.detail(invoice.invoiceUniqueId), { state: returnState })
   }
 
   function handleCloseResend() {
@@ -142,11 +145,12 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
       />
 
       {invoicesQuery.isError ? (
-        <Box p={4} borderRadius="16px" border="1px solid" borderColor="red.200" bg="red.50">
-          <Text fontSize="sm" fontWeight="700" color="red.700">
-            {extractApiError(invoicesQuery.error)}
-          </Text>
-        </Box>
+        <ErrorState
+          title="Could not load invoices"
+          message={extractApiError(invoicesQuery.error)}
+          isRetrying={invoicesQuery.isFetching}
+          onRetry={() => void invoicesQuery.refetch()}
+        />
       ) : null}
 
       <Box borderRadius="20px" border="1px solid" borderColor="border.subtle" bg="card.bg" boxShadow="card" overflow="hidden">

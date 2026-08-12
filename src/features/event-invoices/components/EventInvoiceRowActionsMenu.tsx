@@ -13,7 +13,7 @@ const ITEM_STYLE = {
   borderRadius: "10px",
   fontSize: "sm",
   fontWeight: "600",
-  color: "gray.700",
+  color: "text.secondary",
   px: 3,
   py: 2,
   gap: 2.5,
@@ -33,8 +33,8 @@ export function EventInvoiceRowActionsMenu({ invoice, onOpenDetail, onResendTick
           p={0}
           borderRadius="full"
           borderColor="border.subtle"
-          bg="white"
-          color="gray.500"
+          bg="card.bg"
+          color="text.secondary"
           cursor="pointer"
           aria-label={`Actions for invoice ${invoice.invoiceNo}`}
           title="Actions"
@@ -48,17 +48,16 @@ export function EventInvoiceRowActionsMenu({ invoice, onOpenDetail, onResendTick
             minW="12rem"
             borderRadius="16px"
             border="1px solid"
-            borderColor="gray.200"
+            borderColor="border.subtle"
             boxShadow="0 16px 40px rgba(15, 23, 42, 0.12)"
             p={1.5}
-            bg="white"
+            bg="card.bg"
             _dark={{ bg: "navy.800", borderColor: "whiteAlpha.200" }}
           >
             <Menu.Item
               value="view-invoice"
               {...ITEM_STYLE}
-              _dark={{ color: "gray.200" }}
-              _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
+              _hover={{ bg: "app.bg" }}
               onClick={() => onOpenDetail(invoice)}
             >
               <Eye size={14} />
@@ -71,8 +70,7 @@ export function EventInvoiceRowActionsMenu({ invoice, onOpenDetail, onResendTick
               <Menu.Item
                 value="resend-tickets"
                 {...ITEM_STYLE}
-                _dark={{ color: "gray.200" }}
-                _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
+                  _hover={{ bg: "app.bg" }}
                 onClick={() => onResendTickets(invoice)}
               >
                 <Send size={14} />

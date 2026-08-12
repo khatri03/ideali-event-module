@@ -153,7 +153,7 @@ export function EventInvoiceFilterBar({
             Search
           </Field.Label>
           <Flex position="relative" align="center" w="full">
-            <Box position="absolute" left={4} color="gray.400" pointerEvents="none" display="flex">
+            <Box position="absolute" left={4} color="text.secondary" pointerEvents="none" display="flex">
               <Search size={16} />
             </Box>
             <Input
@@ -185,7 +185,7 @@ export function EventInvoiceFilterBar({
             loading={isApplying}
             loadingText="Applying..."
             onClick={onApply}
-            style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+            bg="brand.gradient"
           >
             <Filter size={15} />
             Apply

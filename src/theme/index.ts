@@ -58,23 +58,28 @@ const config = defineConfig({
           800: { value: "#111c44" },
           900: { value: "#0b1437" },
         },
-        // Semantic status colors — Horizon UI
+        // Semantic status colors — Horizon UI. The 700 shades exist so status text can sit on its own
+        // tinted background at WCAG AA; the 500 shades fail that contrast and are for fills and icons.
         red: {
           100: { value: "#FEEFEE" },
           500: { value: "#EE5D50" },
           600: { value: "#E31A1A" },
+          700: { value: "#A81111" },
         },
         blue: {
           50: { value: "#EFF4FB" },
           500: { value: "#3965FF" },
+          700: { value: "#1F3FA8" },
         },
         orange: {
           100: { value: "#FFF6DA" },
           500: { value: "#FFB547" },
+          700: { value: "#8A5A00" },
         },
         green: {
           100: { value: "#E6FAF5" },
           500: { value: "#01B574" },
+          700: { value: "#017A4F" },
         },
       },
       radii: {
@@ -97,6 +102,10 @@ const config = defineConfig({
           subtle: { value: "{colors.secondaryGray.300}" },
           emphasized: { value: "{colors.secondaryGray.200}" },
           focusRing: { value: "{colors.brand.400}" },
+        },
+        // The Horizon brand wash, as a token rather than an inline style, so a brand change is one edit.
+        "brand.gradient": {
+          value: "linear-gradient(135deg, {colors.brand.400} 0%, {colors.brand.500} 100%)",
         },
         "app.bg": {
           value: {
@@ -147,6 +156,14 @@ const config = defineConfig({
             _dark: "rgba(1, 181, 116, 0.15)",
           },
         },
+        // Text sitting on the matching .bg. Light mode needs the darkened shade to clear AA; dark mode
+        // puts the same tint on navy, where the brighter 500 is the readable one.
+        "status.success.fg": {
+          value: {
+            base: "{colors.green.700}",
+            _dark: "{colors.green.500}",
+          },
+        },
         "status.warning": {
           value: {
             base: "{colors.orange.500}",
@@ -157,6 +174,12 @@ const config = defineConfig({
           value: {
             base: "{colors.orange.100}",
             _dark: "rgba(255, 181, 71, 0.15)",
+          },
+        },
+        "status.warning.fg": {
+          value: {
+            base: "{colors.orange.700}",
+            _dark: "{colors.orange.500}",
           },
         },
         "status.error": {
@@ -171,6 +194,12 @@ const config = defineConfig({
             _dark: "rgba(238, 93, 80, 0.15)",
           },
         },
+        "status.error.fg": {
+          value: {
+            base: "{colors.red.700}",
+            _dark: "{colors.red.500}",
+          },
+        },
         "status.info": {
           value: {
             base: "{colors.blue.500}",
@@ -181,6 +210,24 @@ const config = defineConfig({
           value: {
             base: "{colors.blue.50}",
             _dark: "rgba(57, 101, 255, 0.15)",
+          },
+        },
+        "status.info.fg": {
+          value: {
+            base: "{colors.blue.700}",
+            _dark: "{colors.blue.500}",
+          },
+        },
+        "status.neutral.bg": {
+          value: {
+            base: "{colors.secondaryGray.300}",
+            _dark: "{colors.navy.700}",
+          },
+        },
+        "status.neutral.fg": {
+          value: {
+            base: "{colors.secondaryGray.900}",
+            _dark: "{colors.navy.100}",
           },
         },
       },

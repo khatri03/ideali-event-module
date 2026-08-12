@@ -174,9 +174,9 @@ describe("fetchEventInvoiceDetail notes", () => {
 
     const detail = await fetchEventInvoiceDetail("invoice-1")
 
-    expect(detail.taxAmount).toBe(75.56)
-    expect(detail.platformCharges).toBe(4)
-    expect(detail.serviceCharges).toBe(5)
+    expect(detail.taxAmount).toBe("75.56")
+    expect(detail.platformCharges).toBe("4")
+    expect(detail.serviceCharges).toBe("5")
     expect(detail.charges).toEqual([
       {
         label: "Sales Tax",
@@ -188,7 +188,7 @@ describe("fetchEventInvoiceDetail notes", () => {
         calculationTypeLabel: "Percent",
         sourceUniqueId: "rule-1",
         value: 17.99,
-        amount: 75.56,
+        amount: "75.56",
         displayOrder: 1,
       },
     ])
@@ -267,6 +267,36 @@ describe("fetchEventInvoiceDetail settlement allowances", () => {
     expect(detail.canMarkAsPaid).toBe(false)
     expect(detail.canResendTickets).toBe(true)
   })
+
+  it.each(["PendingPayment", "PartiallyPaid", "Paid", "Failed"])(
+    "LiveInvoiceWithNoFlags_StillAllowsTheBuyerToBeCorrected_%s",
+    async (invoiceStatus) => {
+      getMock.mockResolvedValue(detailResponse({ invoiceStatus }))
+
+      const detail = await fetchEventInvoiceDetail("invoice-1")
+
+      expect(detail.canEditBuyer).toBe(true)
+    },
+  )
+
+  it.each(["Cancelled", "Refund", "PartiallyRefunded", "AdjustedInSystem"])(
+    "ClosedInvoiceWithNoFlags_RefusesToRewriteTheSettledBuyer_%s",
+    async (invoiceStatus) => {
+      getMock.mockResolvedValue(detailResponse({ invoiceStatus }))
+
+      const detail = await fetchEventInvoiceDetail("invoice-1")
+
+      expect(detail.canEditBuyer).toBe(false)
+    },
+  )
+
+  it("BuyerEditFlagSentByApi_OverridesWhatTheStatusWouldImply", async () => {
+    getMock.mockResolvedValue(detailResponse({ invoiceStatus: "Paid", canEditBuyer: false }))
+
+    const detail = await fetchEventInvoiceDetail("invoice-1")
+
+    expect(detail.canEditBuyer).toBe(false)
+  })
 })
 
 describe("event invoice settlement endpoints", () => {
@@ -292,5 +322,78 @@ describe("addEventInvoiceNote", () => {
     await addEventInvoiceNote("invoice-1", "  Call finance.  ")
 
     expect(postMock).toHaveBeenCalledWith("/api/organizer/events/invoices/invoice-1/add-note", { note: "Call finance." })
+  })
+})
+
+describe("event invoice money", () => {
+  beforeEach(() => getMock.mockReset())
+
+  function detailResponse(overrides: Record<string, unknown>) {
+    return {
+      data: {
+        success: true,
+        data: {
+          invoiceUniqueId: "invoice-1",
+          invoiceNo: "INV-1",
+          invoiceStatus: "Paid",
+          invoiceStatusLabel: "Paid",
+          invoiceDateUtc: "2026-08-01T10:00:00Z",
+          currencySymbol: "$",
+          eventUniqueId: "event-1",
+          eventName: "Annual Summit",
+          buyerName: "Jane Doe",
+          charges: [],
+          lineItems: [],
+          notes: [],
+          payments: [],
+          ...overrides,
+        },
+      },
+    }
+  }
+
+  it("AmountsSentAsNumbers_ReachTheUiAsDecimalTextNotFloats", async () => {
+    getMock.mockResolvedValue(detailResponse({ subTotal: 210, totalAmount: 294.5, balanceAmount: 0 }))
+
+    const detail = await fetchEventInvoiceDetail("invoice-1")
+
+    expect(detail.subTotal).toBe("210")
+    expect(detail.totalAmount).toBe("294.5")
+    expect(detail.balanceAmount).toBe("0")
+  })
+
+  it("AmountsSentAsStrings_ArePassedThroughDigitForDigit", async () => {
+    getMock.mockResolvedValue(
+      detailResponse({ subTotal: "12345678901234567890.99", totalAmount: "1000.00", balanceAmount: "-45.10" }),
+    )
+
+    const detail = await fetchEventInvoiceDetail("invoice-1")
+
+    expect(detail.subTotal).toBe("12345678901234567890.99")
+    expect(detail.totalAmount).toBe("1000.00")
+    expect(detail.balanceAmount).toBe("-45.10")
+  })
+
+  it("AmountsAbsentFromTheResponse_DefaultToZeroTextRatherThanNaN", async () => {
+    getMock.mockResolvedValue(detailResponse({}))
+
+    const detail = await fetchEventInvoiceDetail("invoice-1")
+
+    expect(detail.subTotal).toBe("0")
+    expect(detail.totalAmount).toBe("0")
+    expect(detail.balanceAmount).toBeNull()
+  })
+
+  it("ChargeRateStaysNumeric_BecauseItIsAPercentageNotAnAmount", async () => {
+    getMock.mockResolvedValue(
+      detailResponse({
+        charges: [{ label: "Sales Tax", calculationType: "Percent", value: 17.99, amount: 75.56, displayOrder: 1 }],
+      }),
+    )
+
+    const detail = await fetchEventInvoiceDetail("invoice-1")
+
+    expect(detail.charges[0].value).toBe(17.99)
+    expect(detail.charges[0].amount).toBe("75.56")
   })
 })

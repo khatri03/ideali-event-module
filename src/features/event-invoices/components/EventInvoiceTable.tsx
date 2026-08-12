@@ -1,10 +1,13 @@
-import { Badge, Box, Link, Table, Text } from "@chakra-ui/react"
+import { Box, Link, Table, Text } from "@chakra-ui/react"
 import { format } from "date-fns"
 import { Link as RouterLink } from "react-router-dom"
 import type { EventInvoiceListItem, EventInvoiceSortBy, EventInvoiceSortOrder } from "@/api/eventInvoices"
 import { APP_ROUTES } from "@/utils/routes"
+import { EMPTY_VALUE, formatCurrency } from "@/utils/format"
 import { parseUtcDateTime } from "@/utils/utcDates"
+import { useInvoiceListReturnState } from "../hooks/useInvoiceListReturnState"
 import { EventInvoiceRowActionsMenu } from "./EventInvoiceRowActionsMenu"
+import { EventInvoiceStatusBadge } from "./EventInvoiceStatusBadge"
 import { PaymentPills } from "./PaymentPills"
 import { SortableColumnHeader } from "./SortableColumnHeader"
 import { TableBodySkeleton } from "./TableBodySkeleton"
@@ -20,24 +23,9 @@ interface EventInvoiceTableProps {
   onResendTickets: (invoice: EventInvoiceListItem) => void
 }
 
-const STATUS_COLOR: Record<string, string> = {
-  Paid: "green",
-  PartiallyPaid: "yellow",
-  PendingPayment: "orange",
-  Cancelled: "gray",
-  Refund: "purple",
-  PartiallyRefunded: "purple",
-  AdjustedInSystem: "blue",
-  Failed: "red",
-}
-
 function formatDate(value: string) {
   const parsed = parseUtcDateTime(value)
-  return parsed ? format(parsed, "MMM d, yyyy") : "—"
-}
-
-function formatMoney(value: number, currencySymbol: string) {
-  return `${currencySymbol}${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}`
+  return parsed ? format(parsed, "MMM d, yyyy") : EMPTY_VALUE
 }
 
 const COLUMN_COUNT = 7
@@ -51,6 +39,8 @@ export function EventInvoiceTable({
   onOpenDetail,
   onResendTickets,
 }: EventInvoiceTableProps) {
+  const returnState = useInvoiceListReturnState()
+
   return (
     <Box overflow="auto" maxH={TABLE_MAX_HEIGHT}>
       <Table.Root
@@ -59,10 +49,11 @@ export function EventInvoiceTable({
         css={{
           borderCollapse: "separate",
           borderSpacing: 0,
-          "& th, & td": { border: "1px solid", borderColor: "gray.300" },
+          "& th, & td": { border: "1px solid", borderColor: "border.subtle" },
           ...STICKY_HEADER_CSS("app.bg"),
         }}
       >
+        <Table.Caption srOnly>Event invoices matching the current filters</Table.Caption>
         <Table.Header>
           <Table.Row bg="app.bg">
             <Table.ColumnHeader px={4} py={3} textAlign="center" w="1%">
@@ -98,10 +89,10 @@ export function EventInvoiceTable({
               <Table.Row>
                 <Table.Cell colSpan={COLUMN_COUNT} py={14}>
                   <Box textAlign="center">
-                    <Text fontSize="lg" fontWeight="700" color="gray.900">
+                    <Text fontSize="lg" fontWeight="700" color="text.primary">
                       No invoices found
                     </Text>
-                    <Text mt={2} fontSize="sm" color="gray.600">
+                    <Text mt={2} fontSize="sm" color="text.secondary">
                       Try adjusting the filters above.
                     </Text>
                   </Box>
@@ -129,7 +120,7 @@ export function EventInvoiceTable({
                       alignItems="center"
                       _hover={{ textDecoration: "underline" }}
                     >
-                      <RouterLink to={APP_ROUTES.eventInvoices.detail(invoice.invoiceUniqueId)}>
+                      <RouterLink to={APP_ROUTES.eventInvoices.detail(invoice.invoiceUniqueId)} state={returnState}>
                         {invoice.invoiceNo}
                       </RouterLink>
                     </Link>
@@ -142,7 +133,7 @@ export function EventInvoiceTable({
                   </Table.Cell>
                   <Table.Cell px={4} py={4}>
                     <Text fontSize="sm" fontWeight="600" color="text.primary">
-                      {invoice.buyerName || "—"}
+                      {invoice.buyerName || EMPTY_VALUE}
                     </Text>
                     {invoice.buyerEmail ? (
                       <Text fontSize="xs" color="text.secondary">
@@ -151,9 +142,11 @@ export function EventInvoiceTable({
                     ) : null}
                   </Table.Cell>
                   <Table.Cell px={4} py={4} textAlign="center">
-                    <Badge colorPalette={STATUS_COLOR[invoice.invoiceStatus] ?? "gray"} variant="subtle" borderRadius="full" px={3} py={1}>
-                      {invoice.invoiceStatusLabel}
-                    </Badge>
+                    <EventInvoiceStatusBadge
+                      status={invoice.invoiceStatus}
+                      label={invoice.invoiceStatusLabel}
+                      size="sm"
+                    />
                   </Table.Cell>
                   <Table.Cell px={4} py={4} textAlign="center">
                     <Text fontSize="sm" color="text.secondary">
@@ -162,7 +155,7 @@ export function EventInvoiceTable({
                   </Table.Cell>
                   <Table.Cell px={4} py={4} textAlign="right">
                     <Text fontSize="sm" fontWeight="700" color="text.primary">
-                      {formatMoney(invoice.totalAmount, invoice.currencySymbol)}
+                      {formatCurrency(invoice.totalAmount, invoice.currencySymbol)}
                     </Text>
                   </Table.Cell>
                 </Table.Row>

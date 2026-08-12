@@ -1,9 +1,10 @@
 import { useId, useState, type FormEvent } from "react"
-import { Badge, Box, Button, CloseButton, Dialog, Field, Flex, HStack, Stack, Text, Textarea } from "@chakra-ui/react"
+import { Badge, Box, Button, CloseButton, Dialog, Field, Flex, Heading, HStack, Stack, Text, Textarea } from "@chakra-ui/react"
 import { format } from "date-fns"
 import { ChevronDown, Plus } from "lucide-react"
 import type { EventInvoiceNote } from "@/api/eventInvoices"
 import { extractApiError } from "@/utils/errors"
+import { EMPTY_VALUE } from "@/utils/format"
 import { parseUtcDateTime } from "@/utils/utcDates"
 import { useAddEventInvoiceNote } from "../hooks/useEventInvoices"
 
@@ -14,7 +15,7 @@ interface EventInvoiceNotesSectionProps {
 
 function formatTimestamp(value: string) {
   const parsed = parseUtcDateTime(value)
-  return parsed ? format(parsed, "MMM d, yyyy h:mm a") : "—"
+  return parsed ? format(parsed, "MMM d, yyyy h:mm a") : EMPTY_VALUE
 }
 
 export function EventInvoiceNotesSection({ invoiceUniqueId, notes }: EventInvoiceNotesSectionProps) {
@@ -45,37 +46,48 @@ export function EventInvoiceNotesSection({ invoiceUniqueId, notes }: EventInvoic
     <>
       <Box border="1px solid" borderColor="border.subtle" borderRadius="20px" bg="card.bg" boxShadow="card" overflow="hidden">
         <Flex align={{ base: "stretch", md: "center" }} justify="space-between" direction={{ base: "column", md: "row" }} gap={3} px={{ base: 4, md: 6 }} py={4}>
-          {showNotes ? (
-            <Button
-              variant="ghost"
-              justifyContent="flex-start"
-              minH="11"
-              px={0}
-              color="text.primary"
-              cursor="pointer"
-              aria-expanded={isExpanded}
-              aria-controls={contentId}
-              onClick={() => setIsExpanded((value) => !value)}
-            >
-              <ChevronDown
-                size={18}
-                style={{
-                  transform: isExpanded ? "rotate(0deg)" : "rotate(-90deg)",
-                  transition: "transform 0.16s ease",
-                }}
-              />
-              <Text fontWeight="800">Invoice notes</Text>
-              <Badge colorPalette="brand" variant="subtle" borderRadius="full">
-                {notes.length}
-              </Badge>
-            </Button>
-          ) : (
-            <Text fontSize="sm" fontWeight="700" color="text.secondary">
-              No invoice notes yet.
-            </Text>
-          )}
+          <Stack gap={1}>
+            <Heading as="h2" fontSize="lg" fontWeight="800" color="text.primary">
+              {showNotes ? (
+                <Button
+                  variant="ghost"
+                  justifyContent="flex-start"
+                  fontSize="lg"
+                  fontWeight="800"
+                  minH="11"
+                  px={0}
+                  color="text.primary"
+                  cursor="pointer"
+                  aria-expanded={isExpanded}
+                  aria-controls={contentId}
+                  onClick={() => setIsExpanded((value) => !value)}
+                >
+                  <ChevronDown
+                    size={18}
+                    aria-hidden="true"
+                    style={{
+                      transform: isExpanded ? "rotate(0deg)" : "rotate(-90deg)",
+                      transition: "transform 0.16s ease",
+                    }}
+                  />
+                  Invoice notes
+                  <Badge colorPalette="brand" variant="subtle" borderRadius="full">
+                    {notes.length}
+                  </Badge>
+                </Button>
+              ) : (
+                "Invoice notes"
+              )}
+            </Heading>
+            {showNotes ? null : (
+              <Text fontSize="sm" color="text.secondary">
+                No invoice notes yet.
+              </Text>
+            )}
+          </Stack>
 
           <Button
+            data-print-hide
             colorPalette="brand"
             color="white"
             borderRadius="14px"
@@ -84,7 +96,7 @@ export function EventInvoiceNotesSection({ invoiceUniqueId, notes }: EventInvoic
             w={{ base: "full", md: "auto" }}
             cursor="pointer"
             onClick={() => setIsDialogOpen(true)}
-            style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+            bg="brand.gradient"
           >
             <Plus size={16} />
             Add note
@@ -123,7 +135,7 @@ export function EventInvoiceNotesSection({ invoiceUniqueId, notes }: EventInvoic
             <Dialog.Content
               as="form"
               onSubmit={handleSubmit}
-              bg="white"
+              bg="card.bg"
               borderRadius={{ base: 0, md: "24px" }}
               w="full"
               maxW={{ base: "full", md: "560px" }}
@@ -161,8 +173,8 @@ export function EventInvoiceNotesSection({ invoiceUniqueId, notes }: EventInvoic
                 </Field.Root>
 
                 {addNoteMutation.error ? (
-                  <Box mt={4} p={4} borderRadius="16px" border="1px solid" borderColor="red.200" bg="red.50">
-                    <Text fontSize="sm" fontWeight="700" color="red.700">
+                  <Box role="alert" mt={4} p={4} borderRadius="16px" bg="status.error.bg">
+                    <Text fontSize="sm" fontWeight="700" color="status.error.fg">
                       {extractApiError(addNoteMutation.error)}
                     </Text>
                   </Box>
@@ -192,7 +204,7 @@ export function EventInvoiceNotesSection({ invoiceUniqueId, notes }: EventInvoic
                     loading={addNoteMutation.isPending}
                     loadingText="Saving..."
                     cursor={!trimmedNote || addNoteMutation.isPending ? "not-allowed" : "pointer"}
-                    style={{ background: "linear-gradient(135deg, #7551FF 0%, #422AFB 100%)" }}
+                    bg="brand.gradient"
                   >
                     Save note
                   </Button>

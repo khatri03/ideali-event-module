@@ -10,6 +10,18 @@ interface ProblemDetails {
   message?: string
 }
 
+/**
+ * The HTTP status behind a failure, when there was one. Callers use it to tell a request that will never
+ * succeed from one worth retrying - never to show the number, which says nothing to the person reading.
+ */
+export function httpStatusOf(err: unknown): number | null {
+  return isAxiosError(err) ? (err.response?.status ?? null) : null
+}
+
+export function isNotFoundError(err: unknown): boolean {
+  return httpStatusOf(err) === 404
+}
+
 export function extractApiError(err: unknown): string {
   // Raised before the request leaves the browser, so it carries no server detail to leak.
   if (err instanceof TurnstileError) {

@@ -19,7 +19,16 @@ const serviceResponseSchema = z.object({
 // collapsed in the normalizers below - same approach as api/documentCategories.ts.
 const dual = <T extends z.ZodTypeAny>(schema: T) => schema.optional()
 const integer = () => z.coerce.number().int()
-const money = () => z.coerce.number()
+
+/**
+ * Money stays decimal text the whole way to the screen. Nothing in this app does arithmetic on an
+ * invoice figure - it renders totals the server already computed - so parsing them into floats would buy
+ * nothing and cost precision on long amounts.
+ */
+const money = () => z.coerce.string()
+
+/** A charge rule's own input: a percentage or a multiplier, not an amount of currency. */
+const rate = () => z.coerce.number()
 
 export type EventInvoiceSortBy = "invoiceNo" | "eventName" | "buyerName" | "invoiceStatus" | "invoiceDateUtc" | "totalAmount" | "balanceAmount"
 export type EventInvoiceSortOrder = "asc" | "desc"
@@ -34,6 +43,10 @@ export const EVENT_INVOICE_STATUS_OPTIONS = [
   { value: "PartiallyRefunded", label: "Partially Refunded" },
   { value: "Failed", label: "Failed" },
 ] as const
+
+/** Every status the API can put on an event invoice - adding one here forces every presentation map to
+ * account for it rather than silently falling through to a neutral colour. */
+export type EventInvoiceStatus = (typeof EVENT_INVOICE_STATUS_OPTIONS)[number]["value"]
 
 export const EVENT_INVOICE_PAYMENT_METHOD_OPTIONS = [
   { value: "CreditCard", label: "Credit Card" },
@@ -187,8 +200,8 @@ const chargeSchema = z.object({
   calculationTypeLabel: dual(z.string()),
   SourceUniqueId: dual(z.string().nullable()),
   sourceUniqueId: dual(z.string().nullable()),
-  Value: dual(money()),
-  value: dual(money()),
+  Value: dual(rate()),
+  value: dual(rate()),
   Amount: dual(money()),
   amount: dual(money()),
   DisplayOrder: dual(integer()),
@@ -248,6 +261,8 @@ const detailSchema = z.object({
   canCancel: dual(z.boolean()),
   CanResendTickets: dual(z.boolean()),
   canResendTickets: dual(z.boolean()),
+  CanEditBuyer: dual(z.boolean()),
+  canEditBuyer: dual(z.boolean()),
 })
 
 const pageSchema = <T extends z.ZodTypeAny>(item: T) =>
@@ -275,8 +290,9 @@ export interface EventInvoiceListItem {
   /** Human-readable form of invoiceStatus - the raw value stays the key for colours and filters. */
   invoiceStatusLabel: string
   invoiceDateUtc: string
-  totalAmount: number
-  balanceAmount: number | null
+  /** Decimal text as the server wrote it - format with `formatCurrency`, never with float arithmetic. */
+  totalAmount: string
+  balanceAmount: string | null
   paymentMethod: string | null
   /** Card brand and last four, or bank name, as the gateway described the instrument. */
   paymentSource: string | null
@@ -305,8 +321,8 @@ export interface EventInvoiceLineItem {
   sessionName: string
   ticketTypeName: string
   quantity: number
-  unitPrice: number
-  lineTotal: number
+  unitPrice: string
+  lineTotal: string
   attendees: EventInvoiceAttendee[]
   tickets: EventInvoiceTicket[]
 }
@@ -315,7 +331,7 @@ export interface EventInvoicePaymentAttempt {
   paymentMethod: string
   paymentStatus: string
   paymentStatusLabel: string
-  amount: number
+  amount: string
   referenceNo: string | null
   errorMessage: string | null
   paymentDateUtc: string
@@ -330,8 +346,9 @@ export interface EventInvoiceCharge {
   calculationType: string
   calculationTypeLabel: string
   sourceUniqueId: string | null
+  /** The rule's own input - a percentage or a fixed multiplier, not currency. */
   value: number
-  amount: number
+  amount: string
   displayOrder: number
 }
 
@@ -347,14 +364,15 @@ export interface EventInvoiceDetail {
   invoiceStatus: string
   invoiceStatusLabel: string
   invoiceDateUtc: string
-  subTotal: number
-  discountAmount: number | null
+  /** Decimal text as the server wrote it - format with `formatCurrency`, never with float arithmetic. */
+  subTotal: string
+  discountAmount: string | null
   discountCouponCode: string | null
-  taxAmount: number | null
-  platformCharges: number | null
-  serviceCharges: number | null
-  totalAmount: number
-  balanceAmount: number | null
+  taxAmount: string | null
+  platformCharges: string | null
+  serviceCharges: string | null
+  totalAmount: string
+  balanceAmount: string | null
   currencySymbol: string
   eventUniqueId: string
   eventName: string
@@ -369,6 +387,7 @@ export interface EventInvoiceDetail {
   canMarkAsPaid: boolean
   canCancel: boolean
   canResendTickets: boolean
+  canEditBuyer: boolean
 }
 
 export interface EventInvoiceFilterOption {
@@ -419,6 +438,13 @@ function parseServicePayload(payload: unknown): unknown {
 const AWAITING_PAYMENT_STATUSES = ["PendingPayment", "PartiallyPaid"]
 
 /**
+ * Mirrors EventInvoiceActionRule.AllowsBuyerEdit. An order that has been cancelled, refunded or adjusted
+ * is a closed financial record, so its buyer is fixed; listing what is allowed rather than what is not
+ * keeps a status added later out until someone decides otherwise.
+ */
+const BUYER_EDITABLE_STATUSES = ["PendingPayment", "PartiallyPaid", "Paid", "Failed"]
+
+/**
  * What the server would allow if it did not say. A response predating these flags still has to render
  * a usable page, and the endpoints enforce the same rule regardless of what the buttons show.
  */
@@ -444,7 +470,7 @@ function normalizeListItem(raw: z.infer<typeof listItemSchema>): EventInvoiceLis
     invoiceStatus,
     invoiceStatusLabel: statusLabelOr(raw.InvoiceStatusLabel ?? raw.invoiceStatusLabel, invoiceStatus),
     invoiceDateUtc: raw.InvoiceDateUtc ?? raw.invoiceDateUtc ?? "",
-    totalAmount: raw.TotalAmount ?? raw.totalAmount ?? 0,
+    totalAmount: raw.TotalAmount ?? raw.totalAmount ?? "0",
     balanceAmount: raw.BalanceAmount ?? raw.balanceAmount ?? null,
     paymentMethod: raw.PaymentMethod ?? raw.paymentMethod ?? null,
     paymentSource: raw.PaymentSource ?? raw.paymentSource ?? null,
@@ -481,8 +507,8 @@ function normalizeLineItem(raw: z.infer<typeof lineItemSchema>): EventInvoiceLin
     sessionName: raw.SessionName ?? raw.sessionName ?? "",
     ticketTypeName: raw.TicketTypeName ?? raw.ticketTypeName ?? "",
     quantity: raw.Quantity ?? raw.quantity ?? 0,
-    unitPrice: raw.UnitPrice ?? raw.unitPrice ?? 0,
-    lineTotal: raw.LineTotal ?? raw.lineTotal ?? 0,
+    unitPrice: raw.UnitPrice ?? raw.unitPrice ?? "0",
+    lineTotal: raw.LineTotal ?? raw.lineTotal ?? "0",
     attendees: (raw.Attendees ?? raw.attendees ?? []).map(normalizeAttendee),
     tickets: (raw.Tickets ?? raw.tickets ?? []).map(normalizeTicket),
   }
@@ -495,7 +521,7 @@ function normalizePaymentAttempt(raw: z.infer<typeof paymentAttemptSchema>): Eve
     paymentMethod: raw.PaymentMethod ?? raw.paymentMethod ?? "",
     paymentStatus,
     paymentStatusLabel: statusLabelOr(raw.PaymentStatusLabel ?? raw.paymentStatusLabel, paymentStatus),
-    amount: raw.Amount ?? raw.amount ?? 0,
+    amount: raw.Amount ?? raw.amount ?? "0",
     referenceNo: raw.ReferenceNo ?? raw.referenceNo ?? null,
     errorMessage: raw.ErrorMessage ?? raw.errorMessage ?? null,
     paymentDateUtc: raw.PaymentDateUtc ?? raw.paymentDateUtc ?? "",
@@ -513,7 +539,7 @@ function normalizeCharge(raw: z.infer<typeof chargeSchema>): EventInvoiceCharge 
     calculationTypeLabel: raw.CalculationTypeLabel ?? raw.calculationTypeLabel ?? raw.CalculationType ?? raw.calculationType ?? "",
     sourceUniqueId: raw.SourceUniqueId ?? raw.sourceUniqueId ?? null,
     value: raw.Value ?? raw.value ?? 0,
-    amount: raw.Amount ?? raw.amount ?? 0,
+    amount: raw.Amount ?? raw.amount ?? "0",
     displayOrder: raw.DisplayOrder ?? raw.displayOrder ?? 0,
   }
 }
@@ -536,13 +562,13 @@ function normalizeDetail(raw: z.infer<typeof detailSchema>): EventInvoiceDetail 
     invoiceStatus,
     invoiceStatusLabel: statusLabelOr(raw.InvoiceStatusLabel ?? raw.invoiceStatusLabel, invoiceStatus),
     invoiceDateUtc: raw.InvoiceDateUtc ?? raw.invoiceDateUtc ?? "",
-    subTotal: raw.SubTotal ?? raw.subTotal ?? 0,
+    subTotal: raw.SubTotal ?? raw.subTotal ?? "0",
     discountAmount: raw.DiscountAmount ?? raw.discountAmount ?? null,
     discountCouponCode: raw.DiscountCouponCode ?? raw.discountCouponCode ?? null,
     taxAmount: raw.TaxAmount ?? raw.taxAmount ?? null,
     platformCharges: raw.PlatformCharges ?? raw.platformCharges ?? null,
     serviceCharges: raw.ServiceCharges ?? raw.serviceCharges ?? null,
-    totalAmount: raw.TotalAmount ?? raw.totalAmount ?? 0,
+    totalAmount: raw.TotalAmount ?? raw.totalAmount ?? "0",
     balanceAmount: raw.BalanceAmount ?? raw.balanceAmount ?? null,
     currencySymbol: raw.CurrencySymbol ?? raw.currencySymbol ?? "$",
     eventUniqueId: raw.EventUniqueId ?? raw.eventUniqueId ?? "",
@@ -557,6 +583,10 @@ function normalizeDetail(raw: z.infer<typeof detailSchema>): EventInvoiceDetail 
     canMarkAsPaid: actionAllowance(raw.CanMarkAsPaid ?? raw.canMarkAsPaid, isAwaitingPayment),
     canCancel: actionAllowance(raw.CanCancel ?? raw.canCancel, isAwaitingPayment),
     canResendTickets: actionAllowance(raw.CanResendTickets ?? raw.canResendTickets, invoiceStatus !== "Cancelled"),
+    canEditBuyer: actionAllowance(
+      raw.CanEditBuyer ?? raw.canEditBuyer,
+      BUYER_EDITABLE_STATUSES.includes(invoiceStatus),
+    ),
   }
 }
 
@@ -657,6 +687,19 @@ export async function markEventInvoiceAsPaid(invoiceUniqueId: string): Promise<v
 
 export async function cancelEventInvoice(invoiceUniqueId: string): Promise<void> {
   await client.post(API_ROUTES.eventInvoiceCancel(invoiceUniqueId))
+}
+
+export interface EventInvoiceBuyerUpdate {
+  buyerName: string
+  buyerEmail: string
+  buyerPhone: string | null
+}
+
+export async function updateEventInvoiceBuyer(
+  invoiceUniqueId: string,
+  buyer: EventInvoiceBuyerUpdate,
+): Promise<void> {
+  await client.put(API_ROUTES.eventInvoiceBuyer(invoiceUniqueId), buyer)
 }
 
 export async function addEventInvoiceNote(invoiceUniqueId: string, note: string): Promise<void> {

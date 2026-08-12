@@ -45,7 +45,7 @@ export function SortableColumnHeader({
             <ArrowDown size={13} />
           )
         ) : (
-          <Box color="gray.400" display="flex">
+          <Box color="text.secondary" display="flex">
             <ChevronsUpDown size={13} />
           </Box>
         )}
