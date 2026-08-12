@@ -6,9 +6,14 @@ import { APP_ROUTES } from "@/utils/routes"
 
 interface OrderTicketListProps {
   tickets: EventOrderTicket[]
+  /**
+   * Whether the order has settled. The ticket view refuses an unsettled order anyway - this only keeps
+   * a buyer whose bank transfer is still clearing from being offered a pass that will not open.
+   */
+  canViewTickets: boolean
 }
 
-export function OrderTicketList({ tickets }: OrderTicketListProps) {
+export function OrderTicketList({ tickets, canViewTickets }: OrderTicketListProps) {
   if (tickets.length === 0) return null
 
   return (
@@ -25,14 +30,14 @@ export function OrderTicketList({ tickets }: OrderTicketListProps) {
       </Heading>
       <Stack gap={3}>
         {tickets.map((ticket) => (
-          <TicketRow key={ticket.ticketUniqueId} ticket={ticket} />
+          <TicketRow key={ticket.ticketUniqueId} ticket={ticket} canViewTicket={canViewTickets} />
         ))}
       </Stack>
     </Box>
   )
 }
 
-function TicketRow({ ticket }: { ticket: EventOrderTicket }) {
+function TicketRow({ ticket, canViewTicket }: { ticket: EventOrderTicket; canViewTicket: boolean }) {
   const isVoid = ticket.ticketStatus === "Cancelled" || ticket.ticketStatus === "Refunded"
 
   return (
@@ -65,6 +70,10 @@ function TicketRow({ ticket }: { ticket: EventOrderTicket }) {
       {isVoid ? (
         <Text fontSize="xs" fontWeight="700" color="red.600" textTransform="uppercase" letterSpacing="0.06em">
           {ticket.ticketStatus}
+        </Text>
+      ) : !canViewTicket ? (
+        <Text fontSize="xs" color="gray.500" whiteSpace={{ md: "nowrap" }}>
+          Available once payment clears
         </Text>
       ) : (
         <ChakraLink
