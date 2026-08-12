@@ -1,9 +1,11 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   addEventInvoiceNote,
+  cancelEventInvoice,
   fetchEventInvoiceDetail,
   fetchEventInvoiceFilterOptions,
   fetchEventInvoices,
+  markEventInvoiceAsPaid,
   resendEventInvoice,
   resendEventInvoiceTicket,
   type EventInvoiceFilters,
@@ -55,6 +57,35 @@ export function useResendEventInvoice(invoiceUniqueId: string) {
     onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] }),
   })
+}
+
+/**
+ * Both settlement actions change the invoice's status, its notes and its place in the list, so each
+ * one refreshes the detail it was launched from and the list behind it.
+ */
+function useInvoiceSettlementAction(
+  invoiceUniqueId: string,
+  action: (invoiceUniqueId: string) => Promise<void>,
+  successTitle: string,
+) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => action(invoiceUniqueId),
+    onSuccess: () => toaster.create({ type: "success", title: successTitle }),
+    onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] })
+      queryClient.invalidateQueries({ queryKey: ["event-invoices"] })
+    },
+  })
+}
+
+export function useMarkEventInvoiceAsPaid(invoiceUniqueId: string) {
+  return useInvoiceSettlementAction(invoiceUniqueId, markEventInvoiceAsPaid, "Invoice marked as paid.")
+}
+
+export function useCancelEventInvoice(invoiceUniqueId: string) {
+  return useInvoiceSettlementAction(invoiceUniqueId, cancelEventInvoice, "Invoice cancelled.")
 }
 
 export function useAddEventInvoiceNote(invoiceUniqueId: string) {

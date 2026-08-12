@@ -26,6 +26,9 @@ const INVOICE: EventInvoiceDetail = {
   buyerName: "Jane Doe",
   buyerEmail: "jane@example.com",
   buyerPhone: null,
+  canMarkAsPaid: false,
+  canCancel: false,
+  canResendTickets: true,
   lineItems: [
     {
       invoiceItemUniqueId: "line-1",

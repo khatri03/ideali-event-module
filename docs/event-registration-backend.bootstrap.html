@@ -499,7 +499,17 @@
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/invoices/{invoiceId}/tickets/{ticketId}/resend</code></td>
                 <td><code>EventInvoiceService.ResendTicketAsync</code></td>
-                <td>Re-sends one ticket only.</td>
+                <td>Re-sends one ticket only. Both resend routes refuse a cancelled order.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/invoices/{invoiceId}/mark-paid</code></td>
+                <td><code>EventInvoiceSettlementService.MarkInvoiceAsPaidAsync</code></td>
+                <td>Records the outstanding balance as collected outside the gateway: writes one successful <code>InvoicePayment</code>, closes every open line, issues any tickets the order is still owed, then queues the buyer's paid notice and ticket delivery. Refused unless the invoice is <code>PendingPayment</code> or <code>PartiallyPaid</code> — reversing a settled order is a refund.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/invoices/{invoiceId}/cancel</code></td>
+                <td><code>EventInvoiceSettlementService.CancelInvoiceAsync</code></td>
+                <td>Closes the order unpaid and emails the buyer. Same status guard as mark-paid. Everything the order was occupying goes back: holds it never took up are cancelled, tickets it had already been issued (a cheque order) are moved to <code>Cancelled</code>, and the ticket-type counters are rebuilt so the seats return to sale. Afterwards the order's tickets can neither be resent nor viewed — <code>TicketIssuanceRule.IsAuthorised</code> refuses a cancelled invoice outright, ahead of the cheque and zero-total allowances.</td>
               </tr>
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/tickets/check-in</code></td>
@@ -1770,6 +1780,20 @@
                 <td>Resend Ticket</td>
                 <td><span class="badge text-bg-light border access-policy">OrganizerModuleAccess</span></td>
                 <td class="small"><code>invoiceUniqueId</code><span class="text-body-secondary"> : Guid</span><br><code>ticketUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/organizer/events/invoices/{invoiceUniqueId:guid}/mark-paid</code></td>
+                <td>Mark Invoice As Paid</td>
+                <td><span class="badge text-bg-light border access-policy">OrganizerModuleAccess</span></td>
+                <td class="small"><code>invoiceUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/organizer/events/invoices/{invoiceUniqueId:guid}/cancel</code></td>
+                <td>Cancel Invoice</td>
+                <td><span class="badge text-bg-light border access-policy">OrganizerModuleAccess</span></td>
+                <td class="small"><code>invoiceUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
               </tr>
               <tr>
                 <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>

@@ -181,6 +181,9 @@ export function EventInvoiceSummaryCard({ invoice }: EventInvoiceSummaryCardProp
         <Flex justify="flex-end">
           <Box w={{ base: "full", md: "360px" }}>
             <TotalRow label="Subtotal" value={formatMoney(invoice.subTotal, invoice.currencySymbol)} />
+            {invoice.discountAmount ? (
+              <TotalRow label="Discount" value={formatMoney(invoice.discountAmount, invoice.currencySymbol)} />
+            ) : null}
             {charges.length > 0 ? (
               <Stack gap={0} mt={1} mb={2}>
                 {charges.map((charge) => (
@@ -188,17 +191,18 @@ export function EventInvoiceSummaryCard({ invoice }: EventInvoiceSummaryCardProp
                 ))}
               </Stack>
             ) : null}
-            <TotalRow label="Discount" value={formatMoney(invoice.discountAmount, invoice.currencySymbol)} />
             <Separator my={2} />
             <TotalRow label="Total" value={formatMoney(invoice.totalAmount, invoice.currencySymbol)} isStrong />
-            <HStack justify="space-between" bg="brand.100" color="brand.700" borderRadius="14px" px={4} py={3} mt={2}>
-              <Text fontSize="sm" fontWeight="900">
-                Balance
-              </Text>
-              <Text fontSize="lg" fontWeight="900">
-                {formatMoney(invoice.balanceAmount, invoice.currencySymbol)}
-              </Text>
-            </HStack>
+            {invoice.balanceAmount !== null && invoice.balanceAmount !== undefined ? (
+              <HStack justify="space-between" bg="brand.100" color="brand.700" borderRadius="14px" px={4} py={3} mt={2}>
+                <Text fontSize="sm" fontWeight="900">
+                  Balance
+                </Text>
+                <Text fontSize="lg" fontWeight="900">
+                  {formatMoney(invoice.balanceAmount, invoice.currencySymbol)}
+                </Text>
+              </HStack>
+            ) : null}
           </Box>
         </Flex>
       </Stack>

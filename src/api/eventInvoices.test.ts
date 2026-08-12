@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { addEventInvoiceNote, fetchEventInvoiceDetail, fetchEventInvoices, type EventInvoiceFilters } from "./eventInvoices"
+import {
+  addEventInvoiceNote,
+  cancelEventInvoice,
+  fetchEventInvoiceDetail,
+  fetchEventInvoices,
+  markEventInvoiceAsPaid,
+  type EventInvoiceFilters,
+} from "./eventInvoices"
 
 const { getMock, postMock } = vi.hoisted(() => ({ getMock: vi.fn(), postMock: vi.fn() }))
 
@@ -186,6 +193,95 @@ describe("fetchEventInvoiceDetail notes", () => {
       },
     ])
     expect(detail.notes).toEqual([{ note: "Newest note", createdBy: "tester", createdOnUtc: "2026-08-02T10:00:00Z" }])
+  })
+})
+
+describe("fetchEventInvoiceDetail settlement allowances", () => {
+  beforeEach(() => getMock.mockReset())
+
+  function detailResponse(extra: Record<string, unknown>) {
+    return {
+      data: {
+        success: true,
+        data: {
+          invoiceUniqueId: "invoice-1",
+          invoiceNo: "INV-1",
+          invoiceDateUtc: "2026-08-01T10:00:00Z",
+          subTotal: 100,
+          totalAmount: 100,
+          currencySymbol: "$",
+          eventUniqueId: "event-1",
+          eventName: "Annual Summit",
+          buyerName: "Jane Doe",
+          lineItems: [],
+          notes: [],
+          payments: [],
+          ...extra,
+        },
+      },
+    }
+  }
+
+  it("FlagsSentByApi_AreCarriedThroughUnchanged", async () => {
+    getMock.mockResolvedValue(
+      detailResponse({
+        invoiceStatus: "PendingPayment",
+        canMarkAsPaid: false,
+        canCancel: false,
+        canResendTickets: false,
+      }),
+    )
+
+    const detail = await fetchEventInvoiceDetail("invoice-1")
+
+    expect(detail.canMarkAsPaid).toBe(false)
+    expect(detail.canCancel).toBe(false)
+    expect(detail.canResendTickets).toBe(false)
+  })
+
+  it("FlagsMissingFromResponse_FallBackToTheInvoiceStatus", async () => {
+    getMock.mockResolvedValue(detailResponse({ invoiceStatus: "PendingPayment" }))
+
+    const detail = await fetchEventInvoiceDetail("invoice-1")
+
+    expect(detail.canMarkAsPaid).toBe(true)
+    expect(detail.canCancel).toBe(true)
+    expect(detail.canResendTickets).toBe(true)
+  })
+
+  it("CancelledInvoiceWithNoFlags_AllowsNeitherSettlementNorResend", async () => {
+    getMock.mockResolvedValue(detailResponse({ invoiceStatus: "Cancelled" }))
+
+    const detail = await fetchEventInvoiceDetail("invoice-1")
+
+    expect(detail.canMarkAsPaid).toBe(false)
+    expect(detail.canCancel).toBe(false)
+    expect(detail.canResendTickets).toBe(false)
+  })
+
+  it("PaidInvoiceWithNoFlags_AllowsResendButNoSettlement", async () => {
+    getMock.mockResolvedValue(detailResponse({ invoiceStatus: "Paid" }))
+
+    const detail = await fetchEventInvoiceDetail("invoice-1")
+
+    expect(detail.canMarkAsPaid).toBe(false)
+    expect(detail.canResendTickets).toBe(true)
+  })
+})
+
+describe("event invoice settlement endpoints", () => {
+  beforeEach(() => postMock.mockReset().mockResolvedValue({}))
+
+  it("MarkAsPaid_PostsToTheMarkPaidEndpoint", async () => {
+    await markEventInvoiceAsPaid("invoice-1")
+
+    expect(postMock).toHaveBeenCalledWith("/api/organizer/events/invoices/invoice-1/mark-paid")
+  })
+
+  it("Cancel_PostsToTheCancelEndpoint", async () => {
+    await cancelEventInvoice("invoice-1")
+
+    expect(postMock).toHaveBeenCalledWith("/api/organizer/events/invoices/invoice-1/cancel")
   })
 })
 
