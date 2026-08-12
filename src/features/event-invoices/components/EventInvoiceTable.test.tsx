@@ -17,6 +17,7 @@ const INVOICE: EventInvoiceListItem = {
   currencySymbol: "$",
   buyerName: "Sohail Ahmed",
   buyerEmail: "sohail@example.com",
+  eventUniqueId: "event-1",
   eventName: "APPNA 49th Annual Convention 2026",
   paymentMethod: "Stripe",
   paymentSource: "Visa ending 4242",
