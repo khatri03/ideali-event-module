@@ -104,7 +104,7 @@ describe("EventInvoiceMoneyPanel", () => {
   it("ChargeBreakdownPresent_RendersEachSavedChargeBelowSubtotal", () => {
     renderPanel()
 
-    expect(screen.getByText("Subtotal")).toBeInTheDocument()
+    expect(screen.getByText("Line Item Total")).toBeInTheDocument()
     expect(screen.getByText("Sales Tax")).toBeInTheDocument()
     expect(screen.getByText("Platform Charges")).toBeInTheDocument()
     expect(screen.getByText("$75.56")).toBeInTheDocument()
@@ -112,12 +112,20 @@ describe("EventInvoiceMoneyPanel", () => {
     expect(screen.getByText("$504.56")).toBeInTheDocument()
   })
 
-  it("TicketLinesBelongToTheDeliverySection_SoTheMoneyPanelNeverRepeatsThem", () => {
+  it("PercentCharge_ShowsItsRateInParenthesesBesideTheLabel", () => {
     renderPanel()
 
-    expect(screen.queryByRole("table")).not.toBeInTheDocument()
-    expect(screen.queryByText("Unit price")).not.toBeInTheDocument()
-    expect(screen.queryByText("Aga Khan")).not.toBeInTheDocument()
+    expect(screen.getByText("(17.99%)")).toBeInTheDocument()
+    expect(screen.queryByText("(4%)")).not.toBeInTheDocument()
+  })
+
+  it("LineItems_RenderAsAPricedTableAboveTheTotals", () => {
+    renderPanel()
+
+    const table = screen.getByRole("table")
+    expect(table).toBeInTheDocument()
+    expect(screen.getByText("Aga Khan")).toBeInTheDocument()
+    expect(screen.getByText("Allama Iqbal")).toBeInTheDocument()
     expect(screen.getByText("2 tickets across 2 lines")).toBeInTheDocument()
   })
 
@@ -165,5 +173,7 @@ describe("EventInvoiceMoneyPanel", () => {
     expect(screen.getByText("EARLYBIRD")).toBeInTheDocument()
     expect(screen.getByText("Discount")).toBeInTheDocument()
     expect(screen.getByText("-$50.00")).toBeInTheDocument()
+    expect(screen.getByText("Subtotal")).toBeInTheDocument()
+    expect(screen.getByText("$370.00")).toBeInTheDocument()
   })
 })

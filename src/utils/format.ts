@@ -50,3 +50,27 @@ export function formatCurrencyMagnitude(amount: string | null | undefined, curre
   const trimmed = amount?.trim()
   return formatCurrency(trimmed?.startsWith("-") ? trimmed.slice(1) : trimmed, currencySymbol)
 }
+
+function toCents(amount: string): bigint {
+  const trimmed = amount.trim()
+  const isNegative = trimmed.startsWith("-")
+  const digits = isNegative ? trimmed.slice(1) : trimmed
+  const [integerPart, fractionPart = ""] = digits.split(".")
+  const cents = BigInt(integerPart || "0") * 100n + BigInt((fractionPart + "00").slice(0, 2) || "0")
+  return isNegative ? -cents : cents
+}
+
+function fromCents(cents: bigint): string {
+  const isNegative = cents < 0n
+  const magnitude = isNegative ? -cents : cents
+  const fractionPart = (magnitude % 100n).toString().padStart(2, "0")
+  return `${isNegative ? "-" : ""}${magnitude / 100n}.${fractionPart}`
+}
+
+/**
+ * Decimal-text subtraction that never routes money through a float, so results stay exact down to the
+ * cent regardless of how many digits either side carries.
+ */
+export function subtractMoney(minuend: string, subtrahend: string): string {
+  return fromCents(toCents(minuend) - toCents(subtrahend))
+}

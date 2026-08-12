@@ -132,7 +132,7 @@ describe("EventInvoiceDetailPage", () => {
     const { container } = renderPage()
 
     const markPaid = screen.getByRole("button", { name: /mark as paid/i })
-    const subtotal = screen.getByText("Subtotal")
+    const subtotal = screen.getByText("Line Item Total")
 
     expect(container.compareDocumentPosition(markPaid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(markPaid.compareDocumentPosition(subtotal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
