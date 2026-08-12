@@ -1,5 +1,6 @@
+export { OrderCompletionActions } from "./OrderCompletionActions"
 export { OrderConfirmationSkeleton } from "./OrderConfirmationSkeleton"
-export { OrderNextStepDialog } from "./OrderNextStepDialog"
+export { OrderInvoiceBreakdown } from "./OrderInvoiceBreakdown"
 export { OrderNotFoundCard } from "./OrderNotFoundCard"
 export { OrderProcessingActions } from "./OrderProcessingActions"
 export { OrderStateHeader } from "./OrderStateHeader"

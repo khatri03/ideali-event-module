@@ -23,6 +23,30 @@ const eventOrderTicketSchema = z.object({
   ticketStatus: z.string().optional(),
 })
 
+const eventOrderChargeSchema = z.object({
+  Label: z.string().optional(),
+  label: z.string().optional(),
+  ChargeKind: z.string().optional(),
+  chargeKind: z.string().optional(),
+  Amount: z.number().optional(),
+  amount: z.number().optional(),
+})
+
+const eventOrderLineItemSchema = z.object({
+  SessionName: z.string().optional(),
+  sessionName: z.string().optional(),
+  TicketTypeName: z.string().optional(),
+  ticketTypeName: z.string().optional(),
+  Quantity: z.number().optional(),
+  quantity: z.number().optional(),
+  UnitPrice: z.number().optional(),
+  unitPrice: z.number().optional(),
+  DiscountAmount: z.number().nullable().optional(),
+  discountAmount: z.number().nullable().optional(),
+  LineTotal: z.number().optional(),
+  lineTotal: z.number().optional(),
+})
+
 const eventOrderStatusSchema = z.object({
   OrderUniqueId: z.string().optional(),
   orderUniqueId: z.string().optional(),
@@ -38,10 +62,30 @@ const eventOrderStatusSchema = z.object({
   buyerName: z.string().nullable().optional(),
   BuyerEmailMasked: z.string().nullable().optional(),
   buyerEmailMasked: z.string().nullable().optional(),
+  SubTotal: z.number().optional(),
+  subTotal: z.number().optional(),
+  DiscountAmount: z.number().nullable().optional(),
+  discountAmount: z.number().nullable().optional(),
+  DiscountCouponCode: z.string().nullable().optional(),
+  discountCouponCode: z.string().nullable().optional(),
+  TaxAmount: z.number().nullable().optional(),
+  taxAmount: z.number().nullable().optional(),
+  PlatformCharges: z.number().nullable().optional(),
+  platformCharges: z.number().nullable().optional(),
+  ServiceCharges: z.number().nullable().optional(),
+  serviceCharges: z.number().nullable().optional(),
   TotalAmount: z.number().optional(),
   totalAmount: z.number().optional(),
+  AmountPaid: z.number().optional(),
+  amountPaid: z.number().optional(),
+  BalanceAmount: z.number().nullable().optional(),
+  balanceAmount: z.number().nullable().optional(),
   CurrencySymbol: z.string().nullable().optional(),
   currencySymbol: z.string().nullable().optional(),
+  Charges: z.array(eventOrderChargeSchema).optional(),
+  charges: z.array(eventOrderChargeSchema).optional(),
+  LineItems: z.array(eventOrderLineItemSchema).optional(),
+  lineItems: z.array(eventOrderLineItemSchema).optional(),
   EventName: z.string().optional(),
   eventName: z.string().optional(),
   EventThemeColor: z.string().nullable().optional(),
@@ -70,6 +114,21 @@ export interface EventOrderTicket {
   ticketStatus: string
 }
 
+export interface EventOrderCharge {
+  label: string
+  chargeKind: string
+  amount: number
+}
+
+export interface EventOrderLineItem {
+  sessionName: string
+  ticketTypeName: string
+  quantity: number
+  unitPrice: number
+  discountAmount: number | null
+  lineTotal: number
+}
+
 export interface EventOrderStatus {
   orderUniqueId: string
   invoiceNo: string
@@ -79,8 +138,19 @@ export interface EventOrderStatus {
   pollAfterSeconds: number
   buyerName: string | null
   buyerEmailMasked: string | null
+  subTotal: number
+  discountAmount: number | null
+  discountCouponCode: string | null
+  taxAmount: number | null
+  platformCharges: number | null
+  serviceCharges: number | null
   totalAmount: number
+  amountPaid: number
+  /** Null once nothing is owed, so a settled order renders no balance row at all. */
+  balanceAmount: number | null
   currencySymbol: string | null
+  charges: EventOrderCharge[]
+  lineItems: EventOrderLineItem[]
   eventName: string
   eventThemeColor: string | null
   eventStartDateUtc: string | null
@@ -102,8 +172,29 @@ export function normalizeEventOrderStatus(payload: unknown): EventOrderStatus {
     pollAfterSeconds: parsed.PollAfterSeconds ?? parsed.pollAfterSeconds ?? 0,
     buyerName: parsed.BuyerName ?? parsed.buyerName ?? null,
     buyerEmailMasked: parsed.BuyerEmailMasked ?? parsed.buyerEmailMasked ?? null,
+    subTotal: parsed.SubTotal ?? parsed.subTotal ?? 0,
+    discountAmount: parsed.DiscountAmount ?? parsed.discountAmount ?? null,
+    discountCouponCode: parsed.DiscountCouponCode ?? parsed.discountCouponCode ?? null,
+    taxAmount: parsed.TaxAmount ?? parsed.taxAmount ?? null,
+    platformCharges: parsed.PlatformCharges ?? parsed.platformCharges ?? null,
+    serviceCharges: parsed.ServiceCharges ?? parsed.serviceCharges ?? null,
     totalAmount: parsed.TotalAmount ?? parsed.totalAmount ?? 0,
+    amountPaid: parsed.AmountPaid ?? parsed.amountPaid ?? 0,
+    balanceAmount: parsed.BalanceAmount ?? parsed.balanceAmount ?? null,
     currencySymbol: parsed.CurrencySymbol ?? parsed.currencySymbol ?? null,
+    charges: (parsed.Charges ?? parsed.charges ?? []).map((charge) => ({
+      label: charge.Label ?? charge.label ?? "",
+      chargeKind: charge.ChargeKind ?? charge.chargeKind ?? "",
+      amount: charge.Amount ?? charge.amount ?? 0,
+    })),
+    lineItems: (parsed.LineItems ?? parsed.lineItems ?? []).map((line) => ({
+      sessionName: line.SessionName ?? line.sessionName ?? "",
+      ticketTypeName: line.TicketTypeName ?? line.ticketTypeName ?? "",
+      quantity: line.Quantity ?? line.quantity ?? 0,
+      unitPrice: line.UnitPrice ?? line.unitPrice ?? 0,
+      discountAmount: line.DiscountAmount ?? line.discountAmount ?? null,
+      lineTotal: line.LineTotal ?? line.lineTotal ?? 0,
+    })),
     eventName: parsed.EventName ?? parsed.eventName ?? "",
     eventThemeColor: parsed.EventThemeColor ?? parsed.eventThemeColor ?? null,
     eventStartDateUtc: parsed.EventStartDateUtc ?? parsed.eventStartDateUtc ?? null,

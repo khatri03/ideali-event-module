@@ -2,8 +2,9 @@ import { useCallback, useEffect } from "react"
 import { Box, Container, Stack } from "@chakra-ui/react"
 import { useLocation, useParams, useSearchParams } from "react-router-dom"
 import {
+  OrderCompletionActions,
   OrderConfirmationSkeleton,
-  OrderNextStepDialog,
+  OrderInvoiceBreakdown,
   OrderNotFoundCard,
   OrderProcessingActions,
   OrderStateHeader,
@@ -12,7 +13,7 @@ import {
 } from "@/features/events/components/order"
 import { useEventOrderStatus } from "@/features/events/hooks/useEventOrderStatus"
 import { useOrderCheckoutHandoff } from "@/features/events/hooks/useOrderCheckoutHandoff"
-import { useOrderCompletionPrompt } from "@/features/events/hooks/useOrderCompletionPrompt"
+import { useOrderCompletionActions } from "@/features/events/hooks/useOrderCompletionActions"
 import { clearPendingOrderId } from "@/features/events/utils/registrationOrderCookie"
 
 /** Carries the cart forward from a redirecting payment method so the confirm fast-path can still run. */
@@ -43,7 +44,7 @@ export function EventOrderConfirmationPage() {
 
   const { state } = useLocation()
   const registerPath = (state as OrderLocationState | null)?.registerPath ?? null
-  const completionPrompt = useOrderCompletionPrompt(order?.orderState === "Confirmed", registerPath)
+  const completion = useOrderCompletionActions(registerPath)
 
   // The buyer made it here, so the in-flight marker the wizard left behind has done its job.
   useEffect(() => {
@@ -62,8 +63,18 @@ export function EventOrderConfirmationPage() {
   const isBusy = isLoading || isHandingOff
 
   return (
-    <Box minH="100dvh" bg="gray.50" py={{ base: 6, md: 10 }} px={{ base: 4, md: 6 }}>
-      <Container maxW="3xl" px={0}>
+    <Box
+      minH="100dvh"
+      bg="gray.50"
+      py={{ base: 6, md: 10 }}
+      px={{ base: 4, md: 6 }}
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+    >
+      {/* `my="auto"` rather than `justifyContent`: a receipt taller than the viewport still scrolls to
+          its own top, where centring by alignment would cut the first card off. */}
+      <Container maxW="3xl" px={0} w="full" my="auto">
         {isBusy ? <OrderConfirmationSkeleton /> : null}
 
         {!isBusy && (isError || !order) ? <OrderNotFoundCard /> : null}
@@ -85,19 +96,17 @@ export function EventOrderConfirmationPage() {
             ) : null}
 
             <OrderSummaryCard order={order} />
-            <OrderTicketList tickets={order.tickets} />
-          </Stack>
-        ) : null}
+            <OrderInvoiceBreakdown order={order} />
+            <OrderTicketList tickets={order.tickets} canViewTickets={order.orderState === "Confirmed"} />
 
-        {order ? (
-          <OrderNextStepDialog
-            isOpen={completionPrompt.isPromptOpen}
-            eventName={order.eventName}
-            hasCloseFailed={completionPrompt.hasCloseFailed}
-            onBuyAgain={completionPrompt.buyAgain}
-            onCloseTab={completionPrompt.closeTab}
-            onDismiss={completionPrompt.dismiss}
-          />
+            {order.orderState === "Confirmed" ? (
+              <OrderCompletionActions
+                hasCloseFailed={completion.hasCloseFailed}
+                onCloseWindow={completion.closeWindow}
+                onNewRegistration={completion.newRegistration}
+              />
+            ) : null}
+          </Stack>
         ) : null}
       </Container>
     </Box>

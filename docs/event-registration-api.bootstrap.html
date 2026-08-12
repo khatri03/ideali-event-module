@@ -1834,8 +1834,31 @@ export function useEventRegistration(eventUniqueId: string) {
   "pollAfterSeconds": 0,
   "buyerName": "Priya Raman",
   "buyerEmailMasked": "p*********@example.com",
+  "subTotal": 460.00,
+  "discountAmount": 40.00,
+  "discountCouponCode": "EARLYBIRD",
+  "taxAmount": 34.61,
+  "platformCharges": 6.00,
+  "serviceCharges": 10.00,
   "totalAmount": 470.61,
+  "amountPaid": 470.61,
+  "balanceAmount": null,
   "currencySymbol": "$",
+  "charges": [
+    { "label": "Sales Tax", "chargeKind": "Tax", "amount": 34.61, "displayOrder": 0 },
+    { "label": "Platform Charges", "chargeKind": "Revenue Plan", "amount": 6.00, "displayOrder": 1 },
+    { "label": "Credit Card Fee", "chargeKind": "Payment Method", "amount": 10.00, "displayOrder": 2 }
+  ],
+  "lineItems": [
+    {
+      "sessionName": "Day One — Main Stage",
+      "ticketTypeName": "General Admission",
+      "quantity": 2,
+      "unitPrice": 230.00,
+      "discountAmount": 40.00,
+      "lineTotal": 460.00
+    }
+  ],
   "eventName": "Global Product Summit 2026",
   "eventThemeColor": "#1F4FD8",
   "eventStartDateUtc": "2026-09-14T13:00:00Z",
@@ -1855,6 +1878,22 @@ export function useEventRegistration(eventUniqueId: string) {
     }
   ]
 }</code></pre>
+
+            <h4 class="h6 mt-4">The money breakdown</h4>
+            <p>
+              Everything needed to print a receipt is here, so the confirmation page never has to reach
+              for the organizer-only invoice endpoint. <code>charges</code> is already ordered for
+              display and contains <strong>only what the buyer was billed</strong> — a revenue-plan fee
+              the organizer absorbs out of their own payout is deliberately absent, which is why the
+              rows always add up to <code>totalAmount</code>.
+            </p>
+            <ul>
+              <li><code>subTotal</code> is before any discount; <code>discountAmount</code> is the credit, and <code>discountCouponCode</code> names the coupon it came from.</li>
+              <li><code>taxAmount</code>, <code>platformCharges</code> and <code>serviceCharges</code> are the bucket totals of <code>charges</code>. Each is <code>null</code> when nothing landed in it — drop the row rather than printing a zero.</li>
+              <li><code>amountPaid</code> counts settled payments only; a failed attempt is not money received.</li>
+              <li><code>balanceAmount</code> is <code>null</code> once nothing is owed, so a settled order renders no balance row.</li>
+              <li><code>lineItems</code> carries no attendee contact details. The link is the only credential this page has.</li>
+            </ul>
 
             <h4 class="h6 mt-4">Three states — this is the field you build the page around</h4>
             <p>
