@@ -13,6 +13,13 @@ interface ConfirmDialogProps {
   isPending: boolean
   /** "destructive" (default) warns in red; "primary" is for additive actions. */
   tone?: ConfirmTone
+  /**
+   * Reactive visibility. Defaults to true for callers that mount this component only while it should
+   * be open - a caller that instead keeps it mounted and toggles this prop lets Ark's dialog machine run
+   * its own close transition (releasing the scroll lock and focus trap it set up) before anything is torn
+   * down, rather than having that cleanup skipped because the component vanished mid-transition.
+   */
+  open?: boolean
   onConfirm: () => void
   onClose: () => void
 }
@@ -25,13 +32,14 @@ export function ConfirmDialog({
   errorMessage,
   isPending,
   tone = "destructive",
+  open = true,
   onConfirm,
   onClose,
 }: ConfirmDialogProps) {
   const isDestructive = tone === "destructive"
   return (
     <Dialog.Root
-      open
+      open={open}
       role="alertdialog"
       onOpenChange={(details) => (details.open ? null : onClose())}
       size="md"

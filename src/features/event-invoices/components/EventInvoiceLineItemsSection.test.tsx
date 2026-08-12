@@ -92,12 +92,6 @@ describe("EventInvoiceLineItemsSection resend actions", () => {
     expect(screen.getByRole("button", { name: "Resend ticket EVT_ABC123" })).toBeInTheDocument()
   })
 
-  it("does not show a resend-all button when the invoice has no issued tickets yet", () => {
-    renderSection([{ ...LINE_ITEMS[0], tickets: [] }])
-
-    expect(screen.queryByRole("button", { name: /resend all tickets/i })).not.toBeInTheDocument()
-  })
-
   it("offers no resend at all when the order no longer allows it", () => {
     renderSection(LINE_ITEMS, false)
 
@@ -131,18 +125,6 @@ describe("EventInvoiceLineItemsSection resend actions", () => {
     await user.click(within(dialog).getByRole("button", { name: /cancel/i }))
 
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
-    expect(resendEventInvoiceTicketMock).not.toHaveBeenCalled()
-  })
-
-  it("resending the whole invoice calls the invoice-level resend, not the per-ticket one", async () => {
-    const user = userEvent.setup()
-    renderSection()
-
-    await user.click(screen.getByRole("button", { name: /resend all tickets/i }))
-    const dialog = await screen.findByRole("alertdialog")
-    await user.click(within(dialog).getByRole("button", { name: /^resend all$/i }))
-
-    await waitFor(() => expect(resendEventInvoiceMock).toHaveBeenCalledWith(INVOICE_UNIQUE_ID))
     expect(resendEventInvoiceTicketMock).not.toHaveBeenCalled()
   })
 

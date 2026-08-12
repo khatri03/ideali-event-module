@@ -15,11 +15,13 @@ vi.mock("../hooks/useEventInvoices", () => ({
     mutateAsync: updateBuyerMock,
     isPending: false,
     error: null,
+    reset: vi.fn(),
   }),
   useResendEventInvoice: () => ({
     mutateAsync: resendInvoiceMock,
     isPending: false,
     error: null,
+    reset: vi.fn(),
   }),
 }))
 
@@ -44,7 +46,7 @@ function renderPanel(overrides: Partial<Parameters<typeof EventInvoiceBuyerPanel
 /**
  * Chakra's dialog treats any pointer press inside itself as a dismissal in this DOM implementation, so
  * only the button that opens it is clicked. Everything within is driven by the events the browser would
- * have raised anyway - which is also why the dialog's own submit is fired rather than its button pressed.
+ * have raised anyway.
  */
 async function openDialog() {
   await userEvent.setup().click(screen.getByRole("button", { name: /edit buyer details for invoice INV-2001/i }))
@@ -86,10 +88,10 @@ describe("EventInvoiceBuyerPanel", () => {
 
   it("PhoneCleared_IsSentAsNullRatherThanAnEmptyString", async () => {
     renderPanel({ buyerPhone: "+1 555 0100" })
-    const { dialog, fields } = await openDialog()
+    const { fields } = await openDialog()
 
     typeInto(fields.getByLabelText(/phone/i), "")
-    fireEvent.submit(dialog)
+    fireEvent.click(fields.getByRole("button", { name: /save buyer details/i }))
 
     await waitFor(() =>
       expect(updateBuyerMock).toHaveBeenCalledWith({
@@ -102,10 +104,10 @@ describe("EventInvoiceBuyerPanel", () => {
 
   it("SurroundingWhitespace_IsTrimmedBeforeItReachesTheApi", async () => {
     renderPanel()
-    const { dialog, fields } = await openDialog()
+    const { fields } = await openDialog()
 
     typeInto(fields.getByLabelText(/name/i), "  Jane Q Doe  ")
-    fireEvent.submit(dialog)
+    fireEvent.click(fields.getByRole("button", { name: /save buyer details/i }))
 
     await waitFor(() =>
       expect(updateBuyerMock).toHaveBeenCalledWith({
@@ -145,11 +147,11 @@ describe("EventInvoiceBuyerPanel", () => {
 
   it("ResendOptedIn_SavesThenResendsToTheNewAddress", async () => {
     renderPanel()
-    const { dialog, fields } = await openDialog()
+    const { fields } = await openDialog()
 
     typeInto(fields.getByLabelText(/email/i), "new@example.com")
     fireEvent.click(await fields.findByRole("checkbox", { name: /resend every ticket/i }))
-    fireEvent.submit(dialog)
+    fireEvent.click(fields.getByRole("button", { name: /save buyer details/i }))
 
     await waitFor(() =>
       expect(updateBuyerMock).toHaveBeenCalledWith({
@@ -163,10 +165,10 @@ describe("EventInvoiceBuyerPanel", () => {
 
   it("ResendNotOptedIn_SavesWithoutSendingAnyMail", async () => {
     renderPanel()
-    const { dialog, fields } = await openDialog()
+    const { fields } = await openDialog()
 
     typeInto(fields.getByLabelText(/email/i), "new@example.com")
-    fireEvent.submit(dialog)
+    fireEvent.click(fields.getByRole("button", { name: /save buyer details/i }))
 
     await waitFor(() => expect(updateBuyerMock).toHaveBeenCalledTimes(1))
     expect(resendInvoiceMock).not.toHaveBeenCalled()
@@ -186,10 +188,10 @@ describe("EventInvoiceBuyerPanel", () => {
   // tears the dialog down when the form focuses its first invalid field, so only the refusal is visible here.
   it("NameCleared_NeverReachesTheApi", async () => {
     renderPanel()
-    const { dialog, fields } = await openDialog()
+    const { fields } = await openDialog()
 
     typeInto(fields.getByLabelText(/name/i), "")
-    fireEvent.submit(dialog)
+    fireEvent.click(fields.getByRole("button", { name: /save buyer details/i }))
 
     await waitFor(() => expect(fields.getByLabelText(/name/i)).toHaveValue(""))
     expect(updateBuyerMock).not.toHaveBeenCalled()
@@ -197,10 +199,10 @@ describe("EventInvoiceBuyerPanel", () => {
 
   it("UnroutableEmail_NeverReachesTheApi", async () => {
     renderPanel()
-    const { dialog, fields } = await openDialog()
+    const { fields } = await openDialog()
 
     typeInto(fields.getByLabelText(/email/i), "not-an-address")
-    fireEvent.submit(dialog)
+    fireEvent.click(fields.getByRole("button", { name: /save buyer details/i }))
 
     await waitFor(() => expect(fields.getByLabelText(/email/i)).toHaveValue("not-an-address"))
     expect(updateBuyerMock).not.toHaveBeenCalled()
@@ -209,10 +211,10 @@ describe("EventInvoiceBuyerPanel", () => {
   it("SaveFailed_KeepsTheDialogOpenWithTheTypedValuesStillThere", async () => {
     updateBuyerMock.mockRejectedValue(new Error("boom"))
     renderPanel()
-    const { dialog, fields } = await openDialog()
+    const { fields } = await openDialog()
 
     typeInto(fields.getByLabelText(/email/i), "new@example.com")
-    fireEvent.submit(dialog)
+    fireEvent.click(fields.getByRole("button", { name: /save buyer details/i }))
 
     await waitFor(() => expect(updateBuyerMock).toHaveBeenCalled())
     expect(screen.getByRole("dialog")).toBeInTheDocument()

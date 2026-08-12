@@ -28,6 +28,9 @@ export function EventInvoiceBuyerPanel({
   canResendTickets,
 }: EventInvoiceBuyerPanelProps) {
   const [isEditing, setIsEditing] = useState(false)
+  // 0 means editing has never started, so the dialog (and its mutation hooks) isn't mounted at all yet.
+  // Bumped on every open so EventInvoiceBuyerDialog's form remounts with a clean slate each time.
+  const [editSessionKey, setEditSessionKey] = useState(0)
 
   return (
     <>
@@ -44,7 +47,10 @@ export function EventInvoiceBuyerPanel({
               minH="11"
               px={2}
               cursor="pointer"
-              onClick={() => setIsEditing(true)}
+              onClick={() => {
+                setEditSessionKey((session) => session + 1)
+                setIsEditing(true)
+              }}
             >
               <Pencil size={14} />
               Edit
@@ -60,8 +66,15 @@ export function EventInvoiceBuyerPanel({
         <InvoiceMutedLine>{buyerPhone || EMPTY_VALUE}</InvoiceMutedLine>
       </InvoiceDetailPanel>
 
-      {isEditing ? (
+      {/*
+        Mounted once editing starts and kept mounted after - toggling `open` instead of unmounting lets
+        Ark's dialog machine run its own close transition (releasing the scroll lock and focus trap it
+        set up) before anything is torn down.
+      */}
+      {canEditBuyer && editSessionKey > 0 ? (
         <EventInvoiceBuyerDialog
+          open={isEditing}
+          editSessionKey={editSessionKey}
           invoiceUniqueId={invoiceUniqueId}
           buyerName={buyerName}
           buyerEmail={buyerEmail}

@@ -1,5 +1,4 @@
-import type { ReactNode } from "react"
-import { Box, Flex, Link, Separator, Stack, Text } from "@chakra-ui/react"
+import { Box, Flex, Link, Stack, Text } from "@chakra-ui/react"
 import { ExternalLink } from "lucide-react"
 import { format } from "date-fns"
 import { EMPTY_VALUE } from "@/utils/format"
@@ -17,8 +16,6 @@ interface EventInvoiceDetailHeaderProps {
   eventUniqueId: string
   eventName: string
   onBack: () => void
-  /** The actions the order still admits. Nothing is rendered when the caller supplies none. */
-  actions?: ReactNode
 }
 
 function formatIssuedDate(value: string) {
@@ -26,11 +23,7 @@ function formatIssuedDate(value: string) {
   return parsed ? format(parsed, "MMM d, yyyy") : EMPTY_VALUE
 }
 
-/**
- * The page's one identity band: which order this is, what state it is in, and what can still be done to
- * it. Actions live here rather than partway down the page so the organizer never has to scroll past the
- * money to reach the decision.
- */
+/** The page's one identity band: which order this is and what state it is in. */
 export function EventInvoiceDetailHeader({
   invoiceNo,
   invoiceStatus,
@@ -39,7 +32,6 @@ export function EventInvoiceDetailHeader({
   eventUniqueId,
   eventName,
   onBack,
-  actions,
 }: EventInvoiceDetailHeaderProps) {
   return (
     <Box borderRadius="20px" bg="brand.700" color="white" boxShadow="card" overflow="hidden">
@@ -89,13 +81,6 @@ export function EventInvoiceDetailHeader({
             </Text>
           </Stack>
         </Stack>
-
-        {actions ? (
-          <Box data-print-hide>
-            <Separator borderColor="whiteAlpha.300" mb={{ base: 5, md: 6 }} />
-            {actions}
-          </Box>
-        ) : null}
       </Stack>
     </Box>
   )
