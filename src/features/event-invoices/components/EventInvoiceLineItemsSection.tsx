@@ -4,7 +4,6 @@ import { format } from "date-fns"
 import { Send } from "lucide-react"
 import { ConfirmDialog } from "@/features/custom-lists"
 import { extractApiError } from "@/utils/errors"
-import { formatCurrency } from "@/utils/format"
 import { APP_ROUTES } from "@/utils/routes"
 import { parseUtcDateTime } from "@/utils/utcDates"
 import type { EventInvoiceLineItem, EventInvoiceTicket } from "@/api/eventInvoices"
@@ -13,7 +12,6 @@ import { useResendEventInvoiceTicket } from "../hooks/useEventInvoices"
 interface EventInvoiceLineItemsSectionProps {
   invoiceUniqueId: string
   lineItems: EventInvoiceLineItem[]
-  currencySymbol: string
   /** A cancelled order keeps its ticket history on screen but is never posted out again. */
   canResendTickets: boolean
 }
@@ -35,31 +33,19 @@ function formatTimestamp(value: string | null) {
 
 function LineItemCard({
   item,
-  currencySymbol,
   canResend,
   onResendTicket,
 }: {
   item: EventInvoiceLineItem
-  currencySymbol: string
   canResend: boolean
   onResendTicket: (ticket: EventInvoiceTicket) => void
 }) {
   return (
     <Box border="1px solid" borderColor="border.subtle" borderRadius="16px" overflow="hidden">
       <Box px={4} py={3} bg="app.bg" borderBottomWidth="1px" borderBottomColor="border.subtle">
-        <HStack justify="space-between" wrap="wrap" gap={2}>
-          <Stack gap={0}>
-            <Text fontWeight="700" color="text.primary">
-              {item.ticketTypeName}
-            </Text>
-            <Text fontSize="xs" color="text.secondary">
-              {item.sessionName}
-            </Text>
-          </Stack>
-          <Text fontWeight="700" color="text.primary">
-            {item.quantity} × {formatCurrency(item.unitPrice, currencySymbol)} = {formatCurrency(item.lineTotal, currencySymbol)}
-          </Text>
-        </HStack>
+        <Text fontSize="xs" fontWeight="700" color="text.secondary" textTransform="uppercase" letterSpacing="0.08em">
+          {item.sessionName}
+        </Text>
       </Box>
 
       <Box p={4}>
@@ -166,7 +152,6 @@ function LineItemCard({
 export function EventInvoiceLineItemsSection({
   invoiceUniqueId,
   lineItems,
-  currencySymbol,
   canResendTickets,
 }: EventInvoiceLineItemsSectionProps) {
   const [resendTarget, setResendTarget] = useState<EventInvoiceTicket | null>(null)
@@ -198,7 +183,6 @@ export function EventInvoiceLineItemsSection({
             <LineItemCard
               key={item.invoiceItemUniqueId}
               item={item}
-              currencySymbol={currencySymbol}
               canResend={canResendTickets}
               onResendTicket={(ticket) => setResendTarget(ticket)}
             />

@@ -110,7 +110,6 @@ export default function EventInvoiceDetailPage() {
       <EventInvoiceLineItemsSection
         invoiceUniqueId={invoice.invoiceUniqueId}
         lineItems={invoice.lineItems}
-        currencySymbol={invoice.currencySymbol}
         canResendTickets={invoice.canResendTickets}
       />
 

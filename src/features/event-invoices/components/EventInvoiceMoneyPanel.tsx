@@ -1,9 +1,10 @@
 import { Box, Flex, HStack, Separator, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { format } from "date-fns"
 import type { EventInvoiceDetail } from "@/api/eventInvoices"
-import { EMPTY_VALUE, formatCurrency, formatCurrencyMagnitude, moneySign } from "@/utils/format"
+import { EMPTY_VALUE, formatCurrency, formatCurrencyMagnitude, moneySign, subtractMoney } from "@/utils/format"
 import { parseUtcDateTime } from "@/utils/utcDates"
 import { EventInvoiceBuyerPanel } from "./EventInvoiceBuyerPanel"
+import { EventInvoiceItemsTable } from "./EventInvoiceItemsTable"
 import { InvoiceDetailPanel, InvoiceMutedLine } from "./InvoiceDetailPanel"
 
 interface EventInvoiceMoneyPanelProps {
@@ -43,24 +44,57 @@ function formatDate(value: string) {
   return parsed ? format(parsed, "MMM d, yyyy") : EMPTY_VALUE
 }
 
-function TotalRow({ label, value, isStrong = false }: { label: string; value: string; isStrong?: boolean }) {
+function TotalRow({
+  label,
+  value,
+  isStrong = false,
+  valueColor = "text.primary",
+  bordered = false,
+}: {
+  label: string
+  value: string
+  isStrong?: boolean
+  valueColor?: string
+  bordered?: boolean
+}) {
   return (
-    <Flex justify="space-between" gap={4} py={2}>
+    <Flex
+      justify="space-between"
+      gap={4}
+      py={2}
+      borderTop={bordered ? "1px solid" : undefined}
+      borderBottom={bordered ? "1px solid" : undefined}
+      borderColor={bordered ? "border.subtle" : undefined}
+    >
+
       <Text fontSize={isStrong ? "md" : "sm"} fontWeight={isStrong ? "800" : "600"} color={isStrong ? "text.primary" : "text.secondary"}>
         {label}
       </Text>
-      <Text fontSize={isStrong ? "md" : "sm"} fontWeight="800" color="text.primary" textAlign="right">
+      <Text fontSize={isStrong ? "md" : "sm"} fontWeight="800" color={valueColor} textAlign="right">
         {value}
       </Text>
     </Flex>
   )
 }
 
-function ChargeRow({ label, value }: { label: string; value: string }) {
+function formatChargeRate(charge: EventInvoiceDetail["charges"][number]) {
+  if (charge.calculationType !== "Percent") {
+    return null
+  }
+  return `(${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(charge.value)}%)`
+}
+
+function ChargeRow({ label, rate, value }: { label: string; rate: string | null; value: string }) {
   return (
     <Flex justify="space-between" gap={4} py={1.5} pl={3}>
       <Text fontSize="sm" fontWeight="600" color="text.secondary">
         {label}
+        {rate ? (
+          <Text as="span" color="text.secondary" fontWeight="500">
+            {" "}
+            {rate}
+          </Text>
+        ) : null}
       </Text>
       <Text fontSize="sm" fontWeight="700" color="text.primary" textAlign="right">
         {value}
@@ -69,14 +103,13 @@ function ChargeRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-/**
- * Everything about what the order costs and who owes it. The ticket lines themselves are the ticket
- * section's job - repeating them here once as a priced table and again there as delivery cards is what
- * made this page read as two half-pages stitched together.
- */
+/** Everything about what the order costs and who owes it: buyer, priced items, then the total. */
 export function EventInvoiceMoneyPanel({ invoice }: EventInvoiceMoneyPanelProps) {
   const charges = [...invoice.charges].sort((left, right) => left.displayOrder - right.displayOrder)
   const ticketCount = invoice.lineItems.reduce((total, item) => total + item.quantity, 0)
+  const hasDiscount = Boolean(invoice.discountAmount) && moneySign(invoice.discountAmount as string) !== 0
+  const discountMagnitude = hasDiscount ? (invoice.discountAmount as string).trim().replace(/^-/, "") : null
+  const subtotalAfterDiscount = discountMagnitude ? subtractMoney(invoice.subTotal, discountMagnitude) : null
   const balanceAmount = invoice.balanceAmount ?? null
   const standing = balanceAmount === null ? null : balanceStanding(balanceAmount)
   const hasIssuedTickets = invoice.lineItems.some((item) => item.tickets.length > 0)
@@ -113,11 +146,20 @@ export function EventInvoiceMoneyPanel({ invoice }: EventInvoiceMoneyPanelProps)
           </InvoiceDetailPanel>
         </SimpleGrid>
 
+        <EventInvoiceItemsTable lineItems={invoice.lineItems} currencySymbol={invoice.currencySymbol} />
+
         <Flex justify="flex-end">
           <Box w={{ base: "full", md: "360px" }}>
-            <TotalRow label="Subtotal" value={formatCurrency(invoice.subTotal, invoice.currencySymbol)} />
-            {invoice.discountAmount && moneySign(invoice.discountAmount) !== 0 ? (
-              <TotalRow label="Discount" value={formatCurrency(invoice.discountAmount, invoice.currencySymbol)} />
+            <TotalRow label="Line Item Total" value={formatCurrency(invoice.subTotal, invoice.currencySymbol)} />
+            {hasDiscount && discountMagnitude ? (
+              <>
+                <TotalRow
+                  label="Discount"
+                  value={`-${formatCurrencyMagnitude(discountMagnitude, invoice.currencySymbol)}`}
+                  valueColor="status.success.fg"
+                />
+                <TotalRow label="Subtotal" value={formatCurrency(subtotalAfterDiscount, invoice.currencySymbol)} bordered />
+              </>
             ) : null}
             {charges.length > 0 ? (
               <Stack gap={0} mt={1} mb={2}>
@@ -125,6 +167,7 @@ export function EventInvoiceMoneyPanel({ invoice }: EventInvoiceMoneyPanelProps)
                   <ChargeRow
                     key={`${charge.displayOrder}-${charge.label}-${charge.amount}`}
                     label={charge.label}
+                    rate={formatChargeRate(charge)}
                     value={formatCurrency(charge.amount, invoice.currencySymbol)}
                   />
                 ))}

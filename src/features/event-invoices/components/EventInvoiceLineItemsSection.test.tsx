@@ -55,7 +55,6 @@ function renderSection(lineItems: EventInvoiceLineItem[] = LINE_ITEMS, canResend
         <EventInvoiceLineItemsSection
           invoiceUniqueId={INVOICE_UNIQUE_ID}
           lineItems={lineItems}
-          currencySymbol="$"
           canResendTickets={canResendTickets}
         />
       </QueryClientProvider>
