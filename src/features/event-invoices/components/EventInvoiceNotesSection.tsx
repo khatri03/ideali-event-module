@@ -21,6 +21,7 @@ function formatTimestamp(value: string) {
 export function EventInvoiceNotesSection({ invoiceUniqueId, notes }: EventInvoiceNotesSectionProps) {
   const [isExpanded, setIsExpanded] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [hasOpenedDialog, setHasOpenedDialog] = useState(false)
   const [noteText, setNoteText] = useState("")
   const contentId = useId()
   const addNoteMutation = useAddEventInvoiceNote(invoiceUniqueId)
@@ -95,7 +96,10 @@ export function EventInvoiceNotesSection({ invoiceUniqueId, notes }: EventInvoic
             px={4}
             w={{ base: "full", md: "auto" }}
             cursor="pointer"
-            onClick={() => setIsDialogOpen(true)}
+            onClick={() => {
+              setHasOpenedDialog(true)
+              setIsDialogOpen(true)
+            }}
             bg="brand.gradient"
           >
             <Plus size={16} />
@@ -128,8 +132,17 @@ export function EventInvoiceNotesSection({ invoiceUniqueId, notes }: EventInvoic
         ) : null}
       </Box>
 
-      {isDialogOpen ? (
-        <Dialog.Root open onOpenChange={(details) => (details.open ? null : setIsDialogOpen(false))} size={{ base: "full", md: "md" }}>
+      {/*
+        Mounted once opened and kept mounted after - toggling `open` instead of unmounting lets Ark's
+        dialog machine run its close transition (releasing the scroll lock it set up) before anything
+        is torn down, rather than skipping that cleanup because the component vanished mid-transition.
+      */}
+      {hasOpenedDialog ? (
+        <Dialog.Root
+          open={isDialogOpen}
+          onOpenChange={(details) => (details.open ? null : setIsDialogOpen(false))}
+          size={{ base: "full", md: "md" }}
+        >
           <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
           <Dialog.Positioner p={{ base: 0, md: 4 }}>
             <Dialog.Content

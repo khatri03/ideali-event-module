@@ -8,7 +8,7 @@ import { formatCurrency } from "@/utils/format"
 import { APP_ROUTES } from "@/utils/routes"
 import { parseUtcDateTime } from "@/utils/utcDates"
 import type { EventInvoiceLineItem, EventInvoiceTicket } from "@/api/eventInvoices"
-import { useResendEventInvoice, useResendEventInvoiceTicket } from "../hooks/useEventInvoices"
+import { useResendEventInvoiceTicket } from "../hooks/useEventInvoices"
 
 interface EventInvoiceLineItemsSectionProps {
   invoiceUniqueId: string
@@ -17,8 +17,6 @@ interface EventInvoiceLineItemsSectionProps {
   /** A cancelled order keeps its ticket history on screen but is never posted out again. */
   canResendTickets: boolean
 }
-
-type ResendTarget = { kind: "invoice" } | { kind: "ticket"; ticket: EventInvoiceTicket }
 
 /** Mirrors EventTicketStatus on the server; a status it has not seen falls back to neutral. */
 const TICKET_STATUS_TOKENS: Record<string, { bg: string; fg: string }> = {
@@ -171,50 +169,24 @@ export function EventInvoiceLineItemsSection({
   currencySymbol,
   canResendTickets,
 }: EventInvoiceLineItemsSectionProps) {
-  const [resendTarget, setResendTarget] = useState<ResendTarget | null>(null)
-  const resendInvoiceMutation = useResendEventInvoice(invoiceUniqueId)
+  const [resendTarget, setResendTarget] = useState<EventInvoiceTicket | null>(null)
   const resendTicketMutation = useResendEventInvoiceTicket(invoiceUniqueId)
 
-  const hasAnyTicket = lineItems.some((item) => item.tickets.length > 0)
-
   async function handleConfirmResend() {
+    if (!resendTarget) return
     try {
-      if (resendTarget?.kind === "invoice") {
-        await resendInvoiceMutation.mutateAsync()
-      } else if (resendTarget?.kind === "ticket") {
-        await resendTicketMutation.mutateAsync(resendTarget.ticket.ticketUniqueId)
-      }
+      await resendTicketMutation.mutateAsync(resendTarget.ticketUniqueId)
       setResendTarget(null)
     } catch {
       // Surfaced via the mutation's own error state below - keep the dialog open so it stays visible.
     }
   }
 
-  const activeMutation = resendTarget?.kind === "ticket" ? resendTicketMutation : resendInvoiceMutation
-
   return (
     <Box border="1px solid" borderColor="border.subtle" borderRadius="20px" bg="card.bg" boxShadow="card" p={{ base: 4, md: 6 }}>
-      <HStack justify="space-between" wrap="wrap" gap={2} mb={4}>
-        <Heading as="h2" fontSize="lg" fontWeight="800" color="text.primary">
-          Ticket delivery
-        </Heading>
-        {hasAnyTicket && canResendTickets ? (
-          <Button
-            data-print-hide
-            size="sm"
-            variant="outline"
-            colorPalette="brand"
-            borderRadius="12px"
-            minH="11"
-            px={4}
-            cursor="pointer"
-            onClick={() => setResendTarget({ kind: "invoice" })}
-          >
-            <Send size={14} />
-            Resend all tickets
-          </Button>
-        ) : null}
-      </HStack>
+      <Heading as="h2" fontSize="lg" fontWeight="800" color="text.primary" mb={4}>
+        Ticket delivery
+      </Heading>
 
       {lineItems.length === 0 ? (
         <Text fontSize="sm" color="text.secondary">
@@ -228,7 +200,7 @@ export function EventInvoiceLineItemsSection({
               item={item}
               currencySymbol={currencySymbol}
               canResend={canResendTickets}
-              onResendTicket={(ticket) => setResendTarget({ kind: "ticket", ticket })}
+              onResendTicket={(ticket) => setResendTarget(ticket)}
             />
           ))}
         </Stack>
@@ -236,21 +208,17 @@ export function EventInvoiceLineItemsSection({
 
       {resendTarget ? (
         <ConfirmDialog
-          title={resendTarget.kind === "invoice" ? "Resend all tickets" : "Resend ticket"}
+          title="Resend ticket"
           description={
-            resendTarget.kind === "invoice" ? (
-              <Text>Re-email every ticket on this order to the buyer and any attendees with their own address?</Text>
-            ) : (
-              <Text>
-                Re-email ticket <strong>{resendTarget.ticket.ticketCode}</strong>?
-              </Text>
-            )
+            <Text>
+              Re-email ticket <strong>{resendTarget.ticketCode}</strong>?
+            </Text>
           }
-          confirmLabel={resendTarget.kind === "invoice" ? "Resend all" : "Resend ticket"}
+          confirmLabel="Resend ticket"
           loadingLabel="Sending..."
           tone="primary"
-          errorMessage={activeMutation.error ? extractApiError(activeMutation.error) : null}
-          isPending={activeMutation.isPending}
+          errorMessage={resendTicketMutation.error ? extractApiError(resendTicketMutation.error) : null}
+          isPending={resendTicketMutation.isPending}
           onConfirm={handleConfirmResend}
           onClose={() => setResendTarget(null)}
         />

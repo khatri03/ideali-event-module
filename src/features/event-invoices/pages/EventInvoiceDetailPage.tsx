@@ -1,5 +1,5 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom"
-import { Stack } from "@chakra-ui/react"
+import { Box, Flex, Stack } from "@chakra-ui/react"
 import { ErrorState } from "@/components/common"
 import { extractApiError, isNotFoundError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
@@ -75,7 +75,9 @@ export default function EventInvoiceDetailPage() {
     )
   }
 
-  const hasSettlementActions = invoice.canMarkAsPaid || invoice.canCancel
+  const hasAnyIssuedTicket = invoice.lineItems.some((item) => item.tickets.length > 0)
+  const canResendAllTickets = invoice.canResendTickets && hasAnyIssuedTicket
+  const hasSettlementActions = invoice.canMarkAsPaid || invoice.canCancel || canResendAllTickets
 
   return (
     <Stack gap={5} data-print-region>
@@ -87,17 +89,21 @@ export default function EventInvoiceDetailPage() {
         eventUniqueId={invoice.eventUniqueId}
         eventName={invoice.eventName}
         onBack={handleBack}
-        actions={
-          hasSettlementActions ? (
+      />
+
+      {hasSettlementActions ? (
+        <Box data-print-hide>
+          <Flex justify="flex-end">
             <EventInvoiceSettlementActions
               invoiceUniqueId={invoice.invoiceUniqueId}
               invoiceNo={invoice.invoiceNo}
               canMarkAsPaid={invoice.canMarkAsPaid}
               canCancel={invoice.canCancel}
+              canResendTickets={canResendAllTickets}
             />
-          ) : null
-        }
-      />
+          </Flex>
+        </Box>
+      ) : null}
 
       <EventInvoiceMoneyPanel invoice={invoice} />
 
