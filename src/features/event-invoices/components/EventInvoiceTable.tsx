@@ -119,9 +119,7 @@ export function EventInvoiceTable({
                   </Table.Cell>
                   <Table.Cell px={4} py={4}>
                     <Link
-                      as={RouterLink}
-                      href={APP_ROUTES.eventInvoices.detail(invoice.invoiceUniqueId)}
-                      to={APP_ROUTES.eventInvoices.detail(invoice.invoiceUniqueId)}
+                      asChild
                       fontSize="sm"
                       fontWeight="700"
                       color="brand.600"
@@ -131,7 +129,9 @@ export function EventInvoiceTable({
                       alignItems="center"
                       _hover={{ textDecoration: "underline" }}
                     >
-                      {invoice.invoiceNo}
+                      <RouterLink to={APP_ROUTES.eventInvoices.detail(invoice.invoiceUniqueId)}>
+                        {invoice.invoiceNo}
+                      </RouterLink>
                     </Link>
                     <PaymentPills paymentMethod={invoice.paymentMethod} paymentSource={invoice.paymentSource} />
                   </Table.Cell>
