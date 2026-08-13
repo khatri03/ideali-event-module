@@ -283,6 +283,7 @@ export const API_ROUTES = {
   customFormReportColumns: (formUniqueId: string) =>
     `/api/organizer/custom-form-report/forms/${formUniqueId}/columns`,
   customFormReportRun: "/api/organizer/custom-form-report/run",
+  customFormReportExport: "/api/organizer/custom-form-report/run/export",
   customFormReportTemplates: "/api/organizer/custom-form-report/templates",
   customFormReportTemplateOptions: (moduleId: number, formUniqueId: string) =>
     `/api/organizer/custom-form-report/modules/${moduleId}/forms/${formUniqueId}/templates`,

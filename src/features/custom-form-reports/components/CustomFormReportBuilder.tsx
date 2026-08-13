@@ -13,7 +13,14 @@ import {
   useReportTemplate,
   useReportTemplateOptions,
 } from "../hooks/useCustomFormReports"
-import { REPORT_FILTER_OPERATOR, REPORT_SYSTEM_FIELD, type ReportFilter } from "@/api/customFormReports"
+import { useExportCustomFormReport } from "../hooks/useExportCustomFormReport"
+import {
+  REPORT_FILTER_OPERATOR,
+  REPORT_SYSTEM_FIELD,
+  type ReportExportFormat,
+  type ReportExportScope,
+  type ReportFilter,
+} from "@/api/customFormReports"
 import {
   filterDraftError,
   nextReportSort,
@@ -24,6 +31,7 @@ import {
   type ReportSort,
 } from "../schemas/customFormReport.schemas"
 import { ReportColumnPicker } from "./ReportColumnPicker"
+import { ReportExportMenu } from "./ReportExportMenu"
 import { ReportFilterPanel } from "./ReportFilterPanel"
 import { ReportResultsTable } from "./ReportResultsTable"
 import { ReportResultsTableSkeleton } from "./ReportResultsTable.skeleton"
@@ -63,6 +71,7 @@ export function CustomFormReportBuilder() {
   const reportQuery = useCustomFormReport(
     appliedReport ? { ...appliedReport, ...toReportSortRequest(sort), pageNo: page, pageSize } : null,
   )
+  const exportMutation = useExportCustomFormReport()
 
   const fields = columnsQuery.data?.fields ?? []
   const maxColumns = columnsQuery.data?.maxColumns ?? 0
@@ -102,6 +111,23 @@ export function CustomFormReportBuilder() {
     setFilterDrafts([])
     setAppliedReport(null)
     setSort(null)
+  }
+
+  /** The download repeats the report already on screen, so it is built from what was applied, not the draft. */
+  async function handleExport(format: ReportExportFormat, scope: ReportExportScope) {
+    if (appliedReport === null) {
+      return
+    }
+
+    await exportMutation.mutateAsync({
+      ...appliedReport,
+      ...toReportSortRequest(sort),
+      pageNo: page,
+      pageSize,
+      format,
+      scope,
+      templateUniqueId,
+    })
   }
 
   function handleSort(target: string) {
@@ -314,6 +340,15 @@ export function CustomFormReportBuilder() {
           boxShadow="card"
           overflow="hidden"
         >
+          <Flex px={{ base: 4, md: 5 }} pt={4} justify="flex-end">
+            <ReportExportMenu
+              pageRowCount={reportQuery.data.rows.items.length}
+              totalRowCount={reportQuery.data.rows.total}
+              isExporting={exportMutation.isPending}
+              onExport={handleExport}
+            />
+          </Flex>
+
           <ReportResultsTable
             columns={reportColumns}
             rows={reportQuery.data.rows.items}
