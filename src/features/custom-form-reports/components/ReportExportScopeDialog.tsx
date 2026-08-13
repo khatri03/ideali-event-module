@@ -3,6 +3,7 @@ import { Download, FileDown } from "lucide-react"
 import { REPORT_EXPORT_SCOPE, type ReportExportScope } from "@/api/customFormReports"
 
 interface ReportExportScopeDialogProps {
+  open: boolean
   formatLabel: string
   pageRowCount: number
   totalRowCount: number
@@ -16,6 +17,7 @@ function rowLabel(count: number) {
 }
 
 export function ReportExportScopeDialog({
+  open,
   formatLabel,
   pageRowCount,
   totalRowCount,
@@ -24,7 +26,12 @@ export function ReportExportScopeDialog({
   onClose,
 }: ReportExportScopeDialogProps) {
   return (
-    <Dialog.Root open role="alertdialog" size={{ base: "full", md: "lg" }} onOpenChange={(details) => (details.open ? null : onClose())}>
+    <Dialog.Root
+      open={open}
+      role="alertdialog"
+      size={{ base: "full", md: "lg" }}
+      onOpenChange={(details) => (details.open ? null : onClose())}
+    >
       <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
       <Dialog.Positioner p={{ base: 0, md: 4 }}>
         <Dialog.Content

@@ -239,6 +239,11 @@ export function CustomFormReportBuilder() {
     ...column,
     columnLabel: templateColumnHeadings[column.uniqueId] ?? null,
   }))
+  // The picker and the filters share the same rename so a column reads the same wherever it appears.
+  const displayFields = fields.map((field) => ({
+    ...field,
+    columnLabel: templateColumnHeadings[field.uniqueId] ?? null,
+  }))
   const reportError = reportQuery.isError ? extractApiError(reportQuery.error) : null
   const columnsError = columnsQuery.isError ? extractApiError(columnsQuery.error) : null
 
@@ -274,7 +279,7 @@ export function CustomFormReportBuilder() {
 
       {formUniqueId ? (
         <ReportColumnPicker
-          fields={fields}
+          fields={displayFields}
           entityLabel={entityLabel}
           selectedFieldIds={selectedFieldIds}
           maxColumns={maxColumns}
@@ -286,7 +291,7 @@ export function CustomFormReportBuilder() {
 
       {formUniqueId ? (
         <ReportFilterPanel
-          fields={fields}
+          fields={displayFields}
           entityLabel={entityLabel}
           drafts={filterDrafts}
           onAddFilter={handleAddFilter}

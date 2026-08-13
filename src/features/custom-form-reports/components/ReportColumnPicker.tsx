@@ -93,7 +93,7 @@ export function ReportColumnPicker({
                 <Checkbox.HiddenInput />
                 <Checkbox.Control />
                 <Checkbox.Label fontSize="sm" fontWeight="600" lineClamp={1}>
-                  {field.label}
+                  {field.columnLabel ?? field.label}
                 </Checkbox.Label>
               </Checkbox.Root>
             )
