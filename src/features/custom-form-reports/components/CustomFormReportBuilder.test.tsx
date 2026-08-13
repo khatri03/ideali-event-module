@@ -172,7 +172,24 @@ describe("CustomFormReportBuilder", () => {
 
     await waitFor(() =>
       expect(lastReportRequest().filters).toEqual([
-        { fieldUniqueId: "field-2", operator: 4, values: ["Large", "Medium"] },
+        { fieldUniqueId: "field-2", systemField: null, operator: 4, values: ["Large", "Medium"] },
+      ]),
+    )
+  })
+
+  it("RecordDetailFilter_IsSentAsASystemFieldRatherThanAFormField", async () => {
+    renderBuilder()
+    await pickSourceAndColumn()
+
+    await userEvent.click(screen.getByRole("button", { name: /Add filter/ }))
+    await userEvent.selectOptions(screen.getByLabelText("Filter 1 field"), "record-detail:3")
+    await userEvent.type(screen.getByLabelText("Filter 1 value"), "555-0199")
+
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+
+    await waitFor(() =>
+      expect(lastReportRequest().filters).toEqual([
+        { fieldUniqueId: null, systemField: 3, operator: 1, values: ["555-0199"] },
       ]),
     )
   })
@@ -182,6 +199,7 @@ describe("CustomFormReportBuilder", () => {
     await pickSourceAndColumn()
 
     await userEvent.click(screen.getByRole("button", { name: /Add filter/ }))
+    await userEvent.selectOptions(screen.getByLabelText("Filter 1 field"), "field-1")
     await userEvent.selectOptions(screen.getByLabelText("Filter 1 condition"), "5")
 
     expect(screen.getByLabelText("Filter 1 value")).toBeDisabled()
@@ -190,22 +208,56 @@ describe("CustomFormReportBuilder", () => {
 
     await waitFor(() =>
       expect(lastReportRequest().filters).toEqual([
-        { fieldUniqueId: "field-1", operator: 5, values: [] },
+        { fieldUniqueId: "field-1", systemField: null, operator: 5, values: [] },
       ]),
     )
   })
 
-  it("FilterWithoutAValue_KeepsApplyDisabledAndExplainsWhy", async () => {
+  it("FilterWithoutAValue_LeavesApplyUsableAndSaysItIsSkipped", async () => {
     renderBuilder()
     await pickSourceAndColumn()
 
     await userEvent.click(screen.getByRole("button", { name: /Add filter/ }))
 
-    expect(screen.getByText("Enter a value for this filter.")).toBeInTheDocument()
+    expect(screen.getByText("This filter is skipped until you enter a value.")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Apply/ })).toBeEnabled()
+
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+
+    await waitFor(() => expect(lastReportRequest().filters).toEqual([]))
+  })
+
+  it("BlankFilterAlongsideAFilledOne_SendsOnlyTheFilledFilter", async () => {
+    renderBuilder()
+    await pickSourceAndColumn()
+
+    await userEvent.click(screen.getByRole("button", { name: /Add filter/ }))
+    await userEvent.selectOptions(screen.getByLabelText("Filter 1 field"), "field-2")
+    await userEvent.type(screen.getByLabelText("Filter 1 value"), "Large")
+    await userEvent.click(screen.getByRole("button", { name: /Add filter/ }))
+
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+
+    await waitFor(() =>
+      expect(lastReportRequest().filters).toEqual([
+        { fieldUniqueId: "field-2", systemField: null, operator: 1, values: ["Large"] },
+      ]),
+    )
+  })
+
+  it("OverlongFilterValue_StillKeepsApplyDisabled", async () => {
+    renderBuilder()
+    await pickSourceAndColumn()
+
+    await userEvent.click(screen.getByRole("button", { name: /Add filter/ }))
+    await userEvent.click(screen.getByLabelText("Filter 1 value"))
+    await userEvent.paste("x".repeat(201))
+
+    expect(screen.getByText("Filter values must be 200 characters or fewer.")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Apply/ })).toBeDisabled()
   })
 
-  it("RemovingAFilter_ReleasesApply", async () => {
+  it("RemovingAFilter_TakesTheRowAway", async () => {
     renderBuilder()
     await pickSourceAndColumn()
 
@@ -213,7 +265,6 @@ describe("CustomFormReportBuilder", () => {
     await userEvent.click(screen.getByRole("button", { name: "Remove filter 1" }))
 
     expect(screen.queryByLabelText("Filter 1 value")).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /Apply/ })).toBeEnabled()
   })
 
   it("ChangingModule_ClearsTheFiltersOfThePreviousForm", async () => {

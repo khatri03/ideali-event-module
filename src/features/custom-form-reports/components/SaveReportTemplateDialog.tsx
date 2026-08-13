@@ -1,9 +1,14 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, useWatch } from "react-hook-form"
-import { Box, Button, Checkbox, CloseButton, Dialog, Field, Flex, Input, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, CloseButton, Dialog, Field, Flex, Input, Stack, Text } from "@chakra-ui/react"
 import { extractApiError } from "@/utils/errors"
 import { useCreateReportTemplate, useUpdateReportTemplate } from "../hooks/useCustomFormReportTemplateMutations"
-import { reportTemplateFormSchema, type ReportTemplateFormValues } from "../schemas/customFormReport.schemas"
+import {
+  reportTemplateFormSchema,
+  toTemplateColumns,
+  type ReportTemplateFormValues,
+} from "../schemas/customFormReport.schemas"
+import { ReportTemplateColumnField } from "./ReportTemplateColumnField"
 import type { ReportField } from "@/api/customFormReports"
 
 interface SaveReportTemplateDialogProps {
@@ -14,6 +19,8 @@ interface SaveReportTemplateDialogProps {
   fields: ReportField[]
   initialName: string
   initialFieldIds: string[]
+  /** Headings already saved on the template, keyed by field unique id. */
+  initialColumnHeadings: Record<string, string>
   maxColumns: number
   onSaved: (templateUniqueId: string) => void
   onClose: () => void
@@ -26,6 +33,7 @@ export function SaveReportTemplateDialog({
   fields,
   initialName,
   initialFieldIds,
+  initialColumnHeadings,
   maxColumns,
   onSaved,
   onClose,
@@ -43,7 +51,7 @@ export function SaveReportTemplateDialog({
     formState: { errors },
   } = useForm<ReportTemplateFormValues>({
     resolver: zodResolver(reportTemplateFormSchema),
-    defaultValues: { name: initialName, fieldUniqueIds: initialFieldIds },
+    defaultValues: { name: initialName, fieldUniqueIds: initialFieldIds, columnHeadings: initialColumnHeadings },
   })
 
   const selectedFieldIds = useWatch({ control, name: "fieldUniqueIds" })
@@ -58,13 +66,15 @@ export function SaveReportTemplateDialog({
   }
 
   async function handleSave(values: ReportTemplateFormValues) {
+    const orderedFieldIds = fields
+      .filter((field) => values.fieldUniqueIds.includes(field.uniqueId))
+      .map((field) => field.uniqueId)
+
     const request = {
       name: values.name,
       moduleId,
       formUniqueId,
-      fieldUniqueIds: fields
-        .filter((field) => values.fieldUniqueIds.includes(field.uniqueId))
-        .map((field) => field.uniqueId),
+      columns: toTemplateColumns(orderedFieldIds, values.columnHeadings),
     }
 
     const savedUniqueId = templateUniqueId
@@ -121,28 +131,23 @@ export function SaveReportTemplateDialog({
                   </Text>
                   <Text fontSize="sm" color="text.secondary" mb={3}>
                     Only the checked columns are saved. {selectedFieldIds.length} of {maxColumns || "—"} selected.
+                    Give a column its own heading where the question is too long to read as one.
                   </Text>
 
-                  <Stack gap={2}>
+                  <Stack gap={4}>
                     {fields.map((field) => {
                       const isSelected = selectedFieldIds.includes(field.uniqueId)
-                      const isDisabled = !isSelected && hasReachedLimit
 
                       return (
-                        <Checkbox.Root
+                        <ReportTemplateColumnField
                           key={field.uniqueId}
-                          checked={isSelected}
-                          disabled={isDisabled}
-                          onCheckedChange={() => handleToggleField(field.uniqueId)}
-                          cursor={isDisabled ? "not-allowed" : "pointer"}
-                          minH="11"
-                        >
-                          <Checkbox.HiddenInput />
-                          <Checkbox.Control />
-                          <Checkbox.Label fontSize="sm" fontWeight="600">
-                            {field.label}
-                          </Checkbox.Label>
-                        </Checkbox.Root>
+                          field={field}
+                          isSelected={isSelected}
+                          isDisabled={!isSelected && hasReachedLimit}
+                          headingRegistration={register(`columnHeadings.${field.uniqueId}`)}
+                          headingError={errors.columnHeadings?.[field.uniqueId]?.message}
+                          onToggle={() => handleToggleField(field.uniqueId)}
+                        />
                       )
                     })}
                   </Stack>

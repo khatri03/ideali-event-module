@@ -27,9 +27,19 @@ vi.mock("../hooks/useCustomFormReportTemplateMutations", () => ({
 }))
 
 const FIELDS: ReportField[] = [
-  { uniqueId: "field-1", label: "Dietary needs", controlType: "Text", displayOrder: 1 },
-  { uniqueId: "field-2", label: "T-shirt size", controlType: "Dropdown", displayOrder: 2 },
+  { uniqueId: "field-1", label: "Dietary needs", controlType: "Text", displayOrder: 1, columnLabel: null },
+  {
+    uniqueId: "field-2",
+    label: "I agree to receive membership updates",
+    controlType: "Dropdown",
+    displayOrder: 2,
+    columnLabel: null,
+  },
 ]
+
+function nameInput() {
+  return screen.getByLabelText(/Template name/)
+}
 
 function renderDialog(overrides: Partial<Parameters<typeof SaveReportTemplateDialog>[0]> = {}) {
   const onSaved = vi.fn()
@@ -43,6 +53,7 @@ function renderDialog(overrides: Partial<Parameters<typeof SaveReportTemplateDia
         fields={FIELDS}
         initialName=""
         initialFieldIds={["field-1", "field-2"]}
+        initialColumnHeadings={{}}
         maxColumns={15}
         onSaved={onSaved}
         onClose={onClose}
@@ -72,9 +83,9 @@ describe("SaveReportTemplateDialog", () => {
   it("EveryColumnUnchecked_BlocksTheSave", async () => {
     renderDialog()
 
-    await userEvent.type(screen.getByRole("textbox"), "Dietary")
+    await userEvent.type(nameInput(), "Dietary")
     await userEvent.click(screen.getByText("Dietary needs"))
-    await userEvent.click(screen.getByText("T-shirt size"))
+    await userEvent.click(screen.getByText(FIELDS[1].label))
     await userEvent.click(screen.getByRole("button", { name: "Save template" }))
 
     expect(await screen.findByText("Keep at least one column in the template.")).toBeInTheDocument()
@@ -84,8 +95,8 @@ describe("SaveReportTemplateDialog", () => {
   it("UncheckedColumn_IsLeftOutOfTheSavedTemplate", async () => {
     const { onSaved, onClose } = renderDialog()
 
-    await userEvent.type(screen.getByRole("textbox"), "Dietary only")
-    await userEvent.click(screen.getByText("T-shirt size"))
+    await userEvent.type(nameInput(), "Dietary only")
+    await userEvent.click(screen.getByText(FIELDS[1].label))
     await userEvent.click(screen.getByRole("button", { name: "Save template" }))
 
     await waitFor(() =>
@@ -93,7 +104,7 @@ describe("SaveReportTemplateDialog", () => {
         name: "Dietary only",
         moduleId: 1,
         formUniqueId: "form-1",
-        fieldUniqueIds: ["field-1"],
+        columns: [{ fieldUniqueId: "field-1", columnLabel: null }],
       }),
     )
     expect(onSaved).toHaveBeenCalledWith("template-1")
@@ -103,7 +114,7 @@ describe("SaveReportTemplateDialog", () => {
   it("ExistingTemplate_IsUpdatedInPlaceRatherThanSavedAsANewOne", async () => {
     renderDialog({ templateUniqueId: "template-9", initialName: "Dietary" })
 
-    expect(screen.getByRole("textbox")).toHaveValue("Dietary")
+    expect(nameInput()).toHaveValue("Dietary")
 
     await userEvent.click(screen.getByRole("button", { name: "Update template" }))
 
@@ -114,10 +125,66 @@ describe("SaveReportTemplateDialog", () => {
           name: "Dietary",
           moduleId: 1,
           formUniqueId: "form-1",
-          fieldUniqueIds: ["field-1", "field-2"],
+          columns: [
+            { fieldUniqueId: "field-1", columnLabel: null },
+            { fieldUniqueId: "field-2", columnLabel: null },
+          ],
         },
       }),
     )
     expect(mutations.create).not.toHaveBeenCalled()
+  })
+
+  it("ColumnHeading_IsSavedAgainstThatColumnAlone", async () => {
+    renderDialog()
+
+    await userEvent.type(nameInput(), "Membership consent")
+    await userEvent.type(screen.getByLabelText(`Column heading for ${FIELDS[1].label}`), "Updates opt-in")
+    await userEvent.click(screen.getByRole("button", { name: "Save template" }))
+
+    await waitFor(() =>
+      expect(mutations.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          columns: [
+            { fieldUniqueId: "field-1", columnLabel: null },
+            { fieldUniqueId: "field-2", columnLabel: "Updates opt-in" },
+          ],
+        }),
+      ),
+    )
+  })
+
+  it("BlankColumnHeading_LeavesTheColumnNamedAfterItsField", async () => {
+    renderDialog()
+
+    await userEvent.type(nameInput(), "Membership consent")
+    await userEvent.type(screen.getByLabelText(`Column heading for ${FIELDS[1].label}`), "   ")
+    await userEvent.click(screen.getByRole("button", { name: "Save template" }))
+
+    await waitFor(() =>
+      expect(mutations.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          columns: [
+            { fieldUniqueId: "field-1", columnLabel: null },
+            { fieldUniqueId: "field-2", columnLabel: null },
+          ],
+        }),
+      ),
+    )
+  })
+
+  it("SavedHeading_IsShownWhenTheTemplateIsReopened", () => {
+    renderDialog({ templateUniqueId: "template-9", initialColumnHeadings: { "field-2": "Updates opt-in" } })
+
+    expect(screen.getByLabelText(`Column heading for ${FIELDS[1].label}`)).toHaveValue("Updates opt-in")
+    expect(screen.getByLabelText("Column heading for Dietary needs")).toHaveValue("")
+  })
+
+  it("UncheckedColumn_OffersNoHeadingToFillIn", async () => {
+    renderDialog()
+
+    await userEvent.click(screen.getByText("Dietary needs"))
+
+    expect(screen.queryByLabelText("Column heading for Dietary needs")).not.toBeInTheDocument()
   })
 })

@@ -7,9 +7,9 @@ import { ReportColumnPicker } from "./ReportColumnPicker"
 import type { ReportField } from "@/api/customFormReports"
 
 const FIELDS: ReportField[] = [
-  { uniqueId: "field-1", label: "Dietary needs", controlType: "Text", displayOrder: 1 },
-  { uniqueId: "field-2", label: "T-shirt size", controlType: "Dropdown", displayOrder: 2 },
-  { uniqueId: "field-3", label: "Emergency contact", controlType: "Text", displayOrder: 3 },
+  { uniqueId: "field-1", label: "Dietary needs", controlType: "Text", displayOrder: 1, columnLabel: null },
+  { uniqueId: "field-2", label: "T-shirt size", controlType: "Dropdown", displayOrder: 2, columnLabel: null },
+  { uniqueId: "field-3", label: "Emergency contact", controlType: "Text", displayOrder: 3, columnLabel: null },
 ]
 
 function renderPicker(overrides: Partial<Parameters<typeof ReportColumnPicker>[0]> = {}) {

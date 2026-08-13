@@ -19,6 +19,8 @@ const reportFieldSchema = z.object({
   label: z.string(),
   controlType: z.string(),
   displayOrder: z.number().int(),
+  /** Set only where a report template renames the column. */
+  columnLabel: z.string().nullish().transform((label) => label ?? null),
 })
 
 const reportColumnsSchema = z.object({
@@ -31,6 +33,7 @@ const reportColumnsSchema = z.object({
 const reportRowSchema = z.object({
   invoiceNo: z.string().nullable(),
   contactName: z.string().nullable(),
+  contactNo: z.string().nullable(),
   contactEmail: z.string().nullable(),
   entityName: z.string().nullable(),
   answers: z.record(z.string(), z.string().nullable()),
@@ -83,6 +86,7 @@ export interface ReportField {
   label: string
   controlType: string
   displayOrder: number
+  columnLabel: string | null
 }
 
 export interface ReportColumns {
@@ -95,6 +99,7 @@ export interface ReportColumns {
 export interface ReportRow {
   invoiceNo: string
   contactName: string
+  contactNo: string
   contactEmail: string
   entityName: string
   answers: Record<string, string | null>
@@ -117,8 +122,21 @@ export const REPORT_FILTER_OPERATOR = {
 
 export type ReportFilterOperator = (typeof REPORT_FILTER_OPERATOR)[keyof typeof REPORT_FILTER_OPERATOR]
 
+/** Mirrors EnumCustomFormReportSystemField on the API — the record details every report row carries. */
+export const REPORT_SYSTEM_FIELD = {
+  invoiceNo: 1,
+  contactName: 2,
+  contactNo: 3,
+  contactEmail: 4,
+  entityName: 5,
+} as const
+
+export type ReportSystemField = (typeof REPORT_SYSTEM_FIELD)[keyof typeof REPORT_SYSTEM_FIELD]
+
+/** A filter names either a custom form field or a record detail, never both. */
 export interface ReportFilter {
-  fieldUniqueId: string
+  fieldUniqueId: string | null
+  systemField: ReportSystemField | null
   operator: ReportFilterOperator
   values: string[]
 }
@@ -150,11 +168,17 @@ export interface ReportTemplateDetail {
   columns: ReportField[]
 }
 
+export interface ReportTemplateColumn {
+  fieldUniqueId: string
+  /** Null keeps the field's own control label as the heading. */
+  columnLabel: string | null
+}
+
 export interface ReportTemplateRequest {
   name: string
   moduleId: number
   formUniqueId: string
-  fieldUniqueIds: string[]
+  columns: ReportTemplateColumn[]
 }
 
 function toOption(item: z.infer<typeof guidOptionSchema>): ReportOption {
@@ -191,6 +215,7 @@ export async function runCustomFormReport(request: ReportRequest): Promise<Repor
   const rows = (parsed.rows.pageData ?? []).map((row) => ({
     invoiceNo: row.invoiceNo ?? "",
     contactName: row.contactName ?? "",
+    contactNo: row.contactNo ?? "",
     contactEmail: row.contactEmail ?? "",
     entityName: row.entityName ?? "",
     answers: row.answers,

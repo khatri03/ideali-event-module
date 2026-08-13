@@ -13,9 +13,10 @@ import {
   useReportTemplate,
   useReportTemplateOptions,
 } from "../hooks/useCustomFormReports"
-import { REPORT_FILTER_OPERATOR, type ReportFilter } from "@/api/customFormReports"
+import { REPORT_FILTER_OPERATOR, REPORT_SYSTEM_FIELD, type ReportFilter } from "@/api/customFormReports"
 import {
   filterDraftError,
+  systemFieldTarget,
   toReportFilters,
   type ReportFilterDraft,
 } from "../schemas/customFormReport.schemas"
@@ -105,7 +106,7 @@ export function CustomFormReportBuilder() {
       ...filterDrafts,
       {
         id: `filter-${nextFilterId.current}`,
-        fieldUniqueId: fields[0]?.uniqueId ?? "",
+        target: systemFieldTarget(REPORT_SYSTEM_FIELD.invoiceNo),
         operator: REPORT_FILTER_OPERATOR.contains,
         value: "",
       },
@@ -165,6 +166,16 @@ export function CustomFormReportBuilder() {
   }
 
   const selectedFields = fields.filter((field) => selectedFieldIds.includes(field.uniqueId))
+  const templateColumnHeadings = Object.fromEntries(
+    (template?.columns ?? [])
+      .filter((column) => column.columnLabel !== null)
+      .map((column) => [column.uniqueId, column.columnLabel as string]),
+  )
+  // The report answers with the fields' own labels; the template is what knows they were renamed.
+  const reportColumns = (reportQuery.data?.columns ?? []).map((column) => ({
+    ...column,
+    columnLabel: templateColumnHeadings[column.uniqueId] ?? null,
+  }))
   const reportError = reportQuery.isError ? extractApiError(reportQuery.error) : null
   const columnsError = columnsQuery.isError ? extractApiError(columnsQuery.error) : null
 
@@ -287,7 +298,7 @@ export function CustomFormReportBuilder() {
           overflow="hidden"
         >
           <ReportResultsTable
-            columns={reportQuery.data.columns}
+            columns={reportColumns}
             rows={reportQuery.data.rows.items}
             isFetching={reportQuery.isFetching}
           />
@@ -315,6 +326,7 @@ export function CustomFormReportBuilder() {
           fields={selectedFields}
           initialName={isEditingTemplate ? (template?.name ?? "") : ""}
           initialFieldIds={selectedFieldIds}
+          initialColumnHeadings={templateColumnHeadings}
           maxColumns={maxColumns}
           onSaved={handleTemplateSaved}
           onClose={() => setIsTemplateDialogOpen(false)}

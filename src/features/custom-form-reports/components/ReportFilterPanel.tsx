@@ -43,7 +43,8 @@ export function ReportFilterPanel({
             Filters
           </Text>
           <Text fontSize="sm" color="text.secondary">
-            A submission is listed only when it matches every filter.
+            Filter on the record details or on any answer. A submission is listed only when it matches every
+            filter.
           </Text>
         </Box>
 
@@ -54,8 +55,8 @@ export function ReportFilterPanel({
           minH="11"
           px={4}
           w={{ base: "full", md: "auto" }}
-          cursor={hasReachedLimit || fields.length === 0 ? "not-allowed" : "pointer"}
-          disabled={hasReachedLimit || fields.length === 0}
+          cursor={hasReachedLimit ? "not-allowed" : "pointer"}
+          disabled={hasReachedLimit}
           onClick={onAddFilter}
         >
           <Plus size={16} />
