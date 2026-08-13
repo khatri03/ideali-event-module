@@ -147,6 +147,10 @@ export interface ReportRequest {
   formUniqueId: string
   fieldUniqueIds: string[]
   filters: ReportFilter[]
+  /** Like a filter, the sort names either a selected column or a record detail, never both. */
+  sortFieldUniqueId: string | null
+  sortSystemField: ReportSystemField | null
+  sortDescending: boolean
   pageNo: number
   pageSize: number
 }

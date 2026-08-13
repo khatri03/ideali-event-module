@@ -1,7 +1,9 @@
 import { ChakraProvider } from "@chakra-ui/react"
 import { render, screen } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import userEvent from "@testing-library/user-event"
+import { describe, expect, it, vi } from "vitest"
 import { system } from "@/theme"
+import type { ReportSort } from "../schemas/customFormReport.schemas"
 import { ReportResultsTable } from "./ReportResultsTable"
 import type { ReportField, ReportRow } from "@/api/customFormReports"
 
@@ -16,16 +18,19 @@ const ROW: ReportRow = {
   answers: { "field-1": "Yes" },
 }
 
-function renderTable(columnLabel: string | null) {
+function renderTable(columnLabel: string | null, sort: ReportSort | null = null) {
   const columns: ReportField[] = [
     { uniqueId: "field-1", label: CONSENT_LABEL, controlType: "Text", displayOrder: 1, columnLabel },
   ]
+  const onSort = vi.fn()
 
   render(
     <ChakraProvider value={system}>
-      <ReportResultsTable columns={columns} rows={[ROW]} isFetching={false} />
+      <ReportResultsTable columns={columns} rows={[ROW]} isFetching={false} sort={sort} onSort={onSort} />
     </ChakraProvider>,
   )
+
+  return { onSort }
 }
 
 describe("ReportResultsTable", () => {
@@ -58,10 +63,39 @@ describe("ReportResultsTable", () => {
 
     render(
       <ChakraProvider value={system}>
-        <ReportResultsTable columns={columns} rows={[{ ...ROW, contactNo: "" }]} isFetching={false} />
+        <ReportResultsTable
+          columns={columns}
+          rows={[{ ...ROW, contactNo: "" }]}
+          isFetching={false}
+          sort={null}
+          onSort={vi.fn()}
+        />
       </ChakraProvider>,
     )
 
     expect(screen.getAllByRole("cell")[2]).toHaveTextContent("—")
+  })
+
+  it("ClickingAColumn_AsksForItToBeSorted", async () => {
+    const { onSort } = renderTable(null)
+
+    await userEvent.click(screen.getByRole("button", { name: CONSENT_LABEL }))
+
+    expect(onSort).toHaveBeenCalledWith("field-1")
+  })
+
+  it("ClickingARecordDetail_AsksForItsPrefixedTargetToBeSorted", async () => {
+    const { onSort } = renderTable(null)
+
+    await userEvent.click(screen.getByRole("button", { name: "Invoice No" }))
+
+    expect(onSort).toHaveBeenCalledWith("record-detail:1")
+  })
+
+  it("SortedColumn_IsTheOnlyOneAnnouncingADirection", () => {
+    renderTable(null, { target: "field-1", descending: true })
+
+    expect(screen.getByRole("columnheader", { name: CONSENT_LABEL })).toHaveAttribute("aria-sort", "descending")
+    expect(screen.getByRole("columnheader", { name: "Invoice No" })).toHaveAttribute("aria-sort", "none")
   })
 })

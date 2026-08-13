@@ -84,6 +84,43 @@ function lastReportRequest() {
   return calls[calls.length - 1][0]
 }
 
+/** Sorting is only reachable once results are on screen, so these runs answer with a row to click a header on. */
+function renderBuilderWithResults(totalPages = 1) {
+  hooks.useCustomFormReport.mockReturnValue({
+    data: {
+      columns: [
+        { uniqueId: "field-1", label: "Dietary needs", controlType: "Text", displayOrder: 1, columnLabel: null },
+      ],
+      rows: {
+        items: [
+          {
+            invoiceNo: "INV-1",
+            contactName: "Alice Stone",
+            contactNo: "+1-555-0199",
+            contactEmail: "alice@example.com",
+            entityName: "Gold",
+            answers: { "field-1": "Vegan" },
+          },
+        ],
+        total: totalPages * 10,
+        page: 1,
+        pageSize: 10,
+        totalPages,
+      },
+    },
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    error: null,
+  })
+
+  return renderBuilder()
+}
+
+function sortByColumn(label: string) {
+  return userEvent.click(within(screen.getByRole("table")).getByRole("button", { name: label }))
+}
+
 async function pickSourceAndColumn() {
   await userEvent.click(screen.getByRole("button", { name: "pick module 1" }))
   await userEvent.click(screen.getByRole("button", { name: "pick entity" }))
@@ -128,6 +165,9 @@ describe("CustomFormReportBuilder", () => {
         formUniqueId: "form-1",
         fieldUniqueIds: ["field-1"],
         filters: [],
+        sortFieldUniqueId: null,
+        sortSystemField: null,
+        sortDescending: false,
         pageNo: 1,
         pageSize: 10,
       }),
@@ -277,6 +317,73 @@ describe("CustomFormReportBuilder", () => {
     await userEvent.click(screen.getByRole("button", { name: "pick form" }))
 
     expect(screen.queryByLabelText("Filter 1 value")).not.toBeInTheDocument()
+  })
+
+  it("SortingByAColumn_RunsTheReportOrderedByThatColumn", async () => {
+    renderBuilderWithResults()
+    await pickSourceAndColumn()
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+
+    await sortByColumn("Dietary needs")
+
+    expect(lastReportRequest()).toMatchObject({
+      sortFieldUniqueId: "field-1",
+      sortSystemField: null,
+      sortDescending: false,
+    })
+  })
+
+  it("SortingByARecordDetail_SendsItAsASystemFieldRatherThanAColumn", async () => {
+    renderBuilderWithResults()
+    await pickSourceAndColumn()
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+
+    await sortByColumn("Contact Name")
+
+    expect(lastReportRequest()).toMatchObject({
+      sortFieldUniqueId: null,
+      sortSystemField: 2,
+      sortDescending: false,
+    })
+  })
+
+  it("SortingTheSameColumnRepeatedly_ReversesThenReturnsToTheDefaultOrder", async () => {
+    renderBuilderWithResults()
+    await pickSourceAndColumn()
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+
+    await sortByColumn("Dietary needs")
+    await sortByColumn("Dietary needs")
+
+    expect(lastReportRequest()).toMatchObject({ sortFieldUniqueId: "field-1", sortDescending: true })
+
+    await sortByColumn("Dietary needs")
+
+    expect(lastReportRequest()).toMatchObject({ sortFieldUniqueId: null, sortDescending: false })
+  })
+
+  it("SortingAfterPagingOn_ReturnsToTheFirstPage", async () => {
+    renderBuilderWithResults(3)
+    await pickSourceAndColumn()
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+    await userEvent.selectOptions(screen.getByLabelText("Go to page"), "2")
+
+    expect(lastReportRequest().pageNo).toBe(2)
+
+    await sortByColumn("Dietary needs")
+
+    expect(lastReportRequest().pageNo).toBe(1)
+  })
+
+  it("DeselectingTheSortedColumn_ReturnsTheReportToItsDefaultOrder", async () => {
+    renderBuilderWithResults()
+    await pickSourceAndColumn()
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+    await sortByColumn("Dietary needs")
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Dietary needs" }))
+
+    expect(lastReportRequest().sortFieldUniqueId).toBeNull()
   })
 
   it("SaveAsTemplate_OpensTheDialogWithOnlyTheSelectedColumns", async () => {
