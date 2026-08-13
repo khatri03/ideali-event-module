@@ -27,7 +27,14 @@ export function ReportExportMenu({
   onExport,
 }: ReportExportMenuProps) {
   const [chosenFormat, setChosenFormat] = useState<ReportExportFormat | null>(null)
-  const chosen = EXPORT_FORMATS.find((option) => option.format === chosenFormat)
+  // Kept after the dialog closes so its label does not blank out mid closing-animation.
+  const [displayFormat, setDisplayFormat] = useState<ReportExportFormat>(EXPORT_FORMATS[0].format)
+  const displayed = EXPORT_FORMATS.find((option) => option.format === displayFormat) ?? EXPORT_FORMATS[0]
+
+  function openDialog(format: ReportExportFormat) {
+    setChosenFormat(format)
+    setDisplayFormat(format)
+  }
 
   /**
    * A failed download leaves the dialog open so the reader can pick the smaller scope instead; the reason for the
@@ -74,7 +81,7 @@ export function ReportExportMenu({
                   fontSize="sm"
                   fontWeight="600"
                   cursor="pointer"
-                  onClick={() => setChosenFormat(option.format)}
+                  onClick={() => openDialog(option.format)}
                 >
                   {option.label}
                 </Menu.Item>
@@ -84,16 +91,15 @@ export function ReportExportMenu({
         </Portal>
       </Menu.Root>
 
-      {chosen ? (
-        <ReportExportScopeDialog
-          formatLabel={chosen.label}
-          pageRowCount={pageRowCount}
-          totalRowCount={totalRowCount}
-          isExporting={isExporting}
-          onConfirm={(scope) => void handleConfirm(chosen.format, scope)}
-          onClose={() => setChosenFormat(null)}
-        />
-      ) : null}
+      <ReportExportScopeDialog
+        open={chosenFormat !== null}
+        formatLabel={displayed.label}
+        pageRowCount={pageRowCount}
+        totalRowCount={totalRowCount}
+        isExporting={isExporting}
+        onConfirm={(scope) => void handleConfirm(displayed.format, scope)}
+        onClose={() => setChosenFormat(null)}
+      />
     </>
   )
 }
