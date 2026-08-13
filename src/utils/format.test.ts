@@ -1,5 +1,19 @@
 import { describe, expect, it } from "vitest"
-import { EMPTY_VALUE, formatCurrency, formatCurrencyMagnitude, moneySign } from "./format"
+import { EMPTY_VALUE, formatCurrency, formatCurrencyMagnitude, formatList, moneySign } from "./format"
+
+describe("formatList", () => {
+  it("SeveralNames_AreReadOutAsASentenceRatherThanJoinedByCommas", () => {
+    expect(formatList(["Invoice No", "Contact Name", "Entity"])).toBe("Invoice No, Contact Name, and Entity")
+  })
+
+  it("TwoNames_AreJoinedWithoutAComma", () => {
+    expect(formatList(["Invoice No", "Entity"])).toBe("Invoice No and Entity")
+  })
+
+  it("SingleName_StandsAlone", () => {
+    expect(formatList(["Entity"])).toBe("Entity")
+  })
+})
 
 describe("formatCurrency", () => {
   it("WholeAndFractionalAmounts_AlwaysCarryTwoDecimals", () => {

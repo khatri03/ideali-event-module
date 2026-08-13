@@ -3,7 +3,7 @@ import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react"
 import { PencilLine, Play, Save } from "lucide-react"
 import { TablePagination } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
-import { DEFAULT_PAGE_SIZE } from "../constants"
+import { DEFAULT_PAGE_SIZE, entityLabelFor } from "../constants"
 import {
   useCustomFormReport,
   useReportColumns,
@@ -19,32 +19,25 @@ import {
   REPORT_SYSTEM_FIELD,
   type ReportExportFormat,
   type ReportExportScope,
-  type ReportFilter,
 } from "@/api/customFormReports"
 import {
   filterDraftError,
+  isSameReport,
   nextReportSort,
   systemFieldTarget,
   toReportFilters,
   toReportSortRequest,
+  type AppliedReport,
   type ReportFilterDraft,
   type ReportSort,
 } from "../schemas/customFormReport.schemas"
 import { ReportColumnPicker } from "./ReportColumnPicker"
 import { ReportExportMenu } from "./ReportExportMenu"
 import { ReportFilterPanel } from "./ReportFilterPanel"
-import { ReportResultsTable } from "./ReportResultsTable"
+import { ReportResults } from "./ReportResults"
 import { ReportResultsTableSkeleton } from "./ReportResultsTable.skeleton"
 import { ReportSourcePicker } from "./ReportSourcePicker"
 import { SaveReportTemplateDialog } from "./SaveReportTemplateDialog"
-
-interface AppliedReport {
-  moduleId: number
-  entityUniqueId: string
-  formUniqueId: string
-  fieldUniqueIds: string[]
-  filters: ReportFilter[]
-}
 
 export function CustomFormReportBuilder() {
   const [moduleId, setModuleId] = useState<number | null>(null)
@@ -60,7 +53,10 @@ export function CustomFormReportBuilder() {
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE)
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false)
   const [isEditingTemplate, setIsEditingTemplate] = useState(false)
+  const [templateDialogSession, setTemplateDialogSession] = useState(0)
   const nextFilterId = useRef(0)
+  // Tracks the last template auto-run so picking the same template twice does not re-run it on every render.
+  const [autoAppliedTemplateId, setAutoAppliedTemplateId] = useState<string | null>(null)
 
   const modulesQuery = useReportModules()
   const entitiesQuery = useReportEntities(moduleId)
@@ -75,16 +71,45 @@ export function CustomFormReportBuilder() {
 
   const fields = columnsQuery.data?.fields ?? []
   const maxColumns = columnsQuery.data?.maxColumns ?? 0
+  const selectedModule = (modulesQuery.data ?? []).find((module) => module.id === moduleId)
+  const entityLabel = entityLabelFor(selectedModule?.name ?? null)
   const template = templateQuery.data
   const templateFieldIds = template?.columns.map((column) => column.uniqueId) ?? []
   const selectedFieldIds = fieldSelection ?? templateFieldIds
   const hasIncompleteFilter = filterDrafts.some((draft) => filterDraftError(draft) !== null)
-  const canApply =
-    moduleId !== null &&
-    entityUniqueId !== null &&
-    formUniqueId !== null &&
-    selectedFieldIds.length > 0 &&
-    !hasIncompleteFilter
+  const draftReport: AppliedReport | null =
+    moduleId !== null && entityUniqueId !== null && formUniqueId !== null && selectedFieldIds.length > 0
+      ? {
+          moduleId,
+          entityUniqueId,
+          formUniqueId,
+          fieldUniqueIds: selectedFieldIds,
+          filters: toReportFilters(filterDrafts),
+        }
+      : null
+  const canApply = draftReport !== null && !hasIncompleteFilter
+  /**
+   * The table keeps the last run until another one is asked for, so an edit made since then would otherwise
+   * read as though it were already reflected in what is on screen.
+   */
+  const isShowingEarlierRun =
+    appliedReport !== null && (draftReport === null || !isSameReport(appliedReport, draftReport))
+
+  /**
+   * A selected template's columns show as checked in the picker as soon as it loads, so the table below has to
+   * catch up on its own — otherwise it keeps showing whatever ran before, or nothing, until Apply is clicked.
+   * Adjusted during render, guarded by autoAppliedTemplateId, rather than in an effect that would fire a render late.
+   */
+  if (
+    templateUniqueId !== null &&
+    fieldSelection === null &&
+    draftReport !== null &&
+    autoAppliedTemplateId !== templateUniqueId
+  ) {
+    setAutoAppliedTemplateId(templateUniqueId)
+    setAppliedReport(draftReport)
+    setPage(1)
+  }
 
   function handleModuleChange(nextModuleId: number) {
     setModuleId(nextModuleId)
@@ -184,17 +209,11 @@ export function CustomFormReportBuilder() {
   }
 
   function handleApply() {
-    if (!canApply) {
+    if (draftReport === null || hasIncompleteFilter) {
       return
     }
 
-    setAppliedReport({
-      moduleId: moduleId as number,
-      entityUniqueId: entityUniqueId as string,
-      formUniqueId: formUniqueId as string,
-      fieldUniqueIds: selectedFieldIds,
-      filters: toReportFilters(filterDrafts),
-    })
+    setAppliedReport(draftReport)
     setPage(1)
   }
 
@@ -203,12 +222,13 @@ export function CustomFormReportBuilder() {
     setFieldSelection(null)
   }
 
+  /** The dialog outlives one open, so its form is remounted rather than left holding the last one's values. */
   function openTemplateDialog(editing: boolean) {
     setIsEditingTemplate(editing)
+    setTemplateDialogSession(templateDialogSession + 1)
     setIsTemplateDialogOpen(true)
   }
 
-  const selectedFields = fields.filter((field) => selectedFieldIds.includes(field.uniqueId))
   const templateColumnHeadings = Object.fromEntries(
     (template?.columns ?? [])
       .filter((column) => column.columnLabel !== null)
@@ -227,6 +247,7 @@ export function CustomFormReportBuilder() {
       <ReportSourcePicker
         modules={modulesQuery.data ?? []}
         entities={entitiesQuery.data ?? []}
+        entityLabel={entityLabel}
         forms={formsQuery.data ?? []}
         templates={templateOptionsQuery.data ?? []}
         moduleId={moduleId}
@@ -254,6 +275,7 @@ export function CustomFormReportBuilder() {
       {formUniqueId ? (
         <ReportColumnPicker
           fields={fields}
+          entityLabel={entityLabel}
           selectedFieldIds={selectedFieldIds}
           maxColumns={maxColumns}
           isLoading={columnsQuery.isLoading}
@@ -265,6 +287,7 @@ export function CustomFormReportBuilder() {
       {formUniqueId ? (
         <ReportFilterPanel
           fields={fields}
+          entityLabel={entityLabel}
           drafts={filterDrafts}
           onAddFilter={handleAddFilter}
           onChangeFilter={handleChangeFilter}
@@ -280,8 +303,7 @@ export function CustomFormReportBuilder() {
             h="44px"
             px={6}
             w={{ base: "full", md: "auto" }}
-            cursor={selectedFields.length === 0 ? "not-allowed" : "pointer"}
-            disabled={selectedFields.length === 0}
+            cursor="pointer"
             onClick={() => openTemplateDialog(true)}
           >
             <PencilLine size={16} />
@@ -317,7 +339,7 @@ export function CustomFormReportBuilder() {
           onClick={handleApply}
         >
           <Play size={16} />
-          Apply
+          {isShowingEarlierRun ? "Apply changes" : "Apply"}
         </Button>
       </Flex>
 
@@ -340,18 +362,31 @@ export function CustomFormReportBuilder() {
           boxShadow="card"
           overflow="hidden"
         >
-          <Flex px={{ base: 4, md: 5 }} pt={4} justify="flex-end">
-            <ReportExportMenu
-              pageRowCount={reportQuery.data.rows.items.length}
-              totalRowCount={reportQuery.data.rows.total}
-              isExporting={exportMutation.isPending}
-              onExport={handleExport}
-            />
-          </Flex>
+          {isShowingEarlierRun ? (
+            <Box mx={{ base: 4, md: 5 }} mt={4} p={3} borderRadius="14px" bg="orange.50" border="1px solid" borderColor="orange.200">
+              <Text fontSize="sm" fontWeight="700" color="orange.700">
+                These results are from an earlier run. Apply to see the report you have set up now.
+              </Text>
+            </Box>
+          ) : null}
 
-          <ReportResultsTable
+          {/* Nothing on screen means nothing to take away, so the download is not offered on an empty report. */}
+          {reportQuery.data.rows.items.length > 0 ? (
+            <Flex px={{ base: 4, md: 5 }} py={4} justify="flex-end">
+              <ReportExportMenu
+                pageRowCount={reportQuery.data.rows.items.length}
+                totalRowCount={reportQuery.data.rows.total}
+                isExporting={exportMutation.isPending}
+                isDisabled={isShowingEarlierRun}
+                onExport={handleExport}
+              />
+            </Flex>
+          ) : null}
+
+          <ReportResults
             columns={reportColumns}
             rows={reportQuery.data.rows.items}
+            entityLabel={entityLabel}
             isFetching={reportQuery.isFetching}
             sort={sort}
             onSort={handleSort}
@@ -372,12 +407,14 @@ export function CustomFormReportBuilder() {
         </Box>
       ) : null}
 
-      {isTemplateDialogOpen && moduleId !== null && formUniqueId !== null ? (
+      {moduleId !== null && formUniqueId !== null ? (
         <SaveReportTemplateDialog
+          open={isTemplateDialogOpen}
+          editSessionKey={templateDialogSession}
           templateUniqueId={isEditingTemplate ? (templateUniqueId ?? undefined) : undefined}
           moduleId={moduleId}
           formUniqueId={formUniqueId}
-          fields={selectedFields}
+          fields={fields}
           initialName={isEditingTemplate ? (template?.name ?? "") : ""}
           initialFieldIds={selectedFieldIds}
           initialColumnHeadings={templateColumnHeadings}

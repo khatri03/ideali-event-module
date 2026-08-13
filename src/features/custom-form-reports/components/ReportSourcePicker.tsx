@@ -6,6 +6,8 @@ import type { ReportModuleOption, ReportOption } from "@/api/customFormReports"
 interface ReportSourcePickerProps {
   modules: ReportModuleOption[]
   entities: ReportOption[]
+  /** Names what this module reports on, so the choice does not read as "Entity" once a module is picked. */
+  entityLabel: string
   forms: ReportOption[]
   templates: ReportOption[]
   moduleId: number | null
@@ -29,6 +31,7 @@ function toOptions(items: ReportOption[]): SelectOption[] {
 export function ReportSourcePicker({
   modules,
   entities,
+  entityLabel,
   forms,
   templates,
   moduleId,
@@ -75,14 +78,14 @@ export function ReportSourcePicker({
 
         <Field.Root>
           <Field.Label fontSize="sm" fontWeight="700">
-            Entity
+            {entityLabel}
           </Field.Label>
           <StyledSelect
             size="sm"
             options={toOptions(entities)}
             value={entityUniqueId ?? ""}
             onChange={onEntityChange}
-            placeholder={isLoadingEntities ? "Loading entities..." : "Select an entity"}
+            placeholder={isLoadingEntities ? "Loading..." : `Select ${entityLabel.toLowerCase()}`}
             disabled={moduleId === null || isLoadingEntities || entities.length === 0}
           />
         </Field.Root>

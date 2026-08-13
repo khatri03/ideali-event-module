@@ -14,10 +14,18 @@ interface ReportExportMenuProps {
   pageRowCount: number
   totalRowCount: number
   isExporting: boolean
+  /** Set while the table is behind the builder, so a file cannot be taken from a run that is being replaced. */
+  isDisabled?: boolean
   onExport: (format: ReportExportFormat, scope: ReportExportScope) => Promise<void>
 }
 
-export function ReportExportMenu({ pageRowCount, totalRowCount, isExporting, onExport }: ReportExportMenuProps) {
+export function ReportExportMenu({
+  pageRowCount,
+  totalRowCount,
+  isExporting,
+  isDisabled = false,
+  onExport,
+}: ReportExportMenuProps) {
   const [chosenFormat, setChosenFormat] = useState<ReportExportFormat | null>(null)
   const chosen = EXPORT_FORMATS.find((option) => option.format === chosenFormat)
 
@@ -44,7 +52,9 @@ export function ReportExportMenu({ pageRowCount, totalRowCount, isExporting, onE
             h="44px"
             px={6}
             w={{ base: "full", md: "auto" }}
-            cursor="pointer"
+            cursor={isDisabled ? "not-allowed" : "pointer"}
+            disabled={isDisabled}
+            title={isDisabled ? "Apply your changes before downloading this report." : undefined}
           >
             <Download size={16} aria-hidden />
             Export

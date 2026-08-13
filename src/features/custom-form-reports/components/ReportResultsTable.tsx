@@ -1,5 +1,11 @@
-import { Box, Table, Text } from "@chakra-ui/react"
-import { REPORT_RECORD_DETAILS, REPORT_TABLE_MAX_HEIGHT } from "../constants"
+import { Box, Table } from "@chakra-ui/react"
+import { EMPTY_VALUE } from "@/utils/format"
+import {
+  REPORT_CELL_MAX_WIDTH,
+  REPORT_CELL_PADDING_X,
+  REPORT_TABLE_MAX_HEIGHT,
+  reportRecordDetails,
+} from "../constants"
 import { systemFieldTarget, type ReportSort } from "../schemas/customFormReport.schemas"
 import { SortableColumnHeader } from "./SortableColumnHeader"
 import type { ReportField, ReportRow } from "@/api/customFormReports"
@@ -7,24 +13,35 @@ import type { ReportField, ReportRow } from "@/api/customFormReports"
 interface ReportResultsTableProps {
   columns: ReportField[]
   rows: ReportRow[]
-  isFetching: boolean
+  entityLabel: string
   sort: ReportSort | null
   onSort: (target: string) => void
 }
 
-export function ReportResultsTable({ columns, rows, isFetching, sort, onSort }: ReportResultsTableProps) {
-  if (rows.length === 0) {
-    return (
-      <Box p={{ base: 6, md: 10 }} textAlign="center">
-        <Text fontSize="sm" fontWeight="700" color="text.primary">
-          No submissions match this report.
-        </Text>
-        <Text mt={1} fontSize="sm" color="text.secondary">
-          Change the entity, the form or the selected columns and apply again.
-        </Text>
-      </Box>
-    )
-  }
+/**
+ * A long answer is cut to the column's width and carried in full by the cell's title, so one paragraph
+ * cannot stretch the table past everything beside it while still being readable in place.
+ */
+function ReportCell({ value }: { value: string }) {
+  const text = value.trim()
+
+  return (
+    <Table.Cell
+      px={REPORT_CELL_PADDING_X}
+      py={3}
+      fontSize="sm"
+      maxW={REPORT_CELL_MAX_WIDTH}
+      overflow="hidden"
+      textOverflow="ellipsis"
+      title={text.length > 0 ? text : undefined}
+    >
+      {text.length > 0 ? text : EMPTY_VALUE}
+    </Table.Cell>
+  )
+}
+
+export function ReportResultsTable({ columns, rows, entityLabel, sort, onSort }: ReportResultsTableProps) {
+  const recordDetails = reportRecordDetails(entityLabel)
 
   function directionOf(target: string) {
     if (sort === null || sort.target !== target) {
@@ -35,11 +52,11 @@ export function ReportResultsTable({ columns, rows, isFetching, sort, onSort }: 
   }
 
   return (
-    <Box overflowX="auto" maxH={REPORT_TABLE_MAX_HEIGHT} opacity={isFetching ? 0.6 : 1}>
+    <Box overflowX="auto" maxH={REPORT_TABLE_MAX_HEIGHT}>
       <Table.Root variant="line" size="sm" whiteSpace="nowrap">
         <Table.Header>
-          <Table.Row bg="app.bg">
-            {REPORT_RECORD_DETAILS.map((detail) => (
+          <Table.Row>
+            {recordDetails.map((detail) => (
               <SortableColumnHeader
                 key={detail.systemField}
                 label={detail.label}
@@ -61,15 +78,11 @@ export function ReportResultsTable({ columns, rows, isFetching, sort, onSort }: 
         <Table.Body>
           {rows.map((row, rowIndex) => (
             <Table.Row key={`${row.invoiceNo}-${rowIndex}`}>
-              {REPORT_RECORD_DETAILS.map((detail) => (
-                <Table.Cell key={detail.systemField} px={4} py={3} fontSize="sm">
-                  {detail.read(row) || "—"}
-                </Table.Cell>
+              {recordDetails.map((detail) => (
+                <ReportCell key={detail.systemField} value={detail.read(row)} />
               ))}
               {columns.map((column) => (
-                <Table.Cell key={column.uniqueId} px={4} py={3} fontSize="sm">
-                  {row.answers[column.uniqueId] || "—"}
-                </Table.Cell>
+                <ReportCell key={column.uniqueId} value={row.answers[column.uniqueId] ?? ""} />
               ))}
             </Table.Row>
           ))}

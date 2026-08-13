@@ -48,6 +48,8 @@ function renderDialog(overrides: Partial<Parameters<typeof SaveReportTemplateDia
   render(
     <ChakraProvider value={system}>
       <SaveReportTemplateDialog
+        open
+        editSessionKey={1}
         moduleId={1}
         formUniqueId="form-1"
         fields={FIELDS}
@@ -69,6 +71,12 @@ describe("SaveReportTemplateDialog", () => {
   beforeEach(() => {
     mutations.create.mockReset().mockResolvedValue("template-1")
     mutations.update.mockReset().mockResolvedValue("template-1")
+  })
+
+  it("Closed_ShowsNothingWhileStayingMountedForTheNextOpen", () => {
+    renderDialog({ open: false })
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
   it("MissingName_BlocksTheSaveAndSaysWhatIsMissing", async () => {
@@ -178,6 +186,38 @@ describe("SaveReportTemplateDialog", () => {
 
     expect(screen.getByLabelText(`Column heading for ${FIELDS[1].label}`)).toHaveValue("Updates opt-in")
     expect(screen.getByLabelText("Column heading for Dietary needs")).toHaveValue("")
+  })
+
+  it("ColumnNeverChecked_DoesNotBlockTheSaveWithAnErrorNobodyCanSee", async () => {
+    renderDialog({ initialFieldIds: ["field-1"] })
+
+    await userEvent.type(nameInput(), "Dietary only")
+    await userEvent.click(screen.getByRole("button", { name: "Save template" }))
+
+    await waitFor(() =>
+      expect(mutations.create).toHaveBeenCalledWith(
+        expect.objectContaining({ columns: [{ fieldUniqueId: "field-1", columnLabel: null }] }),
+      ),
+    )
+  })
+
+  it("ColumnLeftOutOfTheReport_CanStillBeAddedToTheTemplate", async () => {
+    renderDialog({ initialFieldIds: ["field-1"] })
+
+    await userEvent.type(nameInput(), "Dietary and consent")
+    await userEvent.click(screen.getByText(FIELDS[1].label))
+    await userEvent.click(screen.getByRole("button", { name: "Save template" }))
+
+    await waitFor(() =>
+      expect(mutations.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          columns: [
+            { fieldUniqueId: "field-1", columnLabel: null },
+            { fieldUniqueId: "field-2", columnLabel: null },
+          ],
+        }),
+      ),
+    )
   })
 
   it("UncheckedColumn_OffersNoHeadingToFillIn", async () => {

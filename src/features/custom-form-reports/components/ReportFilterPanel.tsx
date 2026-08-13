@@ -7,6 +7,7 @@ import { ReportFilterRow } from "./ReportFilterRow"
 
 interface ReportFilterPanelProps {
   fields: ReportField[]
+  entityLabel: string
   drafts: ReportFilterDraft[]
   onAddFilter: () => void
   onChangeFilter: (draft: ReportFilterDraft) => void
@@ -15,6 +16,7 @@ interface ReportFilterPanelProps {
 
 export function ReportFilterPanel({
   fields,
+  entityLabel,
   drafts,
   onAddFilter,
   onChangeFilter,
@@ -48,20 +50,25 @@ export function ReportFilterPanel({
           </Text>
         </Box>
 
-        <Button
-          variant="outline"
-          size="sm"
-          borderRadius="12px"
-          minH="11"
-          px={4}
-          w={{ base: "full", md: "auto" }}
-          cursor={hasReachedLimit ? "not-allowed" : "pointer"}
-          disabled={hasReachedLimit}
-          onClick={onAddFilter}
-        >
-          <Plus size={16} />
-          Add filter
-        </Button>
+        <Box>
+          <Button
+            variant="outline"
+            size="sm"
+            borderRadius="12px"
+            minH="11"
+            px={4}
+            w={{ base: "full", md: "auto" }}
+            cursor={hasReachedLimit ? "not-allowed" : "pointer"}
+            disabled={hasReachedLimit}
+            onClick={onAddFilter}
+          >
+            <Plus size={16} />
+            Add filter
+          </Button>
+          <Text mt={1} fontSize="sm" color="text.secondary" fontWeight="600" textAlign={{ base: "left", md: "right" }}>
+            {drafts.length} of {MAX_REPORT_FILTERS} filters added
+          </Text>
+        </Box>
       </Flex>
 
       {drafts.length === 0 ? (
@@ -76,6 +83,7 @@ export function ReportFilterPanel({
               draft={draft}
               position={index + 1}
               fields={fields}
+              entityLabel={entityLabel}
               error={filterDraftError(draft)}
               onChange={onChangeFilter}
               onRemove={() => onRemoveFilter(draft.id)}

@@ -26,7 +26,7 @@ function renderTable(columnLabel: string | null, sort: ReportSort | null = null)
 
   render(
     <ChakraProvider value={system}>
-      <ReportResultsTable columns={columns} rows={[ROW]} isFetching={false} sort={sort} onSort={onSort} />
+      <ReportResultsTable columns={columns} rows={[ROW]} entityLabel="Entity" sort={sort} onSort={onSort} />
     </ChakraProvider>,
   )
 
@@ -65,8 +65,8 @@ describe("ReportResultsTable", () => {
       <ChakraProvider value={system}>
         <ReportResultsTable
           columns={columns}
+          entityLabel="Entity"
           rows={[{ ...ROW, contactNo: "" }]}
-          isFetching={false}
           sort={null}
           onSort={vi.fn()}
         />
@@ -74,6 +74,50 @@ describe("ReportResultsTable", () => {
     )
 
     expect(screen.getAllByRole("cell")[2]).toHaveTextContent("—")
+  })
+
+  it("LongAnswer_IsStillReadableInFullEvenThoughTheColumnCutsIt", () => {
+    const answer = `Severe nut allergy. ${"Details follow. ".repeat(40)}`
+    const columns: ReportField[] = [
+      { uniqueId: "field-1", label: CONSENT_LABEL, controlType: "Text", displayOrder: 1, columnLabel: null },
+    ]
+
+    render(
+      <ChakraProvider value={system}>
+        <ReportResultsTable
+          columns={columns}
+          entityLabel="Entity"
+          rows={[{ ...ROW, answers: { "field-1": answer } }]}
+          sort={null}
+          onSort={vi.fn()}
+        />
+      </ChakraProvider>,
+    )
+
+    expect(screen.getAllByRole("cell")[5]).toHaveAttribute("title", answer.trim())
+  })
+
+  it("UnansweredField_CarriesNoTitleSoTheDashIsNotOfferedAsContent", () => {
+    const columns: ReportField[] = [
+      { uniqueId: "field-1", label: CONSENT_LABEL, controlType: "Text", displayOrder: 1, columnLabel: null },
+    ]
+
+    render(
+      <ChakraProvider value={system}>
+        <ReportResultsTable
+          columns={columns}
+          entityLabel="Entity"
+          rows={[{ ...ROW, answers: {} }]}
+          sort={null}
+          onSort={vi.fn()}
+        />
+      </ChakraProvider>,
+    )
+
+    const answerCell = screen.getAllByRole("cell")[5]
+
+    expect(answerCell).toHaveTextContent("—")
+    expect(answerCell).not.toHaveAttribute("title")
   })
 
   it("ClickingAColumn_AsksForItToBeSorted", async () => {

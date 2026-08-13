@@ -159,6 +159,43 @@ export function toReportFilters(drafts: ReportFilterDraft[]): ReportFilter[] {
     }))
 }
 
+/** What a run was asked for, kept apart from the builder's draft so the two can be told apart. */
+export interface AppliedReport {
+  moduleId: number
+  entityUniqueId: string
+  formUniqueId: string
+  fieldUniqueIds: string[]
+  filters: ReportFilter[]
+}
+
+function isSameFilter(one: ReportFilter, other: ReportFilter): boolean {
+  return (
+    one.fieldUniqueId === other.fieldUniqueId &&
+    one.systemField === other.systemField &&
+    one.operator === other.operator &&
+    isSameOrder(one.values, other.values)
+  )
+}
+
+function isSameOrder(one: readonly string[], other: readonly string[]): boolean {
+  return one.length === other.length && one.every((entry, index) => entry === other[index])
+}
+
+/**
+ * Whether a run still describes what the builder is showing. Column order counts, because it is the order the
+ * table and any download are laid out in.
+ */
+export function isSameReport(one: AppliedReport, other: AppliedReport): boolean {
+  return (
+    one.moduleId === other.moduleId &&
+    one.entityUniqueId === other.entityUniqueId &&
+    one.formUniqueId === other.formUniqueId &&
+    isSameOrder(one.fieldUniqueIds, other.fieldUniqueIds) &&
+    one.filters.length === other.filters.length &&
+    one.filters.every((filter, index) => isSameFilter(filter, other.filters[index]))
+  )
+}
+
 /** The column the report is ordered by, encoded the same way a filter target is. */
 export interface ReportSort {
   target: string
