@@ -1,4 +1,4 @@
-import { ConfirmDialog } from "@/features/custom-lists"
+import { ConfirmDialog } from "@/components/common"
 
 interface ConfirmAlertDialogProps {
   title: string

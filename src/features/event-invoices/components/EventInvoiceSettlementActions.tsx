@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Button, Stack, Text } from "@chakra-ui/react"
 import { Ban, CheckCircle2, Send } from "lucide-react"
-import { ConfirmDialog } from "@/features/custom-lists"
+import { ConfirmDialog } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
 import { useCancelEventInvoice, useMarkEventInvoiceAsPaid, useResendEventInvoice } from "../hooks/useEventInvoices"
 

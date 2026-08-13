@@ -1,8 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Box, Stack, Text } from "@chakra-ui/react"
-import { ErrorState } from "@/components/common"
-import { ConfirmDialog } from "@/features/custom-lists"
+import { ConfirmDialog, ErrorState, TablePagination } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 import type { EventInvoiceFilters, EventInvoiceListItem, EventInvoiceSortBy, EventInvoiceSortOrder } from "@/api/eventInvoices"
@@ -11,7 +10,6 @@ import { useInvoiceListReturnState } from "../hooks/useInvoiceListReturnState"
 import { DEFAULT_PAGE_SIZE } from "../constants"
 import { EventInvoiceFilterBar, type EventInvoiceDraftFilters } from "./EventInvoiceFilterBar"
 import { EventInvoiceTable } from "./EventInvoiceTable"
-import { TablePagination } from "./TablePagination"
 
 const EMPTY_DRAFT: EventInvoiceDraftFilters = {
   searchTerm: "",

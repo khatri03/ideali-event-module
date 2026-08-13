@@ -7,7 +7,7 @@ import { extractApiError } from "@/utils/errors"
 import { useCustomListMemberOptions, useMembershipTypeOptions } from "../hooks/useCustomLists"
 import { SortableColumnHeader } from "./SortableColumnHeader"
 import { TableBodySkeleton } from "./TableBodySkeleton"
-import { TablePagination } from "./TablePagination"
+import { TablePagination } from "@/components/common"
 import { PAGE_SIZE_OPTIONS, PICKER_TABLE_MAX_HEIGHT, STICKY_HEADER_CSS } from "../constants"
 import type { CustomListMemberOptionSortBy, CustomListSortOrder } from "@/api/customLists"
 

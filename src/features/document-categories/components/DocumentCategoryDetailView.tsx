@@ -15,7 +15,7 @@ import {
 import { ArrowLeft, Download, Pencil, Trash2 } from "lucide-react"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
-import { ConfirmDialog } from "@/features/custom-lists"
+import { ConfirmDialog } from "@/components/common"
 import type { DocumentFile } from "@/api/documentCategories"
 import { useDocumentCategory } from "../hooks/useDocumentCategories"
 import {

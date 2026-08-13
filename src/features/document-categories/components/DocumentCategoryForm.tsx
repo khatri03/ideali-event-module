@@ -19,7 +19,7 @@ import ReactSelect, { type MultiValue } from "react-select"
 import { ArrowLeft, Save } from "lucide-react"
 import { APP_ROUTES } from "@/utils/routes"
 import { toaster } from "@/lib/toaster"
-import { ConfirmDialog } from "@/features/custom-lists"
+import { ConfirmDialog } from "@/components/common"
 import {
   useDocumentCategory,
   useDocumentCategoryMembershipTypeOptions,
