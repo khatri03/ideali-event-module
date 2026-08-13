@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   createReportTemplate,
   fetchReportModules,
+  fetchReportTemplate,
   fetchReportTemplates,
+  REPORT_SYSTEM_FIELD,
   runCustomFormReport,
   type ReportRequest,
 } from "./customFormReports"
@@ -40,6 +42,7 @@ function runPayload() {
           {
             InvoiceNo: "INV-1001",
             ContactName: "Sohail Ahmed",
+            ContactNo: "+1-555-0199",
             ContactEmail: "sohail@example.com",
             EntityName: "APPNA 49th Annual Convention 2026",
             Answers: { [DIETARY_FIELD_ID]: "Halal", [ALLERGY_FIELD_ID]: null },
@@ -62,10 +65,24 @@ describe("customFormReports api", () => {
     const result = await runCustomFormReport(REQUEST)
 
     expect(result.columns).toEqual([
-      { uniqueId: DIETARY_FIELD_ID, label: "Dietary needs", controlType: "Text", displayOrder: 1 },
+      { uniqueId: DIETARY_FIELD_ID, label: "Dietary needs", controlType: "Text", displayOrder: 1, columnLabel: null },
     ])
     expect(result.rows).toMatchObject({ total: 37, page: 2, pageSize: 10, totalPages: 4 })
     expect(result.rows.items[0].answers[DIETARY_FIELD_ID]).toBe("Halal")
+    expect(result.rows.items[0].contactNo).toBe("+1-555-0199")
+  })
+
+  it("RunReport_RecordDetailFilter_IsSentWithoutAFieldId", async () => {
+    http.post.mockResolvedValue({ data: runPayload() })
+
+    await runCustomFormReport({
+      ...REQUEST,
+      filters: [{ fieldUniqueId: null, systemField: REPORT_SYSTEM_FIELD.contactNo, operator: 1, values: ["555"] }],
+    })
+
+    expect(http.post.mock.calls[0][1].filters).toEqual([
+      { fieldUniqueId: null, systemField: 3, operator: 1, values: ["555"] },
+    ])
   })
 
   it("RunReport_MissingPermanentColumns_RendersThemAsEmptyStringsRatherThanNull", async () => {
@@ -123,11 +140,41 @@ describe("customFormReports api", () => {
     await expect(fetchReportModules()).resolves.toEqual([{ id: 1, name: "Event" }])
   })
 
+  it("FetchTemplate_RenamedColumn_KeepsBothTheHeadingAndTheFieldLabel", async () => {
+    http.get.mockResolvedValue({
+      data: {
+        Success: true,
+        Data: {
+          UniqueId: "template-1",
+          Name: "Membership consent",
+          ModuleId: 5,
+          ModuleName: "Membership",
+          FormUniqueId: REQUEST.formUniqueId,
+          FormName: "Member form",
+          Columns: [
+            {
+              UniqueId: DIETARY_FIELD_ID,
+              Label: "I agree to receive membership updates",
+              ControlType: "Text",
+              DisplayOrder: 1,
+              ColumnLabel: "Updates opt-in",
+            },
+          ],
+        },
+      },
+    })
+
+    const template = await fetchReportTemplate("template-1")
+
+    expect(template.columns[0].columnLabel).toBe("Updates opt-in")
+    expect(template.columns[0].label).toBe("I agree to receive membership updates")
+  })
+
   it("CreateTemplate_DuplicateName_SurfacesTheServerMessage", async () => {
     http.post.mockResolvedValue({ data: { Success: false, Message: "A template with that name already exists." } })
 
     await expect(
-      createReportTemplate({ name: "Dietary", moduleId: 1, formUniqueId: REQUEST.formUniqueId, fieldUniqueIds: [] }),
+      createReportTemplate({ name: "Dietary", moduleId: 1, formUniqueId: REQUEST.formUniqueId, columns: [] }),
     ).rejects.toThrow("A template with that name already exists.")
   })
 })

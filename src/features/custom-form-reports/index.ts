@@ -7,6 +7,7 @@ export { ReportPageHeader } from "./components/ReportPageHeader"
 export { ReportResultsTable } from "./components/ReportResultsTable"
 export { ReportSourcePicker } from "./components/ReportSourcePicker"
 export { ReportTemplatesManager } from "./components/ReportTemplatesManager"
+export { ReportTemplateColumnField } from "./components/ReportTemplateColumnField"
 export { ReportTemplatesTable } from "./components/ReportTemplatesTable"
 export { SaveReportTemplateDialog } from "./components/SaveReportTemplateDialog"
 export { CustomFormReportBuilderPage } from "./pages/CustomFormReportBuilderPage"
@@ -30,6 +31,7 @@ export {
   reportFilterDraftSchema,
   reportTemplateFormSchema,
   toReportFilters,
+  toTemplateColumns,
   type ReportFilterDraft,
   type ReportTemplateFormValues,
 } from "./schemas/customFormReport.schemas"

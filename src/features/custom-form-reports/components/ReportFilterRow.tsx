@@ -1,8 +1,13 @@
 import { Grid, IconButton, Input, NativeSelect, Text } from "@chakra-ui/react"
 import { Trash2 } from "lucide-react"
 import { REPORT_FILTER_OPERATOR, type ReportField, type ReportFilterOperator } from "@/api/customFormReports"
-import { REPORT_FILTER_OPERATOR_OPTIONS } from "../constants"
-import { isValuelessOperator, type ReportFilterDraft } from "../schemas/customFormReport.schemas"
+import { REPORT_FILTER_OPERATOR_OPTIONS, REPORT_RECORD_DETAILS } from "../constants"
+import {
+  isBlankFilter,
+  isValuelessOperator,
+  systemFieldTarget,
+  type ReportFilterDraft,
+} from "../schemas/customFormReport.schemas"
 
 interface ReportFilterRowProps {
   draft: ReportFilterDraft
@@ -27,17 +32,30 @@ export function ReportFilterRow({ draft, position, fields, error, onChange, onRe
       <NativeSelect.Root size="sm">
         <NativeSelect.Field
           aria-label={`Filter ${position} field`}
-          value={draft.fieldUniqueId}
+          value={draft.target}
           minH="11"
           cursor="pointer"
-          onChange={(event) => onChange({ ...draft, fieldUniqueId: event.currentTarget.value })}
+          onChange={(event) => onChange({ ...draft, target: event.currentTarget.value })}
         >
           <option value="">Select a field</option>
-          {fields.map((field) => (
-            <option key={field.uniqueId} value={field.uniqueId}>
-              {field.label}
-            </option>
-          ))}
+
+          <optgroup label="Record details">
+            {REPORT_RECORD_DETAILS.map((detail) => (
+              <option key={detail.systemField} value={systemFieldTarget(detail.systemField)}>
+                {detail.label}
+              </option>
+            ))}
+          </optgroup>
+
+          {fields.length > 0 ? (
+            <optgroup label="Form fields">
+              {fields.map((field) => (
+                <option key={field.uniqueId} value={field.uniqueId}>
+                  {field.label}
+                </option>
+              ))}
+            </optgroup>
+          ) : null}
         </NativeSelect.Field>
         <NativeSelect.Indicator />
       </NativeSelect.Root>
@@ -88,6 +106,10 @@ export function ReportFilterRow({ draft, position, fields, error, onChange, onRe
       {error ? (
         <Text gridColumn={{ base: "auto", md: "1 / -1" }} fontSize="sm" fontWeight="600" color="red.600">
           {error}
+        </Text>
+      ) : isBlankFilter(draft) ? (
+        <Text gridColumn={{ base: "auto", md: "1 / -1" }} fontSize="sm" color="text.secondary">
+          This filter is skipped until you enter a value.
         </Text>
       ) : null}
     </Grid>

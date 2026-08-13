@@ -1,5 +1,5 @@
 import { ChakraProvider } from "@chakra-ui/react"
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { REPORT_FILTER_OPERATOR, type ReportField } from "@/api/customFormReports"
@@ -9,14 +9,14 @@ import type { ReportFilterDraft } from "../schemas/customFormReport.schemas"
 import { ReportFilterPanel } from "./ReportFilterPanel"
 
 const fields: ReportField[] = [
-  { uniqueId: "field-1", label: "Dietary needs", controlType: "Text", displayOrder: 1 },
-  { uniqueId: "field-2", label: "T-shirt size", controlType: "Dropdown", displayOrder: 2 },
+  { uniqueId: "field-1", label: "Dietary needs", controlType: "Text", displayOrder: 1, columnLabel: null },
+  { uniqueId: "field-2", label: "T-shirt size", controlType: "Dropdown", displayOrder: 2, columnLabel: null },
 ]
 
 function draft(overrides: Partial<ReportFilterDraft> = {}): ReportFilterDraft {
   return {
     id: "filter-1",
-    fieldUniqueId: "field-1",
+    target: "field-1",
     operator: REPORT_FILTER_OPERATOR.contains,
     value: "Vegan",
     ...overrides,
@@ -59,14 +59,14 @@ describe("ReportFilterPanel", () => {
 
     expect(onChangeFilter).toHaveBeenCalledWith({
       id: "filter-1",
-      fieldUniqueId: "field-1",
+      target: "field-1",
       operator: REPORT_FILTER_OPERATOR.contains,
       value: "V",
     })
   })
 
   it("Remove_TargetsTheFilterItBelongsTo", async () => {
-    const { onRemoveFilter } = renderPanel([draft(), draft({ id: "filter-2", fieldUniqueId: "field-2" })])
+    const { onRemoveFilter } = renderPanel([draft(), draft({ id: "filter-2", target: "field-2" })])
 
     await userEvent.click(screen.getByRole("button", { name: "Remove filter 2" }))
 
@@ -82,12 +82,12 @@ describe("ReportFilterPanel", () => {
     expect(screen.getByText("Filter limit reached. Remove a filter before adding another.")).toBeInTheDocument()
   })
 
-  it("FormWithoutFields_LeavesNothingToFilterOn", () => {
+  it("FormWithoutFields_StillOffersTheRecordDetails", () => {
     render(
       <ChakraProvider value={system}>
         <ReportFilterPanel
           fields={[]}
-          drafts={[]}
+          drafts={[draft({ target: "record-detail:1" })]}
           onAddFilter={vi.fn()}
           onChangeFilter={vi.fn()}
           onRemoveFilter={vi.fn()}
@@ -95,7 +95,41 @@ describe("ReportFilterPanel", () => {
       </ChakraProvider>,
     )
 
-    expect(screen.getByRole("button", { name: /Add filter/ })).toBeDisabled()
+    expect(screen.getByRole("button", { name: /Add filter/ })).toBeEnabled()
+    expect(screen.getByRole("option", { name: "Contact No" })).toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "Dietary needs" })).not.toBeInTheDocument()
+  })
+
+  it("FieldSelect_SeparatesRecordDetailsFromTheFormFields", () => {
+    renderPanel([draft()])
+
+    const target = screen.getByLabelText("Filter 1 field")
+
+    expect(within(target).getByRole("option", { name: "Invoice No" })).toBeInTheDocument()
+    expect(within(target).getByRole("option", { name: "Dietary needs" })).toBeInTheDocument()
+  })
+
+  it("ConditionSelect_ReadsInPlainLanguageRatherThanOperatorNames", () => {
+    renderPanel([draft()])
+
+    const condition = screen.getByLabelText("Filter 1 condition")
+
+    expect(within(condition).getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "Contains",
+      "Equals to",
+      "Not equals to",
+      "Is one of",
+      "Has no value",
+      "Has any value",
+    ])
+  })
+
+  it("ChoosingARecordDetail_ReportsItsPrefixedTarget", async () => {
+    const { onChangeFilter } = renderPanel([draft()])
+
+    await userEvent.selectOptions(screen.getByLabelText("Filter 1 field"), "record-detail:4")
+
+    expect(onChangeFilter).toHaveBeenCalledWith(expect.objectContaining({ target: "record-detail:4" }))
   })
 
   it("OverlongValue_IsRejectedBeforeTheRequestIsBuilt", () => {
