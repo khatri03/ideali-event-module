@@ -1,24 +1,29 @@
 import { Grid, IconButton, Input, NativeSelect, Text } from "@chakra-ui/react"
 import { Trash2 } from "lucide-react"
 import { REPORT_FILTER_OPERATOR, type ReportField, type ReportFilterOperator } from "@/api/customFormReports"
-import { REPORT_FILTER_OPERATOR_OPTIONS, REPORT_RECORD_DETAILS } from "../constants"
-import {
-  isBlankFilter,
-  isValuelessOperator,
-  systemFieldTarget,
-  type ReportFilterDraft,
-} from "../schemas/customFormReport.schemas"
+import { REPORT_FILTER_OPERATOR_OPTIONS } from "../constants"
+import { isBlankFilter, isValuelessOperator, type ReportFilterDraft } from "../schemas/customFormReport.schemas"
+import { ReportTargetOptions } from "./ReportTargetOptions"
 
 interface ReportFilterRowProps {
   draft: ReportFilterDraft
   position: number
   fields: ReportField[]
+  entityLabel: string
   error: string | null
   onChange: (draft: ReportFilterDraft) => void
   onRemove: () => void
 }
 
-export function ReportFilterRow({ draft, position, fields, error, onChange, onRemove }: ReportFilterRowProps) {
+export function ReportFilterRow({
+  draft,
+  position,
+  fields,
+  entityLabel,
+  error,
+  onChange,
+  onRemove,
+}: ReportFilterRowProps) {
   const takesValue = !isValuelessOperator(draft.operator)
   const valuePlaceholder =
     draft.operator === REPORT_FILTER_OPERATOR.isAnyOf ? "Separate values with commas" : "Enter a value"
@@ -34,28 +39,14 @@ export function ReportFilterRow({ draft, position, fields, error, onChange, onRe
           aria-label={`Filter ${position} field`}
           value={draft.target}
           minH="11"
+          px={3}
+          borderRadius="12px"
           cursor="pointer"
           onChange={(event) => onChange({ ...draft, target: event.currentTarget.value })}
         >
           <option value="">Select a field</option>
 
-          <optgroup label="Record details">
-            {REPORT_RECORD_DETAILS.map((detail) => (
-              <option key={detail.systemField} value={systemFieldTarget(detail.systemField)}>
-                {detail.label}
-              </option>
-            ))}
-          </optgroup>
-
-          {fields.length > 0 ? (
-            <optgroup label="Form fields">
-              {fields.map((field) => (
-                <option key={field.uniqueId} value={field.uniqueId}>
-                  {field.label}
-                </option>
-              ))}
-            </optgroup>
-          ) : null}
+          <ReportTargetOptions fields={fields} entityLabel={entityLabel} />
         </NativeSelect.Field>
         <NativeSelect.Indicator />
       </NativeSelect.Root>
@@ -65,6 +56,8 @@ export function ReportFilterRow({ draft, position, fields, error, onChange, onRe
           aria-label={`Filter ${position} condition`}
           value={String(draft.operator)}
           minH="11"
+          px={3}
+          borderRadius="12px"
           cursor="pointer"
           onChange={(event) =>
             onChange({ ...draft, operator: Number(event.currentTarget.value) as ReportFilterOperator })
@@ -83,6 +76,8 @@ export function ReportFilterRow({ draft, position, fields, error, onChange, onRe
         aria-label={`Filter ${position} value`}
         size="sm"
         minH="11"
+        px={3}
+        borderRadius="12px"
         placeholder={takesValue ? valuePlaceholder : "Not needed for this condition"}
         value={takesValue ? draft.value : ""}
         disabled={!takesValue}

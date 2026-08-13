@@ -76,6 +76,23 @@ describe("ReportExportMenu", () => {
     await waitFor(() => expect(screen.getByText("Download as CSV")).toBeInTheDocument())
   })
 
+  it("Disabled_OffersNoFormatAndSaysWhatIsMissing", async () => {
+    render(
+      <ChakraProvider value={system}>
+        <ReportExportMenu pageRowCount={10} totalRowCount={37} isExporting={false} isDisabled onExport={vi.fn()} />
+      </ChakraProvider>,
+    )
+
+    const trigger = screen.getByRole("button", { name: /Export/ })
+
+    expect(trigger).toBeDisabled()
+    expect(trigger).toHaveAttribute("title", "Apply your changes before downloading this report.")
+
+    await userEvent.click(trigger)
+
+    expect(screen.queryByRole("menuitem")).not.toBeInTheDocument()
+  })
+
   it("WhileExporting_NeitherScopeCanBeChosenAgain", async () => {
     render(
       <ChakraProvider value={system}>

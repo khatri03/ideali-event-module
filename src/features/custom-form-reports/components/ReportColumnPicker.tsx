@@ -1,8 +1,11 @@
 import { Box, Button, Checkbox, Flex, SimpleGrid, SkeletonText, Text } from "@chakra-ui/react"
+import { formatList } from "@/utils/format"
+import { reportRecordDetails } from "../constants"
 import type { ReportField } from "@/api/customFormReports"
 
 interface ReportColumnPickerProps {
   fields: ReportField[]
+  entityLabel: string
   selectedFieldIds: string[]
   maxColumns: number
   isLoading: boolean
@@ -12,6 +15,7 @@ interface ReportColumnPickerProps {
 
 export function ReportColumnPicker({
   fields,
+  entityLabel,
   selectedFieldIds,
   maxColumns,
   isLoading,
@@ -19,6 +23,8 @@ export function ReportColumnPicker({
   onClearFields,
 }: ReportColumnPickerProps) {
   const hasReachedLimit = maxColumns > 0 && selectedFieldIds.length >= maxColumns
+  /** Read off the same list the table leads with, so the promise cannot drift from what the report shows. */
+  const permanentColumns = formatList(reportRecordDetails(entityLabel).map((detail) => detail.label))
 
   return (
     <Box
@@ -41,7 +47,7 @@ export function ReportColumnPicker({
             Report columns
           </Text>
           <Text fontSize="sm" color="text.secondary">
-            Invoice number, contact name, contact email and entity name are always included.
+            {permanentColumns} are always included.
           </Text>
         </Box>
 

@@ -1,5 +1,6 @@
 import { Box, Button, Table } from "@chakra-ui/react"
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
+import { REPORT_CELL_PADDING_X } from "../constants"
 
 type SortDirection = "ascending" | "descending" | "none"
 
@@ -19,7 +20,17 @@ export function SortableColumnHeader({ label, direction, onSort }: SortableColum
   const SortIcon = SORT_ICON[direction]
 
   return (
-    <Table.ColumnHeader px={4} py={0} fontWeight="800" aria-sort={direction}>
+    <Table.ColumnHeader
+      px={REPORT_CELL_PADDING_X}
+      py={0}
+      fontWeight="800"
+      aria-sort={direction}
+      // The results scroll inside their own box, so the headings stay put rather than leaving with the first rows.
+      position="sticky"
+      top="0"
+      zIndex="docked"
+      bg="app.bg"
+    >
       <Button
         variant="plain"
         w="full"

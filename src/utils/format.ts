@@ -4,6 +4,13 @@ export const EMPTY_VALUE = "—"
 
 const MONEY_LOCALE = "en-US"
 
+const SENTENCE_LIST_FORMAT = new Intl.ListFormat("en-US", { style: "long", type: "conjunction" })
+
+/** Reads a set of names out the way a sentence would, so copy can be built from the list it describes. */
+export function formatList(items: readonly string[]): string {
+  return SENTENCE_LIST_FORMAT.format(items)
+}
+
 const MONEY_PATTERN = /^-?\d+(\.\d+)?$/
 
 const MONEY_FORMAT = new Intl.NumberFormat(MONEY_LOCALE, {

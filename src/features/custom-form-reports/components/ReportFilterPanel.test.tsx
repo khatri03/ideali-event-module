@@ -32,6 +32,7 @@ function renderPanel(drafts: ReportFilterDraft[]) {
     <ChakraProvider value={system}>
       <ReportFilterPanel
         fields={fields}
+        entityLabel="Entity"
         drafts={drafts}
         onAddFilter={onAddFilter}
         onChangeFilter={onChangeFilter}
@@ -50,6 +51,12 @@ describe("ReportFilterPanel", () => {
     expect(
       screen.getByText("No filters applied. The report lists every submission of the selected form."),
     ).toBeInTheDocument()
+  })
+
+  it("FilterCount_TracksHowManyOfTheAllowedFiltersAreAdded", () => {
+    renderPanel([draft(), draft({ id: "filter-2", target: "field-2" })])
+
+    expect(screen.getByText(`2 of ${MAX_REPORT_FILTERS} filters added`)).toBeInTheDocument()
   })
 
   it("EditingAValue_ReportsTheWholeDraftBack", async () => {
@@ -87,6 +94,7 @@ describe("ReportFilterPanel", () => {
       <ChakraProvider value={system}>
         <ReportFilterPanel
           fields={[]}
+          entityLabel="Entity"
           drafts={[draft({ target: "record-detail:1" })]}
           onAddFilter={vi.fn()}
           onChangeFilter={vi.fn()}

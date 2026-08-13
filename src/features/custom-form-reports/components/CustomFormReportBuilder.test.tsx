@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { system } from "@/theme"
 import { CustomFormReportBuilder } from "./CustomFormReportBuilder"
 
-const hooks = vi.hoisted(() => ({ useCustomFormReport: vi.fn(), exportReport: vi.fn() }))
+const hooks = vi.hoisted(() => ({ useCustomFormReport: vi.fn(), useReportTemplate: vi.fn(), exportReport: vi.fn() }))
 
 /** Stands in for the four cascading selects, whose Ark popover is not what these tests are about. */
 vi.mock("./ReportSourcePicker", () => ({
@@ -16,6 +16,7 @@ vi.mock("./ReportSourcePicker", () => ({
     onModuleChange,
     onEntityChange,
     onFormChange,
+    onTemplateChange,
   }: {
     moduleId: number | null
     entityUniqueId: string | null
@@ -23,6 +24,7 @@ vi.mock("./ReportSourcePicker", () => ({
     onModuleChange: (moduleId: number) => void
     onEntityChange: (entityUniqueId: string) => void
     onFormChange: (formUniqueId: string) => void
+    onTemplateChange: (templateUniqueId: string | null) => void
   }) => (
     <div>
       <span data-testid="selection">{`${moduleId ?? "-"}|${entityUniqueId ?? "-"}|${formUniqueId ?? "-"}`}</span>
@@ -37,6 +39,9 @@ vi.mock("./ReportSourcePicker", () => ({
       </button>
       <button type="button" onClick={() => onFormChange("form-1")}>
         pick form
+      </button>
+      <button type="button" onClick={() => onTemplateChange("template-1")}>
+        pick template
       </button>
     </div>
   ),
@@ -71,7 +76,7 @@ vi.mock("../hooks/useCustomFormReports", () => ({
     error: null,
   }),
   useReportTemplateOptions: () => ({ data: [], isLoading: false }),
-  useReportTemplate: () => ({ data: undefined }),
+  useReportTemplate: hooks.useReportTemplate,
   useCustomFormReport: hooks.useCustomFormReport,
 }))
 
@@ -88,35 +93,39 @@ function lastReportRequest() {
   return calls[calls.length - 1][0]
 }
 
-/** Sorting is only reachable once results are on screen, so these runs answer with a row to click a header on. */
-function renderBuilderWithResults(totalPages = 1) {
+const RESULT_ROW = {
+  invoiceNo: "INV-1",
+  contactName: "Alice Stone",
+  contactNo: "+1-555-0199",
+  contactEmail: "alice@example.com",
+  entityName: "Gold",
+  answers: { "field-1": "Vegan" },
+}
+
+function answerWithRows(items: (typeof RESULT_ROW)[], totalPages: number) {
   hooks.useCustomFormReport.mockReturnValue({
     data: {
       columns: [
         { uniqueId: "field-1", label: "Dietary needs", controlType: "Text", displayOrder: 1, columnLabel: null },
       ],
-      rows: {
-        items: [
-          {
-            invoiceNo: "INV-1",
-            contactName: "Alice Stone",
-            contactNo: "+1-555-0199",
-            contactEmail: "alice@example.com",
-            entityName: "Gold",
-            answers: { "field-1": "Vegan" },
-          },
-        ],
-        total: totalPages * 10,
-        page: 1,
-        pageSize: 10,
-        totalPages,
-      },
+      rows: { items, total: totalPages * 10, page: 1, pageSize: 10, totalPages },
     },
     isLoading: false,
     isFetching: false,
     isError: false,
     error: null,
   })
+}
+
+/** Sorting is only reachable once results are on screen, so these runs answer with a row to click a header on. */
+function renderBuilderWithResults(totalPages = 1) {
+  answerWithRows([RESULT_ROW], totalPages)
+
+  return renderBuilder()
+}
+
+function renderBuilderWithoutResults() {
+  answerWithRows([], 0)
 
   return renderBuilder()
 }
@@ -148,6 +157,43 @@ describe("CustomFormReportBuilder", () => {
       isError: false,
       error: null,
     })
+    hooks.useReportTemplate.mockReset().mockReturnValue({ data: undefined })
+  })
+
+  it("PickingASavedTemplate_RunsTheReportForItsColumnsWithoutNeedingApply", async () => {
+    renderBuilder()
+    await userEvent.click(screen.getByRole("button", { name: "pick module 1" }))
+    await userEvent.click(screen.getByRole("button", { name: "pick entity" }))
+    await userEvent.click(screen.getByRole("button", { name: "pick form" }))
+
+    hooks.useReportTemplate.mockReturnValue({
+      data: {
+        uniqueId: "template-1",
+        name: "Dietary only",
+        moduleId: 1,
+        moduleName: "Event",
+        formUniqueId: "form-1",
+        formName: "Attendee form",
+        columns: [{ uniqueId: "field-1", label: "Dietary needs", controlType: "Text", displayOrder: 1 }],
+      },
+    })
+    await userEvent.click(screen.getByRole("button", { name: "pick template" }))
+
+    await waitFor(() =>
+      expect(lastReportRequest()).toEqual({
+        moduleId: 1,
+        entityUniqueId: "entity-1",
+        formUniqueId: "form-1",
+        fieldUniqueIds: ["field-1"],
+        filters: [],
+        sortFieldUniqueId: null,
+        sortSystemField: null,
+        sortDescending: false,
+        pageNo: 1,
+        pageSize: 10,
+      }),
+    )
+    expect(screen.getByText("Dietary needs")).toBeInTheDocument()
   })
 
   it("IncompleteSelection_KeepsApplyDisabled", async () => {
@@ -404,6 +450,15 @@ describe("CustomFormReportBuilder", () => {
     expect(screen.queryByRole("button", { name: /Export/ })).not.toBeInTheDocument()
   })
 
+  it("Export_OfAReportThatMatchedNothing_IsNotOffered", async () => {
+    renderBuilderWithoutResults()
+    await pickSourceAndColumn()
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+
+    expect(await screen.findByText("No submissions match this report.")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /Export/ })).not.toBeInTheDocument()
+  })
+
   it("ExportOfEveryRow_RepeatsTheColumnsAndSortTheReportIsShowing", async () => {
     renderBuilderWithResults()
     await pickSourceAndColumn()
@@ -437,7 +492,95 @@ describe("CustomFormReportBuilder", () => {
     )
   })
 
-  it("SaveAsTemplate_OpensTheDialogWithOnlyTheSelectedColumns", async () => {
+  it("EditingAfterARun_SaysTheResultsAreStaleAndRenamesApply", async () => {
+    renderBuilderWithResults()
+    await pickSourceAndColumn()
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+
+    expect(screen.queryByText(/from an earlier run/)).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "T-shirt size" }))
+
+    expect(screen.getByText(/These results are from an earlier run/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Apply changes/ })).toBeEnabled()
+  })
+
+  it("Export_WhileTheResultsAreStale_IsRefusedUntilTheChangesAreApplied", async () => {
+    renderBuilderWithResults()
+    await pickSourceAndColumn()
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "T-shirt size" }))
+
+    expect(screen.getByRole("button", { name: /Export/ })).toBeDisabled()
+  })
+
+  it("ReapplyingTheChanges_ClearsTheStaleWarning", async () => {
+    renderBuilderWithResults()
+    await pickSourceAndColumn()
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+    await userEvent.click(screen.getByRole("checkbox", { name: "T-shirt size" }))
+
+    await userEvent.click(screen.getByRole("button", { name: /Apply changes/ }))
+
+    expect(screen.queryByText(/from an earlier run/)).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Export/ })).toBeEnabled()
+  })
+
+  it("SortingOrPaging_IsNotMistakenForAnUnappliedChange", async () => {
+    renderBuilderWithResults(3)
+    await pickSourceAndColumn()
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+
+    await sortByColumn("Dietary needs")
+    await userEvent.selectOptions(screen.getByLabelText("Go to page"), "2")
+
+    expect(screen.queryByText(/from an earlier run/)).not.toBeInTheDocument()
+  })
+
+  it("ClearingEveryColumnAfterARun_StillWarnsThatTheTableIsBehind", async () => {
+    renderBuilderWithResults()
+    await pickSourceAndColumn()
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }))
+
+    expect(screen.getByText(/These results are from an earlier run/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Apply changes/ })).toBeDisabled()
+  })
+
+  it("ReopeningTheTemplateDialog_StartsFromACleanForm", async () => {
+    renderBuilder()
+    await pickSourceAndColumn()
+
+    await userEvent.click(screen.getByRole("button", { name: /Save as template/ }))
+    await userEvent.type(await screen.findByLabelText(/Template name/), "Half typed")
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }))
+    await userEvent.click(screen.getByRole("button", { name: /Save as template/ }))
+
+    expect(await screen.findByLabelText(/Template name/)).toHaveValue("")
+  })
+
+  it("ChosenModule_NamesTheEntityColumnAfterWhatThatModuleReportsOn", async () => {
+    renderBuilderWithResults()
+    await pickSourceAndColumn()
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+
+    expect(await screen.findByRole("columnheader", { name: /Event/ })).toBeInTheDocument()
+    expect(screen.queryByRole("columnheader", { name: /Entity/ })).not.toBeInTheDocument()
+  })
+
+  it("ModuleThisBuildDoesNotKnow_LeavesTheColumnReadingEntity", async () => {
+    renderBuilder()
+
+    await userEvent.click(screen.getByRole("button", { name: "pick module 2" }))
+    await userEvent.click(screen.getByRole("button", { name: "pick entity" }))
+    await userEvent.click(screen.getByRole("button", { name: "pick form" }))
+
+    expect(screen.getByText(/Entity are always included\./)).toBeInTheDocument()
+  })
+
+  it("SaveAsTemplate_ListsEveryColumnSoOneLeftOutCanBeAddedWithoutClosingTheDialog", async () => {
     renderBuilder()
     await pickSourceAndColumn()
 
@@ -445,7 +588,8 @@ describe("CustomFormReportBuilder", () => {
 
     const dialog = await screen.findByRole("dialog")
 
-    expect(within(dialog).getByText("Dietary needs")).toBeInTheDocument()
-    expect(within(dialog).queryByText("T-shirt size")).not.toBeInTheDocument()
+    expect(within(dialog).getByText("T-shirt size")).toBeInTheDocument()
+    expect(within(dialog).getByLabelText("Column heading for Dietary needs")).toBeInTheDocument()
+    expect(within(dialog).queryByLabelText("Column heading for T-shirt size")).not.toBeInTheDocument()
   })
 })

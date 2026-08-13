@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { system } from "@/theme"
+import { REPORT_RECORD_DETAILS } from "../constants"
 import { ReportColumnPicker } from "./ReportColumnPicker"
 import type { ReportField } from "@/api/customFormReports"
 
@@ -20,6 +21,7 @@ function renderPicker(overrides: Partial<Parameters<typeof ReportColumnPicker>[0
     <ChakraProvider value={system}>
       <ReportColumnPicker
         fields={FIELDS}
+        entityLabel="Entity"
         selectedFieldIds={[]}
         maxColumns={2}
         isLoading={false}
@@ -34,12 +36,12 @@ function renderPicker(overrides: Partial<Parameters<typeof ReportColumnPicker>[0
 }
 
 describe("ReportColumnPicker", () => {
-  it("PermanentColumns_AreAnnouncedSoTheyAreNotSelectedTwice", () => {
+  it("PermanentColumns_NameEveryRecordDetailTheTableWillShow", () => {
     renderPicker()
 
-    expect(
-      screen.getByText("Invoice number, contact name, contact email and entity name are always included."),
-    ).toBeInTheDocument()
+    const announcement = screen.getByText(/are always included\.$/).textContent ?? ""
+
+    REPORT_RECORD_DETAILS.forEach((detail) => expect(announcement).toContain(detail.label))
   })
 
   it("SelectingAColumn_ReportsTheFieldToTheCaller", async () => {
