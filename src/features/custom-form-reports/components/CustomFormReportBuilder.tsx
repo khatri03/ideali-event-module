@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react"
 import { PencilLine, Play, Save } from "lucide-react"
 import { TablePagination } from "@/components/common"
@@ -13,7 +13,14 @@ import {
   useReportTemplate,
   useReportTemplateOptions,
 } from "../hooks/useCustomFormReports"
+import { REPORT_FILTER_OPERATOR, type ReportFilter } from "@/api/customFormReports"
+import {
+  filterDraftError,
+  toReportFilters,
+  type ReportFilterDraft,
+} from "../schemas/customFormReport.schemas"
 import { ReportColumnPicker } from "./ReportColumnPicker"
+import { ReportFilterPanel } from "./ReportFilterPanel"
 import { ReportResultsTable } from "./ReportResultsTable"
 import { ReportResultsTableSkeleton } from "./ReportResultsTable.skeleton"
 import { ReportSourcePicker } from "./ReportSourcePicker"
@@ -24,6 +31,7 @@ interface AppliedReport {
   entityUniqueId: string
   formUniqueId: string
   fieldUniqueIds: string[]
+  filters: ReportFilter[]
 }
 
 export function CustomFormReportBuilder() {
@@ -33,11 +41,13 @@ export function CustomFormReportBuilder() {
   const [templateUniqueId, setTemplateUniqueId] = useState<string | null>(null)
   // Null means "whatever the chosen template says"; any edit turns it into an explicit choice.
   const [fieldSelection, setFieldSelection] = useState<string[] | null>(null)
+  const [filterDrafts, setFilterDrafts] = useState<ReportFilterDraft[]>([])
   const [appliedReport, setAppliedReport] = useState<AppliedReport | null>(null)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE)
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false)
   const [isEditingTemplate, setIsEditingTemplate] = useState(false)
+  const nextFilterId = useRef(0)
 
   const modulesQuery = useReportModules()
   const entitiesQuery = useReportEntities(moduleId)
@@ -54,30 +64,60 @@ export function CustomFormReportBuilder() {
   const template = templateQuery.data
   const templateFieldIds = template?.columns.map((column) => column.uniqueId) ?? []
   const selectedFieldIds = fieldSelection ?? templateFieldIds
-  const canApply = moduleId !== null && entityUniqueId !== null && formUniqueId !== null && selectedFieldIds.length > 0
+  const hasIncompleteFilter = filterDrafts.some((draft) => filterDraftError(draft) !== null)
+  const canApply =
+    moduleId !== null &&
+    entityUniqueId !== null &&
+    formUniqueId !== null &&
+    selectedFieldIds.length > 0 &&
+    !hasIncompleteFilter
 
   function handleModuleChange(nextModuleId: number) {
     setModuleId(nextModuleId)
     setEntityUniqueId(null)
     setFormUniqueId(null)
-    setTemplateUniqueId(null)
-    setFieldSelection(null)
-    setAppliedReport(null)
+    resetSelection()
   }
 
   function handleEntityChange(nextEntityUniqueId: string) {
     setEntityUniqueId(nextEntityUniqueId)
     setFormUniqueId(null)
-    setTemplateUniqueId(null)
-    setFieldSelection(null)
-    setAppliedReport(null)
+    resetSelection()
   }
 
   function handleFormChange(nextFormUniqueId: string) {
     setFormUniqueId(nextFormUniqueId)
+    resetSelection()
+  }
+
+  /** Columns and filters both name fields of one form, so a different form invalidates every one of them. */
+  function resetSelection() {
     setTemplateUniqueId(null)
     setFieldSelection(null)
+    setFilterDrafts([])
     setAppliedReport(null)
+  }
+
+  function handleAddFilter() {
+    nextFilterId.current += 1
+
+    setFilterDrafts([
+      ...filterDrafts,
+      {
+        id: `filter-${nextFilterId.current}`,
+        fieldUniqueId: fields[0]?.uniqueId ?? "",
+        operator: REPORT_FILTER_OPERATOR.contains,
+        value: "",
+      },
+    ])
+  }
+
+  function handleChangeFilter(changed: ReportFilterDraft) {
+    setFilterDrafts(filterDrafts.map((draft) => (draft.id === changed.id ? changed : draft)))
+  }
+
+  function handleRemoveFilter(draftId: string) {
+    setFilterDrafts(filterDrafts.filter((draft) => draft.id !== draftId))
   }
 
   function handleToggleField(fieldUniqueId: string) {
@@ -109,6 +149,7 @@ export function CustomFormReportBuilder() {
       entityUniqueId: entityUniqueId as string,
       formUniqueId: formUniqueId as string,
       fieldUniqueIds: selectedFieldIds,
+      filters: toReportFilters(filterDrafts),
     })
     setPage(1)
   }
@@ -164,6 +205,16 @@ export function CustomFormReportBuilder() {
           isLoading={columnsQuery.isLoading}
           onToggleField={handleToggleField}
           onClearFields={() => setFieldSelection([])}
+        />
+      ) : null}
+
+      {formUniqueId ? (
+        <ReportFilterPanel
+          fields={fields}
+          drafts={filterDrafts}
+          onAddFilter={handleAddFilter}
+          onChangeFilter={handleChangeFilter}
+          onRemoveFilter={handleRemoveFilter}
         />
       ) : null}
 

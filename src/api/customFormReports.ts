@@ -105,11 +105,30 @@ export interface ReportResult {
   rows: PaginatedResponse<ReportRow>
 }
 
+/** Mirrors EnumCustomFormReportFilterOperator on the API — the server rejects anything outside it. */
+export const REPORT_FILTER_OPERATOR = {
+  contains: 1,
+  equals: 2,
+  notEquals: 3,
+  isAnyOf: 4,
+  isEmpty: 5,
+  isNotEmpty: 6,
+} as const
+
+export type ReportFilterOperator = (typeof REPORT_FILTER_OPERATOR)[keyof typeof REPORT_FILTER_OPERATOR]
+
+export interface ReportFilter {
+  fieldUniqueId: string
+  operator: ReportFilterOperator
+  values: string[]
+}
+
 export interface ReportRequest {
   moduleId: number
   entityUniqueId: string
   formUniqueId: string
   fieldUniqueIds: string[]
+  filters: ReportFilter[]
   pageNo: number
   pageSize: number
 }
