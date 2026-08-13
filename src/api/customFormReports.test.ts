@@ -1,11 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   createReportTemplate,
+  exportCustomFormReport,
   fetchReportModules,
   fetchReportTemplate,
   fetchReportTemplates,
+  REPORT_EXPORT_FORMAT,
+  REPORT_EXPORT_SCOPE,
   REPORT_SYSTEM_FIELD,
   runCustomFormReport,
+  type ReportExportRequest,
   type ReportRequest,
 } from "./customFormReports"
 import { ServiceResponseError } from "./serviceResponse"
@@ -28,6 +32,13 @@ const REQUEST: ReportRequest = {
   sortDescending: false,
   pageNo: 1,
   pageSize: 10,
+}
+
+const EXPORT_REQUEST: ReportExportRequest = {
+  ...REQUEST,
+  format: REPORT_EXPORT_FORMAT.csv,
+  scope: REPORT_EXPORT_SCOPE.allMatchingRows,
+  templateUniqueId: null,
 }
 
 function runPayload() {
@@ -171,6 +182,52 @@ describe("customFormReports api", () => {
 
     expect(template.columns[0].columnLabel).toBe("Updates opt-in")
     expect(template.columns[0].label).toBe("I agree to receive membership updates")
+  })
+
+  it("ExportReport_ScopeAndFormat_AreSentAlongsideTheReportThatIsOnScreen", async () => {
+    http.post.mockResolvedValue({ data: new Blob(["a,b"]), headers: {} })
+
+    await exportCustomFormReport(EXPORT_REQUEST)
+
+    expect(http.post.mock.calls[0][1]).toMatchObject({
+      format: REPORT_EXPORT_FORMAT.csv,
+      scope: REPORT_EXPORT_SCOPE.allMatchingRows,
+      fieldUniqueIds: [DIETARY_FIELD_ID],
+    })
+    expect(http.post.mock.calls[0][2]).toEqual({ responseType: "blob" })
+  })
+
+  it("ExportReport_ServerNamesTheFile_ThatNameIsUsedForTheDownload", async () => {
+    http.post.mockResolvedValue({
+      data: new Blob(["a,b"]),
+      headers: { "content-disposition": 'attachment; filename=member-form-20260813120000.csv' },
+    })
+
+    const download = await exportCustomFormReport(EXPORT_REQUEST)
+
+    expect(download.fileName).toBe("member-form-20260813120000.csv")
+  })
+
+  it("ExportReport_ResponseWithoutAFileName_FallsBackRatherThanDownloadingUndefined", async () => {
+    http.post.mockResolvedValue({ data: new Blob(["a,b"]), headers: {} })
+
+    await expect(exportCustomFormReport(EXPORT_REQUEST)).resolves.toMatchObject({
+      fileName: "custom-form-report",
+    })
+  })
+
+  it("ExportReport_RejectedByTheServer_ThrowsTheMessageInsteadOfReturningAFile", async () => {
+    http.post.mockRejectedValue({
+      response: { data: new Blob([JSON.stringify({ Success: false, Message: "Narrow the filters and try again." })]) },
+    })
+
+    await expect(exportCustomFormReport(EXPORT_REQUEST)).rejects.toBeInstanceOf(ServiceResponseError)
+  })
+
+  it("ExportReport_RejectedWithAnUnreadableBody_StillThrowsSomethingSafeToShow", async () => {
+    http.post.mockRejectedValue({ response: { data: new Blob(["<html>gateway error</html>"]) } })
+
+    await expect(exportCustomFormReport(EXPORT_REQUEST)).rejects.toThrow("Failed to download the report.")
   })
 
   it("CreateTemplate_DuplicateName_SurfacesTheServerMessage", async () => {

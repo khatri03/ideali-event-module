@@ -1,6 +1,7 @@
+import type { AxiosError } from "axios"
 import { z } from "zod"
 import { client } from "@/api/client"
-import { assertSuccess, parseServicePayload } from "@/api/serviceResponse"
+import { assertSuccess, parseServicePayload, ServiceResponseError } from "@/api/serviceResponse"
 import type { PaginatedResponse } from "@/api/types"
 import { API_ROUTES } from "@/utils/routes"
 
@@ -155,6 +156,35 @@ export interface ReportRequest {
   pageSize: number
 }
 
+/** Mirrors EnumCustomFormReportExportFormat on the API. */
+export const REPORT_EXPORT_FORMAT = {
+  csv: 1,
+  excel: 2,
+  json: 3,
+} as const
+
+export type ReportExportFormat = (typeof REPORT_EXPORT_FORMAT)[keyof typeof REPORT_EXPORT_FORMAT]
+
+/** Mirrors EnumCustomFormReportExportScope on the API. */
+export const REPORT_EXPORT_SCOPE = {
+  currentPage: 1,
+  allMatchingRows: 2,
+} as const
+
+export type ReportExportScope = (typeof REPORT_EXPORT_SCOPE)[keyof typeof REPORT_EXPORT_SCOPE]
+
+export interface ReportExportRequest extends ReportRequest {
+  format: ReportExportFormat
+  scope: ReportExportScope
+  /** Names the template whose renamed headings the file should carry. */
+  templateUniqueId: string | null
+}
+
+export interface ReportDownload {
+  blob: Blob
+  fileName: string
+}
+
 export interface ReportTemplateListItem {
   uniqueId: string
   name: string
@@ -234,6 +264,50 @@ export async function runCustomFormReport(request: ReportRequest): Promise<Repor
       pageSize: parsed.rows.pageSize,
       totalPages: parsed.rows.pageCount,
     },
+  }
+}
+
+const DEFAULT_EXPORT_FILE_NAME = "custom-form-report"
+const CONTENT_DISPOSITION_FILE_NAME = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i
+
+/**
+ * The download is asked for as a blob, so a rejection arrives as one too. It is read back as text and surfaced as
+ * the same error a JSON endpoint would raise, rather than reaching the reader as an unreadable file.
+ */
+async function readServiceFailure(payload: unknown): Promise<never> {
+  const fallback = "Failed to download the report."
+
+  if (!(payload instanceof Blob)) {
+    throw new ServiceResponseError(fallback)
+  }
+
+  try {
+    assertSuccess(JSON.parse(await payload.text()), fallback)
+  } catch (error) {
+    throw error instanceof ServiceResponseError ? error : new ServiceResponseError(fallback)
+  }
+
+  throw new ServiceResponseError(fallback)
+}
+
+function fileNameFrom(contentDisposition: unknown): string {
+  if (typeof contentDisposition !== "string") {
+    return DEFAULT_EXPORT_FILE_NAME
+  }
+
+  const matched = CONTENT_DISPOSITION_FILE_NAME.exec(contentDisposition)
+
+  return matched ? decodeURIComponent(matched[1]) : DEFAULT_EXPORT_FILE_NAME
+}
+
+export async function exportCustomFormReport(request: ReportExportRequest): Promise<ReportDownload> {
+  const response = await client
+    .post<Blob>(API_ROUTES.customFormReportExport, request, { responseType: "blob" })
+    .catch((error: AxiosError) => readServiceFailure(error.response?.data))
+
+  return {
+    blob: response.data,
+    fileName: fileNameFrom(response.headers["content-disposition"]),
   }
 }
 

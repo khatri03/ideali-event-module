@@ -1,6 +1,8 @@
 export { CustomFormReportBuilder } from "./components/CustomFormReportBuilder"
 export { DeleteReportTemplateDialog } from "./components/DeleteReportTemplateDialog"
 export { ReportColumnPicker } from "./components/ReportColumnPicker"
+export { ReportExportMenu } from "./components/ReportExportMenu"
+export { ReportExportScopeDialog } from "./components/ReportExportScopeDialog"
 export { ReportFilterPanel } from "./components/ReportFilterPanel"
 export { ReportFilterRow } from "./components/ReportFilterRow"
 export { ReportPageHeader } from "./components/ReportPageHeader"
@@ -22,6 +24,7 @@ export {
   useReportTemplateOptions,
   useReportTemplates,
 } from "./hooks/useCustomFormReports"
+export { useExportCustomFormReport } from "./hooks/useExportCustomFormReport"
 export {
   useCreateReportTemplate,
   useDeleteReportTemplate,

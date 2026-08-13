@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { system } from "@/theme"
 import { CustomFormReportBuilder } from "./CustomFormReportBuilder"
 
-const hooks = vi.hoisted(() => ({ useCustomFormReport: vi.fn() }))
+const hooks = vi.hoisted(() => ({ useCustomFormReport: vi.fn(), exportReport: vi.fn() }))
 
 /** Stands in for the four cascading selects, whose Ark popover is not what these tests are about. */
 vi.mock("./ReportSourcePicker", () => ({
@@ -45,6 +45,10 @@ vi.mock("./ReportSourcePicker", () => ({
 vi.mock("../hooks/useCustomFormReportTemplateMutations", () => ({
   useCreateReportTemplate: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false, error: null }),
   useUpdateReportTemplate: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false, error: null }),
+}))
+
+vi.mock("../hooks/useExportCustomFormReport", () => ({
+  useExportCustomFormReport: () => ({ mutateAsync: hooks.exportReport, isPending: false }),
 }))
 
 vi.mock("../hooks/useCustomFormReports", () => ({
@@ -128,8 +132,15 @@ async function pickSourceAndColumn() {
   await userEvent.click(screen.getByText("Dietary needs"))
 }
 
+async function exportAs(label: string, scope: RegExp) {
+  await userEvent.click(screen.getByRole("button", { name: /Export/ }))
+  await userEvent.click(await screen.findByRole("menuitem", { name: label }))
+  await userEvent.click(await screen.findByRole("button", { name: scope }))
+}
+
 describe("CustomFormReportBuilder", () => {
   beforeEach(() => {
+    hooks.exportReport.mockReset().mockResolvedValue(undefined)
     hooks.useCustomFormReport.mockReset().mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -384,6 +395,46 @@ describe("CustomFormReportBuilder", () => {
     await userEvent.click(screen.getByRole("checkbox", { name: "Dietary needs" }))
 
     expect(lastReportRequest().sortFieldUniqueId).toBeNull()
+  })
+
+  it("Export_BeforeAReportHasRun_IsNotOffered", async () => {
+    renderBuilder()
+    await pickSourceAndColumn()
+
+    expect(screen.queryByRole("button", { name: /Export/ })).not.toBeInTheDocument()
+  })
+
+  it("ExportOfEveryRow_RepeatsTheColumnsAndSortTheReportIsShowing", async () => {
+    renderBuilderWithResults()
+    await pickSourceAndColumn()
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+    await sortByColumn("Dietary needs")
+
+    await exportAs("Excel", /Every row matching the filters/)
+
+    expect(hooks.exportReport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fieldUniqueIds: ["field-1"],
+        sortFieldUniqueId: "field-1",
+        sortDescending: false,
+        format: 2,
+        scope: 2,
+        templateUniqueId: null,
+      }),
+    )
+  })
+
+  it("ExportOfThisPage_CarriesThePageTheReaderIsOn", async () => {
+    renderBuilderWithResults(3)
+    await pickSourceAndColumn()
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+    await userEvent.selectOptions(screen.getByLabelText("Go to page"), "2")
+
+    await exportAs("CSV", /This page only/)
+
+    expect(hooks.exportReport).toHaveBeenCalledWith(
+      expect.objectContaining({ pageNo: 2, pageSize: 10, format: 1, scope: 1 }),
+    )
   })
 
   it("SaveAsTemplate_OpensTheDialogWithOnlyTheSelectedColumns", async () => {
