@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { AxiosError } from "axios"
-import { httpStatusOf, isNotFoundError } from "./errors"
+import { ServiceResponseError } from "@/api/serviceResponse"
+import { extractApiError, httpStatusOf, isNotFoundError } from "./errors"
 
 function httpError(status: number) {
   return new AxiosError("failed", String(status), undefined, undefined, {
@@ -22,6 +23,18 @@ describe("httpStatusOf", () => {
     expect(httpStatusOf(new AxiosError("Network Error"))).toBeNull()
     expect(httpStatusOf(new Error("boom"))).toBeNull()
     expect(httpStatusOf(null)).toBeNull()
+  })
+})
+
+describe("extractApiError", () => {
+  it("ServiceReportedItsOwnFailure_ShowsTheServerWordingToTheOrganizer", () => {
+    expect(extractApiError(new ServiceResponseError("A template with that name already exists."))).toBe(
+      "A template with that name already exists.",
+    )
+  })
+
+  it("AnyOtherThrownError_StaysGenericSoInternalsDoNotLeak", () => {
+    expect(extractApiError(new Error("Cannot read properties of undefined"))).toBe("An unexpected error occurred.")
   })
 })
 

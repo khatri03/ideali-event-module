@@ -1,5 +1,6 @@
 import { isAxiosError } from "axios"
 import { ZodError } from "zod"
+import { ServiceResponseError } from "@/api/serviceResponse"
 import { TurnstileError } from "@/lib/turnstile"
 
 interface ProblemDetails {
@@ -24,7 +25,7 @@ export function isNotFoundError(err: unknown): boolean {
 
 export function extractApiError(err: unknown): string {
   // Raised before the request leaves the browser, so it carries no server detail to leak.
-  if (err instanceof TurnstileError) {
+  if (err instanceof TurnstileError || err instanceof ServiceResponseError) {
     return err.message
   }
 

@@ -133,6 +133,11 @@ export const APP_ROUTES = {
     detailRoute: "/organizer/events/invoices/:invoiceUniqueId",
     detail: (invoiceUniqueId: string) => `/organizer/events/invoices/${invoiceUniqueId}`,
   },
+  customFormReports: {
+    base: "/organizer/custom-form-report",
+    builder: "/organizer/custom-form-report",
+    templates: "/organizer/custom-form-report/templates",
+  },
 } as const
 
 export const API_ROUTES = {
@@ -270,6 +275,19 @@ export const API_ROUTES = {
   customListUpdate: (uniqueId: string) => `/api/organizer/membership/custom-list/${uniqueId}`,
   customListDelete: (uniqueId: string) => `/api/organizer/membership/custom-list/${uniqueId}`,
   customListMembers: (uniqueId: string) => `/api/organizer/membership/custom-list/${uniqueId}/members`,
+
+  customFormReportModules: "/api/organizer/custom-form-report/modules",
+  customFormReportEntities: (moduleId: number) => `/api/organizer/custom-form-report/modules/${moduleId}/entities`,
+  customFormReportForms: (moduleId: number, entityUniqueId: string) =>
+    `/api/organizer/custom-form-report/modules/${moduleId}/entities/${entityUniqueId}/forms`,
+  customFormReportColumns: (formUniqueId: string) =>
+    `/api/organizer/custom-form-report/forms/${formUniqueId}/columns`,
+  customFormReportRun: "/api/organizer/custom-form-report/run",
+  customFormReportTemplates: "/api/organizer/custom-form-report/templates",
+  customFormReportTemplateOptions: (moduleId: number, formUniqueId: string) =>
+    `/api/organizer/custom-form-report/modules/${moduleId}/forms/${formUniqueId}/templates`,
+  customFormReportTemplate: (templateUniqueId: string) =>
+    `/api/organizer/custom-form-report/templates/${templateUniqueId}`,
 
   memberAlerts: "/api/organizer/membership/alert/list",
   memberAlertDetail: (uniqueId: string) => `/api/organizer/membership/alert/${uniqueId}`,

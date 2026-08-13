@@ -18,6 +18,7 @@ import {
   Users,
   FolderOpen,
   Receipt,
+  FileSpreadsheet,
 } from "lucide-react"
 import { logoutUser } from "@/api/auth"
 import { auth } from "@/lib/auth"
@@ -69,6 +70,13 @@ const managementNav: NavItem[] = [
     icon: <ListChecks size={17} />,
     path: APP_ROUTES.customLists.list,
     matchPath: APP_ROUTES.customLists.base,
+    roles: ["Organizer", "Admin"],
+  },
+  {
+    label: "Custom Reports",
+    icon: <FileSpreadsheet size={17} />,
+    path: APP_ROUTES.customFormReports.builder,
+    matchPath: APP_ROUTES.customFormReports.base,
     roles: ["Organizer", "Admin"],
   },
   {

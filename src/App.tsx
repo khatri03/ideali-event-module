@@ -13,6 +13,7 @@ import { AdminRateLimitPage } from "./features/admin-rate-limit"
 import { ChargeRulesPage } from "./features/charge-rules"
 import { VenueManagementPage } from "./features/venues"
 import { CustomListCreatePage, CustomListEditPage, CustomListsPage } from "./features/custom-lists"
+import { CustomFormReportBuilderPage, CustomFormReportTemplatesPage } from "./features/custom-form-reports"
 import { MemberDashboardPage } from "./features/member-dashboard"
 import {
   DocumentCategoriesPage,
@@ -151,6 +152,8 @@ export default function App() {
           <Route path={APP_ROUTES.customLists.list} element={<CustomListsPage />} />
           <Route path={APP_ROUTES.customLists.create} element={<CustomListCreatePage />} />
           <Route path={APP_ROUTES.customLists.editRoute} element={<CustomListEditPage />} />
+          <Route path={APP_ROUTES.customFormReports.builder} element={<CustomFormReportBuilderPage />} />
+          <Route path={APP_ROUTES.customFormReports.templates} element={<CustomFormReportTemplatesPage />} />
           <Route path={APP_ROUTES.memberAlerts.list} element={<MemberAlertsPage />} />
           <Route path={APP_ROUTES.memberAlerts.create} element={<MemberAlertComposePage />} />
           <Route path={APP_ROUTES.memberAlerts.editRoute} element={<MemberAlertEditPage />} />
