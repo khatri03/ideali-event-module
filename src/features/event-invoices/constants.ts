@@ -1,6 +1,4 @@
-export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const
-
-export const DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0]
+export { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@/components/common"
 
 /** Caps table height so a large page size scrolls inside the table instead of stretching the page. */
 export const TABLE_MAX_HEIGHT = { base: "60vh", md: "520px" } as const

@@ -1,13 +1,15 @@
 import { useMemo } from "react"
 import { Button, Flex, NativeSelect, Text } from "@chakra-ui/react"
-import { PAGE_SIZE_OPTIONS } from "../constants"
+import { PAGE_SIZE_OPTIONS } from "./pagination"
 
 interface TablePaginationProps {
   page: number
   pageSize: number
   totalPages: number
   total: number
+  /** Singular noun for the record type, e.g. "list" or "member". */
   itemLabel: string
+  size?: "sm" | "md"
   onPageChange: (page: number) => void
   onPageSizeChange: (pageSize: number) => void
 }
@@ -18,6 +20,7 @@ export function TablePagination({
   totalPages,
   total,
   itemLabel,
+  size = "md",
   onPageChange,
   onPageSizeChange,
 }: TablePaginationProps) {
@@ -31,6 +34,8 @@ export function TablePagination({
   const isLastPage = page >= resolvedTotalPages
   const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
   const rangeEnd = Math.min(page * pageSize, total)
+  const controlHeight = size === "sm" ? "32px" : "36px"
+  const fontSize = size === "sm" ? "xs" : "sm"
 
   return (
     <Flex
@@ -45,12 +50,12 @@ export function TablePagination({
       bg="app.bg"
     >
       <Flex align="center" gap={2} flexWrap="wrap">
-        <Text fontSize="sm" color="text.secondary" whiteSpace="nowrap">
+        <Text fontSize={fontSize} color="text.secondary" whiteSpace="nowrap">
           {total === 0 ? `No ${itemLabel}s` : `${rangeStart}–${rangeEnd} of ${total}`}
         </Text>
 
         <Flex align="center" gap={2}>
-          <Text fontSize="sm" color="text.secondary" whiteSpace="nowrap">
+          <Text fontSize={fontSize} color="text.secondary" whiteSpace="nowrap">
             Rows
           </Text>
           <NativeSelect.Root size="sm" w="auto">
@@ -58,11 +63,11 @@ export function TablePagination({
               value={String(pageSize)}
               onChange={(event) => onPageSizeChange(Number(event.currentTarget.value))}
               aria-label={`${itemLabel}s per page`}
-              h="36px"
+              h={controlHeight}
               minW="86px"
               borderRadius="10px"
               bg="card.bg"
-              fontSize="sm"
+              fontSize={fontSize}
               ps={3}
               pe={8}
               textAlign="start"
@@ -81,7 +86,7 @@ export function TablePagination({
 
       <Flex align="center" gap={2} flexWrap="wrap" justify={{ base: "space-between", lg: "flex-end" }}>
         <Flex align="center" gap={2}>
-          <Text fontSize="sm" color="text.secondary" whiteSpace="nowrap">
+          <Text fontSize={fontSize} color="text.secondary" whiteSpace="nowrap">
             Page
           </Text>
           <NativeSelect.Root size="sm" w="auto" disabled={resolvedTotalPages <= 1}>
@@ -89,11 +94,11 @@ export function TablePagination({
               value={String(page)}
               onChange={(event) => onPageChange(Number(event.currentTarget.value))}
               aria-label="Go to page"
-              h="36px"
+              h={controlHeight}
               minW="86px"
               borderRadius="10px"
               bg="card.bg"
-              fontSize="sm"
+              fontSize={fontSize}
               ps={3}
               pe={8}
               textAlign="start"
@@ -107,7 +112,7 @@ export function TablePagination({
             </NativeSelect.Field>
             <NativeSelect.Indicator />
           </NativeSelect.Root>
-          <Text fontSize="sm" color="text.secondary" whiteSpace="nowrap">
+          <Text fontSize={fontSize} color="text.secondary" whiteSpace="nowrap">
             of {resolvedTotalPages}
           </Text>
         </Flex>
@@ -116,7 +121,7 @@ export function TablePagination({
           <Button
             variant="outline"
             size="sm"
-            h="36px"
+            h={controlHeight}
             borderRadius="10px"
             cursor={isFirstPage ? "not-allowed" : "pointer"}
             disabled={isFirstPage}
@@ -127,7 +132,7 @@ export function TablePagination({
           <Button
             variant="outline"
             size="sm"
-            h="36px"
+            h={controlHeight}
             borderRadius="10px"
             cursor={isLastPage ? "not-allowed" : "pointer"}
             disabled={isLastPage}

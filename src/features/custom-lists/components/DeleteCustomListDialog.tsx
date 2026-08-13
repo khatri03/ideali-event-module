@@ -1,7 +1,7 @@
 import { Text } from "@chakra-ui/react"
 import { extractApiError } from "@/utils/errors"
 import { useDeleteCustomList } from "../hooks/useCustomListMutations"
-import { ConfirmDialog } from "./ConfirmDialog"
+import { ConfirmDialog } from "@/components/common"
 import type { CustomListItem } from "@/api/customLists"
 
 interface DeleteCustomListDialogProps {

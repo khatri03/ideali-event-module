@@ -10,7 +10,7 @@ import { CustomListFilterBar } from "./CustomListFilterBar"
 import { CustomListsTable } from "./CustomListsTable"
 import { CustomListsTableSkeleton } from "./CustomListsTable.skeleton"
 import { DeleteCustomListDialog } from "./DeleteCustomListDialog"
-import { TablePagination } from "./TablePagination"
+import { TablePagination } from "@/components/common"
 import { PAGE_SIZE_OPTIONS } from "../constants"
 import type {
   CustomListFilters,

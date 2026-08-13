@@ -9,7 +9,7 @@ import { SortableColumnHeader } from "./SortableColumnHeader"
 import { RemoveMembersDialog } from "./RemoveMembersDialog"
 import { TableBodySkeleton } from "./TableBodySkeleton"
 import { STICKY_HEADER_CSS, TABLE_MAX_HEIGHT } from "../constants"
-import { TablePagination } from "./TablePagination"
+import { TablePagination } from "@/components/common"
 import { PAGE_SIZE_OPTIONS } from "../constants"
 import type {
   CustomListMember,

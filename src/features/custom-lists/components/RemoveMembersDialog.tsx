@@ -1,7 +1,7 @@
 import { Box, Stack, Text } from "@chakra-ui/react"
 import { extractApiError } from "@/utils/errors"
 import { useRemoveCustomListMembers } from "../hooks/useCustomListMutations"
-import { ConfirmDialog } from "./ConfirmDialog"
+import { ConfirmDialog } from "@/components/common"
 import type { CustomListMember } from "@/api/customLists"
 
 const PREVIEW_COUNT = 5
