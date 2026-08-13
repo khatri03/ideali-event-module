@@ -16,9 +16,12 @@ import {
 import { REPORT_FILTER_OPERATOR, REPORT_SYSTEM_FIELD, type ReportFilter } from "@/api/customFormReports"
 import {
   filterDraftError,
+  nextReportSort,
   systemFieldTarget,
   toReportFilters,
+  toReportSortRequest,
   type ReportFilterDraft,
+  type ReportSort,
 } from "../schemas/customFormReport.schemas"
 import { ReportColumnPicker } from "./ReportColumnPicker"
 import { ReportFilterPanel } from "./ReportFilterPanel"
@@ -44,6 +47,7 @@ export function CustomFormReportBuilder() {
   const [fieldSelection, setFieldSelection] = useState<string[] | null>(null)
   const [filterDrafts, setFilterDrafts] = useState<ReportFilterDraft[]>([])
   const [appliedReport, setAppliedReport] = useState<AppliedReport | null>(null)
+  const [sort, setSort] = useState<ReportSort | null>(null)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE)
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false)
@@ -57,7 +61,7 @@ export function CustomFormReportBuilder() {
   const templateOptionsQuery = useReportTemplateOptions(moduleId, formUniqueId)
   const templateQuery = useReportTemplate(templateUniqueId)
   const reportQuery = useCustomFormReport(
-    appliedReport ? { ...appliedReport, pageNo: page, pageSize } : null,
+    appliedReport ? { ...appliedReport, ...toReportSortRequest(sort), pageNo: page, pageSize } : null,
   )
 
   const fields = columnsQuery.data?.fields ?? []
@@ -91,12 +95,18 @@ export function CustomFormReportBuilder() {
     resetSelection()
   }
 
-  /** Columns and filters both name fields of one form, so a different form invalidates every one of them. */
+  /** Columns, filters and the sort all name fields of one form, so a different form invalidates each of them. */
   function resetSelection() {
     setTemplateUniqueId(null)
     setFieldSelection(null)
     setFilterDrafts([])
     setAppliedReport(null)
+    setSort(null)
+  }
+
+  function handleSort(target: string) {
+    setSort(nextReportSort(sort, target))
+    setPage(1)
   }
 
   function handleAddFilter() {
@@ -124,6 +134,12 @@ export function CustomFormReportBuilder() {
   function handleToggleField(fieldUniqueId: string) {
     if (selectedFieldIds.includes(fieldUniqueId)) {
       setFieldSelection(selectedFieldIds.filter((id) => id !== fieldUniqueId))
+
+      // The report can only be ordered by a column it still shows.
+      if (sort?.target === fieldUniqueId) {
+        setSort(null)
+      }
+
       return
     }
 
@@ -138,6 +154,7 @@ export function CustomFormReportBuilder() {
     setTemplateUniqueId(nextTemplateUniqueId)
     setFieldSelection(null)
     setAppliedReport(null)
+    setSort(null)
   }
 
   function handleApply() {
@@ -301,6 +318,8 @@ export function CustomFormReportBuilder() {
             columns={reportColumns}
             rows={reportQuery.data.rows.items}
             isFetching={reportQuery.isFetching}
+            sort={sort}
+            onSort={handleSort}
           />
 
           <TablePagination

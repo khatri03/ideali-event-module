@@ -3,6 +3,7 @@ import {
   REPORT_FILTER_OPERATOR,
   type ReportFilter,
   type ReportFilterOperator,
+  type ReportRequest,
   type ReportSystemField,
   type ReportTemplateColumn,
 } from "@/api/customFormReports"
@@ -85,7 +86,7 @@ export function systemFieldTarget(systemField: ReportSystemField): string {
   return `${SYSTEM_FIELD_PREFIX}${systemField}`
 }
 
-function splitFilterTarget(target: string): Pick<ReportFilter, "fieldUniqueId" | "systemField"> {
+export function splitReportTarget(target: string): Pick<ReportFilter, "fieldUniqueId" | "systemField"> {
   if (!target.startsWith(SYSTEM_FIELD_PREFIX)) {
     return { fieldUniqueId: target, systemField: null }
   }
@@ -152,8 +153,38 @@ export function toReportFilters(drafts: ReportFilterDraft[]): ReportFilter[] {
   return drafts
     .filter((draft) => !isBlankFilter(draft))
     .map((draft) => ({
-      ...splitFilterTarget(draft.target),
+      ...splitReportTarget(draft.target),
       operator: draft.operator,
       values: splitFilterValues(draft.operator, draft.value),
     }))
+}
+
+/** The column the report is ordered by, encoded the same way a filter target is. */
+export interface ReportSort {
+  target: string
+  descending: boolean
+}
+
+type ReportSortRequest = Pick<ReportRequest, "sortFieldUniqueId" | "sortSystemField" | "sortDescending">
+
+export function toReportSortRequest(sort: ReportSort | null): ReportSortRequest {
+  if (sort === null) {
+    return { sortFieldUniqueId: null, sortSystemField: null, sortDescending: false }
+  }
+
+  const { fieldUniqueId, systemField } = splitReportTarget(sort.target)
+
+  return { sortFieldUniqueId: fieldUniqueId, sortSystemField: systemField, sortDescending: sort.descending }
+}
+
+/**
+ * Clicking a column sorts it ascending, then descending, then hands the report back to its default
+ * newest-first order, so there is always a way back without reloading the page.
+ */
+export function nextReportSort(current: ReportSort | null, target: string): ReportSort | null {
+  if (current === null || current.target !== target) {
+    return { target, descending: false }
+  }
+
+  return current.descending ? null : { target, descending: true }
 }
