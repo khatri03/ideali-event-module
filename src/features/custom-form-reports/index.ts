@@ -1,6 +1,8 @@
 export { CustomFormReportBuilder } from "./components/CustomFormReportBuilder"
 export { DeleteReportTemplateDialog } from "./components/DeleteReportTemplateDialog"
 export { ReportColumnPicker } from "./components/ReportColumnPicker"
+export { ReportFilterPanel } from "./components/ReportFilterPanel"
+export { ReportFilterRow } from "./components/ReportFilterRow"
 export { ReportPageHeader } from "./components/ReportPageHeader"
 export { ReportResultsTable } from "./components/ReportResultsTable"
 export { ReportSourcePicker } from "./components/ReportSourcePicker"
@@ -24,4 +26,10 @@ export {
   useDeleteReportTemplate,
   useUpdateReportTemplate,
 } from "./hooks/useCustomFormReportTemplateMutations"
-export { reportTemplateFormSchema, type ReportTemplateFormValues } from "./schemas/customFormReport.schemas"
+export {
+  reportFilterDraftSchema,
+  reportTemplateFormSchema,
+  toReportFilters,
+  type ReportFilterDraft,
+  type ReportTemplateFormValues,
+} from "./schemas/customFormReport.schemas"

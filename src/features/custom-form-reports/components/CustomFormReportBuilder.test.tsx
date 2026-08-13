@@ -127,6 +127,7 @@ describe("CustomFormReportBuilder", () => {
         entityUniqueId: "entity-1",
         formUniqueId: "form-1",
         fieldUniqueIds: ["field-1"],
+        filters: [],
         pageNo: 1,
         pageSize: 10,
       }),
@@ -156,6 +157,75 @@ describe("CustomFormReportBuilder", () => {
     await userEvent.click(screen.getByText("Emergency contact"))
 
     expect(screen.getByText("2 of 2 selected")).toBeInTheDocument()
+  })
+
+  it("Filter_IsSentAlongsideTheChosenColumns", async () => {
+    renderBuilder()
+    await pickSourceAndColumn()
+
+    await userEvent.click(screen.getByRole("button", { name: /Add filter/ }))
+    await userEvent.selectOptions(screen.getByLabelText("Filter 1 field"), "field-2")
+    await userEvent.selectOptions(screen.getByLabelText("Filter 1 condition"), "4")
+    await userEvent.type(screen.getByLabelText("Filter 1 value"), "Large, Medium")
+
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+
+    await waitFor(() =>
+      expect(lastReportRequest().filters).toEqual([
+        { fieldUniqueId: "field-2", operator: 4, values: ["Large", "Medium"] },
+      ]),
+    )
+  })
+
+  it("PresenceFilter_IsSentWithoutAValue", async () => {
+    renderBuilder()
+    await pickSourceAndColumn()
+
+    await userEvent.click(screen.getByRole("button", { name: /Add filter/ }))
+    await userEvent.selectOptions(screen.getByLabelText("Filter 1 condition"), "5")
+
+    expect(screen.getByLabelText("Filter 1 value")).toBeDisabled()
+
+    await userEvent.click(screen.getByRole("button", { name: /Apply/ }))
+
+    await waitFor(() =>
+      expect(lastReportRequest().filters).toEqual([
+        { fieldUniqueId: "field-1", operator: 5, values: [] },
+      ]),
+    )
+  })
+
+  it("FilterWithoutAValue_KeepsApplyDisabledAndExplainsWhy", async () => {
+    renderBuilder()
+    await pickSourceAndColumn()
+
+    await userEvent.click(screen.getByRole("button", { name: /Add filter/ }))
+
+    expect(screen.getByText("Enter a value for this filter.")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Apply/ })).toBeDisabled()
+  })
+
+  it("RemovingAFilter_ReleasesApply", async () => {
+    renderBuilder()
+    await pickSourceAndColumn()
+
+    await userEvent.click(screen.getByRole("button", { name: /Add filter/ }))
+    await userEvent.click(screen.getByRole("button", { name: "Remove filter 1" }))
+
+    expect(screen.queryByLabelText("Filter 1 value")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Apply/ })).toBeEnabled()
+  })
+
+  it("ChangingModule_ClearsTheFiltersOfThePreviousForm", async () => {
+    renderBuilder()
+    await pickSourceAndColumn()
+
+    await userEvent.click(screen.getByRole("button", { name: /Add filter/ }))
+    await userEvent.click(screen.getByRole("button", { name: "pick module 2" }))
+    await userEvent.click(screen.getByRole("button", { name: "pick entity" }))
+    await userEvent.click(screen.getByRole("button", { name: "pick form" }))
+
+    expect(screen.queryByLabelText("Filter 1 value")).not.toBeInTheDocument()
   })
 
   it("SaveAsTemplate_OpensTheDialogWithOnlyTheSelectedColumns", async () => {

@@ -1,0 +1,93 @@
+import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react"
+import { Plus } from "lucide-react"
+import type { ReportField } from "@/api/customFormReports"
+import { MAX_REPORT_FILTERS } from "../constants"
+import { filterDraftError, type ReportFilterDraft } from "../schemas/customFormReport.schemas"
+import { ReportFilterRow } from "./ReportFilterRow"
+
+interface ReportFilterPanelProps {
+  fields: ReportField[]
+  drafts: ReportFilterDraft[]
+  onAddFilter: () => void
+  onChangeFilter: (draft: ReportFilterDraft) => void
+  onRemoveFilter: (draftId: string) => void
+}
+
+export function ReportFilterPanel({
+  fields,
+  drafts,
+  onAddFilter,
+  onChangeFilter,
+  onRemoveFilter,
+}: ReportFilterPanelProps) {
+  const hasReachedLimit = drafts.length >= MAX_REPORT_FILTERS
+
+  return (
+    <Box
+      border="1px solid"
+      borderColor="border.subtle"
+      borderRadius="20px"
+      bg="card.bg"
+      boxShadow="card"
+      p={{ base: 4, md: 5 }}
+    >
+      <Flex
+        direction={{ base: "column", md: "row" }}
+        align={{ base: "flex-start", md: "center" }}
+        justify="space-between"
+        gap={2}
+        mb={4}
+      >
+        <Box>
+          <Text fontSize={{ base: "sm", md: "md" }} fontWeight="800" color="text.primary">
+            Filters
+          </Text>
+          <Text fontSize="sm" color="text.secondary">
+            A submission is listed only when it matches every filter.
+          </Text>
+        </Box>
+
+        <Button
+          variant="outline"
+          size="sm"
+          borderRadius="12px"
+          minH="11"
+          px={4}
+          w={{ base: "full", md: "auto" }}
+          cursor={hasReachedLimit || fields.length === 0 ? "not-allowed" : "pointer"}
+          disabled={hasReachedLimit || fields.length === 0}
+          onClick={onAddFilter}
+        >
+          <Plus size={16} />
+          Add filter
+        </Button>
+      </Flex>
+
+      {drafts.length === 0 ? (
+        <Text fontSize="sm" color="text.secondary">
+          No filters applied. The report lists every submission of the selected form.
+        </Text>
+      ) : (
+        <Stack gap={3}>
+          {drafts.map((draft, index) => (
+            <ReportFilterRow
+              key={draft.id}
+              draft={draft}
+              position={index + 1}
+              fields={fields}
+              error={filterDraftError(draft)}
+              onChange={onChangeFilter}
+              onRemove={() => onRemoveFilter(draft.id)}
+            />
+          ))}
+        </Stack>
+      )}
+
+      {hasReachedLimit ? (
+        <Text mt={4} fontSize="sm" color="orange.600" fontWeight="600">
+          Filter limit reached. Remove a filter before adding another.
+        </Text>
+      ) : null}
+    </Box>
+  )
+}

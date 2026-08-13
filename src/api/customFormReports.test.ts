@@ -20,6 +20,7 @@ const REQUEST: ReportRequest = {
   entityUniqueId: "d4c3b2a1-0000-4000-8000-000000000001",
   formUniqueId: "d4c3b2a1-0000-4000-8000-000000000002",
   fieldUniqueIds: [DIETARY_FIELD_ID],
+  filters: [],
   pageNo: 1,
   pageSize: 10,
 }
