@@ -1004,6 +1004,26 @@ export function useEventRegistration(eventUniqueId: string) {
                 before then has nothing to print.
               </li>
             </ul>
+            <h4 class="h6 mt-4">When it refuses</h4>
+            <p>
+              The server applies the same registration rules the <code>…/register</code> calls report, so a
+              cart cannot be opened for an event the buyer was never allowed to register for. A
+              <code>400</code> here carries one of these messages, and the message is safe to show as-is:
+            </p>
+            <ul>
+              <li><em>This event has been cancelled.</em></li>
+              <li><em>Registration is not open yet for this event.</em> — the organizer is still setting it up.</li>
+              <li><em>This event is not open for registration.</em> — invitation-only.</li>
+              <li><em>Please sign in to register for this member-only event.</em></li>
+              <li><em>You need an active membership to register for this event.</em></li>
+              <li><em>Your active membership is not eligible for this event.</em></li>
+              <li><em>Registration has not opened yet.</em> / <em>Registration has closed for this event.</em> — outside the booking window.</li>
+            </ul>
+            <p class="small text-secondary">
+              The same checks run again on add-tickets, price, start-payment, cheque and the free-order
+              confirm, so an event cancelled while the buyer was still choosing stops the next call rather
+              than the last one. Treat any of these as "back to the event page", not as a retryable error.
+            </p>
             <div class="dont">
               Saving the cart id in <code>localStorage</code>. This project does not use web storage for
               anything. Use a short-lived cookie scoped to the registration path — there is already a
