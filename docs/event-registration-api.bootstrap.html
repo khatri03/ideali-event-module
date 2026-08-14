@@ -980,6 +980,17 @@ export function useEventRegistration(eventUniqueId: string) {
   "buyerPhone": "+1 416 555 0142"
 }</code></pre>
             <p class="small text-secondary">Only <code>eventUniqueId</code> is required. The buyer fields can be filled in later — you can also send them again when starting the payment, and those win.</p>
+            <div class="dont">
+              Inventing a <code>buyerContactId</code>. It is not a number you can choose — the server
+              only accepts a contact that belongs to this event's organizer, and anything else is
+              refused with <em>Selected contact is not available.</em> Public buyers send
+              <code>null</code> and let the buyer fields carry the details.
+            </div>
+            <p class="small text-secondary">
+              <code>buyerName</code> is capped at 255 characters and <code>buyerPhone</code> at 50.
+              Enforce the same caps in the form so the buyer is corrected while typing rather than on
+              submit.
+            </p>
 
             <h4 class="h6 mt-4">What comes back (inside <code>data</code>)</h4>
 <pre><code>{
@@ -1328,6 +1339,18 @@ export function useEventRegistration(eventUniqueId: string) {
                   <tr><td><code>contactId</code></td><td>No</td><td>Links to an existing member record. Send <code>null</code> for public buyers.</td></tr>
                 </tbody>
               </table>
+            </div>
+
+            <p class="small text-secondary">
+              <code>name</code> is capped at 255 characters and <code>phone</code> at 50.
+            </p>
+
+            <div class="dont">
+              Passing a <code>contactId</code> you did not receive from the server. It must belong to
+              this event's organizer, and one bad id fails the whole submission — the other attendees on
+              the line are not saved either. The refusal is
+              <em>Selected contact is not available.</em> and it never says whether the contact was
+              missing or someone else's, so there is nothing to retry against.
             </div>
 
             <h4 class="h6 mt-4">What comes back</h4>
