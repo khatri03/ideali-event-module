@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { Box, Button, CloseButton, Dialog, Flex, HStack, Heading, Stack, Text } from "@chakra-ui/react"
-import { AlertCircle, Clock3, Trash2 } from "lucide-react"
+import { AlertCircle, Clock3, ShieldAlert, Trash2 } from "lucide-react"
 import { CONTROL_BUTTON_OUTLINE } from "@/components/common/controlStyles"
 import { RichTextBlock } from "@/features/events/components/registration/SupportCard"
 import { hexToRgba } from "@/features/events/utils/registrationFormat"
@@ -186,6 +186,33 @@ export function PurchaseExpiredDialog({
       iconBackground={hexToRgba(accentColor, 0.12)}
       title="Purchase time expired"
       message="The purchase window has ended. Press OK to reload the registration form and start again."
+      actionLabel="OK"
+    />
+  )
+}
+
+/**
+ * Shown when the server stops recognising the cart - a dropped, expired or mismatched capability. It is
+ * terminal by design: there is nothing to retry, so the only action offered is starting over.
+ */
+export function SessionUnavailableDialog({
+  isOpen,
+  accentColor,
+  onRestart,
+}: {
+  isOpen: boolean
+  accentColor: string
+  onRestart: () => void
+}) {
+  return (
+    <NoticeDialog
+      isOpen={isOpen}
+      onDismiss={onRestart}
+      icon={<ShieldAlert size={30} />}
+      accentColor={accentColor}
+      iconBackground={hexToRgba(accentColor, 0.12)}
+      title="Registration session ended"
+      message="This registration session is no longer available. Press OK to reload the form and start again."
       actionLabel="OK"
     />
   )

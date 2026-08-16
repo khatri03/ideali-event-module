@@ -23,6 +23,26 @@ export function isNotFoundError(err: unknown): boolean {
   return httpStatusOf(err) === 404
 }
 
+/** The API spells its failure envelope PascalCase, and an error body never passes through camelizeKeys. */
+interface ServiceFailureBody {
+  ErrorCode?: string
+  errorCode?: string
+}
+
+const CART_CAPABILITY_ERROR_CODE = "cart_capability_required"
+
+/**
+ * The cart's capability cookie no longer reaches the server - it was never sent, it expired, or it
+ * belongs to a different cart. Every later call on that cart is refused identically, so the session is
+ * over: the caller must start again rather than retry.
+ */
+export function isCartSessionLostError(err: unknown): boolean {
+  if (httpStatusOf(err) !== 403 || !isAxiosError(err)) return false
+
+  const body = err.response?.data as ServiceFailureBody | undefined
+  return (body?.ErrorCode ?? body?.errorCode) === CART_CAPABILITY_ERROR_CODE
+}
+
 export function extractApiError(err: unknown): string {
   // Raised before the request leaves the browser, so it carries no server detail to leak.
   if (err instanceof TurnstileError || err instanceof ServiceResponseError) {

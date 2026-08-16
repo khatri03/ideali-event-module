@@ -25,7 +25,6 @@ export { buildCreateEventPayload, buildEventWizardSteps, useEventWizardNavigatio
 export type { EventWizardStep } from "./hooks/useEventWizard"
 export type { EventWizardSessionValues, EventWizardValues } from "./schemas/eventWizard.schemas"
 export { defaultEventWizardValues, eventWizardFieldGroups, eventWizardSchema } from "./schemas/eventWizard.schemas"
-export { useCreateEventCart, useEventCart, useAddEventCartLine, useRemoveEventCartLine } from "./hooks/useEventCart"
 export { usePriceEventCart } from "./hooks/useEventCartPricing"
 export { useSubmitLineAttendees, useSubmitOrderAnswers, useUploadAnswerFile } from "./hooks/useEventCartAttendees"
 export {

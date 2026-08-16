@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
+import { AxiosError } from "axios"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useRegistrationCart } from "./useRegistrationCart"
 import type { EventCart, EventCartPrice } from "@/features/events/schemas/eventCart.schemas"
@@ -37,6 +38,22 @@ const PRICE = {
   netSubtotal: 210,
   paymentBreakdowns: [],
 } as EventCartPrice
+
+function httpFailure(status: number, data: unknown) {
+  return new AxiosError("failed", String(status), undefined, undefined, {
+    status,
+    data,
+    statusText: "",
+    headers: {},
+    config: { headers: {} },
+  } as never)
+}
+
+const CAPABILITY_REFUSAL = httpFailure(403, {
+  Success: false,
+  Message: "This registration session is no longer available. Start again from the event page.",
+  ErrorCode: "cart_capability_required",
+})
 
 async function identify(result: { current: ReturnType<typeof useRegistrationCart> }) {
   await act(async () => {
@@ -142,5 +159,64 @@ describe("useRegistrationCart", () => {
 
     // The pricing transaction rolled back, so the cart still carries what it had before.
     expect(result.current.appliedCouponCode).toBe("SAVE10")
+  })
+
+  it("ServerRefusesTheCapability_EndsTheSessionInsteadOfLeavingADeadCart", async () => {
+    const { result } = renderHook(() => useRegistrationCart(EVENT_UNIQUE_ID))
+    await identify(result)
+
+    priceEventCartMock.mockRejectedValueOnce(CAPABILITY_REFUSAL)
+
+    await act(async () => {
+      await result.current.applyCoupon("SAVE10")
+    })
+
+    await waitFor(() => expect(result.current.isSessionLost).toBe(true))
+    // Holding the cart would leave the buyer retrying against one the server will never accept again.
+    expect(result.current.cart).toBeNull()
+    expect(result.current.price).toBeNull()
+    expect(result.current.error).toBe(
+      "This registration session is no longer available. Start again from the event page.",
+    )
+  })
+
+  it("ServerRefusesTheCapability_OpensAFreshCartOnTheNextSelection", async () => {
+    const { result } = renderHook(() => useRegistrationCart(EVENT_UNIQUE_ID))
+    await identify(result)
+
+    priceEventCartMock.mockRejectedValueOnce(CAPABILITY_REFUSAL)
+
+    await act(async () => {
+      await result.current.applyCoupon("SAVE10")
+    })
+
+    const createCallsBefore = createEventCartMock.mock.calls.length
+
+    await act(async () => {
+      await result.current.setBuyerIdentity({ name: "Sohail Ahmed", email: "khatri03@gmail.com" })
+      await result.current.syncTicketSelection({
+        sessionUniqueId: "session-1",
+        ticketTypeUniqueId: "ticket-1",
+        quantity: 1,
+      })
+    })
+
+    // The refused cart is gone, so the next selection has to open a new one rather than reuse its id.
+    expect(createEventCartMock.mock.calls.length).toBe(createCallsBefore + 1)
+  })
+
+  it("ServerFailsForAnyOtherReason_KeepsTheCartSoTheBuyerCanRetry", async () => {
+    const { result } = renderHook(() => useRegistrationCart(EVENT_UNIQUE_ID))
+    await identify(result)
+
+    priceEventCartMock.mockRejectedValueOnce(httpFailure(500, { Message: "Something broke." }))
+
+    await act(async () => {
+      await result.current.applyCoupon("SAVE10")
+    })
+
+    await waitFor(() => expect(result.current.error).not.toBeNull())
+    expect(result.current.isSessionLost).toBe(false)
+    expect(result.current.cart).not.toBeNull()
   })
 })

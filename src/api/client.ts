@@ -5,6 +5,8 @@ import { API_AUTH_ROUTES, APP_ROUTES } from "@/utils/routes"
 
 export const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5000",
+  // Carries the refresh cookie and the signed event-cart capability cookie. Drop this and every
+  // cart call after creation is refused with 403 cart_capability_required.
   withCredentials: true,
 })
 

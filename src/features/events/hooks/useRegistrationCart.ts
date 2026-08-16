@@ -3,7 +3,7 @@ import { addEventCartLine, createEventCart, fetchEventCart, priceEventCart, remo
 import type { EventCart, EventCartPrice } from "@/features/events/schemas/eventCart.schemas"
 import { clearStoredCartId, readStoredCartId, storeCartId } from "@/features/events/utils/registrationCartCookie"
 import { parseUtcDateTime } from "@/features/events/utils/registrationFormat"
-import { extractApiError } from "@/utils/errors"
+import { extractApiError, isCartSessionLostError } from "@/utils/errors"
 
 interface TicketSelectionInput {
   sessionUniqueId: string
@@ -23,6 +23,8 @@ interface RegistrationCartState {
   appliedCouponCode: string | null
   isSyncing: boolean
   error: string | null
+  /** The server no longer accepts this cart. Nothing can be retried against it. */
+  isSessionLost: boolean
 }
 
 const EMPTY_STATE: RegistrationCartState = {
@@ -31,7 +33,14 @@ const EMPTY_STATE: RegistrationCartState = {
   appliedCouponCode: null,
   isSyncing: false,
   error: null,
+  isSessionLost: false,
 }
+
+/**
+ * The server refuses every capability failure the same way, so it cannot say which one happened. The
+ * buyer is told the only thing that is both true and useful.
+ */
+const SESSION_LOST_MESSAGE = "This registration session is no longer available. Start again from the event page."
 
 function hasIdentity(identity: BuyerIdentity | null): identity is BuyerIdentity {
   return Boolean(identity && identity.name.trim() && identity.email.trim())
@@ -158,6 +167,18 @@ export function useRegistrationCart(eventUniqueId: string) {
     [applyCart, ensureCart, repriceCart],
   )
 
+  /** Everything tying this browser to a server cart. Kept apart from the visible state so a failure can
+   * drop the cart without deciding what the buyer is told. */
+  const forgetCart = useCallback(() => {
+    cartRef.current = null
+    couponCodeRef.current = null
+    identityRef.current = null
+    pendingRef.current.clear()
+    clearStoredCartId()
+    setRestoredCart(null)
+    setIsCompleted(false)
+  }, [])
+
   const enqueue = useCallback((work: () => Promise<void>) => {
     const run = async () => {
       setState((current) => ({ ...current, isSyncing: true, error: null }))
@@ -165,6 +186,14 @@ export function useRegistrationCart(eventUniqueId: string) {
       try {
         await work()
       } catch (error) {
+        // A refused capability ends the cart. Holding on to it would leave every later call failing the
+        // same way, with the buyer retrying against a cart the server will never accept again.
+        if (isCartSessionLostError(error)) {
+          forgetCart()
+          setState({ ...EMPTY_STATE, error: SESSION_LOST_MESSAGE, isSessionLost: true })
+          return
+        }
+
         setState((current) => ({ ...current, error: extractApiError(error) }))
       } finally {
         setState((current) => ({ ...current, isSyncing: false }))
@@ -173,7 +202,7 @@ export function useRegistrationCart(eventUniqueId: string) {
 
     queueRef.current = queueRef.current.then(run, run)
     return queueRef.current
-  }, [])
+  }, [forgetCart])
 
   const syncTicketSelection = useCallback(
     (selection: TicketSelectionInput) => enqueue(() => applySelection(selection)),
@@ -268,15 +297,9 @@ export function useRegistrationCart(eventUniqueId: string) {
   )
 
   const resetCart = useCallback(() => {
-    cartRef.current = null
-    couponCodeRef.current = null
-    identityRef.current = null
-    pendingRef.current.clear()
-    clearStoredCartId()
-    setRestoredCart(null)
-    setIsCompleted(false)
+    forgetCart()
     setState(EMPTY_STATE)
-  }, [])
+  }, [forgetCart])
 
   /**
    * Drops the stored id once the purchase has gone through. The in-memory cart stays so the buyer
@@ -302,6 +325,8 @@ export function useRegistrationCart(eventUniqueId: string) {
     appliedCouponCode: state.appliedCouponCode,
     isSyncing: state.isSyncing,
     error: state.error,
+    /** The cart is gone for good. The wizard must send the buyer back to the start, not offer a retry. */
+    isSessionLost: state.isSessionLost,
     /** Absolute UTC deadline the hold expires at, or null once paid. The UI only counts down to it. */
     expiresAtUtc: isCompleted ? null : state.cart?.expiresAtUtc ?? null,
     lineByTicketTypeId,

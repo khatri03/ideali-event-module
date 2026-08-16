@@ -58,6 +58,7 @@ import {
   ConfirmRemoveDialog,
   ContentDialog,
   PurchaseExpiredDialog,
+  SessionUnavailableDialog,
 } from '@/features/events/components/registration/RegistrationDialogs'
 import type { PaymentProduct } from '@/features/events/schemas/eventCart.schemas'
 import {
@@ -155,6 +156,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     price: cartPrice,
     isSyncing: isCartSyncing,
     error: cartError,
+    isSessionLost: isCartSessionLost,
     expiresAtUtc,
     lineByTicketTypeId,
     restoredCart,
@@ -1314,6 +1316,12 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
       <PurchaseExpiredDialog
         isOpen={purchaseTimerExpiryOpen}
+        accentColor={formAccent}
+        onRestart={restartPurchaseFlow}
+      />
+
+      <SessionUnavailableDialog
+        isOpen={isCartSessionLost}
         accentColor={formAccent}
         onRestart={restartPurchaseFlow}
       />

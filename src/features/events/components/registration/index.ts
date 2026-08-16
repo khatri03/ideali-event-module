@@ -22,6 +22,7 @@ export {
   ContentDialog,
   NoticeDialog,
   PurchaseExpiredDialog,
+  SessionUnavailableDialog,
 } from "./RegistrationDialogs"
 export { SessionTitleCard } from "./SessionTitleCard"
 export { SessionsStep } from "./SessionsStep"

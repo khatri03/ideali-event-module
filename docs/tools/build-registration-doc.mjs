@@ -160,7 +160,13 @@ const narrative = registrationSections
   .join("\n")
 
 const narrativeNav = registrationSections
-  .map((entry, index) => `        <a class="nav-link fw-semibold" href="#${entry.id}">${index + sectionOffset}. ${escape(entry.title)}</a>`)
+  .map((entry, index) => {
+    const top = `        <a class="nav-link fw-semibold" href="#${entry.id}">${index + sectionOffset}. ${escape(entry.title)}</a>`
+    const subs = (entry.subs ?? [])
+      .map((sub) => `        <a class="nav-link ms-3 small" href="#${sub.id}">${escape(sub.title)}</a>`)
+      .join("\n")
+    return subs ? `${top}\n${subs}` : top
+  })
   .join("\n")
 
 const appendixNumber = registrationSections.length + sectionOffset
@@ -197,6 +203,9 @@ const html = `<!doctype html>
     .dont::before { content: "Trap"; display: block; font-weight: 600; font-size: .8125rem; text-transform: uppercase; letter-spacing: .04em; opacity: .75; margin-bottom: .3rem; }
     .rule { background: var(--bs-success-bg-subtle); border-left: 4px solid var(--bs-success); padding: .85rem 1rem; border-radius: .375rem; margin: 1rem 0; }
     .rule::before { content: "Rule"; display: block; font-weight: 600; font-size: .8125rem; text-transform: uppercase; letter-spacing: .04em; opacity: .75; margin-bottom: .3rem; }
+    .must { background: var(--bs-warning-bg-subtle); border: 2px solid var(--bs-warning); border-left-width: 8px; padding: 1rem 1.15rem; border-radius: .375rem; margin: 1.25rem 0; }
+    .must::before { content: "Do this or nothing works"; display: block; font-weight: 700; font-size: .8125rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .45rem; }
+    .must > :last-child { margin-bottom: 0; }
     .step-rail { counter-reset: step; list-style: none; padding-left: 0; }
     .step-rail > li { position: relative; padding-left: 3rem; padding-bottom: 1.5rem; border-left: 2px solid var(--bs-border-color); margin-left: 1rem; }
     .step-rail > li:last-child { border-left-color: transparent; padding-bottom: 0; }
@@ -258,6 +267,21 @@ ${narrativeNav}
           cart holds seats, exactly how each payment method's total is built, and what runs on its own
           afterwards.
         </p>
+
+        <div class="must">
+          <p class="mb-2">
+            Before deploying this module anywhere, including a laptop:
+            <strong><code>EventCartCapability:SigningKey</code> must be set</strong> or the API will not
+            start. Before writing a frontend that talks to it: <strong>the axios client needs
+            <code>withCredentials: true</code></strong> or every cart call after creation returns
+            <code>403</code>.
+          </p>
+          <p class="mb-0">
+            Both come from the same feature — carts are anonymous and are guarded by a signed cookie
+            instead of a login. <a href="#reg-cart-capability" class="fw-semibold">Who is allowed to touch
+            a cart</a> explains why, with the failure modes for each.
+          </p>
+        </div>
 
         <h3>Who this is for</h3>
         <p>
