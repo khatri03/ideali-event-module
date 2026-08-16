@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ideali AI Agent Strategy</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root { --doc-max: 1160px; }
+    body { scroll-behavior: smooth; }
+    .doc-shell { max-width: var(--doc-max); }
+
+    .hero { background: linear-gradient(140deg, #0b1220 0%, #16263b 52%, #0d3242 100%); color: #fff; }
+    .hero .lead { color: rgba(255,255,255,.85); }
+    .hero .eyebrow { font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.6); font-weight: 600; }
+    .hero h1 { letter-spacing: -.02em; max-width: 56rem; }
+
+    .sidebar { position: sticky; top: 1rem; max-height: calc(100dvh - 2rem); overflow-y: auto; }
+    .sidebar .nav-link { padding: .3rem .6rem; font-size: .86rem; border-radius: .375rem; color: var(--bs-body-color); }
+    .sidebar .nav-link:hover { background: var(--bs-secondary-bg); }
+    .sidebar .nav-link.small { font-size: .8rem; opacity: .78; }
+    .sidebar .nav-head { font-size: .69rem; text-transform: uppercase; letter-spacing: .07em; color: var(--bs-secondary-color); font-weight: 700; padding: .95rem .6rem .25rem; }
+
+    section { scroll-margin-top: 1rem; }
+    h2.section-title { border-bottom: 1px solid var(--bs-border-color); padding-bottom: .6rem; margin-top: 3.25rem; font-weight: 650; letter-spacing: -.01em; }
+    .module-intro { font-size: .95rem; color: var(--bs-secondary-color); max-width: 60rem; }
+
+    .testbox { border: 1px solid var(--bs-border-color); border-radius: .75rem; overflow: hidden; height: 100%; }
+    .testbox .head { padding: .8rem 1.15rem; font-weight: 650; font-size: .95rem; }
+    .testbox .head.code { background: var(--bs-secondary-bg); }
+    .testbox .head.ai { background: var(--bs-primary-bg-subtle); }
+    .testbox ul { padding: 1rem 1.15rem 1.15rem 2.3rem; margin: 0; font-size: .88rem; }
+    .testbox li { margin-bottom: .4rem; }
+    .testbox li:last-child { margin-bottom: 0; }
+
+    .agent-card { border: 1px solid var(--bs-border-color); border-radius: .75rem; overflow: hidden; height: 100%; }
+    .agent-card .accent { height: 5px; }
+    .a-org { background: #6f42c1; }
+    .a-hybrid { background: #cc8a00; }
+    .agent-card .card-body { padding: 1.3rem 1.4rem; }
+    .agent-card h5 { font-weight: 650; margin-bottom: .1rem; font-size: 1.06rem; letter-spacing: -.01em; }
+    .agent-card .kicker { font-size: .69rem; text-transform: uppercase; letter-spacing: .07em; color: var(--bs-secondary-color); font-weight: 700; }
+    .block-label { font-size: .69rem; text-transform: uppercase; letter-spacing: .07em; font-weight: 700; color: var(--bs-secondary-color); margin: .95rem 0 .3rem; }
+    .agent-card p.body-text { font-size: .89rem; margin-bottom: 0; }
+    .agent-card ul.owns { padding-left: 1.15rem; margin-bottom: 0; font-size: .875rem; }
+    .agent-card ul.owns li { margin-bottom: .25rem; }
+    .whyai { font-size: .82rem; border-left: 3px solid var(--bs-primary); background: var(--bs-primary-bg-subtle); border-radius: .35rem; padding: .65rem .8rem; margin-top: 1rem; }
+    .whyai strong { font-weight: 650; }
+    .evidence { font-size: .78rem; color: var(--bs-secondary-color); background: var(--bs-tertiary-bg); border-radius: .4rem; padding: .6rem .75rem; margin-top: .6rem; }
+    .evidence strong { color: var(--bs-body-color); font-weight: 650; }
+
+    .badge-p1 { background: #146c43 !important; }
+    .badge-p2 { background: #0d6efd !important; }
+    .badge-p3 { background: #6c757d !important; }
+
+    table.roadmap th { font-size: .73rem; text-transform: uppercase; letter-spacing: .04em; color: var(--bs-secondary-color); }
+    table.roadmap td, table.roadmap th { vertical-align: middle; }
+    table.roadmap td.agent-name { font-weight: 600; }
+    table.backlog th { font-size: .73rem; text-transform: uppercase; letter-spacing: .04em; color: var(--bs-secondary-color); }
+    table.backlog td { vertical-align: top; font-size: .875rem; }
+
+    .callout { border-left: 4px solid var(--bs-primary); background: var(--bs-primary-bg-subtle); border-radius: .45rem; padding: 1rem 1.2rem; font-size: .92rem; }
+    .callout.warn { border-left-color: var(--bs-warning); background: var(--bs-warning-bg-subtle); }
+    .callout.danger { border-left-color: var(--bs-danger); background: var(--bs-danger-bg-subtle); }
+    .callout.neutral { border-left-color: var(--bs-secondary); background: var(--bs-secondary-bg); }
+
+    .phase0 { border: 1px solid var(--bs-border-color); border-radius: .75rem; padding: 1.4rem 1.5rem; background: var(--bs-tertiary-bg); }
+    .finding { border: 1px solid var(--bs-border-color); border-left: 4px solid var(--bs-secondary); border-radius: .5rem; padding: 1rem 1.15rem; height: 100%; }
+    .finding h6 { font-weight: 650; margin-bottom: .35rem; font-size: .93rem; }
+    .finding p { font-size: .86rem; margin-bottom: 0; color: var(--bs-secondary-color); }
+    .finding.f-amber { border-left-color: #cc8a00; }
+    .finding.f-blue { border-left-color: #0d6efd; }
+
+    @media (max-width: 991.98px) { .sidebar { position: static; max-height: none; } }
+    @media print {
+      .sidebar, .navbar { display: none !important; }
+      .hero { background: #0b1220 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .agent-card { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand bg-body-tertiary border-bottom sticky-top">
+  <div class="container doc-shell">
+    <span class="navbar-brand fw-semibold mb-0">Ideali — AI Agent Strategy</span>
+    <span class="ms-auto badge text-bg-secondary d-none d-sm-inline">Internal · Leadership review</span>
+  </div>
+</nav>
+
+<header class="hero py-5">
+  <div class="container doc-shell">
+    <div class="eyebrow mb-2">Prepared for leadership review</div>
+    <h1 class="fw-bold mb-3">Seven agents that make organizers faster — and the honest list of what is just missing software</h1>
+    <p class="lead mb-0" style="max-width:52rem;">Organizers are the customer, and their transaction volume is our revenue. This document proposes AI only where AI is genuinely the answer, and names plainly the work that should be built as ordinary backend features instead.</p>
+  </div>
+</header>
+
+<div class="container doc-shell my-4">
+  <div class="row g-4">
+    <div class="col-lg-3">
+      <nav class="sidebar nav flex-column">
+        <a class="nav-link fw-semibold" href="#summary">Executive summary</a>
+        <a class="nav-link fw-semibold" href="#test">Why an agent, not more code</a>
+        <a class="nav-link fw-semibold" href="#organizer">The organizer's day today</a>
+        <a class="nav-link fw-semibold" href="#roadmap">Priority roadmap</a>
+
+        <div class="nav-head">Where AI is the only answer</div>
+        <a class="nav-link ms-2 small" href="#a-setup">1. Setup Copilot</a>
+        <a class="nav-link ms-2 small" href="#a-success">2. Organizer Success Copilot</a>
+        <a class="nav-link ms-2 small" href="#a-ask">3. Ask Ideali</a>
+        <a class="nav-link ms-2 small" href="#a-content">4. Content Studio</a>
+        <a class="nav-link ms-2 small" href="#a-review">5. Application Reader</a>
+        <a class="nav-link ms-2 small" href="#a-voice">6. Community Insight</a>
+        <a class="nav-link ms-2 small" href="#a-selfservice">7. Member Self-Service</a>
+
+        <div class="nav-head">Where AI is the last mile</div>
+        <a class="nav-link ms-2 small" href="#hybrid">Three hybrid cases</a>
+
+        <div class="nav-head">Where I was wrong</div>
+        <a class="nav-link ms-2 small" href="#backlog">Build these as backend work</a>
+
+        <a class="nav-link fw-semibold mt-3" href="#foundation">Foundation needed first</a>
+        <a class="nav-link fw-semibold" href="#constraints">Constraints &amp; caveats</a>
+        <a class="nav-link fw-semibold" href="#method">Method</a>
+      </nav>
+    </div>
+
+    <div class="col-lg-9">
+
+      <!-- ===================== SUMMARY ===================== -->
+      <section id="summary">
+        <h2 class="section-title">Executive summary</h2>
+        <p>Ideali earns on transactions, not subscriptions. Module access carries no price in the system; revenue comes from tips, per-transaction platform charges and event fees. <strong>That makes the organizer the whole business.</strong> An organizer who gets live faster, runs their operation with fewer people and asks more of the platform generates more volume — and our revenue is a percentage of that volume.</p>
+        <p>So the question this document answers is narrow: <em>where does AI make an organizer meaningfully faster in a way that writing more backend code cannot?</em></p>
+        <p>The honest answer is: in fewer places than an AI proposal usually claims, but in a handful of places it is transformative. Seven agents qualify. Three more are hybrids where conventional code does the work and AI handles the last mile. And roughly a dozen things I would have been tempted to call agents are simply features we have not built — they are listed by name, because presenting them as AI would be misleading and would let real gaps hide behind a more exciting label.</p>
+        <p class="mb-0">One short foundation item comes first: AI in the product today has no authentication, permission, quota or cost tracking around it.</p>
+      </section>
+
+      <!-- ===================== THE TEST ===================== -->
+      <section id="test">
+        <h2 class="section-title">Why an agent, and not more backend code</h2>
+        <p class="module-intro">This is the right challenge to put to any AI proposal, and most of what gets pitched as AI fails it. The test is simple: <strong>can the rules be written in advance?</strong> If the input has a fixed shape and the logic can be enumerated, conventional code wins on every dimension that matters — cost, speed, reliability, testability. AI should be reached for only when one of those conditions genuinely breaks down.</p>
+
+        <div class="row g-3 mt-1">
+          <div class="col-md-6">
+            <div class="testbox">
+              <div class="head code">Backend code wins when…</div>
+              <ul>
+                <li>The input has a schema — dates, amounts, statuses, identifiers</li>
+                <li>The logic can be written as rules, however many</li>
+                <li>The same input must always give the same output</li>
+                <li>It must be provably correct — anything touching money or permissions</li>
+                <li>It runs constantly and cheaply at volume</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="testbox">
+              <div class="head ai">An agent earns its place when…</div>
+              <ul>
+                <li>The input is language, a document or an image — no schema exists</li>
+                <li>The output is language written for a person to read</li>
+                <li>The possible inputs are unbounded, so rules cannot be enumerated</li>
+                <li>Intent must be translated — what someone <em>meant</em> into what the system <em>does</em></li>
+                <li>The variety is a long tail no team could staff against</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout mt-4">
+          <strong>The commercial version of the same point.</strong> Backend code scales with engineering effort — each new capability costs another build. AI scales across the long tail: one agent handles every phrasing an organizer might use, every organization's tone of voice, every question a member might ask. Where the tail is short, write code. Where the tail is infinite, an agent is the only economic answer.
+        </div>
+
+        <div class="callout neutral mt-3">
+          <strong>Applied honestly, this rules out much of what gets called AI.</strong> A view joining a supporter's giving, membership and attendance is a database query. Churn and lifetime value are calculations. A work queue is a table and a scheduled job. A suppression list is a column. Cart-recovery timing is a timer. All of those are real gaps in our product and all of them should be built — as backend features, on the engineering roadmap, at a fraction of the cost. They are listed in full further down.
+        </div>
+      </section>
+
+      <!-- ===================== ORGANIZER DAY ===================== -->
+      <section id="organizer">
+        <h2 class="section-title">The organizer's day today</h2>
+        <p class="module-intro">Every proposal below is aimed at one of these. All were verified in code during the review.</p>
+        <div class="row g-3 mt-1">
+          <div class="col-md-6">
+            <div class="finding f-blue">
+              <h6>Getting live takes 28 screens</h6>
+              <p>Publishing one event with one session and one ticket takes 28 screens and around 49 fields — and requires a payment account and venue that already exist, which nothing tells them in advance.</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="finding f-blue">
+              <h6>The product is hard to learn and does not explain itself</h6>
+              <p>85 permission settings with non-obvious wording, constraints that only surface as validation errors, and two setup steps that are not implemented at all.</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="finding f-amber">
+              <h6>Answers live in Excel, not in the product</h6>
+              <p>Nine export buttons exist, each returning only the current page of fifty rows. Anything resembling analysis happens in a spreadsheet outside our platform.</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="finding f-amber">
+              <h6>Everything written starts from a blank page</h6>
+              <p>One editable email per campaign, event or membership tier, no preview against real data, no library, no reuse — and no help in the Events product at all.</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="finding f-amber">
+              <h6>Reading is the job</h6>
+              <p>Approving one applicant means opening several pages and each uploaded document in turn. Poll free-text shows three answers. Event registration answers cannot be read at all.</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="finding f-amber">
+              <h6>Members email the office</h6>
+              <p>Document search matches category names only, so routine member questions — expiry dates, receipts, what a policy says — land on the same staff we are trying to free up.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== ROADMAP ===================== -->
+      <section id="roadmap">
+        <h2 class="section-title">Priority roadmap</h2>
+        <p class="module-intro">Ordered by organizer impact. All seven pass the test above; the three hybrids are marked as such.</p>
+        <div class="table-responsive">
+          <table class="table roadmap align-middle">
+            <thead>
+              <tr><th>#</th><th>Agent</th><th>Serves</th><th>Wave</th><th>Why it cannot be code</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="text-secondary">0</td><td class="agent-name">AI foundation &amp; governance</td><td>Platform</td><td><span class="badge badge-p1">Start</span></td><td>Prerequisite for everything below</td></tr>
+              <tr><td class="text-secondary">1</td><td class="agent-name">Setup Copilot</td><td>Organizer</td><td><span class="badge badge-p1">Start</span></td><td>Unbounded language mapped to 49 structured fields</td></tr>
+              <tr><td class="text-secondary">2</td><td class="agent-name">Organizer Success Copilot</td><td>Organizer</td><td><span class="badge badge-p1">Start</span></td><td>Arbitrary questions answered against their own configuration</td></tr>
+              <tr><td class="text-secondary">3</td><td class="agent-name">Ask Ideali</td><td>Organizer</td><td><span class="badge badge-p1">Start</span></td><td>Intent translated into queries no filter set can anticipate</td></tr>
+              <tr><td class="text-secondary">4</td><td class="agent-name">Content Studio</td><td>Organizer</td><td><span class="badge badge-p2">Next</span></td><td>Original writing in each organization's own voice</td></tr>
+              <tr><td class="text-secondary">5</td><td class="agent-name">Application Reader</td><td>Organizer</td><td><span class="badge badge-p2">Next</span></td><td>Reads documents and prose, judges against written policy</td></tr>
+              <tr><td class="text-secondary">6</td><td class="agent-name">Community Insight</td><td>Organizer</td><td><span class="badge badge-p2">Next</span></td><td>Synthesis of free text at a scale no query can reach</td></tr>
+              <tr><td class="text-secondary">7</td><td class="agent-name">Member Self-Service</td><td>Members → frees organizer</td><td><span class="badge badge-p3">Later</span></td><td>Open-ended questions answered from documents</td></tr>
+              <tr class="table-light"><td class="text-secondary">H</td><td class="agent-name">Three hybrid cases</td><td>Organizer</td><td><span class="badge badge-p3">Later</span></td><td>Code does the work; AI handles the last mile only</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================== TIER A ===================== -->
+      <section id="tier-a">
+        <h2 class="section-title">Where AI is the only answer</h2>
+        <p class="module-intro">Seven agents. Each includes a plain statement of why backend code cannot substitute — that claim is the point of the proposal, so it is stated explicitly rather than assumed.</p>
+
+        <div class="row g-4">
+
+          <!-- 1 SETUP -->
+          <div class="col-lg-6" id="a-setup">
+            <div class="agent-card">
+              <div class="accent a-org"></div>
+              <div class="card-body">
+                <div class="kicker">01 · Organizer · All modules</div>
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                  <h5>Setup Copilot</h5>
+                  <span class="badge badge-p1 flex-shrink-0">Start</span>
+                </div>
+
+                <div class="block-label">The problem</div>
+                <p class="body-text">Twenty-eight screens and roughly forty-nine fields to publish one event with a single session and ticket. Prerequisites that block at step six with no warning at step one. No completeness check before going on sale, so events reach the public with no tickets or no payment account attached. And because the flag marking setup complete is never set anywhere in the code, we cannot even see who gives up or where.</p>
+
+                <div class="block-label">The agent</div>
+                <p class="body-text">The organizer describes what they are running in their own words. The agent produces a complete draft configuration across every step — sessions, tiers, pricing schedule, dates, questions, confirmation email — which they review and adjust rather than author. It raises prerequisites at the start, not as a blocker, and checks readiness before anything goes live.</p>
+
+                <div class="block-label">What it owns</div>
+                <ul class="owns">
+                  <li>A full draft setup generated from a plain description</li>
+                  <li>Prerequisites surfaced up front instead of blocking mid-flow</li>
+                  <li>Readiness check before publishing, which does not exist today</li>
+                  <li>A staff role proposed from a job description rather than 85 settings</li>
+                </ul>
+
+                <div class="whyai"><strong>Why not code:</strong> we can cut 28 screens to 12 with better engineering — worth doing regardless. We cannot write rules that turn any sentence an organizer might type into a valid configuration. The input space has no schema and no boundary.</div>
+                <div class="evidence"><strong>Evidence:</strong> publish gates check only current state, never completeness. Two setup steps return "not implemented". The wizard-completed flag is never set to true anywhere in the codebase.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2 SUCCESS COPILOT -->
+          <div class="col-lg-6" id="a-success">
+            <div class="agent-card">
+              <div class="accent a-org"></div>
+              <div class="card-body">
+                <div class="kicker">02 · Organizer · All modules</div>
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                  <h5>Organizer Success Copilot</h5>
+                  <span class="badge badge-p1 flex-shrink-0">Start</span>
+                </div>
+
+                <div class="block-label">The problem</div>
+                <p class="body-text">The product is large and does not explain itself. Rules surface only as validation errors — a hundred-seat show cannot offer a hundred-ticket order, and nothing says so until the save fails. Permission wording is ambiguous enough that roles get configured wrongly. Onboarding is finished by our own staff by hand, because module selection, branding and sender configuration are reachable only through our admin console.</p>
+
+                <div class="block-label">The agent</div>
+                <p class="body-text">An in-product expert that answers "how do I", "why can't I", and "what does this do" — grounded not in generic documentation but in that organizer's actual configuration. It can explain why an event will not publish by looking at the event, and walk them through the fix.</p>
+
+                <div class="block-label">What it owns</div>
+                <ul class="owns">
+                  <li>Answers product questions in the context of this organizer's own setup</li>
+                  <li>Diagnoses "why can't I publish / why did this fail" concretely</li>
+                  <li>Explains settings and permissions in plain terms before they are chosen</li>
+                  <li>Reduces the manual finishing work our team does on every new account</li>
+                </ul>
+
+                <div class="whyai"><strong>Why not code:</strong> the code answer is documentation and better error messages — both worth doing. Neither can answer an unanticipated question, and neither can reason about <em>this</em> organizer's specific configuration to explain what is actually wrong.</div>
+                <div class="evidence"><strong>Evidence:</strong> module selection, logo and sender configuration are admin-only, so every self-serve signup requires our staff to finish it. Signup via single sign-on produces an organization with no portal address at all.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3 ASK IDEALI -->
+          <div class="col-lg-6" id="a-ask">
+            <div class="agent-card">
+              <div class="accent a-org"></div>
+              <div class="card-body">
+                <div class="kicker">03 · Organizer · All modules</div>
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                  <h5>Ask Ideali</h5>
+                  <span class="badge badge-p1 flex-shrink-0">Start</span>
+                </div>
+
+                <div class="block-label">The problem</div>
+                <p class="body-text">Organizers cannot ask our product questions. There are nine export buttons and each returns only the current page — fifty rows — so real analysis happens in a spreadsheet outside our platform. The member list has no date filters at all, which means the single most common question in membership, "who lapses this month", cannot be asked at all.</p>
+
+                <div class="block-label">The agent</div>
+                <p class="body-text">A question box over their own data. They ask in their own words — "members who lapsed last year and gave over five hundred", "which sessions are underselling with a fortnight to go" — and get an answer, a table they can act on, and the ability to follow up. Every answer states what it counted so it can be trusted.</p>
+
+                <div class="block-label">What it owns</div>
+                <ul class="owns">
+                  <li>Plain-language questions answered against live data, no export step</li>
+                  <li>Follow-up questions that keep the context of the previous answer</li>
+                  <li>Results usable directly — a list to act on, not a file to open elsewhere</li>
+                  <li>States its own method so figures can be checked</li>
+                </ul>
+
+                <div class="whyai"><strong>Why not code:</strong> partly it is — the metrics and filters underneath must be built properly as backend work, and that is on the list below. But no filter set anticipates every question. Code gives an organizer controls they must first learn; the agent removes the learning.</div>
+                <div class="evidence"><strong>Evidence:</strong> every export endpoint exports the current page only. No churn, retention or lifetime-value calculation exists anywhere in the platform.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4 CONTENT -->
+          <div class="col-lg-6" id="a-content">
+            <div class="agent-card">
+              <div class="accent a-org"></div>
+              <div class="card-body">
+                <div class="kicker">04 · Organizer · All modules</div>
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                  <h5>Content Studio</h5>
+                  <span class="badge badge-p2 flex-shrink-0">Next</span>
+                </div>
+
+                <div class="block-label">The problem</div>
+                <p class="body-text">We already generate campaign descriptions and banner images and organizers use it — but it exists only in donations, runs off a single fixed instruction, and is entirely absent from the Events product. Everywhere else our customers write from nothing: one editable email per campaign, event or tier, no preview against a real record, no library, no reuse. Every shared campaign link carries the same generic description regardless of the cause.</p>
+
+                <div class="block-label">The agent</div>
+                <p class="body-text">Extends generation across all three modules and beyond descriptions into confirmation emails, announcements and share text — written in each organization's established voice, aware of the personalization fields available, and previewable against a real record before it goes anywhere.</p>
+
+                <div class="block-label">What it owns</div>
+                <ul class="owns">
+                  <li>Drafts descriptions, emails, announcements and share copy in every module</li>
+                  <li>Matches each organization's own tone rather than one generic voice</li>
+                  <li>Preview against a real record before sending</li>
+                  <li>Alternative subject lines and share text where they affect conversion</li>
+                </ul>
+
+                <div class="whyai"><strong>Why not code:</strong> the code answer is a template library — and a template cannot sound like a particular organization writing about a particular cause. Covering that with templates means one per organization per module per message type. That is the long tail.</div>
+                <div class="evidence"><strong>Evidence:</strong> existing AI is one service with a single hardcoded fundraising instruction, used at three points in the older product and nowhere in Events.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5 APPLICATION READER -->
+          <div class="col-lg-6" id="a-review">
+            <div class="agent-card">
+              <div class="accent a-org"></div>
+              <div class="card-body">
+                <div class="kicker">05 · Organizer · Membership</div>
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                  <h5>Application Reader</h5>
+                  <span class="badge badge-p2 flex-shrink-0">Next</span>
+                </div>
+
+                <div class="block-label">The problem</div>
+                <p class="body-text">Approving one applicant means opening their detail page, then their form answers on a second page, then each uploaded document in turn — and deciding by reading. Nothing is pre-checked or compared against previous decisions. Approvals record no rationale at all, so the reasoning behind past decisions is simply gone and consistency between reviewers is impossible to hold.</p>
+
+                <div class="block-label">The agent</div>
+                <p class="body-text">Reads the whole application — written answers and uploaded documents — before a human opens it. Produces a short summary, flags what needs attention, and drafts a recommendation with its reasoning. The staff member confirms or overrides. The agent never decides.</p>
+
+                <div class="block-label">What it owns</div>
+                <ul class="owns">
+                  <li>One-screen summary of an application spanning several pages and files</li>
+                  <li>Reads uploaded evidence rather than just listing that a file exists</li>
+                  <li>Drafts the recommendation and, where declined, a considerate reason</li>
+                  <li>Captures rationale on approval too, building the missing audit trail</li>
+                </ul>
+
+                <div class="whyai"><strong>Why not code:</strong> code can flag a duplicate email address — and should. It cannot read a personal statement, interpret a certificate image, or weigh either against a policy written in prose.</div>
+                <div class="evidence"><strong>Evidence:</strong> approve and reject share one status path; approval passes an empty reason. Rejection reasons arrive as an unvalidated web-address parameter.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 6 COMMUNITY INSIGHT -->
+          <div class="col-lg-6" id="a-voice">
+            <div class="agent-card">
+              <div class="accent a-org"></div>
+              <div class="card-body">
+                <div class="kicker">06 · Organizer · All modules</div>
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                  <h5>Community Insight</h5>
+                  <span class="badge badge-p2 flex-shrink-0">Next</span>
+                </div>
+
+                <div class="block-label">The problem</div>
+                <p class="body-text">We store a great deal of what people actually wrote and read almost none of it. Poll open-text questions display three answers while every other question type is fully analysed. Application essays are readable one applicant at a time. Staff notes on invoices are an organization's real working memory and are never read across records. An organization can ask four hundred people what to improve and have no practical way to find out.</p>
+
+                <div class="block-label">The agent</div>
+                <p class="body-text">Reads every free-text source and returns themes, sentiment and movement over time — what people are asking for, what is changing, and which individual responses a human needs to see. Always links back to the original words so staff verify rather than trust.</p>
+
+                <div class="block-label">What it owns</div>
+                <ul class="owns">
+                  <li>Themed synthesis of poll, survey and application free text at any volume</li>
+                  <li>Trends across time and across membership segments</li>
+                  <li>Flags individual responses needing a personal reply</li>
+                  <li>Every finding traceable to the responses behind it</li>
+                </ul>
+
+                <div class="whyai"><strong>Why not code:</strong> prose has no schema. Counting and grouping work on ratings and choices — which is exactly why those are already analysed properly and free text is not. There is no query that summarizes four hundred paragraphs.</div>
+                <div class="evidence"><strong>Evidence:</strong> poll open-text is limited to three sample answers. There is no poll export endpoint of any kind.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 7 SELF SERVICE -->
+          <div class="col-lg-6" id="a-selfservice">
+            <div class="agent-card">
+              <div class="accent a-org"></div>
+              <div class="card-body">
+                <div class="kicker">07 · Members · Frees organizer staff</div>
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                  <h5>Member Self-Service Assistant</h5>
+                  <span class="badge badge-p3 flex-shrink-0">Later</span>
+                </div>
+
+                <div class="block-label">The problem</div>
+                <p class="body-text">Organizations upload handbooks, bylaws, minutes and forms for their members, and the only way to find anything is matching text against a category name — there is no search inside documents at all. Members who cannot find an answer email the office, so the routine questions land on exactly the staff the other six agents are trying to free up.</p>
+
+                <div class="block-label">The agent</div>
+                <p class="body-text">Answers members' questions from their own record and their organization's published documents, with citations, respecting precisely what that member is entitled to see. Hands to a person whenever it is not confident.</p>
+
+                <div class="block-label">What it owns</div>
+                <ul class="owns">
+                  <li>Questions about the member's own membership, giving and receipts</li>
+                  <li>Answers drawn from the organization's documents, with citations</li>
+                  <li>Strictly respects existing document permissions and view-only rules</li>
+                  <li>Hands off to staff rather than guessing when unsure</li>
+                </ul>
+
+                <div class="whyai"><strong>Why not code:</strong> full-text search is the code answer and is worth building. Search returns documents; members are asking questions. "Can I bring a guest to the AGM" is answered by a clause on page nine, not by a list of files.</div>
+                <div class="evidence"><strong>Evidence:</strong> document search matches against the category name only. No search of document content exists anywhere in the platform.</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ===================== HYBRID ===================== -->
+      <section id="hybrid">
+        <h2 class="section-title">Where AI is only the last mile</h2>
+        <p class="module-intro">Three cases where the bulk of the value is conventional engineering and AI contributes something narrow at the end. Worth doing — but the backend work is the substance, and should be scoped and funded as such.</p>
+
+        <div class="row g-4">
+          <div class="col-lg-4">
+            <div class="agent-card">
+              <div class="accent a-hybrid"></div>
+              <div class="card-body">
+                <div class="kicker">Hybrid · Revenue recovery</div>
+                <h5 class="mb-2">Recovery outreach</h5>
+                <p class="body-text"><strong>Code does:</strong> detect the failed charge, the abandoned cart, the approaching expiry; schedule and send; check availability. All ordinary work, none of it built today.</p>
+                <p class="body-text mt-2"><strong>AI does:</strong> write the message so it is worth receiving, and decide which cases deserve a person rather than an email.</p>
+                <div class="evidence">Recurring gifts end in a permanent failed state with no recovery path; abandoned carts are detected every minute and nothing follows them up.</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-4">
+            <div class="agent-card">
+              <div class="accent a-hybrid"></div>
+              <div class="card-body">
+                <div class="kicker">Hybrid · Finance</div>
+                <h5 class="mb-2">Reconciliation</h5>
+                <p class="body-text"><strong>Code does:</strong> match on amount, date and reference; maintain an outstanding-and-aging view; capture payment details on event orders as membership already does.</p>
+                <p class="body-text mt-2"><strong>AI does:</strong> interpret messy bank descriptions and free-text notes where an exact match fails.</p>
+                <div class="evidence">Membership revenue is reported on invoice creation date, not payment date, so it cannot tie to a bank statement.</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-4">
+            <div class="agent-card">
+              <div class="accent a-hybrid"></div>
+              <div class="card-body">
+                <div class="kicker">Hybrid · Event day</div>
+                <h5 class="mb-2">Event run-sheet</h5>
+                <p class="body-text"><strong>Code does:</strong> expose the registration answers at all, total the dietary and accessibility counts, produce per-session manifests, read back the check-in log.</p>
+                <p class="body-text mt-2"><strong>AI does:</strong> interpret free-text special requests and group them into actions for the team.</p>
+                <div class="evidence">Registration answers have no organizer-facing read path. The check-in log is written at four points in the code and read at none.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== BACKLOG ===================== -->
+      <section id="backlog">
+        <h2 class="section-title">Where I was wrong — build these as backend work</h2>
+        <p class="module-intro">These came out of the same review and are real gaps worth fixing. None of them needs AI, and calling them agents would hide genuine product debt behind a more exciting label. They are listed so they land on the engineering roadmap rather than quietly disappearing.</p>
+        <div class="table-responsive">
+          <table class="table backlog align-middle">
+            <thead><tr><th style="width:34%">Gap</th><th>What it actually is</th></tr></thead>
+            <tbody>
+              <tr><td><strong>One view of a supporter</strong></td><td>A person's giving, membership and attendance already hang off one contact record and are never read together. This is a database query and a screen.</td></tr>
+              <tr><td><strong>Churn, retention, lifetime value</strong></td><td>Not computed anywhere in the platform. Calculations and a dashboard.</td></tr>
+              <tr><td><strong>Date filters on the member list</strong></td><td>Absent entirely, which is why "who lapses this month" cannot be asked. Filter parameters.</td></tr>
+              <tr><td><strong>Exports that export everything</strong></td><td>All nine return the current page only, silently truncating at fifty rows. A pagination fix.</td></tr>
+              <tr><td><strong>An operational work queue</strong></td><td>Pending approvals, failed charges, unpaid invoices, failed syncs. A table, a job, and wiring into the notification system we already built and left unused.</td></tr>
+              <tr><td><strong>Business events in the notification bell</strong></td><td>It currently carries only our own product announcements. Real-time delivery, priority and targeting all exist already — nothing is connected to them.</td></tr>
+              <tr><td><strong>Stop emailing staff on every donation</strong></td><td>Currently one email per transaction, which guarantees it gets filtered away. A digest setting.</td></tr>
+              <tr><td><strong>Suppression list</strong></td><td>Unsubscribes are recorded and then ignored — the next broadcast still targets them. A column and a filter, and a compliance exposure until it exists.</td></tr>
+              <tr><td><strong>Publish gates</strong></td><td>Events can go on sale with no tickets, no dates and no payment account. Validation rules.</td></tr>
+              <tr><td><strong>Setup abandonment visibility</strong></td><td>The completion flag is never set, so we cannot see who drops out or where. A field and a report.</td></tr>
+              <tr><td><strong>Registration answers and check-in history read paths</strong></td><td>Both are written and never readable. Endpoints and screens — and prerequisites for the event run-sheet above.</td></tr>
+              <tr><td><strong>Dashboard corrections</strong></td><td>Recurring donations are counted regardless of status, so cancelled ones show as live. Membership revenue is dated on invoice creation, not payment.</td></tr>
+              <tr><td><strong>Accounting integration correctness</strong></td><td>The fundraising goal is written into the price field, items are named from user-typed campaign names, and the income account is picked automatically. Donations only.</td></tr>
+              <tr><td><strong>Export privacy</strong></td><td>Donation exports strip personal data; member and event exports have no exclusion list configured and return every field.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================== FOUNDATION ===================== -->
+      <section id="foundation">
+        <h2 class="section-title">Foundation needed first</h2>
+        <div class="phase0">
+          <h5 class="fw-semibold mb-2">AI foundation &amp; governance <span class="badge badge-p1 align-middle ms-1">Start — prerequisite</span></h5>
+          <p class="mb-2" style="font-size:.94rem;">AI in the product today is a single service reached through an endpoint with <strong>no authentication, no permission, no quota and no cost tracking</strong>. Nothing records what was generated, for whom, or at what cost, and there is no way to grant or withhold the capability per customer. Acceptable for three experimental fields; not acceptable underneath seven agents touching member data.</p>
+          <p class="mb-2" style="font-size:.94rem;">Before the first agent ships: authentication and permissions on AI features, per-customer quotas and cost attribution, an audit record of every agent action, a managed home for instructions rather than values compiled into code, and a consistent approval model so agents propose and humans decide wherever money or a person's status is involved.</p>
+          <p class="mb-0" style="font-size:.94rem;">It is also what makes AI <strong>sellable</strong> — entitlement and quota are the difference between a cost we absorb and a capability we can package and charge for.</p>
+        </div>
+
+        <div class="callout danger mt-4">
+          <strong>Raised separately, not part of this proposal.</strong> The review also found three endpoints that send email, spend money on AI, or fetch arbitrary web addresses <em>with no authentication at all</em>, plus a payment-related endpoint marked publicly accessible whose backing service file is empty. These should be ticketed and fixed on their own merits regardless of any decision about AI.
+        </div>
+      </section>
+
+      <!-- ===================== CONSTRAINTS ===================== -->
+      <section id="constraints">
+        <h2 class="section-title">Constraints &amp; caveats</h2>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="finding f-amber">
+              <h6>We have transaction data, not behaviour data</h6>
+              <p>No general activity log or click tracking exists. Agents can reason about what people bought, gave and joined — not what they browsed. The proposals stay inside that boundary deliberately.</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="finding f-amber">
+              <h6>Three agents depend on backlog items first</h6>
+              <p>Ask Ideali needs the metrics layer built. The run-sheet needs registration answers exposed. Self-service needs document content indexed. These are prerequisites, not assumptions.</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="finding f-amber">
+              <h6>Data quality will cap early accuracy</h6>
+              <p>Contact matching is not reliably scoped per organization, and two dashboard figures are computed misleadingly. Agents built on this inherit those flaws until they are fixed.</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="finding f-blue">
+              <h6>Sequencing matters more than count</h6>
+              <p>The first three are chosen because they need the least backlog work and touch the organizer's day most directly. Adopting all seven at once is not the recommendation.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== METHOD ===================== -->
+      <section id="method" class="mb-5">
+        <h2 class="section-title">Method</h2>
+        <p style="font-size:.93rem;" class="mb-2">Output of a direct review of the production backend (Donation, Membership, shared invoicing and payments) and the in-development Event module across backend and frontend, conducted August 2026. Findings were traced to specific services, endpoints and configuration rather than inferred from documentation.</p>
+        <p style="font-size:.93rem;" class="mb-0">This document argues <strong>what each agent should own and why code cannot substitute for it</strong>. Implementation approach, model selection, guardrails, effort and staffing are deliberately out of scope. The Event module is moving quickly; anything relating to it should be re-validated against the code before work is scoped.</p>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<footer class="border-top py-4 mt-3">
+  <div class="container doc-shell text-center text-secondary" style="font-size:.85rem;">
+    Ideali — AI Agent Strategy · Internal document, not for external distribution
+  </div>
+</footer>
+
+</body>
+</html>
