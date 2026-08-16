@@ -1,6 +1,6 @@
 import { format } from "date-fns"
 import { Box, Badge, Button, Flex, HStack, Menu, Portal, Skeleton, SkeletonText, Table, Text } from "@chakra-ui/react"
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpDown, CalendarDays, Eye, MapPin, MoreHorizontal, PencilLine } from "lucide-react"
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpDown, CalendarDays, Eye, MapPin, MoreHorizontal, PencilLine, ScanLine } from "lucide-react"
 import { type SessionListItem } from "@/api/sessions"
 
 export type SessionSortBy = "name" | "eventName" | "venue" | "bookingStatus" | "seatEnabled" | "startDate" | "endDate" | "ticketsSold"
@@ -20,6 +20,7 @@ interface SessionListTableProps {
   onSort: (sortBy: SessionSortBy) => void
   onClearSort: () => void
   onOpenSession: (sessionId: string) => void
+  onCheckInSession: (eventUniqueId: string, sessionUniqueId: string) => void
 }
 
 const actionButtonStyles = {
@@ -129,6 +130,7 @@ export function SessionListTable({
   onSort,
   onClearSort,
   onOpenSession,
+  onCheckInSession,
 }: SessionListTableProps) {
   if (isLoading && sessions.length === 0) {
     return <SessionListSkeleton />
@@ -262,6 +264,28 @@ export function SessionListTable({
                                   Edit
                                 </Text>
                               </Menu.Item>
+                              {/* Without the owning event the door screen has no route to open, so the
+                                  entry is left out rather than offered as a link that goes nowhere. */}
+                              {session.eventUniqueId ? (
+                                <Menu.Item
+                                  value="check-in-session"
+                                  borderRadius="10px"
+                                  fontSize="sm"
+                                  fontWeight="600"
+                                  color="gray.700"
+                                  _dark={{ color: "gray.200" }}
+                                  _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
+                                  px={3}
+                                  py={2}
+                                  gap={2.5}
+                                  onClick={() => onCheckInSession(session.eventUniqueId, session.uniqueId)}
+                                >
+                                  <ScanLine size={14} />
+                                  <Text as="span" flex="1" textAlign="left">
+                                    Check in attendees
+                                  </Text>
+                                </Menu.Item>
+                              ) : null}
                             </Menu.Content>
                           </Menu.Positioner>
                         </Portal>

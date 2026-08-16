@@ -10,6 +10,20 @@ import "./index.css"
 import "timepicker-ui/main.css"
 import App from "./App"
 
+// Chakra hands the renderer an open string, so an unrecognised type falls back to the neutral tone
+// rather than rendering an untinted box. "info" keeps the amber the alert bell has always used.
+const TOAST_TONES = {
+  success: { bg: "green.50", color: "green.900", border: "green.200", glyph: "✓" },
+  error: { bg: "red.50", color: "red.900", border: "red.200", glyph: "!" },
+  warning: { bg: "orange.50", color: "orange.950", border: "orange.200", glyph: "!" },
+  info: { bg: "orange.50", color: "orange.950", border: "orange.200", glyph: "!" },
+  neutral: { bg: "gray.50", color: "gray.900", border: "gray.200", glyph: "i" },
+} as const
+
+function toneFor(type: string | undefined) {
+  return TOAST_TONES[type as keyof typeof TOAST_TONES] ?? TOAST_TONES.neutral
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
@@ -17,15 +31,16 @@ createRoot(document.getElementById("root")!).render(
         <Toaster toaster={toaster}>
           {(toast) => {
             const opensBell = toast.meta?.onClick === "open-bell"
+            const tone = toneFor(toast.type)
             return (
             <Box
               key={toast.id}
               role="status"
               aria-live="polite"
-              bg={toast.type === "error" ? "red.50" : toast.type === "success" ? "green.50" : toast.type === "info" ? "orange.50" : "gray.50"}
-              color={toast.type === "error" ? "red.900" : toast.type === "success" ? "green.900" : toast.type === "info" ? "orange.950" : "gray.900"}
+              bg={tone.bg}
+              color={tone.color}
               border="1px solid"
-              borderColor={toast.type === "error" ? "red.200" : toast.type === "success" ? "green.200" : toast.type === "info" ? "orange.200" : "gray.200"}
+              borderColor={tone.border}
               borderRadius="16px"
               boxShadow="0 18px 40px rgba(15, 23, 42, 0.15)"
               px={4}
@@ -38,7 +53,7 @@ createRoot(document.getElementById("root")!).render(
             >
               <Flex align="flex-start" gap={3}>
                 <Box mt={1} fontSize="lg" lineHeight={1} aria-hidden="true">
-                  {toast.type === "error" ? "!" : toast.type === "success" ? "✓" : toast.type === "info" ? "!" : "i"}
+                  {tone.glyph}
                 </Box>
                 <Box minW={0} flex="1">
                   <Text fontSize="sm" fontWeight="800" lineHeight={1.25}>

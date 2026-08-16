@@ -1,4 +1,5 @@
 export { EventWizardLayout } from "./pages/EventWizardLayout"
+export { EventCheckInPage } from "./pages/EventCheckInPage"
 export { EventRegisterPage } from "./pages/EventRegisterPage"
 export { EventTicketViewPage } from "./pages/EventTicketViewPage"
 export { EventOrderConfirmationPage } from "./pages/EventOrderConfirmationPage"

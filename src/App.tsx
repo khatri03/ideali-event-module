@@ -33,6 +33,7 @@ import {
 import { SeatingLayoutDesignerPage, SeatingLayoutsPage } from "./features/seating-layouts"
 import {
   EventBannerStepPage,
+  EventCheckInPage,
   EventDescriptionStepPage,
   EventDiscountCouponStepPage,
   EventDateTimeStepPage,
@@ -162,6 +163,7 @@ export default function App() {
           <Route path={APP_ROUTES.documentCategories.create} element={<DocumentCategoryCreatePage />} />
           <Route path={APP_ROUTES.documentCategories.editRoute} element={<DocumentCategoryEditPage />} />
           <Route path={APP_ROUTES.documentCategories.detailRoute} element={<DocumentCategoryDetailPage />} />
+          <Route path={APP_ROUTES.eventCheckInRoute} element={<EventCheckInPage />} />
           <Route path={APP_ROUTES.eventInvoices.list} element={<EventInvoicesPage />} />
           <Route path={APP_ROUTES.eventInvoices.detailRoute} element={<EventInvoiceDetailPage />} />
           <Route path={APP_ROUTES.memberDocuments.list} element={<MemberDocumentsPage />} />

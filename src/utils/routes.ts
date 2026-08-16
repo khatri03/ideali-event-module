@@ -63,6 +63,9 @@ export const APP_ROUTES = {
   eventTicketView: (ticketUniqueId: string) => `/events/tickets/${ticketUniqueId}/view`,
   eventOrderRoute: "/events/orders/:orderUniqueId",
   eventOrder: (orderUniqueId: string) => `/events/orders/${orderUniqueId}`,
+  eventCheckInRoute: "/organizer/events/:eventUniqueId/sessions/:sessionUniqueId/check-in",
+  eventCheckIn: (eventUniqueId: string, sessionUniqueId: string) =>
+    `/organizer/events/${eventUniqueId}/sessions/${sessionUniqueId}/check-in`,
   sessionWizard: {
     list: "/organizer/sessions",
     edit: (sessionId: string) => `/organizer/sessions/${sessionId}`,
@@ -339,6 +342,12 @@ export const API_ROUTES = {
     `/api/organizer/events/invoices/${invoiceUniqueId}/tickets/${ticketUniqueId}/resend`,
   stripePublicCredentials: (paymentAccountUniqueId: string) =>
     `/api/public/stripe/${paymentAccountUniqueId}/credentials`,
+  sessionAttendees: (eventUniqueId: string, sessionUniqueId: string) =>
+    `/api/organizer/events/${eventUniqueId}/sessions/${sessionUniqueId}/attendees`,
+  sessionTicketCheckIn: (eventUniqueId: string, sessionUniqueId: string) =>
+    `/api/organizer/events/${eventUniqueId}/sessions/${sessionUniqueId}/check-in`,
+  sessionTicketCheckInUndo: (eventUniqueId: string, sessionUniqueId: string) =>
+    `/api/organizer/events/${eventUniqueId}/sessions/${sessionUniqueId}/check-in/undo`,
 } as const
 
 export const API_AUTH_ROUTES = {

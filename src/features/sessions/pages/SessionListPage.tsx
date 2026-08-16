@@ -296,6 +296,9 @@ export function SessionListPage() {
         onSort={handleSort}
         onClearSort={handleClearSort}
         onOpenSession={(sessionId) => navigate(APP_ROUTES.sessionWizard.edit(sessionId))}
+        onCheckInSession={(eventUniqueId, sessionUniqueId) =>
+          navigate(APP_ROUTES.eventCheckIn(eventUniqueId, sessionUniqueId))
+        }
       />
 
       <Dialog.Root

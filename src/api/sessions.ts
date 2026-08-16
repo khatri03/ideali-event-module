@@ -151,6 +151,8 @@ const sessionListItemSchema = z.object({
   uniqueId: z.string().optional(),
   Name: z.string().optional(),
   name: z.string().optional(),
+  EventUniqueId: z.string().optional(),
+  eventUniqueId: z.string().optional(),
   EventName: z.string().optional(),
   eventName: z.string().optional(),
   VenueName: z.string().nullable().optional(),
@@ -479,6 +481,7 @@ export interface SessionListOption {
 export interface SessionListItem {
   uniqueId: string
   name: string
+  eventUniqueId: string
   eventName: string
   venueName: string | null
   offerPickingSeats: boolean
@@ -1072,6 +1075,7 @@ function parseSessionListItem(item: z.infer<typeof sessionListItemSchema>): Sess
   return {
     uniqueId: item.UniqueId ?? item.uniqueId ?? "",
     name: item.Name ?? item.name ?? "",
+    eventUniqueId: item.EventUniqueId ?? item.eventUniqueId ?? "",
     eventName: item.EventName ?? item.eventName ?? "",
     venueName: item.VenueName ?? item.venueName ?? null,
     offerPickingSeats: item.OfferPickingSeats ?? item.offerPickingSeats ?? false,
