@@ -29,6 +29,9 @@
     .dont::before { content: "Trap"; display: block; font-weight: 600; font-size: .8125rem; text-transform: uppercase; letter-spacing: .04em; opacity: .75; margin-bottom: .3rem; }
     .rule { background: var(--bs-success-bg-subtle); border-left: 4px solid var(--bs-success); padding: .85rem 1rem; border-radius: .375rem; margin: 1rem 0; }
     .rule::before { content: "Rule"; display: block; font-weight: 600; font-size: .8125rem; text-transform: uppercase; letter-spacing: .04em; opacity: .75; margin-bottom: .3rem; }
+    .must { background: var(--bs-warning-bg-subtle); border: 2px solid var(--bs-warning); border-left-width: 8px; padding: 1rem 1.15rem; border-radius: .375rem; margin: 1.25rem 0; }
+    .must::before { content: "Do this or nothing works"; display: block; font-weight: 700; font-size: .8125rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .45rem; }
+    .must > :last-child { margin-bottom: 0; }
     .step-rail { counter-reset: step; list-style: none; padding-left: 0; }
     .step-rail > li { position: relative; padding-left: 3rem; padding-bottom: 1.5rem; border-left: 2px solid var(--bs-border-color); margin-left: 1rem; }
     .step-rail > li:last-child { border-left-color: transparent; padding-bottom: 0; }
@@ -73,6 +76,7 @@
         <a class="nav-link fw-semibold" href="#reg-map">3. The journey at a glance</a>
         <a class="nav-link fw-semibold" href="#reg-endpoints">4. Every endpoint in the journey</a>
         <a class="nav-link fw-semibold" href="#reg-cart">5. How the cart actually works</a>
+        <a class="nav-link ms-3 small" href="#reg-cart-capability">Who is allowed to touch a cart</a>
         <a class="nav-link fw-semibold" href="#reg-pricing">6. How the total is calculated</a>
         <a class="nav-link fw-semibold" href="#reg-questions">7. Attendees, questions and files</a>
         <a class="nav-link fw-semibold" href="#reg-settlement">8. Payment and settlement, step by step</a>
@@ -98,6 +102,21 @@
           cart holds seats, exactly how each payment method's total is built, and what runs on its own
           afterwards.
         </p>
+
+        <div class="must">
+          <p class="mb-2">
+            Before deploying this module anywhere, including a laptop:
+            <strong><code>EventCartCapability:SigningKey</code> must be set</strong> or the API will not
+            start. Before writing a frontend that talks to it: <strong>the axios client needs
+            <code>withCredentials: true</code></strong> or every cart call after creation returns
+            <code>403</code>.
+          </p>
+          <p class="mb-0">
+            Both come from the same feature — carts are anonymous and are guarded by a signed cookie
+            instead of a login. <a href="#reg-cart-capability" class="fw-semibold">Who is allowed to touch
+            a cart</a> explains why, with the failure modes for each.
+          </p>
+        </div>
 
         <h3>Who this is for</h3>
         <p>
@@ -499,27 +518,22 @@
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/invoices/{invoiceId}/tickets/{ticketId}/resend</code></td>
                 <td><code>EventInvoiceService.ResendTicketAsync</code></td>
-                <td>Re-sends one ticket only. Both resend routes refuse a cancelled order.</td>
+                <td>Re-sends one ticket only.</td>
               </tr>
               <tr>
-                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/invoices/{invoiceId}/mark-paid</code></td>
-                <td><code>EventInvoiceSettlementService.MarkInvoiceAsPaidAsync</code></td>
-                <td>Records the outstanding balance as collected outside the gateway: writes one successful <code>InvoicePayment</code>, closes every open line, issues any tickets the order is still owed, then queues the buyer's paid notice and ticket delivery. Refused unless the invoice is <code>PendingPayment</code> or <code>PartiallyPaid</code> — reversing a settled order is a refund.</td>
+                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/organizer/events/{e}/sessions/{s}/attendees</code></td>
+                <td><code>EventAttendeeRosterService.GetRosterAsync</code></td>
+                <td>The door list: everyone holding a live ticket for that session, with arrival state, plus session-wide counts that ignore the search term. Searchable by name, email or ticket code — the fallback when a code will not scan. Cancelled and refunded tickets are left off.</td>
               </tr>
               <tr>
-                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/invoices/{invoiceId}/cancel</code></td>
-                <td><code>EventInvoiceSettlementService.CancelInvoiceAsync</code></td>
-                <td>Closes the order unpaid and emails the buyer. Same status guard as mark-paid. Everything the order was occupying goes back: holds it never took up are cancelled, tickets it had already been issued (a cheque order) are moved to <code>Cancelled</code>, and the ticket-type counters are rebuilt so the seats return to sale. Afterwards the order's tickets can neither be resent nor viewed — <code>TicketIssuanceRule.IsAuthorised</code> refuses a cancelled invoice outright, ahead of the cheque and zero-total allowances.</td>
-              </tr>
-              <tr>
-                <td><span class="badge badge-method text-bg-warning">PUT</span> <code>/api/organizer/events/invoices/{invoiceId}/buyer</code></td>
-                <td><code>EventInvoiceService.UpdateBuyerAsync</code></td>
-                <td>Corrects the name, email and phone the order is billed to. Name and a routable email are required; the phone is optional and blanks out to <code>null</code>. Allowed only while the order is live (<code>PendingPayment</code>, <code>PartiallyPaid</code>, <code>Paid</code>, <code>Failed</code>) — <code>EventInvoiceActionRule.AllowsBuyerEdit</code> refuses a cancelled, refunded, partially refunded or adjusted order, whose buyer is part of a settled record. Every field that actually changed is written to the invoice's note trail as an audited <code>InvoiceNote</code>, so who changed what and when sits where the organizer already looks; an unchanged submit answers <code>false</code> and leaves no trail. Changing the email does not move tickets that have already gone out — the caller resends them separately.</td>
-              </tr>
-              <tr>
-                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/tickets/check-in</code></td>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/{e}/sessions/{s}/check-in</code></td>
                 <td><code>TicketingService.CheckInAsync</code></td>
-                <td>Scans a ticket code at the door and writes a <code>TicketCheckInLog</code> row. Refuses a code that is already used, cancelled or refunded.</td>
+                <td>Scans a ticket code at the door and writes a <code>TicketCheckInLog</code> row. Event and session come from the route, so a scan can only ever land on the session the operator opened. Refuses a code that is already used, cancelled or refunded.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/{e}/sessions/{s}/check-in/undo</code></td>
+                <td><code>TicketingService.UndoCheckInAsync</code></td>
+                <td>Reverses a mistaken admission: the ticket returns to <code>Active</code> and the reversal is appended to the log as <code>ManualOverride</code>. The original admission is never erased.</td>
               </tr>
             </tbody>
           </table>
@@ -613,6 +627,119 @@
               <tr><th>What the buyer sees</th><td><code>expiresAtUtc</code> on the cart response. Once it passes, pricing refuses the line with "the hold has expired; remove and re-add this line".</td></tr>
             </tbody>
           </table>
+        </div>
+
+        <h4 id="reg-cart-capability">Who is allowed to touch a cart</h4>
+        <p>
+          A cart is anonymous — there is no principal to check, no <code>[Authorize]</code> to lean on — so
+          for a while the cart's <code>uniqueId</code> was the only thing standing between a stranger and
+          somebody else's attendee names, email addresses and prices. A secret URL is not authorisation.
+          Ids leak in ordinary, non-malicious use:
+        </p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:34%">How the id escapes</th><th>What an unguarded route would have granted</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Buyer pastes the wizard URL into a support ticket; an agent screenshots it.</td>
+                <td><code>GET /api/events/cart/{id}</code> returns every attendee's full name, email, phone and the amounts — to anyone who reads the ticket.</td>
+              </tr>
+              <tr>
+                <td>The URL reaches request logs, an APM trace, an analytics pipeline, or a referrer header on a third-party asset.</td>
+                <td>Anybody with log or dashboard access — vendors included — could replay the cart, mutate its lines, or drive <code>/checkout/intent</code>.</td>
+              </tr>
+              <tr>
+                <td>A shared or kiosk machine keeps the id in browser history.</td>
+                <td>The next person resumes a stranger's registration and pays with the previous buyer's attendee data attached.</td>
+              </tr>
+              <tr>
+                <td>An attacker harvests ids from any of the above and scripts them.</td>
+                <td>Bulk extraction of buyer and attendee personal data across an organizer's entire event — a reportable breach, not an inconvenience.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="plain">
+          The id still <em>identifies</em> the cart. It no longer <em>authorises</em> anything. The signed
+          cookie does, and a browser only ever returns a cookie to the origin that set it — so a copied
+          URL is inert wherever it lands.
+        </div>
+        <p>
+          <code>POST /api/events/cart</code> issues a signed capability as an http-only cookie, and
+          <code>RequireCartCapabilityAttribute</code> refuses every later cart-scoped and checkout-scoped
+          call without it. The cheque route is organizer-authenticated and is deliberately not gated on a
+          buyer's cookie.
+        </p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <tbody>
+              <tr><th style="width:16rem">Token</th><td><code>{cartUniqueId:N}.{expiryUnix}.{base64url-signature}</code>, signed HMAC-SHA256 and compared with <code>CryptographicOperations.FixedTimeEquals</code>.</td></tr>
+              <tr><th>Cookie</th><td><code>IdealiEventCart_{cartUniqueId:N}</code> — <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite=Strict</code>, path-scoped to <code>/api/events/cart</code> so a capability never rides along on an unrelated API call or into a log of one. One cookie per cart, so two carts open in one browser do not evict each other.</td></tr>
+              <tr><th>Binding</th><td>The token carries its own cart id, so renaming a valid cookie onto another cart fails the signature check.</td></tr>
+              <tr><th>Lifetime</th><td>Cart expiry plus a 60-minute grace. A card authorised just after the hold lapsed must still be confirmable.</td></tr>
+              <tr><th>Verification</th><td>Stateless. Nothing is stored server-side — no session table, no Redis. The signing key is the only shared state, which is why every instance in one environment must carry the identical key.</td></tr>
+              <tr><th>Refusal</th><td>One <code>403</code> with <code>errorCode: "cart_capability_required"</code> and one message for every case — no cookie, wrong cart, expired, forged, cart that never existed — so the endpoint cannot be used to enumerate carts.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="must">
+          <p class="mb-2">
+            <strong><code>EventCartCapability:SigningKey</code> must exist before the API can start.</strong>
+            It throws on a missing or under-32-byte value on purpose: a default fallback key is a known key,
+            and a known key lets anyone mint a valid capability for any cart — worse than no gate at all,
+            because it looks guarded.
+          </p>
+<pre class="mb-2"><code># Windows PowerShell 5.1 — 48 random bytes, base64
+$b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvider]::new()).GetBytes($b); [Convert]::ToBase64String($b)</code></pre>
+<pre class="mb-2"><code>// Configuration/secrets.json — gitignored, never commit a real value
+"EventCartCapability": { "SigningKey": "&lt;generated value&gt;" }</code></pre>
+          <p class="mb-0">
+            One value per environment — local, staging and production each get their own, because the key
+            mints valid tokens for every cart and staging is always the weakest of the three. Identical
+            across every instance <em>within</em> one environment. Staging and production keys are generated
+            inside the secret store itself and pasted nowhere else. The generation command also lives in
+            <code>docs/README.md</code> in the API repository.
+          </p>
+        </div>
+
+        <p>What breaks without it, and how each failure presents:</p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th style="width:30%">Situation</th><th>Symptom</th></tr></thead>
+            <tbody>
+              <tr><td>Key missing or too short</td><td>The process throws at startup with the setting name in the message. The API does not serve traffic — deliberately, rather than serving registration ungated.</td></tr>
+              <tr><td>Two instances behind one load balancer hold different keys</td><td>Instance A sets a cookie, the next request lands on B, and B reads it as forged. Intermittent <code>403</code>s that look like session loss and never reproduce locally.</td></tr>
+              <tr><td>Key rotated during trading hours</td><td>Every in-flight cart dies at once. Existing cookies stop verifying and those buyers are refused mid-registration, some already at the payment step. Rotate in a low-traffic window.</td></tr>
+              <tr><td>Frontend client omits <code>withCredentials: true</code></td><td>Cart creation returns <code>200</code>, then every following cart call returns <code>403 cart_capability_required</code>. Nothing is wrong server-side; the browser was never asked to send the cookie.</td></tr>
+              <tr><td>SPA and API are not same-site, or not on HTTPS</td><td><code>SameSite=Strict</code> and <code>Secure</code> mean the browser withholds the cookie regardless of client configuration. Same symptom as above, different cause.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>What the frontend does with a refusal</h4>
+        <p>
+          A refused capability is terminal. The cart cannot be repaired from the browser — the cookie is
+          http-only, the server will refuse every later call on that cart identically, and it will not say
+          which of the five causes applied. So the wizard does not retry and does not surface the raw
+          failure inline.
+        </p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <tbody>
+              <tr><th style="width:16rem">Detection</th><td><code>isCartSessionLostError</code> in <code>src/utils/errors.ts</code>. Matches <code>403</code> plus <code>cart_capability_required</code>. The failure envelope arrives PascalCase and never passes through <code>camelizeKeys</code>, so both spellings of the error-code field are read.</td></tr>
+              <tr><th>Reaction</th><td><code>useRegistrationCart</code> drops the cart id, coupon, buyer identity, any buffered line changes and the stored cart id, then raises <code>isSessionLost</code>. Keeping the cart would leave the buyer retrying against one the server will never accept again.</td></tr>
+              <tr><th>What the buyer sees</th><td>A single-action "Registration session ended" dialog. The only button reloads the form. There is no retry, because nothing can be retried.</td></tr>
+              <tr><th>Wording</th><td>Fixed client-side, not read from the response. The server's message is deliberately identical for every cause, so echoing it adds nothing and couples the copy to the API.</td></tr>
+              <tr><th>Not this path</th><td>Restoring a cart id from storage on page load. That failure clears the stored id silently and shows a clean form — a returning buyer with a dead cookie has done nothing wrong and should not meet an error.</td></tr>
+              <tr><th>Any other failure</th><td>Left alone. A <code>500</code> or a rejected coupon keeps the cart intact and retryable.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="dont">
+          Adding a new anonymous cart-scoped action without <code>[RequireCartCapability]</code>. It reopens
+          the entire hole above, and only the reflection test in <code>RequireCartCapabilityAttributeTests</code>
+          will notice — nothing else in the build will.
         </div>
 
         <h4>Two gates you will meet everywhere</h4>
@@ -1269,6 +1396,9 @@
               <tr><td><strong>Retrying "sold out before your payment could be taken"</strong></td><td>That wording is only chosen once availability has been re-read and found empty. Retrying cannot succeed.</td></tr>
               <tr><td><strong>Expecting a shared <code>Invoice</code> while the cart is open</strong></td><td>An open cart is an <code>EventInvoice</code> only. The shared invoice and its order number are minted at <code>/checkout/intent</code>, so <code>orderNumber</code> is null until payment starts.</td></tr>
               <tr><td><strong>Pointing Stripe at <code>/webhooks/stripe</code></strong></td><td>That route only logs. The real one is <code>/api/public/stripe/web-hook</code>.</td></tr>
+              <tr><td><strong>Deploying without <code>EventCartCapability:SigningKey</code></strong></td><td>The API does not start. There is no default key on purpose &mdash; see <a href="#reg-cart-capability">"Who is allowed to touch a cart"</a>.</td></tr>
+              <tr><td><strong>Treating the cart id as proof of ownership</strong></td><td>It never was. The capability cookie is the credential; a cart id passed to another browser, device or email link opens nothing.</td></tr>
+              <tr><td><strong>Reading <code>403 cart_capability_required</code> as "cart not found"</strong></td><td>It says nothing about existence, deliberately. Send the buyer back to the event page to start again; do not retry.</td></tr>
             </tbody>
           </table>
         </div>
@@ -1785,27 +1915,6 @@
                 <td>Resend Ticket</td>
                 <td><span class="badge text-bg-light border access-policy">OrganizerModuleAccess</span></td>
                 <td class="small"><code>invoiceUniqueId</code><span class="text-body-secondary"> : Guid</span><br><code>ticketUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
-              </tr>
-              <tr>
-                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
-                <td><code class="path">/api/organizer/events/invoices/{invoiceUniqueId:guid}/mark-paid</code></td>
-                <td>Mark Invoice As Paid</td>
-                <td><span class="badge text-bg-light border access-policy">OrganizerModuleAccess</span></td>
-                <td class="small"><code>invoiceUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
-              </tr>
-              <tr>
-                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
-                <td><code class="path">/api/organizer/events/invoices/{invoiceUniqueId:guid}/cancel</code></td>
-                <td>Cancel Invoice</td>
-                <td><span class="badge text-bg-light border access-policy">OrganizerModuleAccess</span></td>
-                <td class="small"><code>invoiceUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
-              </tr>
-              <tr>
-                <td class="text-nowrap"><span class="badge badge-method text-bg-warning">PUT</span></td>
-                <td><code class="path">/api/organizer/events/invoices/{invoiceUniqueId:guid}/buyer</code></td>
-                <td>Update Invoice Buyer</td>
-                <td><span class="badge text-bg-light border access-policy">OrganizerModuleAccess</span></td>
-                <td class="small"><code>invoiceUniqueId</code><span class="text-body-secondary"> : Guid</span>, <code>dto</code><span class="text-body-secondary"> : EventInvoiceBuyerDto</span></td>
               </tr>
               <tr>
                 <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>

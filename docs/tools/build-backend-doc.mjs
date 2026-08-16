@@ -210,6 +210,9 @@ const html = `<!doctype html>
     .dont::before { content: "Trap"; display: block; font-weight: 600; font-size: .8125rem; text-transform: uppercase; letter-spacing: .04em; opacity: .75; margin-bottom: .3rem; }
     .rule { background: var(--bs-success-bg-subtle); border-left: 4px solid var(--bs-success); padding: .85rem 1rem; border-radius: .375rem; margin: 1rem 0; }
     .rule::before { content: "Rule"; display: block; font-weight: 600; font-size: .8125rem; text-transform: uppercase; letter-spacing: .04em; opacity: .75; margin-bottom: .3rem; }
+    .must { background: var(--bs-warning-bg-subtle); border: 2px solid var(--bs-warning); border-left-width: 8px; padding: 1rem 1.15rem; border-radius: .375rem; margin: 1.25rem 0; }
+    .must::before { content: "Do this or nothing works"; display: block; font-weight: 700; font-size: .8125rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .45rem; }
+    .must > :last-child { margin-bottom: 0; }
     .step-rail { counter-reset: step; list-style: none; padding-left: 0; }
     .step-rail > li { position: relative; padding-left: 3rem; padding-bottom: 1.5rem; border-left: 2px solid var(--bs-border-color); margin-left: 1rem; }
     .step-rail > li:last-child { border-left-color: transparent; padding-bottom: 0; }

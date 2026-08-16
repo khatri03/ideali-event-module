@@ -521,9 +521,19 @@
                 <td>Re-sends one ticket only.</td>
               </tr>
               <tr>
-                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/tickets/check-in</code></td>
+                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/organizer/events/{e}/sessions/{s}/attendees</code></td>
+                <td><code>EventAttendeeRosterService.GetRosterAsync</code></td>
+                <td>The door list: everyone holding a live ticket for that session, with arrival state, plus session-wide counts that ignore the search term. Searchable by name, email or ticket code — the fallback when a code will not scan. Cancelled and refunded tickets are left off.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/{e}/sessions/{s}/check-in</code></td>
                 <td><code>TicketingService.CheckInAsync</code></td>
-                <td>Scans a ticket code at the door and writes a <code>TicketCheckInLog</code> row. Refuses a code that is already used, cancelled or refunded.</td>
+                <td>Scans a ticket code at the door and writes a <code>TicketCheckInLog</code> row. Event and session come from the route, so a scan can only ever land on the session the operator opened. Refuses a code that is already used, cancelled or refunded.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/{e}/sessions/{s}/check-in/undo</code></td>
+                <td><code>TicketingService.UndoCheckInAsync</code></td>
+                <td>Reverses a mistaken admission: the ticket returns to <code>Active</code> and the reversal is appended to the log as <code>ManualOverride</code>. The original admission is never erased.</td>
               </tr>
             </tbody>
           </table>
