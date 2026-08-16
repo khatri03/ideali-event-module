@@ -47,6 +47,7 @@ export type AttendeeRoster = z.infer<typeof attendeeRosterSchema>
 
 export const checkInResultSchema = z.object({
   ticketCode: z.string(),
+  attendeeName: z.string().nullish().transform((value) => value ?? null),
   ticketStatus: eventTicketStatusSchema,
   checkInStatus: checkInOutcomeSchema,
   checkedInAtUtc: z.string(),
@@ -56,6 +57,7 @@ export type CheckInResult = z.infer<typeof checkInResultSchema>
 
 export const checkInUndoResultSchema = z.object({
   ticketCode: z.string(),
+  attendeeName: z.string().nullish().transform((value) => value ?? null),
   ticketStatus: eventTicketStatusSchema,
   reversedAtUtc: z.string(),
   message: z.string().nullish().transform((value) => value ?? null),

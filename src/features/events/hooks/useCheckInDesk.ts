@@ -58,6 +58,7 @@ export function useCheckInDesk(eventUniqueId: string, sessionUniqueId: string) {
           setAttempt({
             outcome: "ManualOverride",
             ticketCode: result.ticketCode,
+            attendeeName: result.attendeeName,
             message: result.message ?? "",
             checkedInAtUtc: null,
           }),

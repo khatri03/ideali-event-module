@@ -80,7 +80,7 @@ describe("useCheckInDesk", () => {
 
     await waitFor(() => expect(toastMock).toHaveBeenCalled())
     expect(toastMock).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "success", title: "Admit: TKT-1" }),
+      expect.objectContaining({ type: "success", title: "Check-in successful: TKT-1" }),
     )
   })
 

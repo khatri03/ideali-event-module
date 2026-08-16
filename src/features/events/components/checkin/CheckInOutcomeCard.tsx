@@ -47,6 +47,12 @@ export function CheckInOutcomeCard({ attempt, isReversing, onUndo }: CheckInOutc
         <Text fontSize="sm" fontWeight="800" lineHeight="1.3">
           {presentation.heading}
         </Text>
+        {/* The operator is looking at a person, not a code, so the name leads and the code backs it up. */}
+        {attempt.attendeeName ? (
+          <Text fontSize="sm" fontWeight="700" lineHeight="1.3" lineClamp={1}>
+            {attempt.attendeeName}
+          </Text>
+        ) : null}
         <Text fontFamily="mono" fontSize="xs" opacity={0.85} lineClamp={1}>
           {attempt.ticketCode}
         </Text>

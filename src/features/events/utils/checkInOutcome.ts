@@ -17,7 +17,7 @@ interface CheckInOutcomePresentation {
  */
 export const CHECK_IN_OUTCOME_PRESENTATION: Record<CheckInOutcome, CheckInOutcomePresentation> = {
   Success: {
-    heading: "Admit",
+    heading: "Check-in successful",
     toastType: "success",
     surface: "status.success.bg",
     border: "status.success",

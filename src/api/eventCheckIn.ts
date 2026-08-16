@@ -35,6 +35,8 @@ export interface TicketCheckInCommand {
 export interface CheckInAttempt {
   outcome: CheckInOutcome
   ticketCode: string
+  /** Who the ticket admits, when the server could name them - a refused code names nobody. */
+  attendeeName: string | null
   message: string
   checkedInAtUtc: string | null
 }
@@ -63,6 +65,7 @@ export async function checkInTicket(command: TicketCheckInCommand): Promise<Chec
     return {
       outcome: result.checkInStatus,
       ticketCode: result.ticketCode,
+      attendeeName: result.attendeeName,
       message: result.message ?? "",
       checkedInAtUtc: result.checkedInAtUtc,
     }
@@ -75,6 +78,7 @@ export async function checkInTicket(command: TicketCheckInCommand): Promise<Chec
     return {
       outcome: "Invalid",
       ticketCode: command.ticketCode,
+      attendeeName: null,
       message: refusal,
       checkedInAtUtc: null,
     }

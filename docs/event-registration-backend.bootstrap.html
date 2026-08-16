@@ -528,12 +528,12 @@
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/{e}/sessions/{s}/check-in</code></td>
                 <td><code>TicketingService.CheckInAsync</code></td>
-                <td>Scans a ticket code at the door and writes a <code>TicketCheckInLog</code> row. Event and session come from the route, so a scan can only ever land on the session the operator opened. Refuses a code that is already used, cancelled or refunded.</td>
+                <td>Scans a ticket code at the door and writes a <code>TicketCheckInLog</code> row. Event and session come from the route, so a scan can only ever land on the session the operator opened. Refuses a code that is already used, cancelled or refunded. The reply carries <code>attendeeName</code> alongside the code, so the door can name the person it just admitted without going back to the roster.</td>
               </tr>
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/{e}/sessions/{s}/check-in/undo</code></td>
                 <td><code>TicketingService.UndoCheckInAsync</code></td>
-                <td>Reverses a mistaken admission: the ticket returns to <code>Active</code> and the reversal is appended to the log as <code>ManualOverride</code>. The original admission is never erased.</td>
+                <td>Reverses a mistaken admission: the ticket returns to <code>Active</code> and the reversal is appended to the log as <code>ManualOverride</code>. The original admission is never erased. The reply carries <code>attendeeName</code> too, so the operator can see who was turned back.</td>
               </tr>
             </tbody>
           </table>

@@ -21,16 +21,39 @@ function renderCard(attempt: CheckInAttempt, isReversing = false) {
 const ADMITTED: CheckInAttempt = {
   outcome: "Success",
   ticketCode: "TKT-1",
+  attendeeName: "Wilhelmina Featherstonehaugh",
   message: "Ticket checked in successfully.",
   checkedInAtUtc: "2026-08-17T18:00:00Z",
 }
 
+const REFUSED: CheckInAttempt = {
+  outcome: "Invalid",
+  ticketCode: "TKT-9",
+  attendeeName: null,
+  message: "Ticket code is invalid.",
+  checkedInAtUtc: null,
+}
+
 describe("CheckInOutcomeCard", () => {
-  it("TellsTheOperatorToAdmitAnAcceptedTicket", () => {
+  it("ReportsAnAcceptedTicketAsCheckedIn", () => {
     renderCard(ADMITTED)
 
-    expect(screen.getByText("Admit")).toBeInTheDocument()
+    expect(screen.getByText("Check-in successful")).toBeInTheDocument()
     expect(screen.getByText("TKT-1")).toBeInTheDocument()
+  })
+
+  /** The operator has a person in front of them, and a code alone does not tell them who. */
+  it("NamesTheGuestTheTicketAdmits", () => {
+    renderCard(ADMITTED)
+
+    expect(screen.getByText("Wilhelmina Featherstonehaugh")).toBeInTheDocument()
+  })
+
+  it("ShowsOnlyTheCodeWhenTheServerNamedNobody", () => {
+    renderCard({ ...ADMITTED, attendeeName: null })
+
+    expect(screen.getByText("TKT-1")).toBeInTheDocument()
+    expect(screen.getByText("Check-in successful")).toBeInTheDocument()
   })
 
   it("SeparatesATicketAlreadyInsideFromOneThatWasJustAdmitted", () => {
@@ -40,7 +63,7 @@ describe("CheckInOutcomeCard", () => {
   })
 
   it("RefusesEntryLoudlyForAnInvalidTicket", () => {
-    renderCard({ outcome: "Invalid", ticketCode: "TKT-9", message: "Ticket code is invalid.", checkedInAtUtc: null })
+    renderCard(REFUSED)
 
     expect(screen.getByText("Do not admit")).toBeInTheDocument()
   })
@@ -53,7 +76,7 @@ describe("CheckInOutcomeCard", () => {
   })
 
   it("OffersNoReversalForATicketThatWasNeverAdmitted", () => {
-    renderCard({ outcome: "Invalid", ticketCode: "TKT-9", message: "Ticket code is invalid.", checkedInAtUtc: null })
+    renderCard(REFUSED)
 
     expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument()
   })

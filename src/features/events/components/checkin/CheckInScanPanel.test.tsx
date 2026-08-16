@@ -17,6 +17,7 @@ vi.mock("./TicketScanner", () => ({
 const ADMITTED: CheckInAttempt = {
   outcome: "Success",
   ticketCode: "TKT-1",
+  attendeeName: "Admitted Guest",
   message: "Ticket checked in successfully.",
   checkedInAtUtc: "2026-08-17T18:00:00Z",
 }
@@ -24,6 +25,7 @@ const ADMITTED: CheckInAttempt = {
 const ALREADY_INSIDE: CheckInAttempt = {
   outcome: "AlreadyCheckedIn",
   ticketCode: "TKT-2",
+  attendeeName: "Returning Guest",
   message: "This ticket was already checked in.",
   checkedInAtUtc: "2026-08-17T18:00:00Z",
 }
@@ -31,6 +33,7 @@ const ALREADY_INSIDE: CheckInAttempt = {
 const REFUSED: CheckInAttempt = {
   outcome: "Invalid",
   ticketCode: "TKT-3",
+  attendeeName: null,
   message: "This ticket is not valid for this session.",
   checkedInAtUtc: null,
 }

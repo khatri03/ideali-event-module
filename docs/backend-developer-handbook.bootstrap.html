@@ -1277,9 +1277,19 @@ var stored = await fileStorageService.SaveFileAsync(file);   // returns the File
                 <td>Re-sends one ticket only.</td>
               </tr>
               <tr>
-                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/tickets/check-in</code></td>
+                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/organizer/events/{e}/sessions/{s}/attendees</code></td>
+                <td><code>EventAttendeeRosterService.GetRosterAsync</code></td>
+                <td>The door list: everyone holding a live ticket for that session, with arrival state, plus session-wide counts that ignore the search term. Searchable by name, email or ticket code — the fallback when a code will not scan. Cancelled and refunded tickets are left off.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/{e}/sessions/{s}/check-in</code></td>
                 <td><code>TicketingService.CheckInAsync</code></td>
-                <td>Scans a ticket code at the door and writes a <code>TicketCheckInLog</code> row. Refuses a code that is already used, cancelled or refunded.</td>
+                <td>Scans a ticket code at the door and writes a <code>TicketCheckInLog</code> row. Event and session come from the route, so a scan can only ever land on the session the operator opened. Refuses a code that is already used, cancelled or refunded. The reply carries <code>attendeeName</code> alongside the code, so the door can name the person it just admitted without going back to the roster.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/{e}/sessions/{s}/check-in/undo</code></td>
+                <td><code>TicketingService.UndoCheckInAsync</code></td>
+                <td>Reverses a mistaken admission: the ticket returns to <code>Active</code> and the reversal is appended to the log as <code>ManualOverride</code>. The original admission is never erased. The reply carries <code>attendeeName</code> too, so the operator can see who was turned back.</td>
               </tr>
             </tbody>
           </table>
@@ -1462,6 +1472,26 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
             </tbody>
           </table>
         </div>
+        <h4>What the frontend does with a refusal</h4>
+        <p>
+          A refused capability is terminal. The cart cannot be repaired from the browser — the cookie is
+          http-only, the server will refuse every later call on that cart identically, and it will not say
+          which of the five causes applied. So the wizard does not retry and does not surface the raw
+          failure inline.
+        </p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <tbody>
+              <tr><th style="width:16rem">Detection</th><td><code>isCartSessionLostError</code> in <code>src/utils/errors.ts</code>. Matches <code>403</code> plus <code>cart_capability_required</code>. The failure envelope arrives PascalCase and never passes through <code>camelizeKeys</code>, so both spellings of the error-code field are read.</td></tr>
+              <tr><th>Reaction</th><td><code>useRegistrationCart</code> drops the cart id, coupon, buyer identity, any buffered line changes and the stored cart id, then raises <code>isSessionLost</code>. Keeping the cart would leave the buyer retrying against one the server will never accept again.</td></tr>
+              <tr><th>What the buyer sees</th><td>A single-action "Registration session ended" dialog. The only button reloads the form. There is no retry, because nothing can be retried.</td></tr>
+              <tr><th>Wording</th><td>Fixed client-side, not read from the response. The server's message is deliberately identical for every cause, so echoing it adds nothing and couples the copy to the API.</td></tr>
+              <tr><th>Not this path</th><td>Restoring a cart id from storage on page load. That failure clears the stored id silently and shows a clean form — a returning buyer with a dead cookie has done nothing wrong and should not meet an error.</td></tr>
+              <tr><th>Any other failure</th><td>Left alone. A <code>500</code> or a rejected coupon keeps the cart intact and retryable.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
         <div class="dont">
           Adding a new anonymous cart-scoped action without <code>[RequireCartCapability]</code>. It reopens
           the entire hole above, and only the reflection test in <code>RequireCartCapabilityAttributeTests</code>
