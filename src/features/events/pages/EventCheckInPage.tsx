@@ -51,9 +51,14 @@ export function EventCheckInPage() {
         </Box>
       </Box>
 
-      {/* The roster is what the operator works from between scans, so it takes the larger share. */}
+      {/*
+        The roster is what the operator works from between scans, so it takes the larger share. The
+        columns are floored at zero because a grid track sized "1fr" still refuses to go below its
+        content: the roster table is 880px wide by design, and without this the track grows to match
+        it and carries the whole desk off the side of a phone instead of letting the table scroll.
+      */}
       <Grid
-        templateColumns={{ base: "1fr", lg: "35fr 65fr" }}
+        templateColumns={{ base: "minmax(0, 1fr)", lg: "minmax(0, 35fr) minmax(0, 65fr)" }}
         gap={{ base: 6, lg: 8 }}
         alignItems="start"
       >
