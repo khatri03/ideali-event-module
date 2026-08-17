@@ -16,6 +16,7 @@ function buildTicket(overrides: Partial<EventRegistrationTicket> = {}): EventReg
     totalQuantity: 20,
     availableForSale: 0,
     ticketsSold: 0,
+    showRemainingTickets: false,
     nextSeatsAvailableAtUtc: "2026-08-07T12:04:00Z",
     isActive: true,
     salesStartDateUtc: null,

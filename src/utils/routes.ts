@@ -249,6 +249,8 @@ export const API_ROUTES = {
   sessionWizardTicket: (id: string) => `/api/organizer/sessions/${id}/ticket`,
   sessionWizardTicketItem: (id: string, ticketId: string) => `/api/organizer/sessions/${id}/ticket/${ticketId}`,
   sessionWizardTicketDisplayOrder: (id: string) => `/api/organizer/sessions/${id}/ticket/display-order`,
+  sessionWizardTicketRemainingVisibility: (id: string, ticketId: string) =>
+    `/api/organizer/sessions/${id}/ticket/${ticketId}/remaining-visibility`,
   sessionWizardTicketPricePeriod: (id: string, ticketId: string) =>
     `/api/organizer/sessions/${id}/ticket/${ticketId}/price-period`,
   sessionWizardTicketPricePeriodItem: (id: string, ticketId: string, pricePeriodId: string) =>

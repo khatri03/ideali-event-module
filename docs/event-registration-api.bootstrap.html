@@ -376,7 +376,7 @@
               <tr>
                 <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/events/{id}/register/sessions</code></td>
                 <td><code>GetEventRegistrationSessionsAsync</code></td>
-                <td>Sessions with their ticket types and prices — what the buyer picks from.</td>
+                <td>Sessions with their ticket types and prices — what the buyer picks from. Each ticket type carries <code>showRemainingTickets</code>; when it is true the card prints the seats left, taken from <code>availableForSale</code>.</td>
               </tr>
               <tr>
                 <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/events/{id}/register/attendee-info</code></td>

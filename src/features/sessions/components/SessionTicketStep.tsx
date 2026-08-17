@@ -35,6 +35,7 @@ import {
   fetchSessionWizardTickets,
   updateSessionWizardTicketDisplayOrder,
   updateSessionWizardTicket,
+  updateSessionWizardTicketRemainingVisibility,
   type SessionWizardTicket,
   type SessionWizardTicketDisplayOrderRequest,
 } from "@/api/sessions"
@@ -230,6 +231,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
   const [minimumPurchase, setMinimumPurchase] = useState("")
   const [maximumPurchase, setMaximumPurchase] = useState("")
   const [isActive, setIsActive] = useState(true)
+  const [showRemainingTickets, setShowRemainingTickets] = useState(false)
   const [isSortOpen, setIsSortOpen] = useState(false)
   const [sortedTicketDraft, setSortedTicketDraft] = useState<SessionWizardTicket[]>([])
   const [ticketNameError, setTicketNameError] = useState("")
@@ -282,8 +284,10 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
     retry: false,
   })
 
+  const ticketsQueryKey = ["sessions", { sessionId, step: "ticket" }]
+
   const ticketsQuery = useQuery({
-    queryKey: ["sessions", { sessionId, step: "ticket" }],
+    queryKey: ticketsQueryKey,
     queryFn: () => fetchSessionWizardTickets(sessionId),
     enabled: !!sessionId,
     retry: false,
@@ -354,9 +358,10 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
       minPurchase: number | null
       maxPurchase: number | null
       isActive: boolean
+      showRemainingTickets: boolean
     }) => createSessionWizardTicket(sessionId, payload),
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "ticket" }] })
+      await queryClient.invalidateQueries({ queryKey: ticketsQueryKey })
     },
   })
 
@@ -371,6 +376,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
       minPurchase: number | null
       maxPurchase: number | null
       isActive: boolean
+      showRemainingTickets: boolean
     }) =>
       updateSessionWizardTicket(sessionId, payload.ticketUniqueId, {
         name: payload.name,
@@ -381,16 +387,48 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
         minPurchase: payload.minPurchase,
         maxPurchase: payload.maxPurchase,
         isActive: payload.isActive,
+        showRemainingTickets: payload.showRemainingTickets,
       }),
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "ticket" }] })
+      await queryClient.invalidateQueries({ queryKey: ticketsQueryKey })
+    },
+  })
+
+  const remainingVisibilityMutation = useMutation({
+    mutationFn: (payload: { ticketUniqueId: string; showRemainingTickets: boolean }) =>
+      updateSessionWizardTicketRemainingVisibility(
+        sessionId,
+        payload.ticketUniqueId,
+        payload.showRemainingTickets,
+      ),
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries({ queryKey: ticketsQueryKey })
+      const previousTickets = queryClient.getQueryData<SessionWizardTicket[]>(ticketsQueryKey)
+
+      queryClient.setQueryData<SessionWizardTicket[]>(ticketsQueryKey, (current) =>
+        current?.map((ticket) =>
+          ticket.uniqueId === payload.ticketUniqueId
+            ? { ...ticket, showRemainingTickets: payload.showRemainingTickets }
+            : ticket,
+        ),
+      )
+
+      return { previousTickets }
+    },
+    onError: (_error, _payload, context) => {
+      if (context?.previousTickets) {
+        queryClient.setQueryData(ticketsQueryKey, context.previousTickets)
+      }
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ticketsQueryKey })
     },
   })
 
   const deleteTicketMutation = useMutation({
     mutationFn: (ticketUniqueId: string) => deleteSessionWizardTicket(sessionId, ticketUniqueId),
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "ticket" }] })
+      await queryClient.invalidateQueries({ queryKey: ticketsQueryKey })
     },
   })
 
@@ -398,7 +436,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
     mutationFn: (payload: SessionWizardTicketDisplayOrderRequest) =>
       updateSessionWizardTicketDisplayOrder(sessionId, payload),
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["sessions", { sessionId, step: "ticket" }] })
+      await queryClient.invalidateQueries({ queryKey: ticketsQueryKey })
     },
   })
 
@@ -508,6 +546,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
     setMinimumPurchase("")
     setMaximumPurchase("")
     setIsActive(true)
+    setShowRemainingTickets(false)
     setTicketNameError("")
     setTicketCategoryError("")
     setTicketTotalTicketsError("")
@@ -549,6 +588,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
     setMinimumPurchase(ticket.minPurchase?.toString() ?? "")
     setMaximumPurchase(ticket.maxPurchase?.toString() ?? "")
     setIsActive(ticket.isActive)
+    setShowRemainingTickets(ticket.showRemainingTickets)
     setTicketNameError("")
     setTicketCategoryError("")
     setTicketTotalTicketsError("")
@@ -649,6 +689,7 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
       minPurchase: resolvedMinimumPurchase,
       maxPurchase: resolvedMaximumPurchase,
       isActive,
+      showRemainingTickets,
     }
 
     try {
@@ -738,10 +779,11 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
       <Box overflowX="auto" borderRadius="20px" border="1px solid" borderColor="gray.300" bg="app.bg">
         <Table.Root variant="line" size="sm" borderColor="gray.300">
           <Table.ColumnGroup>
-            <Table.Column htmlWidth="30%" />
-            <Table.Column htmlWidth="16%" />
+            <Table.Column htmlWidth="26%" />
             <Table.Column htmlWidth="14%" />
-            <Table.Column htmlWidth="14%" />
+            <Table.Column htmlWidth="12%" />
+            <Table.Column htmlWidth="12%" />
+            <Table.Column htmlWidth="10%" />
             <Table.Column htmlWidth="12%" />
             <Table.Column htmlWidth="14%" />
           </Table.ColumnGroup>
@@ -808,6 +850,18 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                 Active
               </Table.ColumnHeader>
               <Table.ColumnHeader
+                px={6}
+                py={3}
+                borderColor="gray.300"
+                fontSize="xs"
+                fontWeight="700"
+                color="text.secondary"
+                textTransform="uppercase"
+                letterSpacing="0.05em"
+              >
+                Show Left
+              </Table.ColumnHeader>
+              <Table.ColumnHeader
                 px={4}
                 py={3}
                 borderColor="gray.300"
@@ -839,6 +893,12 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                   <Table.Cell px={6} py={4} borderColor="gray.300">
                     <Skeleton h="18px" w="50%" />
                   </Table.Cell>
+                  <Table.Cell px={6} py={4} borderColor="gray.300">
+                    <Skeleton h="18px" w="60%" />
+                  </Table.Cell>
+                  <Table.Cell px={6} py={4} borderColor="gray.300">
+                    <Skeleton borderRadius="999px" h="24px" w="44px" />
+                  </Table.Cell>
                   <Table.Cell px={4} py={4} borderColor="gray.300">
                     <Flex justify="flex-end" gap={2}>
                       <Skeleton borderRadius="full" h="36px" w="36px" />
@@ -848,7 +908,12 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                 </Table.Row>
               ))
             ) : sortedTickets.length > 0 ? (
-              sortedTickets.map((ticket) => (
+              sortedTickets.map((ticket) => {
+                const isTogglingRemaining =
+                  remainingVisibilityMutation.isPending &&
+                  remainingVisibilityMutation.variables?.ticketUniqueId === ticket.uniqueId
+
+                return (
                 <Table.Row key={ticket.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s" borderColor="gray.300">
                   <Table.Cell px={6} py={4} borderColor="gray.300">
                     <Text fontSize="sm" fontWeight="600" color="text.primary" lineClamp={1}>
@@ -874,6 +939,23 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                     <Badge colorPalette={ticket.isActive ? "green" : "gray"} variant="subtle">
                       {ticket.isActive ? "Active" : "Inactive"}
                     </Badge>
+                  </Table.Cell>
+                  <Table.Cell px={6} py={4} borderColor="gray.300">
+                    <Switch.Root
+                      checked={ticket.showRemainingTickets}
+                      disabled={isTogglingRemaining}
+                      onCheckedChange={(details) =>
+                        remainingVisibilityMutation.mutate({
+                          ticketUniqueId: ticket.uniqueId,
+                          showRemainingTickets: Boolean(details.checked),
+                        })
+                      }
+                      colorPalette="brand"
+                      aria-label={`Show tickets left for ${ticket.name}`}
+                    >
+                      <Switch.HiddenInput />
+                      <Switch.Control cursor={isTogglingRemaining ? "not-allowed" : "pointer"} />
+                    </Switch.Root>
                   </Table.Cell>
                   <Table.Cell px={4} py={4} borderColor="gray.300">
                     <Flex justify="flex-end" gap={2}>
@@ -911,10 +993,11 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                     </Flex>
                   </Table.Cell>
                 </Table.Row>
-              ))
+                )
+              })
             ) : (
               <Table.Row borderColor="gray.300">
-                <Table.Cell px={6} py={8} borderColor="gray.300" colSpan={6}>
+                <Table.Cell px={6} py={8} borderColor="gray.300" colSpan={7}>
                   <Text fontSize="sm" color="gray.600">
                     No tickets added yet.
                   </Text>
@@ -934,6 +1017,12 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
       {ticketActionError ? (
         <Text fontSize="sm" color="red.500">
           {extractApiError(ticketActionError)}
+        </Text>
+      ) : null}
+
+      {remainingVisibilityMutation.error ? (
+        <Text fontSize="sm" color="red.500">
+          {extractApiError(remainingVisibilityMutation.error)}
         </Text>
       ) : null}
 
@@ -1180,6 +1269,21 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                           {ticketTotalTicketsError}
                         </Text>
                       ) : null}
+
+                      <Switch.Root
+                        mt={3}
+                        checked={showRemainingTickets}
+                        onCheckedChange={(details) => setShowRemainingTickets(Boolean(details.checked))}
+                        colorPalette="brand"
+                      >
+                        <Switch.HiddenInput />
+                        <Switch.Control cursor="pointer" />
+                        <Switch.Label>
+                          <Text fontSize="sm" fontWeight="600" color="navy.700">
+                            Show tickets left on the registration form
+                          </Text>
+                        </Switch.Label>
+                      </Switch.Root>
                     </Box>
 
                     <Box>

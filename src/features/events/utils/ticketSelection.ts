@@ -52,6 +52,22 @@ export function getTicketRemaining(ticket: EventRegistrationTicket) {
 }
 
 /**
+ * Scarcity line for the ticket card, shown only where the organizer opted in. Null means the card
+ * prints nothing: either they kept the count private, or the ticket type has no capacity to count
+ * down from and "0 left" would read as sold out on a ticket that is selling fine.
+ */
+export function getTicketRemainingLabel(ticket: EventRegistrationTicket) {
+  if (!ticket.showRemainingTickets) return null
+
+  const remaining = getTicketRemaining(ticket)
+  if (remaining === null) return null
+
+  return remaining > 0
+    ? { text: `${new Intl.NumberFormat("en-US").format(remaining)} left`, isSoldOut: false }
+    : { text: "Sold out", isSoldOut: true }
+}
+
+/**
  * Display-only price for the ticket card. The payable amount always comes from the server-priced
  * cart - this just shows the buyer which price period they are currently in.
  */
