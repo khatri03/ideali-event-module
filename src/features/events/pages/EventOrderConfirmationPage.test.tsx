@@ -191,7 +191,7 @@ describe("EventOrderConfirmationPage", () => {
 
     renderPage(`?cart=${CART_UNIQUE_ID}`)
 
-    await waitFor(() => expect(confirmEventCheckoutMock).toHaveBeenCalledWith(CART_UNIQUE_ID))
+    await waitFor(() => expect(confirmEventCheckoutMock).toHaveBeenCalledWith(CART_UNIQUE_ID, {}))
     await waitFor(() => expect(screen.getByText("You're going")).toBeTruthy())
     expect(confirmEventCheckoutMock).toHaveBeenCalledTimes(1)
   })

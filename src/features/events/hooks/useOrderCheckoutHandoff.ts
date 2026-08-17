@@ -26,7 +26,8 @@ export function useOrderCheckoutHandoff(cartUniqueId: string | null, onCompleted
     // The money has moved, so this cart must stop being resumable whatever the confirm call reports.
     clearStoredCartId()
 
-    mutateAsync().catch(() => undefined).finally(() => {
+    // No payload: the order this confirms already exists, and its buyer was recorded when it was raised.
+    mutateAsync({}).catch(() => undefined).finally(() => {
       if (isCancelled) return
       setIsHandingOff(false)
       onCompleted()

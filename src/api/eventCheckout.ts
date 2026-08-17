@@ -8,6 +8,7 @@ import {
   normalizeEventChequePaymentResult,
   normalizeEventPaymentIntentResult,
   type AddEventCartLineRequest,
+  type ConfirmEventCheckoutRequest,
   type CreateEventCartRequest,
   type CreateEventPaymentIntentRequest,
   type EventCart,
@@ -127,7 +128,10 @@ export async function recordEventChequePayment(
   return normalizeEventChequePaymentResult(readResponseData(res.data))
 }
 
-export async function confirmEventCheckout(cartUniqueId: string): Promise<EventCheckoutConfirmation> {
-  const res = await client.post<unknown>(API_ROUTES.eventCartCheckoutConfirm(cartUniqueId), {})
+export async function confirmEventCheckout(
+  cartUniqueId: string,
+  request: ConfirmEventCheckoutRequest = {},
+): Promise<EventCheckoutConfirmation> {
+  const res = await client.post<unknown>(API_ROUTES.eventCartCheckoutConfirm(cartUniqueId), request)
   return normalizeEventCheckoutConfirmation(readResponseData(res.data))
 }

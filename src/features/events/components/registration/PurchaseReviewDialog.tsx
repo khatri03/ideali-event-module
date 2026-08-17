@@ -19,6 +19,8 @@ interface PurchaseReviewDialogProps {
   selectedTicketCount: number
   paymentMethodLabel: string
   isCardPayment: boolean
+  /** Nothing is payable, so confirming registers rather than pays. */
+  isFreeOrder: boolean
   /** The outstanding purchase-review complaint, if the buyer has one to fix. */
   validationMessage: string | null
   ticketRows: PurchaseReviewTicketRow[]
@@ -182,6 +184,7 @@ export function PurchaseReviewDialog({
   selectedTicketCount,
   paymentMethodLabel,
   isCardPayment,
+  isFreeOrder,
   validationMessage,
   ticketRows,
   grossSubtotal,
@@ -194,8 +197,13 @@ export function PurchaseReviewDialog({
   onInvoiceNoteChange,
   onConfirm,
 }: PurchaseReviewDialogProps) {
-  // Card details were already collected on the payment step, so confirming here is the pay action.
-  const confirmLabel = isCardPayment ? `Pay ${formatAmount(grandTotal, currencyCode)}` : "Confirm purchase"
+  // Card details were already collected on the payment step, so confirming here is the pay action -
+  // unless there is nothing to pay, where offering to pay an amount of nothing reads as a fault.
+  const confirmLabel = isFreeOrder
+    ? "Complete registration"
+    : isCardPayment
+      ? `Pay ${formatAmount(grandTotal, currencyCode)}`
+      : "Confirm purchase"
   const ticketCountLabel = `${selectedTicketCount} ${selectedTicketCount === 1 ? "ticket" : "tickets"}`
 
   return (

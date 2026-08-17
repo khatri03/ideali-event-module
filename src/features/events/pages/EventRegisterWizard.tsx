@@ -40,7 +40,11 @@ import { useTicketSelectionSummary } from '@/features/events/hooks/useTicketSele
 import { usePurchaseReviewValidation } from '@/features/events/hooks/usePurchaseReviewValidation'
 import { useBuyerAttendeeInfo } from '@/features/events/hooks/useBuyerAttendeeInfo'
 import { useQuestionnaireAnswers } from '@/features/events/hooks/useQuestionnaireAnswers'
-import { useCreateEventPaymentIntent, useRecordEventChequePayment } from '@/features/events/hooks/useEventCheckout'
+import {
+  useConfirmEventCheckout,
+  useCreateEventPaymentIntent,
+  useRecordEventChequePayment,
+} from '@/features/events/hooks/useEventCheckout'
 import {
   useSubmitLineAttendees,
   useSubmitOrderAnswers,
@@ -315,8 +319,13 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     paymentBreakdowns.find((breakdown) => breakdown.paymentMethod === selectedPaymentMethod) ??
     paymentBreakdowns[0] ??
     null
-  const isSelectedPaymentMethodCard = Boolean(selectedPaymentBreakdown && isCardPaymentMethod(selectedPaymentBreakdown.paymentMethod))
-  const isSelectedPaymentMethodCheque = Boolean(selectedPaymentBreakdown && isChequePaymentMethod(selectedPaymentBreakdown.paymentMethod))
+  // Free tickets and a coupon that takes the whole total land in the same place: an order that owes
+  // nothing. Every method prices such a cart at zero, so the selected breakdown answers for all of them.
+  const isFreeOrder = selectedTicketCount > 0 && (selectedPaymentBreakdown?.grandTotal ?? selectedTicketTotal) <= 0
+  const isSelectedPaymentMethodCard =
+    !isFreeOrder && Boolean(selectedPaymentBreakdown && isCardPaymentMethod(selectedPaymentBreakdown.paymentMethod))
+  const isSelectedPaymentMethodCheque =
+    !isFreeOrder && Boolean(selectedPaymentBreakdown && isChequePaymentMethod(selectedPaymentBreakdown.paymentMethod))
   // Gross on purpose. A breakdown's own subtotal is already net of the coupon, and the table lists
   // the coupon on its own line underneath - showing the net figure above it reads as a second deduction.
   const paymentBreakdownGrossSubtotal = cartPrice?.subTotal ?? selectedPaymentBreakdown?.subtotal ?? 0
@@ -365,6 +374,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const uploadAnswerFileMutation = useUploadAnswerFile(cart?.cartUniqueId)
   const createPaymentIntentMutation = useCreateEventPaymentIntent(cart?.cartUniqueId)
   const recordChequePaymentMutation = useRecordEventChequePayment(cart?.cartUniqueId)
+  const confirmCheckoutMutation = useConfirmEventCheckout(cart?.cartUniqueId)
   const bannerSlides = useMemo(() => getSessionBannerSlides(currentEvent), [currentEvent])
   const sessionsLoading = sessionsQuery.isLoading || (sessionsQuery.isFetching && sessions.length === 0)
   const attendeeInfoLoading = attendeeInfoQuery.isLoading && !attendeeInfoQuery.data
@@ -540,15 +550,19 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
     issues.push(...getQuestionnaireIssues())
 
-    issues.push(
-      ...getPaymentFieldIssues({
-        hasSelectedMethod: Boolean(selectedPaymentBreakdown),
-        isCardMethod: isSelectedPaymentMethodCard,
-        cardHolderName,
-        isChequeMethod: isSelectedPaymentMethodCheque,
-        chequeReferenceNo,
-      }),
-    )
+    // A free order has no method to choose and no card or cheque fields on screen, so the payment
+    // rules have nothing left to judge - running them would fault a form the buyer was never shown.
+    if (!isFreeOrder) {
+      issues.push(
+        ...getPaymentFieldIssues({
+          hasSelectedMethod: Boolean(selectedPaymentBreakdown),
+          isCardMethod: isSelectedPaymentMethodCard,
+          cardHolderName,
+          isChequeMethod: isSelectedPaymentMethodCheque,
+          chequeReferenceNo,
+        }),
+      )
+    }
 
     if (currentEvent.termsConditions && !termsAccepted) {
       issues.push({ message: 'Accept the registration terms and conditions.', target: 'terms' })
@@ -630,7 +644,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       return false
     }
 
-    if (!cart || !selectedPaymentBreakdown) {
+    if (!cart || (!selectedPaymentBreakdown && !isFreeOrder)) {
       return false
     }
 
@@ -724,6 +738,32 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     })
   }
 
+  /**
+   * The free counterpart to recordChequePaymentAsync. Confirming is what raises the order for a cart
+   * that owes nothing, and it issues the tickets in the same call — the buyer states who they are here
+   * because no intent and no cheque ever carried it.
+   */
+  async function confirmFreeRegistrationAsync() {
+    const confirmation = await confirmCheckoutMutation.mutateAsync({
+      buyerName: `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim() || null,
+      buyerEmail: buyerInfo.email || null,
+      invoiceNote: invoiceNote.trim() || null,
+    })
+
+    // Written down before anything else can fail: the tickets already exist on the server, so a tab
+    // that dies here must still have a way back to the order.
+    setOrderUniqueId(confirmation.invoiceUniqueId)
+    storePendingOrderId(confirmation.invoiceUniqueId)
+
+    const handoffCartUniqueId = cart?.cartUniqueId ?? null
+    completeCart()
+
+    navigate(buildOrderPath(confirmation.invoiceUniqueId, handoffCartUniqueId), {
+      replace: true,
+      state: { registerPath: APP_ROUTES.eventRegister(event.uniqueId) },
+    })
+  }
+
   /** Stripe rejected the payment, so the buyer goes back to the fields to correct it. */
   function handlePaymentFailed(message: string) {
     applyPurchaseReviewIssues([{ message, target: 'payment-method' }])
@@ -771,10 +811,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     })),
   )
   const purchaseReviewChargeRows = selectedPaymentBreakdown?.charges ?? []
-  const selectedPaymentMethodLabel =
-    selectedPaymentBreakdown?.label ??
-    selectedPaymentBreakdown?.paymentMethod ??
-    'Payment method not selected'
+  const selectedPaymentMethodLabel = isFreeOrder
+    ? 'No payment required'
+    : selectedPaymentBreakdown?.label ?? selectedPaymentBreakdown?.paymentMethod ?? 'Payment method not selected'
   function handleBackStep() {
     if (activeIndex <= 0) {
       onBack()
@@ -1215,6 +1254,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                 currencyCode={currentEvent.paymentAccountCurrency}
                                 formAccent={formAccent}
                                 isLoading={isCartSyncing}
+                                isFreeOrder={isFreeOrder}
                                 hasVisiblePaymentMethods={visiblePaymentMethods.length > 0}
                                 validationMessage={
                                   isFinalStep && purchaseReviewAttempted ? purchaseReviewMessage : null
@@ -1336,6 +1376,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
         paymentMethodLabel={selectedPaymentMethodLabel}
         isCardPayment={isSelectedPaymentMethodCard}
         isChequePayment={isSelectedPaymentMethodCheque}
+        isFreeOrder={isFreeOrder}
         cardHolderName={cardHolderName}
         validationMessage={purchaseReviewAttempted ? purchaseReviewMessage : null}
         ticketRows={purchaseReviewTicketRows}
@@ -1345,11 +1386,16 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
         chargeRows={purchaseReviewChargeRows}
         grandTotal={selectedPaymentBreakdown?.grandTotal ?? selectedTicketTotal}
         invoiceNote={invoiceNote}
-        isBusy={createPaymentIntentMutation.isPending || recordChequePaymentMutation.isPending}
+        isBusy={
+          createPaymentIntentMutation.isPending ||
+          recordChequePaymentMutation.isPending ||
+          confirmCheckoutMutation.isPending
+        }
         onInvoiceNoteChange={setInvoiceNote}
         onPrepare={preparePurchaseAsync}
         onCreateIntent={createPaymentIntentAsync}
         onRecordCheque={recordChequePaymentAsync}
+        onConfirmFree={confirmFreeRegistrationAsync}
         onPaid={handlePaymentSucceeded}
         onFailed={handlePaymentFailed}
       />

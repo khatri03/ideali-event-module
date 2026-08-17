@@ -469,7 +469,7 @@
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/checkout/confirm</code></td>
                 <td><code>EventCheckoutService.ConfirmCheckoutAsync</code></td>
-                <td>The fast path the browser calls after paying, and the <em>only</em> path for a zero-total order. It settles open attempts, reads whether issuance is authorised, and runs the same idempotent issuance the webhook runs. For free orders, this is where seats are claimed.</td>
+                <td>The fast path the browser calls after paying, and the <em>only</em> path for a zero-total order. It settles open attempts, reads whether issuance is authorised, and runs the same idempotent issuance the webhook runs. For free orders, this is where seats are claimed. The body is optional and carries <code>buyerName</code>, <code>buyerEmail</code> and <code>invoiceNote</code>; they are applied only on the call that raises the invoice, so a buyer reloading a paid order cannot rewrite who it is addressed to.</td>
               </tr>
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/public/stripe/web-hook</code></td>
@@ -902,7 +902,7 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
               <tr><td><strong>ACH</strong> (US bank)</td><td>Destination charge on the platform account</td><td>Same, with the ACH processor fee — usually different from the card fee, which is why the totals differ per method</td></tr>
               <tr><td><strong>PAD</strong> (Canadian bank)</td><td>Destination charge on the platform account</td><td>Same, with the PAD processor fee</td></tr>
               <tr><td><strong>Cheque</strong></td><td>No Stripe involvement</td><td>Net subtotal + charge rules + buyer revenue plan. <strong>No processor fee at all</strong> — any fee left over from an earlier card attempt is cleared. Only visible to the event's own organizer.</td></tr>
-              <tr><td><strong>Free order</strong></td><td>No payment</td><td><code>TotalAmount</code> is zero, so there is no intent and no webhook. <code>/checkout/confirm</code> is the whole flow.</td></tr>
+              <tr><td><strong>Free order</strong></td><td>No payment</td><td><code>TotalAmount</code> is zero, so there is no intent and no webhook. <code>/checkout/confirm</code> is the whole flow, and it is what closes the invoice as <code>Paid</code> without recording a payment.</td></tr>
             </tbody>
           </table>
         </div>
@@ -1093,6 +1093,15 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
           <li><code>TotalAmount</code> is zero or less — a free order;</li>
           <li>a cheque payment exists that has not failed — and only an organizer-authenticated endpoint can record one.</li>
         </ul>
+        <p>
+          A free order is also <strong>closed</strong> here, once its seats are claimed: the invoice and
+          every line on it move to <code>Paid</code> with no balance left. Nothing will ever be collected
+          against it, so no webhook and no organizer action is coming to do it later — left open it would
+          sit in the organizer's outstanding-payment views and read back to the buyer as
+          "Pending Payment" on an order they owe nothing on. <strong>No payment row is written</strong>:
+          nothing was collected, and a zero-amount record would name an instrument the buyer never used.
+          A shortfall on the seat claim leaves the invoice open, because there is no order to close.
+        </p>
 
         <h4>What checkout refuses, and what each refusal means</h4>
         <p>

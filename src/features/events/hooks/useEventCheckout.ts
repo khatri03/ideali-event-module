@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { confirmEventCheckout, createEventPaymentIntent, recordEventChequePayment } from "@/api/eventCheckout"
 import type {
+  ConfirmEventCheckoutRequest,
   CreateEventPaymentIntentRequest,
   RecordEventChequePaymentRequest,
 } from "@/features/events/schemas/eventCart.schemas"
@@ -47,12 +48,12 @@ export function useConfirmEventCheckout(cartUniqueId?: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: () => {
+    mutationFn: (request: ConfirmEventCheckoutRequest = {}) => {
       if (!cartUniqueId) {
         throw new Error("Cart id is required.")
       }
 
-      return confirmEventCheckout(cartUniqueId)
+      return confirmEventCheckout(cartUniqueId, request)
     },
     onSettled: () => {
       if (!cartUniqueId) {

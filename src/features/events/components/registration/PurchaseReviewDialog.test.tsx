@@ -27,6 +27,7 @@ function renderDialog(overrides: Partial<Parameters<typeof PurchaseReviewDialog>
         selectedTicketCount={1}
         paymentMethodLabel="Debit/Credit Card"
         isCardPayment
+        isFreeOrder={false}
         validationMessage={null}
         ticketRows={TICKET_ROWS}
         grossSubtotal={210}
@@ -91,6 +92,13 @@ describe("PurchaseReviewDialog", () => {
     renderDialog({ isCardPayment: false })
 
     expect(screen.getByRole("button", { name: "Confirm purchase" })).toBeTruthy()
+  })
+
+  it("Review_OrderCostsNothing_AsksToRegisterRatherThanToPay", () => {
+    renderDialog({ isFreeOrder: true, grandTotal: 0, paymentMethodLabel: "No payment required" })
+
+    expect(screen.getByRole("button", { name: "Complete registration" })).toBeTruthy()
+    expect(screen.queryByRole("button", { name: /^Pay / })).toBeNull()
   })
 
   it("Review_AnyPaymentMethod_OffersOneInvoiceNote", () => {

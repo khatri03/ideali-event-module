@@ -432,3 +432,13 @@ export interface CreateEventPaymentIntentRequest {
   buyerEmail?: string | null
   invoiceNote?: string | null
 }
+
+/**
+ * Only a free order carries this. Nothing minted an intent or recorded a cheque for it, so confirming
+ * is the one call that can tell the server who ordered and what they wrote on it.
+ */
+export interface ConfirmEventCheckoutRequest {
+  buyerName?: string | null
+  buyerEmail?: string | null
+  invoiceNote?: string | null
+}

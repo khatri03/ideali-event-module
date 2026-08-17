@@ -31,6 +31,11 @@ interface RegistrationPaymentConfirmationProps {
    * than handing the caller on to a payment form with nothing left to do.
    */
   isChequePayment: boolean
+  /**
+   * Nothing is payable, so no intent may be minted: the server refuses a zero-amount cart outright,
+   * and confirming is the only call that turns it into an order.
+   */
+  isFreeOrder: boolean
   /** Collected outside the Payment Element, so it has to be supplied on confirm. */
   cardHolderName: string
   validationMessage: string | null
@@ -50,6 +55,8 @@ interface RegistrationPaymentConfirmationProps {
   onCreateIntent: () => Promise<PreparedPaymentIntent>
   /** Records the cheque and takes the organizer to the order. Only called when isChequePayment. */
   onRecordCheque: () => Promise<void>
+  /** Turns a free cart into an order and takes the buyer to it. Only called when isFreeOrder. */
+  onConfirmFree: () => Promise<void>
   onPaid: () => Promise<void>
   onFailed: (message: string) => void
 }
@@ -64,10 +71,12 @@ export function RegistrationPaymentConfirmation({
   isBusy,
   isCardPayment,
   isChequePayment,
+  isFreeOrder,
   cardHolderName,
   onPrepare,
   onCreateIntent,
   onRecordCheque,
+  onConfirmFree,
   onPaid,
   onFailed,
   onOpenChange,
@@ -82,10 +91,17 @@ export function RegistrationPaymentConfirmation({
       return
     }
 
+    // First of all the branches: a free cart may carry a selected method, and honouring that choice
+    // would send it to an endpoint that refuses a zero-amount order and hold the seats anyway.
+    if (isFreeOrder) {
+      await finishAsync(onConfirmFree)
+      return
+    }
+
     // Checked before the card branch and before the off-card one: a cheque has no intent to mint, so
     // reaching either of those would send it to an endpoint that refuses it and hold the seats anyway.
     if (isChequePayment) {
-      await recordChequeAsync()
+      await finishAsync(onRecordCheque)
       return
     }
 
@@ -97,11 +113,15 @@ export function RegistrationPaymentConfirmation({
     await payWithStripeAsync()
   }
 
-  async function recordChequeAsync() {
+  /**
+   * The two routes that finish the checkout in a single call and navigate away themselves. Only the
+   * dialog is closed here — what they left behind on the server stands whether or not it closes.
+   */
+  async function finishAsync(complete: () => Promise<void>) {
     setIsPaying(true)
 
     try {
-      await onRecordCheque()
+      await complete()
       onOpenChange(false)
     } catch (error) {
       onFailed(extractApiError(error))
@@ -166,6 +186,7 @@ export function RegistrationPaymentConfirmation({
     <PurchaseReviewDialog
       {...dialogProps}
       isCardPayment={isCardPayment}
+      isFreeOrder={isFreeOrder}
       onOpenChange={onOpenChange}
       isConfirming={isBusy || isPaying}
       onConfirm={handleConfirm}

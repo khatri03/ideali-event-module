@@ -21,12 +21,14 @@ interface PaymentStepOverrides {
   acceptsDiscountCoupons?: boolean
   appliedCouponCode?: string | null
   isChequeMethodSelected?: boolean
+  isFreeOrder?: boolean
 }
 
 function renderPaymentStep({
   acceptsDiscountCoupons = true,
   appliedCouponCode = null,
   isChequeMethodSelected = false,
+  isFreeOrder = false,
 }: PaymentStepOverrides = {}) {
   return render(
     <ChakraProvider value={system}>
@@ -46,6 +48,7 @@ function renderPaymentStep({
         currencyCode="USD"
         formAccent="#123456"
         isLoading={false}
+        isFreeOrder={isFreeOrder}
         hasVisiblePaymentMethods
         validationMessage={null}
         methodValidationRef={createRef<HTMLDivElement>()}
@@ -85,6 +88,30 @@ describe("PaymentStep coupon entry", () => {
 
     expect(screen.getByText("SAVE10")).toBeTruthy()
     expect(screen.getByRole("button", { name: /Remove/ })).toBeTruthy()
+  })
+})
+
+describe("PaymentStep free order", () => {
+  it("PaymentMethods_OrderCostsNothing_AreNotOffered", () => {
+    renderPaymentStep({ isFreeOrder: true })
+
+    expect(screen.getByText("No payment required")).toBeTruthy()
+    expect(screen.queryByText("Select payment method")).toBeNull()
+    // The breakdown table still names the method it priced; what must be gone is the tile that picks it.
+    expect(screen.queryByRole("button", { name: /Debit\/Credit Card/ })).toBeNull()
+  })
+
+  it("ChequeFields_OrderCostsNothing_AreNotAskedFor", () => {
+    renderPaymentStep({ isFreeOrder: true, isChequeMethodSelected: true })
+
+    expect(screen.queryByPlaceholderText("Enter the number printed on the cheque")).toBeNull()
+  })
+
+  it("CouponField_OrderIsFreeBecauseOfACoupon_StaysSoItCanBeRemoved", () => {
+    renderPaymentStep({ isFreeOrder: true, appliedCouponCode: "FREEENTRY" })
+
+    // The coupon is what made it free. Hiding it would leave a discount the buyer cannot take back off.
+    expect(screen.getByText("FREEENTRY")).toBeTruthy()
   })
 })
 

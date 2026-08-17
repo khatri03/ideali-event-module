@@ -38,6 +38,8 @@ interface PaymentStepProps {
   currencyCode: string | null
   formAccent: string
   isLoading: boolean
+  /** Nothing is payable, so the method tiles and their fields have nothing to collect. */
+  isFreeOrder: boolean
   hasVisiblePaymentMethods: boolean
   validationMessage: string | null
   methodValidationRef: RefObject<HTMLDivElement | null>
@@ -113,6 +115,31 @@ function PaymentMethodTile({
   )
 }
 
+/**
+ * Takes the method tiles' place, and their validation anchor with it: a buyer who owes nothing has no
+ * method to pick, so scrolling them to a choice that is not on screen would strand the complaint.
+ */
+function FreeOrderNotice({ ref }: { ref: RefObject<HTMLDivElement | null> }) {
+  return (
+    <Box ref={ref} borderWidth="1px" borderColor="green.200" bg="green.50" borderRadius="18px" p={4}>
+      <HStack gap={3} align="start">
+        <Box color="green.600" pt={0.5}>
+          <CheckCircle2 size={18} />
+        </Box>
+        <Stack gap={1}>
+          <Text fontSize="sm" fontWeight="700" color="green.800">
+            No payment required
+          </Text>
+          <Text fontSize="sm" color="green.700">
+            Your tickets cost nothing, so there is nothing to pay. Review your order and complete your
+            registration.
+          </Text>
+        </Stack>
+      </HStack>
+    </Box>
+  )
+}
+
 export function PaymentStep({
   breakdowns,
   selectedBreakdown,
@@ -129,6 +156,7 @@ export function PaymentStep({
   currencyCode,
   formAccent,
   isLoading,
+  isFreeOrder,
   hasVisiblePaymentMethods,
   validationMessage,
   methodValidationRef,
@@ -179,40 +207,46 @@ export function PaymentStep({
         <PaymentStepSkeleton />
       ) : breakdowns.length > 0 ? (
         <>
-          <Stack gap={2} ref={methodValidationRef}>
-            <Text fontSize="sm" fontWeight="700" color="gray.700">
-              Select payment method
-            </Text>
-          </Stack>
+          {isFreeOrder ? (
+            <FreeOrderNotice ref={methodValidationRef} />
+          ) : (
+            <>
+              <Stack gap={2} ref={methodValidationRef}>
+                <Text fontSize="sm" fontWeight="700" color="gray.700">
+                  Select payment method
+                </Text>
+              </Stack>
 
-          <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
-            {breakdowns.map((breakdown) => (
-              <PaymentMethodTile
-                key={breakdown.paymentMethod}
-                breakdown={breakdown}
-                isSelected={selectedBreakdown?.paymentMethod === breakdown.paymentMethod}
-                formAccent={formAccent}
-                currencyCode={currencyCode}
-                onSelect={() => onSelectMethod(breakdown.paymentMethod)}
-              />
-            ))}
-          </SimpleGrid>
+              <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
+                {breakdowns.map((breakdown) => (
+                  <PaymentMethodTile
+                    key={breakdown.paymentMethod}
+                    breakdown={breakdown}
+                    isSelected={selectedBreakdown?.paymentMethod === breakdown.paymentMethod}
+                    formAccent={formAccent}
+                    currencyCode={currencyCode}
+                    onSelect={() => onSelectMethod(breakdown.paymentMethod)}
+                  />
+                ))}
+              </SimpleGrid>
 
-          {isCardMethodSelected ? (
-            <StripePaymentFields
-              cardHolderName={cardHolderName}
-              onCardHolderNameChange={onCardHolderNameChange}
-            />
-          ) : null}
+              {isCardMethodSelected ? (
+                <StripePaymentFields
+                  cardHolderName={cardHolderName}
+                  onCardHolderNameChange={onCardHolderNameChange}
+                />
+              ) : null}
 
-          {isChequeMethodSelected ? (
-            <ChequePaymentFields
-              chequeReferenceNo={chequeReferenceNo}
-              onChequeReferenceNoChange={onChequeReferenceNoChange}
-              notes={chequeNotes}
-              onNotesChange={onChequeNotesChange}
-            />
-          ) : null}
+              {isChequeMethodSelected ? (
+                <ChequePaymentFields
+                  chequeReferenceNo={chequeReferenceNo}
+                  onChequeReferenceNoChange={onChequeReferenceNoChange}
+                  notes={chequeNotes}
+                  onNotesChange={onChequeNotesChange}
+                />
+              ) : null}
+            </>
+          )}
 
           {validationMessage ? (
             <Box borderWidth="1px" borderColor="red.200" bg="red.50" borderRadius="18px" p={4}>
