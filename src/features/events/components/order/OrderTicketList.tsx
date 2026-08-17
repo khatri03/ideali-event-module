@@ -2,6 +2,7 @@ import { Box, Flex, Heading, Stack, Text, Link as ChakraLink } from "@chakra-ui/
 import { Link as RouterLink } from "react-router-dom"
 import { formatRegistrationDateTime } from "@/features/events/utils/registrationFormat"
 import type { EventOrderTicket } from "@/features/events/schemas/eventOrder.schemas"
+import { groupInOrder } from "@/utils/collections"
 import { APP_ROUTES } from "@/utils/routes"
 
 interface OrderTicketListProps {
@@ -28,12 +29,40 @@ export function OrderTicketList({ tickets, canViewTickets }: OrderTicketListProp
       <Heading fontSize={{ base: "sm", md: "md" }} color="gray.900" mb={4}>
         {tickets.length === 1 ? "Your ticket" : `Your ${tickets.length} tickets`}
       </Heading>
-      <Stack gap={3}>
-        {tickets.map((ticket) => (
-          <TicketRow key={ticket.ticketUniqueId} ticket={ticket} canViewTicket={canViewTickets} />
+      <Stack gap={5}>
+        {groupTicketsBySession(tickets).map((group) => (
+          <Stack key={group.key} gap={3}>
+            <SessionHeading ticket={group.items[0]} />
+
+            {group.items.map((ticket) => (
+              <TicketRow key={ticket.ticketUniqueId} ticket={ticket} canViewTicket={canViewTickets} />
+            ))}
+          </Stack>
         ))}
       </Stack>
     </Box>
+  )
+}
+
+/** Tickets carry no session id, so the name and its start stand in for one. */
+function groupTicketsBySession(tickets: EventOrderTicket[]) {
+  return groupInOrder(tickets, (ticket) => `${ticket.sessionName}|${ticket.sessionStartDateUtc ?? ""}`)
+}
+
+function SessionHeading({ ticket }: { ticket: EventOrderTicket }) {
+  if (!ticket.sessionName) return null
+
+  return (
+    <Stack gap={0.5}>
+      <Text fontSize="sm" fontWeight="800" color="gray.900" wordBreak="break-word">
+        {ticket.sessionName}
+      </Text>
+      {ticket.sessionStartDateUtc ? (
+        <Text fontSize="xs" color="gray.500">
+          {formatRegistrationDateTime(ticket.sessionStartDateUtc)}
+        </Text>
+      ) : null}
+    </Stack>
   )
 }
 
@@ -57,10 +86,6 @@ function TicketRow({ ticket, canViewTicket }: { ticket: EventOrderTicket; canVie
         <Text fontSize="sm" fontWeight="700" color="gray.900" wordBreak="break-word">
           {ticket.ticketTypeName}
           {ticket.attendeeName ? ` · ${ticket.attendeeName}` : ""}
-        </Text>
-        <Text fontSize="xs" color="gray.600" wordBreak="break-word">
-          {ticket.sessionName}
-          {ticket.sessionStartDateUtc ? ` · ${formatRegistrationDateTime(ticket.sessionStartDateUtc)}` : ""}
         </Text>
         <Text fontSize="xs" fontWeight="700" color="gray.500" letterSpacing="0.06em">
           {ticket.ticketCode}

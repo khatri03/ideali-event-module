@@ -1,5 +1,6 @@
 import { Badge, Box, Flex, Heading, Stack, Text } from "@chakra-ui/react"
 import { formatAmount } from "@/features/events/utils/registrationFormat"
+import { groupInOrder } from "@/utils/collections"
 import type { EventOrderCharge, EventOrderLineItem, EventOrderStatus } from "@/features/events/schemas/eventOrder.schemas"
 
 interface OrderInvoiceBreakdownProps {
@@ -25,14 +26,30 @@ export function OrderInvoiceBreakdown({ order }: OrderInvoiceBreakdownProps) {
       boxShadow="0 16px 40px rgba(15, 23, 42, 0.06)"
     >
       <Stack gap={5}>
-        <Heading fontSize={{ base: "sm", md: "md" }} color="gray.900">
+        <Heading
+          fontSize={{ base: "sm", md: "md" }}
+          color="gray.900"
+          borderBottomWidth="1px"
+          borderBottomColor="gray.200"
+          pb={4}
+        >
           Payment summary
         </Heading>
 
         {order.lineItems.length > 0 ? (
-          <Stack gap={4} separator={<Box borderTopWidth="1px" borderTopColor="gray.100" />}>
-            {order.lineItems.map((line, index) => (
-              <LineItemRow key={`${line.sessionName}-${line.ticketTypeName}-${index}`} line={line} currency={currency} />
+          <Stack gap={5} separator={<Box borderTopWidth="1px" borderTopColor="gray.100" />}>
+            {groupInOrder(order.lineItems, (line) => line.sessionName).map((group) => (
+              <Stack key={group.key} gap={3}>
+                {group.key ? (
+                  <Text fontSize="sm" fontWeight="800" color="gray.900" wordBreak="break-word">
+                    {group.key}
+                  </Text>
+                ) : null}
+
+                {group.items.map((line, index) => (
+                  <LineItemRow key={`${line.ticketTypeName}-${index}`} line={line} currency={currency} />
+                ))}
+              </Stack>
             ))}
           </Stack>
         ) : null}
@@ -83,34 +100,25 @@ interface LineItemRowProps {
   currency: string | null
 }
 
+/**
+ * Lines are priced gross and sum to the subtotal below; the coupon is deducted once, on its own row.
+ * Splitting the same discount across the tickets it happened to be apportioned to only invites the
+ * buyer to add it back onto a total that already has it taken off.
+ */
 function LineItemRow({ line, currency }: LineItemRowProps) {
-  const netTotal = line.lineTotal - (line.discountAmount ?? 0)
-
   return (
     <Flex justify="space-between" align="start" gap={4}>
       <Stack gap={1} minW="0">
         <Text fontSize="sm" fontWeight="700" color="gray.900" wordBreak="break-word">
           {line.ticketTypeName || "Ticket"}
         </Text>
-        {line.sessionName ? (
-          <Text fontSize="xs" color="gray.500" wordBreak="break-word">
-            {line.sessionName}
-          </Text>
-        ) : null}
         <Text fontSize="xs" color="gray.500">
           {line.quantity} × {formatAmount(line.unitPrice, currency)}
         </Text>
       </Stack>
-      <Stack gap={1} align="flex-end" flexShrink={0}>
-        <Text fontSize="sm" fontWeight="700" color="gray.900" whiteSpace="nowrap">
-          {formatAmount(netTotal, currency)}
-        </Text>
-        {line.discountAmount ? (
-          <Text fontSize="xs" fontWeight="600" color="green.600" whiteSpace="nowrap">
-            −{formatAmount(line.discountAmount, currency)} off
-          </Text>
-        ) : null}
-      </Stack>
+      <Text fontSize="sm" fontWeight="700" color="gray.900" whiteSpace="nowrap" flexShrink={0}>
+        {formatAmount(line.lineTotal, currency)}
+      </Text>
     </Flex>
   )
 }

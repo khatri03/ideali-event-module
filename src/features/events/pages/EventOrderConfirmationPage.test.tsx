@@ -225,6 +225,30 @@ describe("EventOrderConfirmationPage", () => {
     expect(screen.getByText("Available once payment clears")).toBeTruthy()
   })
 
+  it("Tickets_SeveralSessions_NamesEachSessionOnceAboveItsOwnTickets", async () => {
+    fetchEventOrderStatusMock.mockResolvedValue(
+      buildOrder({
+        tickets: [
+          ISSUED_TICKET,
+          { ...ISSUED_TICKET, ticketUniqueId: "ticket-2", ticketCode: "GJ-9F2K-115", attendeeName: "Amina Ahmed" },
+          {
+            ...ISSUED_TICKET,
+            ticketUniqueId: "ticket-3",
+            ticketCode: "GJ-9F2K-116",
+            sessionName: "Saturday Gala",
+          },
+        ],
+      }),
+    )
+
+    renderPage()
+
+    await waitFor(() => expect(screen.getByText("Your 3 tickets")).toBeTruthy())
+    expect(screen.getAllByText("Friday Dinner & Entertainment")).toHaveLength(1)
+    expect(screen.getAllByText("Saturday Gala")).toHaveLength(1)
+    expect(screen.getByText("GJ-9F2K-115")).toBeTruthy()
+  })
+
   it("Breakdown_PricedOrder_ShowsEveryLineChargeAndTheAmountCollected", async () => {
     fetchEventOrderStatusMock.mockResolvedValue(buildOrder({ ...PRICED_ORDER, tickets: [ISSUED_TICKET] }))
 
@@ -248,6 +272,51 @@ describe("EventOrderConfirmationPage", () => {
     expect(screen.getByText("Discount")).toBeTruthy()
     expect(screen.getByText("SAVE20")).toBeTruthy()
     expect(screen.getByText("−USD$20.00")).toBeTruthy()
+  })
+
+  it("Breakdown_LinesFromOneSession_NamesTheSessionOnceAboveThem", async () => {
+    fetchEventOrderStatusMock.mockResolvedValue(
+      buildOrder({
+        lineItems: [
+          ...(PRICED_ORDER.lineItems ?? []),
+          {
+            sessionName: "Friday Dinner & Entertainment",
+            ticketTypeName: "Standard",
+            quantity: 1,
+            unitPrice: 40,
+            discountAmount: null,
+            lineTotal: 40,
+          },
+          {
+            sessionName: "Saturday Gala",
+            ticketTypeName: "Standard",
+            quantity: 1,
+            unitPrice: 60,
+            discountAmount: null,
+            lineTotal: 60,
+          },
+        ],
+      }),
+    )
+
+    renderPage()
+
+    await waitFor(() => expect(screen.getByText("Payment summary")).toBeTruthy())
+    expect(screen.getAllByText("Friday Dinner & Entertainment")).toHaveLength(1)
+    expect(screen.getAllByText("Saturday Gala")).toHaveLength(1)
+    expect(screen.getAllByText("Standard")).toHaveLength(2)
+  })
+
+  /** Deducted once, on the totals row. Repeating it per ticket reads as a second, uncounted saving. */
+  it("Breakdown_DiscountedOrder_PricesEachLineGrossWithoutRepeatingTheDiscount", async () => {
+    fetchEventOrderStatusMock.mockResolvedValue(buildOrder(PRICED_ORDER))
+
+    renderPage()
+
+    await waitFor(() => expect(screen.getByText("Payment summary")).toBeTruthy())
+    expect(screen.queryByText(/off$/)).toBeNull()
+    // The line and the subtotal it is the whole of, both gross.
+    expect(screen.getAllByText("USD$220.00")).toHaveLength(2)
   })
 
   it("Breakdown_SettledOrder_ShowsNoBalanceDueRow", async () => {
