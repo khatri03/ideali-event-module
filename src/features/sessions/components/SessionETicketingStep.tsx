@@ -10,6 +10,11 @@ interface SessionETicketingStepProps {
   sessionId: string
 }
 
+const DEFAULT_TICKETING: SessionWizardETicketing = {
+  enableDigitalTicket: true,
+  requiresAttendeeInfo: true,
+}
+
 function ETicketingOptionCard({
   title,
   description,
@@ -102,10 +107,7 @@ export function SessionETicketingStep({ sessionId }: SessionETicketingStepProps)
     },
   })
 
-  const currentTicketing = draftTicketing ?? ticketingQuery.data ?? {
-    enableDigitalTicket: false,
-    requiresAttendeeInfo: false,
-  }
+  const currentTicketing = draftTicketing ?? ticketingQuery.data ?? DEFAULT_TICKETING
 
   useEffect(() => {
     if (!ticketingQuery.isSuccess || !ticketingQuery.data) {

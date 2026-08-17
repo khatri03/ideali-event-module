@@ -1244,8 +1244,8 @@ export async function fetchSessionWizardETicketing(uniqueId: string): Promise<Se
   const ticketing = sessionETicketingSchema.parse(responseData)
 
   return {
-    enableDigitalTicket: ticketing.EnableDigitalTicket ?? ticketing.enableDigitalTicket ?? false,
-    requiresAttendeeInfo: ticketing.RequiresAttendeeInfo ?? ticketing.requiresAttendeeInfo ?? false,
+    enableDigitalTicket: ticketing.EnableDigitalTicket ?? ticketing.enableDigitalTicket ?? true,
+    requiresAttendeeInfo: ticketing.RequiresAttendeeInfo ?? ticketing.requiresAttendeeInfo ?? true,
   }
 }
 
@@ -1258,8 +1258,8 @@ export async function updateSessionWizardETicketing(
   const ticketing = sessionETicketingSchema.parse(responseData)
 
   return {
-    enableDigitalTicket: ticketing.EnableDigitalTicket ?? ticketing.enableDigitalTicket ?? false,
-    requiresAttendeeInfo: ticketing.RequiresAttendeeInfo ?? ticketing.requiresAttendeeInfo ?? false,
+    enableDigitalTicket: ticketing.EnableDigitalTicket ?? ticketing.enableDigitalTicket ?? true,
+    requiresAttendeeInfo: ticketing.RequiresAttendeeInfo ?? ticketing.requiresAttendeeInfo ?? true,
   }
 }
 
