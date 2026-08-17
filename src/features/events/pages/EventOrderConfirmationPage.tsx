@@ -15,6 +15,7 @@ import { useEventOrderStatus } from "@/features/events/hooks/useEventOrderStatus
 import { useOrderCheckoutHandoff } from "@/features/events/hooks/useOrderCheckoutHandoff"
 import { useOrderCompletionActions } from "@/features/events/hooks/useOrderCompletionActions"
 import { clearPendingOrderId } from "@/features/events/utils/registrationOrderCookie"
+import { APP_ROUTES } from "@/utils/routes"
 
 /** Carries the cart forward from a redirecting payment method so the confirm fast-path can still run. */
 const CART_HANDOFF_PARAM = "cart"
@@ -42,8 +43,12 @@ export function EventOrderConfirmationPage() {
 
   const { isHandingOff } = useOrderCheckoutHandoff(handoffCartUniqueId, handleHandoffCompleted)
 
+  // The order itself is the reliable source: a shared link, a refresh and the return leg of a bank
+  // redirect all arrive with no router state, and the wizard's hint only survives an in-app navigation.
   const { state } = useLocation()
-  const registerPath = (state as OrderLocationState | null)?.registerPath ?? null
+  const registerPath = order?.eventUniqueId
+    ? APP_ROUTES.eventRegister(order.eventUniqueId)
+    : ((state as OrderLocationState | null)?.registerPath ?? null)
   const completion = useOrderCompletionActions(registerPath)
 
   // The buyer made it here, so the in-flight marker the wizard left behind has done its job.

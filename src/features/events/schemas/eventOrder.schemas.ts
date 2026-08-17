@@ -86,6 +86,8 @@ const eventOrderStatusSchema = z.object({
   charges: z.array(eventOrderChargeSchema).optional(),
   LineItems: z.array(eventOrderLineItemSchema).optional(),
   lineItems: z.array(eventOrderLineItemSchema).optional(),
+  EventUniqueId: z.string().optional(),
+  eventUniqueId: z.string().optional(),
   EventName: z.string().optional(),
   eventName: z.string().optional(),
   EventThemeColor: z.string().nullable().optional(),
@@ -151,6 +153,8 @@ export interface EventOrderStatus {
   currencySymbol: string | null
   charges: EventOrderCharge[]
   lineItems: EventOrderLineItem[]
+  /** Empty only on an order whose event was removed, which is the one case with nowhere to send a buyer back to. */
+  eventUniqueId: string
   eventName: string
   eventThemeColor: string | null
   eventStartDateUtc: string | null
@@ -195,6 +199,7 @@ export function normalizeEventOrderStatus(payload: unknown): EventOrderStatus {
       discountAmount: line.DiscountAmount ?? line.discountAmount ?? null,
       lineTotal: line.LineTotal ?? line.lineTotal ?? 0,
     })),
+    eventUniqueId: parsed.EventUniqueId ?? parsed.eventUniqueId ?? "",
     eventName: parsed.EventName ?? parsed.eventName ?? "",
     eventThemeColor: parsed.EventThemeColor ?? parsed.eventThemeColor ?? null,
     eventStartDateUtc: parsed.EventStartDateUtc ?? parsed.eventStartDateUtc ?? null,

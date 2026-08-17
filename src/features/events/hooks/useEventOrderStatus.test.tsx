@@ -32,6 +32,7 @@ function buildOrder(overrides: Partial<EventOrderStatus>): EventOrderStatus {
     currencySymbol: "USD",
     charges: [],
     lineItems: [],
+    eventUniqueId: "event-1",
     eventName: "Golden Jubilee",
     eventThemeColor: null,
     eventStartDateUtc: null,

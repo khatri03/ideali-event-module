@@ -32,6 +32,7 @@ vi.mock("@/utils/browserTab", () => browserTabMocks)
 vi.mock("@/features/events/utils/registrationCartCookie", () => cartCookieMocks)
 
 const ORDER_UNIQUE_ID = "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
+const EVENT_UNIQUE_ID = "5176956b-5410-45e7-80be-4d6359607499"
 const CART_UNIQUE_ID = "cart-1"
 
 function buildOrder(overrides: Partial<EventOrderStatus>): EventOrderStatus {
@@ -55,6 +56,7 @@ function buildOrder(overrides: Partial<EventOrderStatus>): EventOrderStatus {
     currencySymbol: "USD",
     charges: [],
     lineItems: [],
+    eventUniqueId: EVENT_UNIQUE_ID,
     eventName: "Golden Jubilee",
     eventThemeColor: null,
     eventStartDateUtc: null,
@@ -294,23 +296,35 @@ describe("EventOrderConfirmationPage", () => {
     expect(screen.queryByRole("button", { name: "New Registration" })).toBeNull()
   })
 
-  it("Completion_NewRegistration_OpensAFreshCartForTheSameEvent", async () => {
+  // A shared link, a refresh and the return leg of a bank redirect all land here with no router state,
+  // which is every way a buyer reaches this page other than walking the wizard in one go.
+  it("Completion_NewRegistrationOnADirectlyOpenedOrder_OpensAFreshCartForTheSameEvent", async () => {
     fetchEventOrderStatusMock.mockResolvedValue(buildOrder({}))
-    const registerPath = APP_ROUTES.eventRegister("event-1")
 
-    renderPage("", { registerPath })
+    renderPage()
     await waitFor(() => expect(screen.getByRole("button", { name: "New Registration" })).toBeTruthy())
 
     await userEvent.click(screen.getByRole("button", { name: "New Registration" }))
 
     // The cart behind this order is spent, so it must not be resumed by the registration it reopens.
     expect(cartCookieMocks.clearStoredCartId).toHaveBeenCalledTimes(1)
-    expect(browserTabMocks.openPath).toHaveBeenCalledWith(registerPath)
+    expect(browserTabMocks.openPath).toHaveBeenCalledWith(APP_ROUTES.eventRegister(EVENT_UNIQUE_ID))
     expect(browserTabMocks.reloadTab).not.toHaveBeenCalled()
   })
 
-  it("Completion_NewRegistrationWithoutAKnownRegistrationLink_ReloadsInstead", async () => {
+  it("Completion_NewRegistration_PrefersTheOrdersOwnEventOverTheWizardHint", async () => {
     fetchEventOrderStatusMock.mockResolvedValue(buildOrder({}))
+
+    renderPage("", { registerPath: APP_ROUTES.eventRegister("stale-event") })
+    await waitFor(() => expect(screen.getByRole("button", { name: "New Registration" })).toBeTruthy())
+
+    await userEvent.click(screen.getByRole("button", { name: "New Registration" }))
+
+    expect(browserTabMocks.openPath).toHaveBeenCalledWith(APP_ROUTES.eventRegister(EVENT_UNIQUE_ID))
+  })
+
+  it("Completion_NewRegistrationWithoutAKnownRegistrationLink_ReloadsInstead", async () => {
+    fetchEventOrderStatusMock.mockResolvedValue(buildOrder({ eventUniqueId: "" }))
 
     renderPage()
     await waitFor(() => expect(screen.getByRole("button", { name: "New Registration" })).toBeTruthy())
