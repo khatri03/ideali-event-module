@@ -52,6 +52,32 @@ export function formatCurrency(amount: string | null | undefined, currencySymbol
   return `${isNegative ? "-" : ""}${currencySymbol}${magnitude}`
 }
 
+/**
+ * The same job as {@link formatCurrency} for the endpoints that send an ISO code rather than a display
+ * symbol - Intl derives the symbol and its placement from the code, which no amount of prefixing can do
+ * correctly for every currency. An unknown or absent code leaves the bare figure rather than guessing
+ * at a symbol that could name the wrong money.
+ */
+export function formatCurrencyCode(amount: string | null | undefined, currencyCode: string | null): string {
+  const trimmed = amount?.trim()
+  if (!trimmed || !MONEY_PATTERN.test(trimmed)) {
+    return EMPTY_VALUE
+  }
+
+  const digits = trimmed as Intl.StringNumericLiteral
+  if (!currencyCode) {
+    return MONEY_FORMAT.format(digits)
+  }
+
+  try {
+    return new Intl.NumberFormat(MONEY_LOCALE, { style: "currency", currency: currencyCode }).format(digits)
+  } catch {
+    // Intl throws on a code it does not recognise. The figure is the part the reader needs; inventing a
+    // symbol for it would be worse than leaving it plain.
+    return MONEY_FORMAT.format(digits)
+  }
+}
+
 /** The same figure with its sign dropped, for places that state the direction in words instead. */
 export function formatCurrencyMagnitude(amount: string | null | undefined, currencySymbol: string): string {
   const trimmed = amount?.trim()

@@ -20,6 +20,8 @@ const ADMITTED: CheckInAttempt = {
   attendeeName: "Admitted Guest",
   message: "Ticket checked in successfully.",
   checkedInAtUtc: "2026-08-17T18:00:00Z",
+  outstandingAmount: null,
+  outstandingCurrency: null,
 }
 
 const ALREADY_INSIDE: CheckInAttempt = {
@@ -28,6 +30,8 @@ const ALREADY_INSIDE: CheckInAttempt = {
   attendeeName: "Returning Guest",
   message: "This ticket was already checked in.",
   checkedInAtUtc: "2026-08-17T18:00:00Z",
+  outstandingAmount: null,
+  outstandingCurrency: null,
 }
 
 const REFUSED: CheckInAttempt = {
@@ -36,6 +40,8 @@ const REFUSED: CheckInAttempt = {
   attendeeName: null,
   message: "This ticket is not valid for this session.",
   checkedInAtUtc: null,
+  outstandingAmount: null,
+  outstandingCurrency: null,
 }
 
 function renderPanel({

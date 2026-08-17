@@ -24,6 +24,8 @@ const ADMITTED: CheckInAttempt = {
   attendeeName: "Wilhelmina Featherstonehaugh",
   message: "Ticket checked in successfully.",
   checkedInAtUtc: "2026-08-17T18:00:00Z",
+  outstandingAmount: null,
+  outstandingCurrency: null,
 }
 
 const REFUSED: CheckInAttempt = {
@@ -32,6 +34,8 @@ const REFUSED: CheckInAttempt = {
   attendeeName: null,
   message: "Ticket code is invalid.",
   checkedInAtUtc: null,
+  outstandingAmount: null,
+  outstandingCurrency: null,
 }
 
 describe("CheckInOutcomeCard", () => {
@@ -87,6 +91,47 @@ describe("CheckInOutcomeCard", () => {
     await userEvent.click(screen.getByRole("button", { name: "Undo" }))
 
     expect(onUndo).toHaveBeenCalledWith("TKT-1")
+  })
+
+  /**
+   * The organizer can send a ticket against an order that was never paid, and the operator on the door
+   * is the only person positioned to collect what is left.
+   */
+  it("TellsTheDeskWhatTheAdmittedGuestStillOwes", () => {
+    renderCard({ ...ADMITTED, outstandingAmount: "40.00", outstandingCurrency: "USD" })
+
+    expect(screen.getByText("Balance due $40.00 — collect at desk")).toBeInTheDocument()
+  })
+
+  /** Naming the money must not become a second gate: the guest is already through by the time it reads. */
+  it("StillReportsTheAdmissionAlongsideTheBalance", () => {
+    renderCard({ ...ADMITTED, outstandingAmount: "40.00", outstandingCurrency: "USD" })
+
+    expect(screen.getByText("Check-in successful")).toBeInTheDocument()
+  })
+
+  it("RepeatsTheBalanceForAGuestScannedASecondTime", () => {
+    renderCard({
+      ...ADMITTED,
+      outcome: "AlreadyCheckedIn",
+      outstandingAmount: "12.50",
+      outstandingCurrency: "CAD",
+    })
+
+    expect(screen.getByText("Balance due CA$12.50 — collect at desk")).toBeInTheDocument()
+  })
+
+  /** An event without a payment account still owes the desk a figure, just not a symbol for it. */
+  it("ShowsTheAmountEvenWhenNoCurrencyWasResolved", () => {
+    renderCard({ ...ADMITTED, outstandingAmount: "40.00", outstandingCurrency: null })
+
+    expect(screen.getByText("Balance due 40.00 — collect at desk")).toBeInTheDocument()
+  })
+
+  it("SaysNothingAboutMoneyWhenTheOrderIsSettled", () => {
+    renderCard(ADMITTED)
+
+    expect(screen.queryByText(/Balance due/)).not.toBeInTheDocument()
   })
 
   it("BlocksASecondReversalWhileTheFirstIsInFlight", () => {

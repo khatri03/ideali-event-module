@@ -61,6 +61,9 @@ export function useCheckInDesk(eventUniqueId: string, sessionUniqueId: string) {
             attendeeName: result.attendeeName,
             message: result.message ?? "",
             checkedInAtUtc: null,
+            // A reversal puts the holder back outside, so there is nobody at the desk to ask for money.
+            outstandingAmount: null,
+            outstandingCurrency: null,
           }),
       })
     },

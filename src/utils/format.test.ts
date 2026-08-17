@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest"
-import { EMPTY_VALUE, formatCurrency, formatCurrencyMagnitude, formatList, moneySign } from "./format"
+import {
+  EMPTY_VALUE,
+  formatCurrency,
+  formatCurrencyCode,
+  formatCurrencyMagnitude,
+  formatList,
+  moneySign,
+} from "./format"
 
 describe("formatList", () => {
   it("SeveralNames_AreReadOutAsASentenceRatherThanJoinedByCommas", () => {
@@ -44,6 +51,32 @@ describe("formatCurrency", () => {
   it("CurrencySymbolFromTheApi_IsUsedVerbatim", () => {
     expect(formatCurrency("10", "CAD$")).toBe("CAD$10.00")
     expect(formatCurrency("10", "£")).toBe("£10.00")
+  })
+})
+
+describe("formatCurrencyCode", () => {
+  it("IsoCode_PlacesTheSymbolTheWayThatCurrencyIsWritten", () => {
+    expect(formatCurrencyCode("40", "USD")).toBe("$40.00")
+    expect(formatCurrencyCode("12.5", "CAD")).toBe("CA$12.50")
+  })
+
+  /** An event with no payment account still owes the reader a figure, just not a symbol for it. */
+  it("NoCode_LeavesTheFigureBareRatherThanGuessingACurrency", () => {
+    expect(formatCurrencyCode("40", null)).toBe("40.00")
+  })
+
+  it("UnrecognisedCode_FallsBackToThePlainFigureInsteadOfThrowing", () => {
+    expect(formatCurrencyCode("40", "NOT-A-CURRENCY")).toBe("40.00")
+  })
+
+  it("MissingOrNonNumericAmount_ReadsAsAbsent", () => {
+    expect(formatCurrencyCode(null, "USD")).toBe(EMPTY_VALUE)
+    expect(formatCurrencyCode("forty", "USD")).toBe(EMPTY_VALUE)
+  })
+
+  /** Long figures are formatted from the text, so nothing is lost to a double on the way to the screen. */
+  it("AmountBeyondFloatPrecision_KeepsEveryDigit", () => {
+    expect(formatCurrencyCode("12345678901234567890.99", null)).toBe("12,345,678,901,234,567,890.99")
   })
 })
 

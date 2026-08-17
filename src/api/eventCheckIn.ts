@@ -39,6 +39,13 @@ export interface CheckInAttempt {
   attendeeName: string | null
   message: string
   checkedInAtUtc: string | null
+  /**
+   * What the order behind this ticket still owes, as decimal text, null when nothing is outstanding.
+   * The operator on the door is who collects it, and they never see the buyer's invoice.
+   */
+  outstandingAmount: string | null
+  /** ISO code the outstanding amount is denominated in, null when the event has no payment account. */
+  outstandingCurrency: string | null
 }
 
 export async function fetchSessionAttendees(query: SessionAttendeeQuery): Promise<AttendeeRoster> {
@@ -68,6 +75,8 @@ export async function checkInTicket(command: TicketCheckInCommand): Promise<Chec
       attendeeName: result.attendeeName,
       message: result.message ?? "",
       checkedInAtUtc: result.checkedInAtUtc,
+      outstandingAmount: result.outstandingAmount,
+      outstandingCurrency: result.outstandingCurrency,
     }
   } catch (error) {
     const refusal = refusalMessage(error)
@@ -81,6 +90,8 @@ export async function checkInTicket(command: TicketCheckInCommand): Promise<Chec
       attendeeName: null,
       message: refusal,
       checkedInAtUtc: null,
+      outstandingAmount: null,
+      outstandingCurrency: null,
     }
   }
 }

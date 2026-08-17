@@ -52,6 +52,13 @@ export const checkInResultSchema = z.object({
   checkInStatus: checkInOutcomeSchema,
   checkedInAtUtc: z.string(),
   message: z.string().nullish().transform((value) => value ?? null),
+  // Kept as text all the way to the screen: the desk is about to ask someone for this figure, and a
+  // round trip through a float is how the amount asked for stops matching the amount owed.
+  outstandingAmount: z
+    .union([z.number(), z.string()])
+    .nullish()
+    .transform((value) => (value == null ? null : String(value))),
+  outstandingCurrency: z.string().nullish().transform((value) => value ?? null),
 })
 export type CheckInResult = z.infer<typeof checkInResultSchema>
 

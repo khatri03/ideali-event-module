@@ -113,6 +113,50 @@ describe("checkInTicket", () => {
     expect(attempt.message).toBe("Ticket has already been checked in.")
   })
 
+  /** Money arrives as a JSON number and must reach the screen as text, never as a rounded float. */
+  it("carries the outstanding balance through as decimal text", async () => {
+    postMock.mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          ticketCode: "TKT-1",
+          ticketStatus: "CheckedIn",
+          checkInStatus: "Success",
+          checkedInAtUtc: "2026-08-17T18:00:00Z",
+          message: "Ticket checked in successfully.",
+          outstandingAmount: 40.5,
+          outstandingCurrency: "CAD",
+        },
+      },
+    })
+
+    const attempt = await checkInTicket({ ...SESSION, ticketCode: "TKT-1" })
+
+    expect(attempt.outstandingAmount).toBe("40.5")
+    expect(attempt.outstandingCurrency).toBe("CAD")
+  })
+
+  it("reports no balance for a settled order", async () => {
+    postMock.mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          ticketCode: "TKT-1",
+          ticketStatus: "CheckedIn",
+          checkInStatus: "Success",
+          checkedInAtUtc: "2026-08-17T18:00:00Z",
+          message: "Ticket checked in successfully.",
+          outstandingAmount: null,
+          outstandingCurrency: null,
+        },
+      },
+    })
+
+    const attempt = await checkInTicket({ ...SESSION, ticketCode: "TKT-1" })
+
+    expect(attempt.outstandingAmount).toBeNull()
+  })
+
   /** The operator has to read why a ticket was refused, so a refusal must reach the screen, not a toast. */
   it("turns a refused ticket into a readable outcome instead of throwing", async () => {
     postMock.mockRejectedValue(badRequest("Ticket does not belong to this event session."))
