@@ -489,9 +489,11 @@ const eventWizardAdvancedSettingsResponseSchema = z.object({
   PurchaseTimeLimit: z.number().int().positive().nullable().optional(),
   Visibility: eventVisibilityValueSchema.nullable().optional(),
   ChargeRuleUniqueIds: z.array(z.string()).nullable().optional(),
+  ApplyPaymentMethodCharges: z.boolean().nullable().optional(),
   purchaseTimeLimit: z.number().int().positive().nullable().optional(),
   visibility: eventVisibilityValueSchema.nullable().optional(),
   chargeRuleUniqueIds: z.array(z.string()).nullable().optional(),
+  applyPaymentMethodCharges: z.boolean().nullable().optional(),
 })
 
 const eventEmailPlaceholderItemSchema = z.object({
@@ -1405,16 +1407,22 @@ export interface EventWizardAdvancedSettingsResponse {
   purchaseTimeLimit?: number | null
   visibility?: EventVisibility | null
   chargeRuleUniqueIds?: string[]
+  applyPaymentMethodCharges: boolean
 }
 
-export async function fetchEventWizardAdvancedSettings(uniqueId: string): Promise<EventWizardAdvancedSettingsResponse> {
-  const res = await client.get<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "advanced-settings")}`)
-  const parsed = eventWizardAdvancedSettingsResponseSchema.parse(res.data)
+function toAdvancedSettings(payload: unknown): EventWizardAdvancedSettingsResponse {
+  const parsed = eventWizardAdvancedSettingsResponseSchema.parse(payload)
   return {
     purchaseTimeLimit: parsed.purchaseTimeLimit ?? parsed.PurchaseTimeLimit ?? null,
     visibility: parsed.visibility ?? parsed.Visibility ?? null,
     chargeRuleUniqueIds: parsed.chargeRuleUniqueIds ?? parsed.ChargeRuleUniqueIds ?? [],
+    applyPaymentMethodCharges: parsed.applyPaymentMethodCharges ?? parsed.ApplyPaymentMethodCharges ?? false,
   }
+}
+
+export async function fetchEventWizardAdvancedSettings(uniqueId: string): Promise<EventWizardAdvancedSettingsResponse> {
+  const res = await client.get<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "advanced-settings")}`)
+  return toAdvancedSettings(res.data)
 }
 
 export interface EventVisibilityOption {
@@ -1440,18 +1448,18 @@ export async function fetchEventWizardPurchaseTimeLimitOptions(): Promise<EventP
 
 export async function updateEventWizardAdvancedSettings(
   uniqueId: string,
-  payload: { purchaseTimeLimit: number | null; visibility: EventVisibility; chargeRuleUniqueIds: string[] },
+  payload: {
+    purchaseTimeLimit: number | null
+    visibility: EventVisibility
+    chargeRuleUniqueIds: string[]
+    applyPaymentMethodCharges: boolean
+  },
   stepNo = 14
 ): Promise<EventWizardAdvancedSettingsResponse> {
   const res = await client.post<unknown>(`${API_ROUTES.eventWizardStep(uniqueId, "advanced-settings")}`, payload, {
     params: { stepNo },
   })
-  const parsed = eventWizardAdvancedSettingsResponseSchema.parse(res.data)
-  return {
-    purchaseTimeLimit: parsed.purchaseTimeLimit ?? parsed.PurchaseTimeLimit ?? null,
-    visibility: parsed.visibility ?? parsed.Visibility ?? null,
-    chargeRuleUniqueIds: parsed.chargeRuleUniqueIds ?? parsed.ChargeRuleUniqueIds ?? [],
-  }
+  return toAdvancedSettings(res.data)
 }
 
 export interface EventEmailPlaceholderItem {

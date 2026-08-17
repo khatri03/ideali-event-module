@@ -8,6 +8,7 @@ import {
 import { StyledSelect } from "@/components/common"
 import { StepFieldLabel } from "../components/StepFieldLabel"
 import { EventChargeRulesSection } from "../components/EventChargeRulesSection"
+import { PaymentMethodChargesToggle } from "../components/PaymentMethodChargesToggle"
 import type { EventWizardValues } from "../schemas/eventWizard.schemas"
 
 export function EventPurchaseTimeLimitStepPage() {
@@ -77,6 +78,14 @@ export function EventPurchaseTimeLimitStepPage() {
             <Field.HelperText>Choose when sales should close before the event starts.</Field.HelperText>
           </Stack>
         </Field.Root>
+
+        <Controller
+          control={control}
+          name="applyPaymentMethodCharges"
+          render={({ field }) => (
+            <PaymentMethodChargesToggle isEnabled={field.value} onToggle={field.onChange} />
+          )}
+        />
 
         <EventChargeRulesSection />
       </Stack>

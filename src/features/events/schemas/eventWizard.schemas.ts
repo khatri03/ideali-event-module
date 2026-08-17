@@ -22,6 +22,7 @@ export const eventWizardSchema = z.object({
   visibility: eventVisibilitySchema,
   purchaseTimeLimitMinutes: z.number().int().min(5, "Choose a value between 5 and 60").max(60, "Choose a value between 5 and 60").optional(),
   chargeRuleUniqueIds: z.array(z.string().trim().min(1)).optional(),
+  applyPaymentMethodCharges: z.boolean(),
   paymentAccountId: z.string().trim().min(1, "Payment account is required"),
   paymentMethods: z.array(z.number().int().positive()).min(1, "Select at least one payment method"),
   venueUniqueId: z.string().trim().optional(),
@@ -42,7 +43,7 @@ export const eventWizardFieldGroups = {
   timeZone: ["timeZone"] as const,
   sessions: ["sessions"] as const,
   dateTime: ["startDate", "endDate", "bookingStartDate", "bookingEndDate"] as const,
-  advancedSettings: ["purchaseTimeLimitMinutes", "visibility"] as const,
+  advancedSettings: ["purchaseTimeLimitMinutes", "visibility", "applyPaymentMethodCharges"] as const,
 }
 
 export const defaultEventWizardValues: EventWizardValues = {
@@ -59,6 +60,7 @@ export const defaultEventWizardValues: EventWizardValues = {
   visibility: "Public",
   purchaseTimeLimitMinutes: 15,
   chargeRuleUniqueIds: [],
+  applyPaymentMethodCharges: false,
   paymentAccountId: "",
   paymentMethods: [],
   venueUniqueId: "",

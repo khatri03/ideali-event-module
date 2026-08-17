@@ -19,6 +19,7 @@ export function eventToWizardValues(event: AppEvent): EventWizardValues {
     bookingEndDate: event.bookingEndDate ?? "",
     visibility: event.visibility ?? "Public",
     purchaseTimeLimitMinutes: event.purchaseTimeLimitMinutes ?? 15,
+    applyPaymentMethodCharges: false,
     paymentAccountId: event.paymentAccountId ?? defaultPaymentAccountId,
     paymentMethods: [],
     venueUniqueId: "",

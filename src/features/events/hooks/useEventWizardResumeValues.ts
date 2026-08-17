@@ -16,6 +16,7 @@ type EventWizardResumeValues = Partial<
     | "purchaseTimeLimitMinutes"
     | "visibility"
     | "chargeRuleUniqueIds"
+    | "applyPaymentMethodCharges"
     | "startDate"
     | "endDate"
     | "bookingStartDate"
@@ -48,6 +49,7 @@ export function useEventWizardResumeValues(eventId?: string, lastCompletedStepNo
         purchaseTimeLimitMinutes: advancedSettingsResult?.purchaseTimeLimit ?? 15,
         visibility: advancedSettingsResult?.visibility ?? "Public",
         chargeRuleUniqueIds: advancedSettingsResult?.chargeRuleUniqueIds ?? [],
+        applyPaymentMethodCharges: advancedSettingsResult?.applyPaymentMethodCharges ?? false,
       }
     },
     enabled: !!eventId && lastCompletedStepNo > 0,

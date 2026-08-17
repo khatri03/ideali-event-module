@@ -404,6 +404,11 @@ function EventWizardLayoutContent() {
           shouldTouch: false,
           shouldValidate: false,
         })
+        form.setValue("applyPaymentMethodCharges", draftData.applyPaymentMethodCharges ?? false, {
+          shouldDirty: false,
+          shouldTouch: false,
+          shouldValidate: false,
+        })
       }
     }
   }, [form, wizardDraftQuery.data])
@@ -597,6 +602,7 @@ function EventWizardLayoutContent() {
               purchaseTimeLimit: purchaseTimeLimitMinutes,
               visibility: form.getValues("visibility"),
               chargeRuleUniqueIds: form.getValues("chargeRuleUniqueIds") ?? [],
+              applyPaymentMethodCharges: form.getValues("applyPaymentMethodCharges"),
             },
             14,
           )
@@ -729,6 +735,7 @@ function EventWizardLayoutContent() {
               purchaseTimeLimit: purchaseTimeLimitMinutes,
               visibility: form.getValues("visibility"),
               chargeRuleUniqueIds: form.getValues("chargeRuleUniqueIds") ?? [],
+              applyPaymentMethodCharges: form.getValues("applyPaymentMethodCharges"),
             },
             14,
           )
