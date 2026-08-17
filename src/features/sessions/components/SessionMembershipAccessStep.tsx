@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Badge, Box, Flex, Input, SimpleGrid, Skeleton, Stack, Text } from "@chakra-ui/react"
-import { CheckCircle2, Shield, Sparkles, X } from "lucide-react"
+import { Badge, Box, Flex, SimpleGrid, Skeleton, Stack, Text } from "@chakra-ui/react"
+import { Shield, Sparkles, X } from "lucide-react"
 import ReactSelect, { components, type MultiValue, type OptionProps, type StylesConfig } from "react-select"
 import { fetchMembershipTypeOptions, type MembershipTypeOption } from "@/api/memberships"
 import {
@@ -10,10 +10,11 @@ import {
   type SessionWizardMembershipAccessItem,
   type SessionWizardMembershipDiscountType,
 } from "@/api/sessions"
-import { StyledSelect } from "@/components/common/StyledSelect"
+import type { SelectOption } from "@/components/common/StyledSelect"
 import { extractApiError } from "@/utils/errors"
 import { getSessionWizardStepNumber } from "../hooks/useSessionWizard"
 import { useSessionWizardActions } from "../hooks/useSessionWizardActions"
+import { SessionMembershipDiscountCard } from "./SessionMembershipDiscountCard"
 
 interface SessionMembershipAccessStepProps {
   sessionId: string
@@ -31,7 +32,7 @@ interface MembershipSelectOption {
   label: string
 }
 
-const DISCOUNT_TYPE_OPTIONS: Array<{ label: string; value: SessionWizardMembershipDiscountType }> = [
+const DISCOUNT_TYPE_OPTIONS: SelectOption[] = [
   { label: "Fixed Amount", value: "FixedAmount" },
   { label: "Percentage", value: "Percentage" },
 ]
@@ -383,79 +384,21 @@ export function SessionMembershipAccessStep({ sessionId }: SessionMembershipAcce
           {activeDraftMemberships.length > 0 ? (
             <SimpleGrid columns={{ base: 1, xl: 2 }} gap={4}>
               {activeDraftMemberships.map((item) => {
-                const membership = membershipTypeOptionMap.get(item.membershipTypeUniqueId)
+                const membership = membershipTypeOptionMap.get(
+                  normalizeMembershipTypeUniqueId(item.membershipTypeUniqueId),
+                )
 
                 return (
-                  <Box
+                  <SessionMembershipDiscountCard
                     key={item.membershipTypeUniqueId}
-                    border="1px solid"
-                    borderColor="gray.200"
-                    borderRadius="20px"
-                    bg="gray.50"
-                    p={4}
-                  >
-                    <Flex align="center" justify="space-between" gap={3}>
-                      <Box minW={0}>
-                        <Text fontSize="sm" fontWeight="800" color="gray.900" lineClamp={1}>
-                          {membership?.label ?? "Selected membership"}
-                        </Text>
-                        <Text fontSize="xs" color="gray.600">
-                          Optional discount settings for this membership.
-                        </Text>
-                      </Box>
-                      <Badge variant="subtle" colorPalette="green" borderRadius="999px" px={3} py={1}>
-                        <Flex align="center" gap={1.5}>
-                          <CheckCircle2 size={14} />
-                          <Text as="span" fontSize="xs" fontWeight="800">
-                            Selected
-                          </Text>
-                        </Flex>
-                      </Badge>
-                    </Flex>
-
-                    <SimpleGrid columns={{ base: 1, md: 3 }} gap={3} mt={4}>
-                      <StyledSelect
-                        options={DISCOUNT_TYPE_OPTIONS}
-                        value={item.discountType ?? "FixedAmount"}
-                        onChange={(value) =>
-                          updateMembershipField(item.membershipTypeUniqueId, "discountType", value || "FixedAmount")
-                        }
-                        placeholder="Discount type"
-                        size="sm"
-                      />
-
-                      <Input
-                        value={item.discountValueInput}
-                        onChange={(event) =>
-                          updateMembershipField(item.membershipTypeUniqueId, "discountValueInput", event.target.value)
-                        }
-                        placeholder="Discount value"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        bg="white"
-                        h="38px"
-                        px={4}
-                        borderRadius="12px"
-                      />
-
-                      <Input
-                        value={item.maxDiscountAmountInput}
-                        onChange={(event) =>
-                          updateMembershipField(item.membershipTypeUniqueId, "maxDiscountAmountInput", event.target.value)
-                        }
-                        placeholder="Max discount amount"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        bg="white"
-                        h="38px"
-                        px={4}
-                        borderRadius="12px"
-                        disabled={item.discountType !== "Percentage"}
-                      />
-                    </SimpleGrid>
-                  </Box>
+                    membershipTypeUniqueId={item.membershipTypeUniqueId}
+                    membershipName={membership?.label ?? "Selected membership"}
+                    discountTypeOptions={DISCOUNT_TYPE_OPTIONS}
+                    discountType={item.discountType}
+                    discountValueInput={item.discountValueInput}
+                    maxDiscountAmountInput={item.maxDiscountAmountInput}
+                    onFieldChange={updateMembershipField}
+                  />
                 )
               })}
             </SimpleGrid>

@@ -24,6 +24,8 @@ interface StyledSelectProps {
   size?: "sm" | "md"
   disabled?: boolean
   minW?: string
+  /** Names the control for screen readers when no visible label is wired to it. */
+  ariaLabel?: string
 }
 
 export function StyledSelect({
@@ -34,6 +36,7 @@ export function StyledSelect({
   size = "md",
   disabled,
   minW,
+  ariaLabel,
 }: StyledSelectProps) {
   const collection = useMemo(() => createListCollection({ items: options }), [options])
 
@@ -50,6 +53,7 @@ export function StyledSelect({
     >
       <Select.HiddenSelect />
       <Select.Trigger
+        aria-label={ariaLabel}
         h={h}
         w="full"
         borderRadius={radius}
