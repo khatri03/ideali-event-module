@@ -198,7 +198,7 @@
             <dd>What the <em>platform</em> charges. Its rules say whether the buyer or the organizer pays. Assigned to an organizer per module.</dd>
 
             <dt>Processor fee</dt>
-            <dd>What the organizer adds to cover the payment gateway's own cut. Configured per payment method, which is why totals differ between methods.</dd>
+            <dd>What the organizer adds to cover the payment gateway's own cut. Configured per payment method, which is why totals differ between methods. Only passed on when the event's <code>ApplyPaymentMethodCharges</code> is on — off (the default) means the organizer absorbs it and every method totals the same.</dd>
 
             <dt>Discount coupon</dt>
             <dd>A code the buyer can enter. Validated at pricing time and only actually spent when the order settles.</dd>
@@ -855,7 +855,7 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
               <tr>
                 <td><strong>Coupon discount</strong></td>
                 <td><code>DiscountCoupon</code>, validated by <code>DiscountCouponService.ValidateCouponForEventAsync</code>; recorded on <code>EventInvoice.DiscountCouponId</code> and <code>.CouponDiscountAmount</code></td>
-                <td>Calculated against the total <em>after</em> the membership discount, then spread across lines in proportion to each line's net. The last line absorbs the rounding remainder so the parts always sum exactly.</td>
+                <td>Calculated against the total <em>after</em> the membership discount, then spread across lines in proportion to each line's net. The last line absorbs the rounding remainder so the parts always sum exactly. Every <code>/price</code> pass clears the discount each line carries before recalculating, so re-pricing an unchanged cart quotes the same discount and dropping the coupon drops it from the lines too.</td>
               </tr>
               <tr>
                 <td><strong>Event charge rule</strong></td>
@@ -875,7 +875,7 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
               <tr>
                 <td><strong>Processor fee</strong></td>
                 <td><code>OrganizerPaymentProcessorFee</code> matched on organizer, merchant and <code>PaymentProductId</code> — fields <code>.ValueType</code>, <code>.Value</code>, <code>.Label</code></td>
-                <td>Method-dependent, so it differs per payment method. A <strong>percentage</strong> is charged on <code>netSubtotal + all other buyer charges</code>; a <strong>fixed</strong> amount is calculated on <code>netSubtotal</code> alone. Quoted per method by <code>/price</code>, and only written to the invoice once a method is chosen at <code>/checkout/intent</code>.</td>
+                <td>Method-dependent, so it differs per payment method. A <strong>percentage</strong> is charged on <code>netSubtotal + all other buyer charges</code>; a <strong>fixed</strong> amount is calculated on <code>netSubtotal</code> alone. Quoted per method by <code>/price</code>, and only written to the invoice once a method is chosen at <code>/checkout/intent</code>. Skipped entirely — in the quote and on the invoice alike — when the event has <code>ApplyPaymentMethodCharges</code> off, which is the default for every event.</td>
               </tr>
             </tbody>
           </table>
@@ -892,7 +892,8 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
         <h4>What each payment method's total looks like</h4>
         <p>
           <code>/price</code> returns one <code>paymentBreakdowns</code> entry per method the event
-          offers, sorted cheapest first. They differ only in the processor fee:
+          offers, sorted cheapest first. They differ only in the processor fee — and where the event does
+          not pass that fee on, they do not differ at all:
         </p>
         <div class="table-responsive">
           <table class="table table-sm table-bordered">
