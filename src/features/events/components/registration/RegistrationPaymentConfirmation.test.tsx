@@ -101,4 +101,24 @@ describe("RegistrationPaymentConfirmation", () => {
     await waitFor(() => expect(handlers.onPrepare).toHaveBeenCalledTimes(1))
     expect(handlers.onConfirmFree).not.toHaveBeenCalled()
   })
+
+  it("Confirm_ClickedAgainWhileThePurchaseIsStillBeingPrepared_PreparesOnlyOnce", async () => {
+    // Preparing submits the attendees, so a second run of it duplicates people on the order rather
+    // than merely duplicating the charge, which the server's idempotency key would have absorbed.
+    const handlers = renderConfirmation({ isFreeOrder: true })
+    let releasePrepare = () => {}
+    handlers.onPrepare.mockImplementation(
+      () => new Promise<boolean>((resolve) => { releasePrepare = () => resolve(true) }),
+    )
+
+    const confirmButton = screen.getByRole("button", { name: "Complete registration" })
+    await userEvent.click(confirmButton)
+    await waitFor(() => expect(confirmButton).toBeDisabled())
+    await userEvent.click(confirmButton)
+
+    releasePrepare()
+
+    await waitFor(() => expect(handlers.onConfirmFree).toHaveBeenCalledTimes(1))
+    expect(handlers.onPrepare).toHaveBeenCalledTimes(1)
+  })
 })

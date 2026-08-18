@@ -86,7 +86,22 @@ export function RegistrationPaymentConfirmation({
   const elements = useElements()
   const [isPaying, setIsPaying] = useState(false)
 
+  /**
+   * The guard is raised before anything is awaited, because preparing the purchase is itself a run of
+   * network calls: leaving the button live until the payment starts lets a second click submit the
+   * same attendees again.
+   */
   async function handleConfirm() {
+    setIsPaying(true)
+
+    try {
+      await confirmAsync()
+    } finally {
+      setIsPaying(false)
+    }
+  }
+
+  async function confirmAsync() {
     if (!(await onPrepare())) {
       return
     }
@@ -118,15 +133,11 @@ export function RegistrationPaymentConfirmation({
    * dialog is closed here — what they left behind on the server stands whether or not it closes.
    */
   async function finishAsync(complete: () => Promise<void>) {
-    setIsPaying(true)
-
     try {
       await complete()
       onOpenChange(false)
     } catch (error) {
       onFailed(extractApiError(error))
-    } finally {
-      setIsPaying(false)
     }
   }
 
@@ -145,8 +156,6 @@ export function RegistrationPaymentConfirmation({
       onFailed("The payment form is still loading. Try again in a moment.")
       return
     }
-
-    setIsPaying(true)
 
     try {
       const { error: submitError } = await elements.submit()
@@ -177,8 +186,6 @@ export function RegistrationPaymentConfirmation({
       await onPaid()
     } catch (error) {
       onFailed(extractApiError(error))
-    } finally {
-      setIsPaying(false)
     }
   }
 
