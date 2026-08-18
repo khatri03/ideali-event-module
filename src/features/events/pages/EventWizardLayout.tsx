@@ -409,6 +409,11 @@ function EventWizardLayoutContent() {
           shouldTouch: false,
           shouldValidate: false,
         })
+        form.setValue("blockEntryUntilPaid", draftData.blockEntryUntilPaid ?? false, {
+          shouldDirty: false,
+          shouldTouch: false,
+          shouldValidate: false,
+        })
       }
     }
   }, [form, wizardDraftQuery.data])
@@ -603,6 +608,7 @@ function EventWizardLayoutContent() {
               visibility: form.getValues("visibility"),
               chargeRuleUniqueIds: form.getValues("chargeRuleUniqueIds") ?? [],
               applyPaymentMethodCharges: form.getValues("applyPaymentMethodCharges"),
+              blockEntryUntilPaid: form.getValues("blockEntryUntilPaid"),
             },
             14,
           )
@@ -736,6 +742,7 @@ function EventWizardLayoutContent() {
               visibility: form.getValues("visibility"),
               chargeRuleUniqueIds: form.getValues("chargeRuleUniqueIds") ?? [],
               applyPaymentMethodCharges: form.getValues("applyPaymentMethodCharges"),
+              blockEntryUntilPaid: form.getValues("blockEntryUntilPaid"),
             },
             14,
           )

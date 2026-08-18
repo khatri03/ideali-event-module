@@ -8,6 +8,8 @@ interface AttendeeRosterTableProps {
   outstandingCurrency: string | null
   /** Admitting from a row is the same act as scanning, so it is withheld on the same clock. */
   isDoorOpen: boolean
+  /** The event's own policy: an unpaid order is refused at the door rather than merely flagged. */
+  blockEntryUntilPaid: boolean
   busyTicketCode: string | null
   sendingTicketUniqueId: string | null
   onCheckIn: (ticketCode: string) => void
@@ -39,6 +41,7 @@ export function AttendeeRosterTable({
   attendees,
   outstandingCurrency,
   isDoorOpen,
+  blockEntryUntilPaid,
   busyTicketCode,
   sendingTicketUniqueId,
   onCheckIn,
@@ -87,9 +90,12 @@ export function AttendeeRosterTable({
             // Without the order behind it there is nowhere to send the ticket from, so the action is
             // withheld rather than offered and then refused by the server.
             const canSendTicket = attendee.invoiceUniqueId !== ""
-            // Reversing a check-in is not gated by the window: it undoes something already recorded,
-            // and a mistaken admission has to be correctable after the doors have shut.
-            const canAdmit = hasArrived || isDoorOpen
+            // The balance owed is still shown either way; only the admission is withheld, so the
+            // operator reads the figure and sends the guest to the cashier rather than a dead button.
+            const owesMoney = blockEntryUntilPaid && attendee.outstandingAmount !== null
+            // Reversing a check-in is gated by neither the window nor the balance: it undoes something
+            // already recorded, and a mistaken admission has to be correctable after the doors have shut.
+            const canAdmit = hasArrived || (isDoorOpen && !owesMoney)
 
             return (
               <Table.Row key={attendee.ticketUniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">

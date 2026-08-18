@@ -490,10 +490,12 @@ const eventWizardAdvancedSettingsResponseSchema = z.object({
   Visibility: eventVisibilityValueSchema.nullable().optional(),
   ChargeRuleUniqueIds: z.array(z.string()).nullable().optional(),
   ApplyPaymentMethodCharges: z.boolean().nullable().optional(),
+  BlockEntryUntilPaid: z.boolean().nullable().optional(),
   purchaseTimeLimit: z.number().int().positive().nullable().optional(),
   visibility: eventVisibilityValueSchema.nullable().optional(),
   chargeRuleUniqueIds: z.array(z.string()).nullable().optional(),
   applyPaymentMethodCharges: z.boolean().nullable().optional(),
+  blockEntryUntilPaid: z.boolean().nullable().optional(),
 })
 
 const eventEmailPlaceholderItemSchema = z.object({
@@ -1408,6 +1410,7 @@ export interface EventWizardAdvancedSettingsResponse {
   visibility?: EventVisibility | null
   chargeRuleUniqueIds?: string[]
   applyPaymentMethodCharges: boolean
+  blockEntryUntilPaid: boolean
 }
 
 function toAdvancedSettings(payload: unknown): EventWizardAdvancedSettingsResponse {
@@ -1417,6 +1420,7 @@ function toAdvancedSettings(payload: unknown): EventWizardAdvancedSettingsRespon
     visibility: parsed.visibility ?? parsed.Visibility ?? null,
     chargeRuleUniqueIds: parsed.chargeRuleUniqueIds ?? parsed.ChargeRuleUniqueIds ?? [],
     applyPaymentMethodCharges: parsed.applyPaymentMethodCharges ?? parsed.ApplyPaymentMethodCharges ?? false,
+    blockEntryUntilPaid: parsed.blockEntryUntilPaid ?? parsed.BlockEntryUntilPaid ?? false,
   }
 }
 
@@ -1453,6 +1457,7 @@ export async function updateEventWizardAdvancedSettings(
     visibility: EventVisibility
     chargeRuleUniqueIds: string[]
     applyPaymentMethodCharges: boolean
+    blockEntryUntilPaid: boolean
   },
   stepNo = 14
 ): Promise<EventWizardAdvancedSettingsResponse> {

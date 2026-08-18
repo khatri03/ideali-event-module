@@ -17,6 +17,7 @@ type EventWizardResumeValues = Partial<
     | "visibility"
     | "chargeRuleUniqueIds"
     | "applyPaymentMethodCharges"
+    | "blockEntryUntilPaid"
     | "startDate"
     | "endDate"
     | "bookingStartDate"
@@ -50,6 +51,7 @@ export function useEventWizardResumeValues(eventId?: string, lastCompletedStepNo
         visibility: advancedSettingsResult?.visibility ?? "Public",
         chargeRuleUniqueIds: advancedSettingsResult?.chargeRuleUniqueIds ?? [],
         applyPaymentMethodCharges: advancedSettingsResult?.applyPaymentMethodCharges ?? false,
+        blockEntryUntilPaid: advancedSettingsResult?.blockEntryUntilPaid ?? false,
       }
     },
     enabled: !!eventId && lastCompletedStepNo > 0,

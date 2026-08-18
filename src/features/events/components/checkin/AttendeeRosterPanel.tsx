@@ -161,6 +161,7 @@ export function AttendeeRosterPanel({
             attendees={attendees}
             outstandingCurrency={roster?.outstandingCurrency ?? null}
             isDoorOpen={isDoorOpen}
+            blockEntryUntilPaid={roster?.blockEntryUntilPaid ?? false}
             busyTicketCode={busyTicketCode}
             sendingTicketUniqueId={sendingTicketUniqueId}
             onCheckIn={requestCheckIn}

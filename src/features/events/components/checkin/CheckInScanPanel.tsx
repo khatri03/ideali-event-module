@@ -18,6 +18,7 @@ const HOLD_MS: Record<CheckInAttempt["outcome"], number> = {
   ManualOverride: 1500,
   AlreadyCheckedIn: 2500,
   Invalid: 3000,
+  PaymentRequired: 3000,
 }
 
 interface CheckInScanPanelProps {

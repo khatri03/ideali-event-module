@@ -38,6 +38,16 @@ const REFUSED: CheckInAttempt = {
   outstandingCurrency: null,
 }
 
+const UNPAID: CheckInAttempt = {
+  outcome: "PaymentRequired",
+  ticketCode: "TKT-4",
+  attendeeName: "Ayesha Khan",
+  message: "Payment of $40.00 is required before entry.",
+  checkedInAtUtc: "2026-08-17T18:00:00Z",
+  outstandingAmount: "40.00",
+  outstandingCurrency: "USD",
+}
+
 describe("CheckInOutcomeCard", () => {
   it("ReportsAnAcceptedTicketAsCheckedIn", () => {
     renderCard(ADMITTED)
@@ -138,5 +148,16 @@ describe("CheckInOutcomeCard", () => {
     renderCard(ADMITTED, true)
 
     expect(screen.getByRole("button", { name: /Reversing/ })).toBeDisabled()
+  })
+  /**
+   * The event refuses an unpaid order, so this is a turn-away rather than an admission. Offering Undo
+   * would suggest a check-in happened, and the operator needs the figure to send them to the cashier.
+   */
+  it("ReportsAnUnpaidOrderAsARefusalCarryingWhatIsOwed", () => {
+    renderCard(UNPAID)
+
+    expect(screen.getByText("Payment required")).toBeInTheDocument()
+    expect(screen.getByText(/40\.00/)).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument()
   })
 })

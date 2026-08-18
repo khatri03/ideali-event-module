@@ -46,6 +46,7 @@ describe("updateEventWizardAdvancedSettings", () => {
       visibility: "Public",
       chargeRuleUniqueIds: [],
       applyPaymentMethodCharges: true,
+      blockEntryUntilPaid: false,
     })
 
     expect(postMock).toHaveBeenCalledWith(
@@ -65,7 +66,29 @@ describe("updateEventWizardAdvancedSettings", () => {
         visibility: "Public",
         chargeRuleUniqueIds: [],
         applyPaymentMethodCharges: true,
+        blockEntryUntilPaid: false,
       }),
     ).rejects.toThrow()
+  })
+
+  it("SendsTheUnpaidEntryPolicyWithTheStepPayload", async () => {
+    postMock.mockResolvedValue({
+      data: { purchaseTimeLimit: 20, visibility: "Public", applyPaymentMethodCharges: false, blockEntryUntilPaid: true },
+    })
+
+    const result = await updateEventWizardAdvancedSettings(EVENT_ID, {
+      purchaseTimeLimit: 20,
+      visibility: "Public",
+      chargeRuleUniqueIds: [],
+      applyPaymentMethodCharges: false,
+      blockEntryUntilPaid: true,
+    })
+
+    expect(postMock).toHaveBeenCalledWith(
+      expect.stringContaining("advanced-settings"),
+      expect.objectContaining({ blockEntryUntilPaid: true }),
+      { params: { stepNo: 14 } },
+    )
+    expect(result.blockEntryUntilPaid).toBe(true)
   })
 })

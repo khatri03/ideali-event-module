@@ -1,5 +1,5 @@
 import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react"
-import { CheckCircle2, RotateCcw, ShieldAlert, TriangleAlert } from "lucide-react"
+import { CheckCircle2, RotateCcw, ShieldAlert, TriangleAlert, Wallet } from "lucide-react"
 import type { CheckInAttempt } from "@/api/eventCheckIn"
 import { CHECK_IN_OUTCOME_PRESENTATION } from "@/features/events/utils/checkInOutcome"
 import { OutstandingBalanceNotice } from "./OutstandingBalanceNotice"
@@ -15,6 +15,7 @@ const OUTCOME_ICONS = {
   AlreadyCheckedIn: TriangleAlert,
   Invalid: ShieldAlert,
   ManualOverride: RotateCcw,
+  PaymentRequired: Wallet,
 } as const
 
 /**

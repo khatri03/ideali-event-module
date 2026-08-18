@@ -30,6 +30,7 @@ function renderTable(
     sendingTicketUniqueId = null as string | null,
     outstandingCurrency = "USD" as string | null,
     isDoorOpen = true,
+    blockEntryUntilPaid = false,
   } = {},
 ) {
   const onCheckIn = vi.fn()
@@ -42,6 +43,7 @@ function renderTable(
         attendees={attendees}
         outstandingCurrency={outstandingCurrency}
         isDoorOpen={isDoorOpen}
+        blockEntryUntilPaid={blockEntryUntilPaid}
         busyTicketCode={busyTicketCode}
         sendingTicketUniqueId={sendingTicketUniqueId}
         onCheckIn={onCheckIn}
@@ -157,6 +159,44 @@ describe("AttendeeRosterTable", () => {
     await userEvent.click(screen.getByRole("button", { name: "Undo check-in for TKT-1" }))
 
     expect(onUndo).toHaveBeenCalledWith("TKT-1")
+  })
+
+  /**
+   * The event refuses an unpaid order at the door, so offering the admission here only produces a
+   * refusal with a guest already at the desk. The balance stays on the row so the operator can name it.
+   */
+  it("WithholdsCheckInFromAnUnpaidRowWhenTheEventRefusesUnpaidEntry", () => {
+    renderTable([attendee({ outstandingAmount: "40.00" })], { blockEntryUntilPaid: true })
+
+    expect(screen.queryByRole("button", { name: "Check in TKT-1" })).not.toBeInTheDocument()
+    expect(screen.getByText("Due $40.00")).toBeInTheDocument()
+  })
+
+  it("StillOffersCheckInOnASettledRowWhenTheEventRefusesUnpaidEntry", async () => {
+    const { onCheckIn } = renderTable([attendee()], { blockEntryUntilPaid: true })
+
+    await userEvent.click(screen.getByRole("button", { name: "Check in TKT-1" }))
+
+    expect(onCheckIn).toHaveBeenCalledWith("TKT-1")
+  })
+
+  /** Flagging the balance must not become a gate on an event that never asked for one. */
+  it("StillOffersCheckInOnAnUnpaidRowWhenTheEventAdmitsUnpaidGuests", async () => {
+    const { onCheckIn } = renderTable([attendee({ outstandingAmount: "40.00" })])
+
+    await userEvent.click(screen.getByRole("button", { name: "Check in TKT-1" }))
+
+    expect(onCheckIn).toHaveBeenCalledWith("TKT-1")
+  })
+
+  /** A mistaken admission stays correctable whatever the order owes. */
+  it("StillOffersUndoOnAnUnpaidRowWhenTheEventRefusesUnpaidEntry", () => {
+    renderTable(
+      [attendee({ ticketStatus: "CheckedIn", checkedInAtUtc: "2026-08-17T18:00:00Z", outstandingAmount: "40.00" })],
+      { blockEntryUntilPaid: true },
+    )
+
+    expect(screen.getByRole("button", { name: "Undo check-in for TKT-1" })).toBeInTheDocument()
   })
 
   it("SaysTheSearchMatchedNobodyInsteadOfShowingAnEmptyTable", () => {

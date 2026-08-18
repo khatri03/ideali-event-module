@@ -9,7 +9,13 @@ export type AttendeeScope = (typeof ATTENDEE_SCOPES)[number]
  * front of the operator: a guest to wave through, a guest already inside, or a ticket that never
  * belonged here.
  */
-export const checkInOutcomeSchema = z.enum(["Success", "AlreadyCheckedIn", "Invalid", "ManualOverride"])
+export const checkInOutcomeSchema = z.enum([
+  "Success",
+  "AlreadyCheckedIn",
+  "Invalid",
+  "ManualOverride",
+  "PaymentRequired",
+])
 export type CheckInOutcome = z.infer<typeof checkInOutcomeSchema>
 
 export const attendeeSchema = z.object({
@@ -57,6 +63,9 @@ export const attendeeRosterSchema = z.object({
   // The server's clock when this roster was read. A door tablet ten minutes fast would otherwise count
   // down to zero while the server still refuses the scan, so the countdown runs off an offset from this.
   serverTimeUtc: z.string(),
+  // Whether this event refuses a ticket whose order still owes money. The desk stops offering an
+  // admission the scan would only refuse, rather than finding out with a guest already in front of it.
+  blockEntryUntilPaid: z.boolean().default(false),
 })
 export type AttendeeRoster = z.infer<typeof attendeeRosterSchema>
 

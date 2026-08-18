@@ -14,6 +14,7 @@ function roster(overrides: Partial<AttendeeRoster> = {}): AttendeeRoster {
     checkInOpensAtUtc: "2026-08-18T17:15:00Z",
     checkInClosesAtUtc: "2026-08-18T22:00:00Z",
     serverTimeUtc: "2026-08-18T17:00:00Z",
+    blockEntryUntilPaid: false,
     ...overrides,
   }
 }

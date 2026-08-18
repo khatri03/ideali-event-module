@@ -32,6 +32,7 @@ function roster(attendees: Attendee[], outstandingCurrency: string | null = "USD
     checkInOpensAtUtc: null,
     checkInClosesAtUtc: null,
     serverTimeUtc: "2026-08-18T18:00:00Z",
+    blockEntryUntilPaid: false,
   }
 }
 

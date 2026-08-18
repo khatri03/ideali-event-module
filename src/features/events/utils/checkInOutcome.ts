@@ -44,6 +44,13 @@ export const CHECK_IN_OUTCOME_PRESENTATION: Record<CheckInOutcome, CheckInOutcom
     border: "status.info",
     foreground: "status.info.fg",
   },
+  PaymentRequired: {
+    heading: "Payment required",
+    toastType: "error",
+    surface: "status.error.bg",
+    border: "status.error",
+    foreground: "status.error.fg",
+  },
 }
 
 /**
@@ -55,4 +62,6 @@ export const CHECK_IN_TOAST_DURATION_MS: Record<CheckInOutcome, number> = {
   AlreadyCheckedIn: 5000,
   Invalid: 9000,
   ManualOverride: 4000,
+  // Read out to the guest and often repeated to a cashier, so it outlasts every other refusal.
+  PaymentRequired: 9000,
 }

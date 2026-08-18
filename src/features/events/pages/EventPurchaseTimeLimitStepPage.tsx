@@ -9,6 +9,7 @@ import { StyledSelect } from "@/components/common"
 import { StepFieldLabel } from "../components/StepFieldLabel"
 import { EventChargeRulesSection } from "../components/EventChargeRulesSection"
 import { PaymentMethodChargesToggle } from "../components/PaymentMethodChargesToggle"
+import { UnpaidEntryPolicyToggle } from "../components/UnpaidEntryPolicyToggle"
 import type { EventWizardValues } from "../schemas/eventWizard.schemas"
 
 export function EventPurchaseTimeLimitStepPage() {
@@ -84,6 +85,14 @@ export function EventPurchaseTimeLimitStepPage() {
           name="applyPaymentMethodCharges"
           render={({ field }) => (
             <PaymentMethodChargesToggle isEnabled={field.value} onToggle={field.onChange} />
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="blockEntryUntilPaid"
+          render={({ field }) => (
+            <UnpaidEntryPolicyToggle isEnabled={field.value} onToggle={field.onChange} />
           )}
         />
 
