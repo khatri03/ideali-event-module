@@ -18,13 +18,18 @@ function attendee(overrides: Partial<Attendee> = {}): Attendee {
     ticketStatus: "Active",
     checkedInAtUtc: null,
     checkedInBy: null,
+    outstandingAmount: null,
     ...overrides,
   }
 }
 
 function renderTable(
   attendees: Attendee[],
-  { busyTicketCode = null as string | null, sendingTicketUniqueId = null as string | null } = {},
+  {
+    busyTicketCode = null as string | null,
+    sendingTicketUniqueId = null as string | null,
+    outstandingCurrency = "USD" as string | null,
+  } = {},
 ) {
   const onCheckIn = vi.fn()
   const onUndo = vi.fn()
@@ -34,6 +39,7 @@ function renderTable(
     <ChakraProvider value={system}>
       <AttendeeRosterTable
         attendees={attendees}
+        outstandingCurrency={outstandingCurrency}
         busyTicketCode={busyTicketCode}
         sendingTicketUniqueId={sendingTicketUniqueId}
         onCheckIn={onCheckIn}
@@ -84,6 +90,28 @@ describe("AttendeeRosterTable", () => {
     renderTable([attendee()])
 
     expect(screen.getByText("INV-2026-0001")).toBeInTheDocument()
+  })
+
+  /**
+   * A guest reading out an invoice number is admitted from this row without a scan, so the row is the
+   * only place the operator can learn money is owed while there is still time to ask for it.
+   */
+  it("FlagsARowWhoseOrderStillOwesMoney", () => {
+    renderTable([attendee({ outstandingAmount: "40.00" })])
+
+    expect(screen.getByText("Due $40.00")).toBeInTheDocument()
+  })
+
+  it("NamesTheBalanceInTheEventsOwnCurrency", () => {
+    renderTable([attendee({ outstandingAmount: "12.50" })], { outstandingCurrency: "CAD" })
+
+    expect(screen.getByText("Due CA$12.50")).toBeInTheDocument()
+  })
+
+  it("LeavesASettledRowUnflagged", () => {
+    renderTable([attendee()])
+
+    expect(screen.queryByText(/^Due /)).not.toBeInTheDocument()
   })
 
   it("SendsOneTicketAgainWithTheOrderItBelongsTo", async () => {

@@ -4,14 +4,23 @@ import { describeCheckInConfirmation, type CheckInConfirmationKind } from "@/fea
 interface CheckInConfirmDialogProps {
   kind: CheckInConfirmationKind
   ticketCode: string
+  /** Already formatted for reading aloud at the desk, null when the order is settled. */
+  outstandingBalance?: string | null
   /** Kept mounted and toggled, so the dialog can release the body scroll lock on its way out. */
   isOpen: boolean
   onConfirm: () => void
   onCancel: () => void
 }
 
-export function CheckInConfirmDialog({ kind, ticketCode, isOpen, onConfirm, onCancel }: CheckInConfirmDialogProps) {
-  const copy = describeCheckInConfirmation(kind, ticketCode)
+export function CheckInConfirmDialog({
+  kind,
+  ticketCode,
+  outstandingBalance = null,
+  isOpen,
+  onConfirm,
+  onCancel,
+}: CheckInConfirmDialogProps) {
+  const copy = describeCheckInConfirmation(kind, ticketCode, outstandingBalance)
 
   return (
     <ConfirmDialog

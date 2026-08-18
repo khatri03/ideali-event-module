@@ -16,12 +16,17 @@ interface CheckInConfirmationCopy {
 export function describeCheckInConfirmation(
   kind: CheckInConfirmationKind,
   ticketCode: string,
+  outstandingBalance: string | null = null,
 ): CheckInConfirmationCopy {
   switch (kind) {
     case "manualCheckIn":
       return {
         title: "Check in this ticket?",
-        description: `Ticket ${ticketCode} will be marked as arrived. Do this only with the guest at the door.`,
+        // The balance is named here rather than only afterwards because this is the last moment the
+        // operator can still send the guest to the cashier instead of through the door.
+        description: outstandingBalance
+          ? `Ticket ${ticketCode} will be marked as arrived. This order still owes ${outstandingBalance} - collect it before admitting.`
+          : `Ticket ${ticketCode} will be marked as arrived. Do this only with the guest at the door.`,
         confirmLabel: "Check in",
         loadingLabel: "Checking in...",
         tone: "primary",

@@ -18,15 +18,17 @@ function attendee(overrides: Partial<Attendee> = {}): Attendee {
     ticketStatus: "Active",
     checkedInAtUtc: null,
     checkedInBy: null,
+    outstandingAmount: null,
     ...overrides,
   }
 }
 
-function roster(attendees: Attendee[]): AttendeeRoster {
+function roster(attendees: Attendee[], outstandingCurrency: string | null = "USD"): AttendeeRoster {
   return {
     sessionName: "Opening Night",
     counts: { issued: attendees.length, arrived: 0, expected: attendees.length },
     attendees: { pageNo: 1, pageSize: 25, totalRecordsCount: attendees.length, pageData: attendees },
+    outstandingCurrency,
   }
 }
 
@@ -112,6 +114,27 @@ describe("AttendeeRosterPanel", () => {
 
     await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument())
     expect(onCheckIn).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The confirmation is the last moment the guest can still be sent to the cashier; naming the balance
+   * only on the outcome card afterwards names it once the door has already opened.
+   */
+  it("NamesTheOutstandingBalanceBeforeAdmittingFromTheRoster", async () => {
+    const { onCheckIn } = renderPanel([attendee({ outstandingAmount: "40.00" })])
+
+    const dialog = await openConfirmation("Check in TKT-1")
+
+    expect(within(dialog).getByText(/still owes \$40\.00/)).toBeInTheDocument()
+    expect(onCheckIn).not.toHaveBeenCalled()
+  })
+
+  it("LeavesTheConfirmationUnchangedForASettledOrder", async () => {
+    renderPanel()
+
+    const dialog = await openConfirmation("Check in TKT-1")
+
+    expect(within(dialog).queryByText(/still owes/)).not.toBeInTheDocument()
   })
 
   it("NamesTheTicketTheConfirmationIsAbout", async () => {

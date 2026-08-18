@@ -23,6 +23,12 @@ export const attendeeSchema = z.object({
   ticketStatus: eventTicketStatusSchema,
   checkedInAtUtc: z.string().nullish().transform((value) => value ?? null),
   checkedInBy: z.string().nullish().transform((value) => value ?? null),
+  // A guest who reads out an invoice number is admitted from this row without a ticket ever being
+  // scanned, so the balance has to travel with the row or nobody sees it before the door opens.
+  outstandingAmount: z
+    .union([z.number(), z.string()])
+    .nullish()
+    .transform((value) => (value == null ? null : String(value))),
 })
 export type Attendee = z.infer<typeof attendeeSchema>
 
@@ -42,6 +48,8 @@ export const attendeeRosterSchema = z.object({
     totalRecordsCount: z.coerce.number().int().default(0),
     pageData: z.array(attendeeSchema).default([]),
   }),
+  // One currency for the whole roster: it belongs to the event taking the money, not to any one ticket.
+  outstandingCurrency: z.string().nullish().transform((value) => value ?? null),
 })
 export type AttendeeRoster = z.infer<typeof attendeeRosterSchema>
 

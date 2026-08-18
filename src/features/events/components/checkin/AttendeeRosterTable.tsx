@@ -1,9 +1,11 @@
 import { Badge, Box, Button, Stack, Table, Text } from "@chakra-ui/react"
 import type { AttendeeTicketResend } from "@/features/events/hooks/useResendAttendeeTicket"
 import type { Attendee } from "@/features/events/schemas/eventCheckIn.schemas"
+import { OutstandingBalanceBadge } from "./OutstandingBalanceBadge"
 
 interface AttendeeRosterTableProps {
   attendees: Attendee[]
+  outstandingCurrency: string | null
   busyTicketCode: string | null
   sendingTicketUniqueId: string | null
   onCheckIn: (ticketCode: string) => void
@@ -33,6 +35,7 @@ function formatArrival(checkedInAtUtc: string | null): string {
 
 export function AttendeeRosterTable({
   attendees,
+  outstandingCurrency,
   busyTicketCode,
   sendingTicketUniqueId,
   onCheckIn,
@@ -106,6 +109,9 @@ export function AttendeeRosterTable({
                   <Text fontFamily="mono" fontSize="xs" color="text.primary">
                     {attendee.invoiceNo || "—"}
                   </Text>
+                  {attendee.outstandingAmount ? (
+                    <OutstandingBalanceBadge amount={attendee.outstandingAmount} currency={outstandingCurrency} />
+                  ) : null}
                 </Table.Cell>
                 <Table.Cell px={4} py={4}>
                   <Badge

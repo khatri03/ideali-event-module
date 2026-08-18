@@ -2,6 +2,7 @@ import { Box, Button, Flex, Heading, Input, Stack, Text } from "@chakra-ui/react
 import { Search } from "lucide-react"
 import { ErrorState, TablePagination } from "@/components/common"
 import { useConfirmationRequest } from "@/hooks/useConfirmationRequest"
+import { formatCurrencyCode } from "@/utils/format"
 import type { AttendeeTicketResend } from "@/features/events/hooks/useResendAttendeeTicket"
 import { ATTENDEE_SCOPES, type AttendeeRoster, type AttendeeScope } from "@/features/events/schemas/eventCheckIn.schemas"
 import { AttendeeRosterTable } from "./AttendeeRosterTable"
@@ -34,7 +35,7 @@ const SCOPE_LABELS: Record<AttendeeScope, string> = {
 }
 
 type RosterConfirmation =
-  | { kind: "manualCheckIn"; ticketCode: string }
+  | { kind: "manualCheckIn"; ticketCode: string; outstandingBalance: string | null }
   | { kind: "undoCheckIn"; ticketCode: string }
   | { kind: "sendTicket"; ticketCode: string; ticket: AttendeeTicketResend }
 
@@ -59,6 +60,16 @@ export function AttendeeRosterPanel({
   const attendees = roster?.attendees.pageData ?? []
   const total = roster?.attendees.totalRecordsCount ?? 0
   const confirmation = useConfirmationRequest<RosterConfirmation>()
+
+  function requestCheckIn(ticketCode: string) {
+    const owed = attendees.find((row) => row.ticketCode === ticketCode)?.outstandingAmount ?? null
+
+    confirmation.open({
+      kind: "manualCheckIn",
+      ticketCode,
+      outstandingBalance: owed ? formatCurrencyCode(owed, roster?.outstandingCurrency ?? null) : null,
+    })
+  }
 
   function requestSend(ticket: AttendeeTicketResend) {
     const attendee = attendees.find((row) => row.ticketUniqueId === ticket.ticketUniqueId)
@@ -146,9 +157,10 @@ export function AttendeeRosterPanel({
         {!isError && !isLoading ? (
           <AttendeeRosterTable
             attendees={attendees}
+            outstandingCurrency={roster?.outstandingCurrency ?? null}
             busyTicketCode={busyTicketCode}
             sendingTicketUniqueId={sendingTicketUniqueId}
-            onCheckIn={(ticketCode) => confirmation.open({ kind: "manualCheckIn", ticketCode })}
+            onCheckIn={requestCheckIn}
             onUndo={(ticketCode) => confirmation.open({ kind: "undoCheckIn", ticketCode })}
             onSendTicket={requestSend}
           />
@@ -171,6 +183,9 @@ export function AttendeeRosterPanel({
           <CheckInConfirmDialog
             kind={confirmation.request.kind}
             ticketCode={confirmation.request.ticketCode}
+            outstandingBalance={
+              confirmation.request.kind === "manualCheckIn" ? confirmation.request.outstandingBalance : null
+            }
             isOpen={confirmation.isOpen}
             onConfirm={() => confirmation.confirm(runConfirmedAction)}
             onCancel={confirmation.close}
