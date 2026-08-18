@@ -73,9 +73,7 @@ export function extractApiError(err: unknown): string {
     )
   }
 
-  if (err instanceof Error) {
-    return err.message || "An unexpected error occurred."
-  }
-
+  // Only an axios failure with no response body reaches here - a refused connection or a timeout,
+  // whose message names the host and port we were dialling. That is ours to log, never theirs to read.
   return "An unexpected error occurred."
 }

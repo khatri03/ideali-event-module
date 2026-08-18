@@ -36,6 +36,12 @@ describe("extractApiError", () => {
   it("AnyOtherThrownError_StaysGenericSoInternalsDoNotLeak", () => {
     expect(extractApiError(new Error("Cannot read properties of undefined"))).toBe("An unexpected error occurred.")
   })
+
+  it("RequestNeverReachedTheServer_NamesNoHostOrPortToTheUser", () => {
+    expect(extractApiError(new AxiosError("connect ECONNREFUSED 10.0.0.4:5001", "ECONNREFUSED"))).toBe(
+      "An unexpected error occurred.",
+    )
+  })
 })
 
 describe("isNotFoundError", () => {
