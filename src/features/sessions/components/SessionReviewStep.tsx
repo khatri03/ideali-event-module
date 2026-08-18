@@ -6,6 +6,7 @@ import { CheckCircle2, PencilLine, X } from "lucide-react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { format, parseISO } from "date-fns"
 import { type SessionWizardETicketing, type SessionWizardSetupState, type SessionWizardSetupStateOption, markSessionWizardReadyForReview, updateSessionWizardSetupState } from "@/api/sessions"
+import { TextPill } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 import { useSessionReviewSummary } from "../hooks/useSessionReviewSummary"
@@ -132,16 +133,6 @@ function describeCheckInWindow(eTicketing: SessionWizardETicketing) {
   const closesAfter = eTicketing.checkInClosesAfterMinutes ?? DEFAULT_CHECK_IN_CLOSES_AFTER_MINUTES
 
   return `Check-in ${opensBefore}m before, ${closesAfter}m after`
-}
-
-function TextPill({ children }: { children: string }) {
-  return (
-    <Badge variant="subtle" colorPalette="gray" borderRadius="999px" px={3} py={1}>
-      <Text as="span" fontSize="xs" fontWeight="800" lineHeight={1}>
-        {children}
-      </Text>
-    </Badge>
-  )
 }
 
 interface FinishConfirmationDeferred {

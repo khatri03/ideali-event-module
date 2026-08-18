@@ -9,10 +9,12 @@ import {
   type EventSetupStateOption,
   updateEventWizardSetupState,
 } from "@/api/events"
+import { TextPill } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 import { useEventReviewSummary } from "../hooks/useEventReviewSummary"
 import { useEventWizardActions } from "../hooks/useEventWizardActions"
+import { AdvancedSettingsReviewSummary } from "../components/AdvancedSettingsReviewSummary"
 
 type ReviewStepSlug =
   | "name"
@@ -48,16 +50,6 @@ function ReviewPill({ label, isSuccess }: { label: string; isSuccess: boolean })
           {label}
         </Text>
       </Flex>
-    </Badge>
-  )
-}
-
-function TextPill({ children, colorPalette }: { children: string; colorPalette: "brand" | "gray" | "cyan" }) {
-  return (
-    <Badge variant="subtle" colorPalette={colorPalette} borderRadius="999px" px={3} py={1}>
-      <Text as="span" fontSize="xs" fontWeight="800" lineHeight={1}>
-        {children}
-      </Text>
     </Badge>
   )
 }
@@ -349,6 +341,8 @@ export function EventReviewStepPage() {
 
   const selectedVisibilityLabel = reviewSummary?.visibility ?? "Not set"
   const selectedPurchaseTimeLimit = reviewSummary?.purchaseTimeLimit ?? 15
+  const passesPaymentFeesToBuyer = reviewSummary?.applyPaymentMethodCharges ?? false
+  const refusesUnpaidEntry = reviewSummary?.blockEntryUntilPaid ?? false
   const selectedPaymentAccountName = reviewSummary?.paymentAccountName ?? "Not selected"
   const selectedPaymentAccountMerchant = reviewSummary?.paymentAccountMerchant ?? ""
   const selectedPaymentAccountCurrency = reviewSummary?.paymentAccountCurrency ?? ""
@@ -596,12 +590,12 @@ export function EventReviewStepPage() {
         <ReviewItem
           label="Advanced Settings"
           value={
-            <Stack gap={2} align="flex-start">
-              <Text fontSize="sm" fontWeight="800" color="gray.900" wordBreak="break-word">
-                {selectedVisibilityLabel}
-              </Text>
-              <TextPill colorPalette="gray">{`${selectedPurchaseTimeLimit} minute${selectedPurchaseTimeLimit === 1 ? "" : "s"}`}</TextPill>
-            </Stack>
+            <AdvancedSettingsReviewSummary
+              visibilityLabel={selectedVisibilityLabel}
+              purchaseTimeLimitMinutes={selectedPurchaseTimeLimit}
+              passesPaymentFeesToBuyer={passesPaymentFeesToBuyer}
+              refusesUnpaidEntry={refusesUnpaidEntry}
+            />
           }
           onEdit={() => editStep("advanced-settings")}
           editLabel="Edit advanced settings"

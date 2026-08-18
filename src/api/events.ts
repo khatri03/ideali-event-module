@@ -685,6 +685,10 @@ const eventReviewSummaryResponseSchema = z.object({
   visibility: z.string().optional(),
   PurchaseTimeLimit: z.number().int().positive().nullable().optional(),
   purchaseTimeLimit: z.number().int().positive().nullable().optional(),
+  ApplyPaymentMethodCharges: z.boolean().optional(),
+  applyPaymentMethodCharges: z.boolean().optional(),
+  BlockEntryUntilPaid: z.boolean().optional(),
+  blockEntryUntilPaid: z.boolean().optional(),
   DiscountsEnabled: z.boolean().optional(),
   discountsEnabled: z.boolean().optional(),
   HasQuestions: z.boolean().optional(),
@@ -1576,6 +1580,8 @@ export interface EventReviewSummaryResponse {
   venueName: string | null
   visibility: string
   purchaseTimeLimit: number | null
+  applyPaymentMethodCharges: boolean
+  blockEntryUntilPaid: boolean
   discountsEnabled: boolean
   hasQuestions: boolean
   startDate: string | null
@@ -1601,6 +1607,8 @@ function parseEventReviewSummary(payload: unknown): EventReviewSummaryResponse {
     venueName: parsed.VenueName ?? parsed.venueName ?? null,
     visibility: parsed.Visibility ?? parsed.visibility ?? "",
     purchaseTimeLimit: parsed.PurchaseTimeLimit ?? parsed.purchaseTimeLimit ?? null,
+    applyPaymentMethodCharges: parsed.ApplyPaymentMethodCharges ?? parsed.applyPaymentMethodCharges ?? false,
+    blockEntryUntilPaid: parsed.BlockEntryUntilPaid ?? parsed.blockEntryUntilPaid ?? false,
     discountsEnabled: parsed.DiscountsEnabled ?? parsed.discountsEnabled ?? false,
     hasQuestions: parsed.HasQuestions ?? parsed.hasQuestions ?? false,
     startDate: parsed.StartDate ?? parsed.startDate ?? null,
