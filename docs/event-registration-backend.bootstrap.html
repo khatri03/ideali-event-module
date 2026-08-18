@@ -425,17 +425,17 @@
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/lines/{lineId}/attendees</code></td>
                 <td><code>EventCartAttendeeService.SubmitAttendeesAsync</code></td>
-                <td>Names the people in one line's seats. The count must equal the line quantity exactly, and every attendee needs a name. Replaces any previous submission for that line.</td>
+                <td>Names the people in one line's seats. The count must equal the line quantity exactly, and every attendee needs a name. Replaces any previous submission for that line. Refuses the write when the event is no longer open for registration &mdash; the cart capability outlives a cancellation, so eligibility is re-checked here rather than left to fail at checkout.</td>
               </tr>
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/answers</code></td>
                 <td><code>EventCartAnswerService.SubmitAnswersAsync</code></td>
-                <td>All questionnaire answers for the order in one call. Validates every answer against its field definition, then writes the <code>EventPurchaseSubmission</code> tree. Re-submittable — it updates in place rather than duplicating.</td>
+                <td>All questionnaire answers for the order in one call. Validates every answer against its field definition, then writes the <code>EventPurchaseSubmission</code> tree. Re-submittable — it updates in place rather than duplicating. Refuses the write when the event is no longer open for registration &mdash; the cart capability outlives a cancellation, so eligibility is re-checked here rather than left to fail at checkout.</td>
               </tr>
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/answers/files</code> <span class="badge text-bg-light border flag">BotMitigation · 12 MB</span></td>
                 <td><code>EventCartAnswerService.UploadAnswerFileAsync</code></td>
-                <td>Stores one attachment and returns its <code>fileStorageId</code>, which the answers call then references. Also records the upload as in-flight so an abandoned one can be collected later.</td>
+                <td>Stores one attachment and returns its <code>fileStorageId</code>, which the answers call then references. Also records the upload as in-flight so an abandoned one can be collected later. Refuses the write when the event is no longer open for registration &mdash; the cart capability outlives a cancellation, so eligibility is re-checked here rather than left to fail at checkout. Gated before the blob is written, so a closed event cannot be used as storage.</td>
               </tr>
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/price</code></td>
@@ -459,7 +459,7 @@
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/checkout/intent</code> <span class="badge text-bg-light border flag">BotMitigation</span></td>
                 <td><code>EventCheckoutService.CreatePaymentIntentAsync</code></td>
-                <td>First claims the seats under ticket-type locks. If the buyer won, it raises the shared <code>Invoice</code>, mirrors cart lines to <code>InvoiceItem</code>, recomputes charges for the chosen method, creates the Stripe intent, and records a <code>Pending</code> <code>InvoicePayment</code>. Returns the client secret.</td>
+                <td>First claims the seats under ticket-type locks. If the buyer won, it raises the shared <code>Invoice</code>, mirrors cart lines to <code>InvoiceItem</code>, recomputes charges for the chosen method, creates the Stripe intent, and records a <code>Pending</code> <code>InvoicePayment</code>. Returns the client secret. <code>buyerName</code> is bounded to 255 characters at the boundary, matching the column it lands in &mdash; without it checkout could overwrite a name the cart had already validated and fail at <code>SaveChanges</code> instead.</td>
               </tr>
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/checkout/cheque</code> <span class="badge text-bg-light border">Signed in</span></td>
@@ -469,7 +469,7 @@
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/cart/{cartId}/checkout/confirm</code></td>
                 <td><code>EventCheckoutService.ConfirmCheckoutAsync</code></td>
-                <td>The fast path the browser calls after paying, and the <em>only</em> path for a zero-total order. It settles open attempts, reads whether issuance is authorised, and runs the same idempotent issuance the webhook runs. For free orders, this is where seats are claimed.</td>
+                <td>The fast path the browser calls after paying, and the <em>only</em> path for a zero-total order. It settles open attempts, reads whether issuance is authorised, and runs the same idempotent issuance the webhook runs. For free orders, this is where seats are claimed. The body is optional and carries <code>buyerName</code>, <code>buyerEmail</code> and <code>invoiceNote</code>; they are applied only on the call that raises the invoice, so a buyer reloading a paid order cannot rewrite who it is addressed to. <code>buyerName</code> is bounded to 255 characters at the boundary, matching the column it lands in &mdash; without it checkout could overwrite a name the cart had already validated and fail at <code>SaveChanges</code> instead.</td>
               </tr>
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/public/stripe/web-hook</code></td>
@@ -523,12 +523,12 @@
               <tr>
                 <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/organizer/events/{e}/sessions/{s}/attendees</code></td>
                 <td><code>EventAttendeeRosterService.GetRosterAsync</code></td>
-                <td>The door list: everyone holding a live ticket for that session, with arrival state, plus session-wide counts that ignore the search term. Searchable by name, email or ticket code — the fallback when a code will not scan. Cancelled and refunded tickets are left off.</td>
+                <td>The door list: everyone holding a live ticket for that session, with arrival state, plus session-wide counts that ignore the search term. Searchable by name, email, ticket code <em>or invoice number</em> — the fallback when a code will not scan. Cancelled and refunded tickets are left off. Each row carries <code>outstandingAmount</code>, read live off <code>Invoice.BalanceAmount</code> and null once the order is settled, with <code>outstandingCurrency</code> on the roster itself because the currency belongs to the event rather than to any one ticket. It is on the row and not only on the scan reply because a guest who reads out an invoice number is admitted from this list without a ticket ever being scanned — without it the operator commits before they can ask for the money.</td>
               </tr>
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/{e}/sessions/{s}/check-in</code></td>
                 <td><code>TicketingService.CheckInAsync</code></td>
-                <td>Scans a ticket code at the door and writes a <code>TicketCheckInLog</code> row. Event and session come from the route, so a scan can only ever land on the session the operator opened. Refuses a code that is already used, cancelled or refunded. The reply carries <code>attendeeName</code> alongside the code, so the door can name the person it just admitted without going back to the roster.</td>
+                <td>Scans a ticket code at the door and writes a <code>TicketCheckInLog</code> row. Event and session come from the route, so a scan can only ever land on the session the operator opened. Refuses a code that is already used, cancelled or refunded. The reply carries <code>attendeeName</code> alongside the code, so the door can name the person it just admitted without going back to the roster. It also carries <code>outstandingAmount</code> and <code>outstandingCurrency</code>, read live off <code>Invoice.BalanceAmount</code> and null when the order is settled — an organizer may issue a ticket against an unpaid order (a cheque taken but not banked is the everyday case), and the operator collecting that money never sees the buyer's invoice. It is a notice, not a gate: the balance never blocks admission, and it repeats on an <code>AlreadyCheckedIn</code> scan because the operator reading it may not be the one who opened the door.</td>
               </tr>
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/organizer/events/{e}/sessions/{s}/check-in/undo</code></td>
@@ -941,6 +941,7 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
               <tr><th>How the page knows</th><td><code>visibleTabs</code> contains <code>"attendee-info"</code> when <em>any</em> session in the event has the flag. <code>GET /register/attendee-info</code> then returns only those sessions.</td></tr>
               <tr><th>What is stored</th><td>One <code>EventInvoiceItemAttendee</code> per seat, with a <code>SlotIndex</code>. Submitted per line, before payment.</td></tr>
               <tr><th>The rule at submit</th><td>The number of attendees must equal the line quantity exactly, and each needs a name. Email and phone are optional.</td></tr>
+              <tr><th>Length limits</th><td>Name and email are bounded to 255 characters, phone to 50 — the same widths as the columns they land in, so an over-long value is refused at the boundary rather than at <code>SaveChanges</code>.</td></tr>
               <tr><th>What happens at issuance</th><td>Slot <em>n</em> becomes ticket <em>n</em>'s attendee. A submitted slot owns all its fields — a blank email means "not provided", it does <strong>not</strong> fall back to the buyer's. If no attendees were submitted at all, the tickets carry no attendee name.</td></tr>
             </tbody>
           </table>
@@ -1076,6 +1077,27 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
           deliberately re-enters settlement on a repeat success event, because the first delivery may
           have settled the invoice and then failed before issuing.
         </div>
+
+        <h4>Why two simultaneous intents for one cart collapse into one</h4>
+        <p>
+          <code>EventCheckoutService.BuildIntentIdempotencyKey</code> derives the key from the cart, the
+          chosen method and the invoice's payment count —
+          <code>event-cart-{cartUniqueId}-{method}-{paymentCount}</code> — and
+          <code>StripeService.CreateEventPaymentIntentAsync</code> carries it on its own
+          <code>RequestOptions</code> instance, separate from the one handed to the customer lookup,
+          because Stripe rejects a key replayed against a different call's parameters. A request that
+          arrives without a key is refused with an <code>ArgumentException</code> before Stripe is
+          reached: a caller that omits it is asking for a fresh intent on every retry, which is how one
+          cart ends up with two payable intents.
+        </p>
+        <p>
+          The count in the key is what keeps it from being too sticky. Retiring the live attempt writes a
+          payment row, so the next genuine attempt hashes to a different key and gets its own intent,
+          while a duplicate of the attempt in flight does not. Selecting a second method also produces a
+          different key, since the method is part of it. Covered by
+          <code>StripeEventIntentIdempotencyTests</code> and by the simultaneous-request, retired-attempt
+          and second-method cases in <code>EventCheckoutServiceTests</code>.
+        </p>
 
         <h4>Why /checkout/confirm exists as well</h4>
         <p>

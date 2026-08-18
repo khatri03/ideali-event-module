@@ -19,27 +19,13 @@ The registration read service checks event cancellation, setup state, visibility
 
 **Recommended action:** Create one server-side registration-eligibility policy and call it from cart creation, line mutation, pricing, payment-intent creation, cheque checkout, and free-order confirmation. Add direct-API tests for every denied state.
 
-## 2. Three buyer-facing messaging tests fail
+## 2. Three buyer-facing messaging tests fail — RESOLVED
 
-**Severity:** High — release blocker
+**Severity:** Was a release blocker. Closed.
 
-The focused registration test run produced:
+`{{EventName}}` no longer resolves blank. `EventPlaceHolderReplacer` reads it from `context.Event.Name`, and both jobs now load the event alongside the invoice — `EventRegistrationConfirmationJob.LoadEventInvoiceAsync` includes `eventInvoice.Event` before building the context, so the placeholder has something to substitute rather than an unloaded navigation.
 
-- 230 tests executed
-- 227 passed
-- 3 failed
-
-The failed tests show `{{EventName}}` becoming blank in registration confirmation and ticket-delivery bodies, producing text such as `Registered for .` and `Tickets for .`.
-
-Affected areas:
-
-- `EventRegistrationConfirmationJob`
-- `EventTicketDeliveryJob`
-- `EventPlaceHolderReplacer`
-
-**Why this could be real:** These jobs run after payment and generate customer-facing emails. The failures reproduce on a clean working tree. Even if the cause is an in-memory test-fixture relationship issue rather than production SQL, the discrepancy must be understood before release.
-
-**Recommended action:** Trace how `Event` is loaded into `EventPlaceHolderContext`, fix the production code or fixture as appropriate, and require all three tests to pass.
+`EventPlaceHolderReplacerTests`, `EventRegistrationConfirmationJobTests` and `EventTicketDeliveryJobTests` run 63 tests, all passing, including the two that assert the confirmation and ticket bodies read `Registered for Annual Convention.` and the subject falls back to the event name when the organizer leaves it blank.
 
 ## 3. SQL Server concurrency tests were not exercised
 
@@ -51,15 +37,15 @@ Affected areas:
 
 **Recommended action:** Run these tests against a disposable SQL Server in CI. Report them as genuinely skipped when unavailable, or fail the release pipeline when the required integration-test environment is missing.
 
-## 4. Stripe intent creation has no gateway idempotency key
+## 4. Stripe intent creation has no gateway idempotency key — RESOLVED
 
-**Severity:** High risk — verify before release
+**Severity:** Was high risk. Closed.
 
-The application tries to reuse an existing live payment attempt, but `StripeService.CreateEventPaymentIntentAsync` creates an intent without setting `RequestOptions.IdempotencyKey`.
+`StripeService.CreateEventPaymentIntentAsync` now sets `RequestOptions.IdempotencyKey`, and refuses the call with an `ArgumentException` when no key is supplied. The key comes from `EventCheckoutService.BuildIntentIdempotencyKey` — `event-cart-{cartUniqueId}-{method}-{paymentCount}` — so simultaneous requests for one cart resolve to a single intent, while retiring the live attempt moves the payment count on and lets a genuinely fresh attempt mint its own.
 
-**Why this could be real:** Application-level lookup protects ordinary sequential retries but does not fully cover simultaneous requests or a failure between Stripe intent creation and database persistence. Two requests may create separate intents before either database record becomes visible.
+Covered by `StripeEventIntentIdempotencyTests` and by three cases in `EventCheckoutServiceTests`: simultaneous requests for one cart, a request after the live attempt is retired, and a second payment method on the same cart.
 
-**Recommended action:** Supply a stable Stripe idempotency key derived from the cart and a server-managed checkout-attempt/version identifier. Add a simultaneous-intent test for the same cart.
+**Client side, also closed:** the confirm button now raises its busy guard before preparing the purchase rather than when payment starts. Preparation submits attendees and answers, which no gateway idempotency key covers, so a second click there duplicated people on the order. `RegistrationPaymentConfirmation` owns the guard in one place and holds it across the whole confirm.
 
 ## 5. Anonymous cart ID acts as the only authorization credential
 
@@ -97,9 +83,9 @@ Cart read, line mutation, attendee submission, questionnaire submission, and che
 ## Minimum release gate
 
 1. Enforce one event-registration policy at every write/payment boundary.
-2. Fix all three failing messaging tests.
+2. ~~Fix all three failing messaging tests.~~ Done — see item 2.
 3. Run and pass the SQL Server integration suite.
-4. Add Stripe idempotency protection and a same-cart concurrency test.
+4. ~~Add Stripe idempotency protection and a same-cart concurrency test.~~ Done — see item 4.
 5. Decide and implement an explicit anonymous-cart authorization model.
 
 Only after these items pass should the production-readiness rating be reassessed.
