@@ -204,6 +204,10 @@ const sessionETicketingSchema = z.object({
   enableDigitalTicket: z.boolean().optional(),
   RequiresAttendeeInfo: z.boolean().optional(),
   requiresAttendeeInfo: z.boolean().optional(),
+  CheckInOpensBeforeMinutes: z.number().int().nullable().optional(),
+  checkInOpensBeforeMinutes: z.number().int().nullable().optional(),
+  CheckInClosesAfterMinutes: z.number().int().nullable().optional(),
+  checkInClosesAfterMinutes: z.number().int().nullable().optional(),
 })
 
 const sessionScheduleSchema = z.object({
@@ -547,11 +551,15 @@ export interface SessionReviewSummary {
 export interface SessionWizardETicketing {
   enableDigitalTicket: boolean
   requiresAttendeeInfo: boolean
+  checkInOpensBeforeMinutes: number | null
+  checkInClosesAfterMinutes: number | null
 }
 
 export interface SessionWizardETicketingRequest {
   enableDigitalTicket: boolean
   requiresAttendeeInfo: boolean
+  checkInOpensBeforeMinutes: number | null
+  checkInClosesAfterMinutes: number | null
 }
 
 export interface SessionWizardSchedule {
@@ -1234,6 +1242,10 @@ export async function fetchSessionWizardReviewSummary(uniqueId: string): Promise
     eTicketing: {
       enableDigitalTicket: eTicketing?.EnableDigitalTicket ?? eTicketing?.enableDigitalTicket ?? false,
       requiresAttendeeInfo: eTicketing?.RequiresAttendeeInfo ?? eTicketing?.requiresAttendeeInfo ?? false,
+      checkInOpensBeforeMinutes:
+        eTicketing?.CheckInOpensBeforeMinutes ?? eTicketing?.checkInOpensBeforeMinutes ?? null,
+      checkInClosesAfterMinutes:
+        eTicketing?.CheckInClosesAfterMinutes ?? eTicketing?.checkInClosesAfterMinutes ?? null,
     },
     scheduleCount: summary.ScheduleCount ?? summary.scheduleCount ?? 0,
     ticketCount: summary.TicketCount ?? summary.ticketCount ?? 0,
@@ -1242,15 +1254,26 @@ export async function fetchSessionWizardReviewSummary(uniqueId: string): Promise
   }
 }
 
+/** Null means the session has declared no door window of its own and falls back to the platform default. */
+function toSessionWizardETicketing(
+  ticketing: z.infer<typeof sessionETicketingSchema>,
+): SessionWizardETicketing {
+  return {
+    enableDigitalTicket: ticketing.EnableDigitalTicket ?? ticketing.enableDigitalTicket ?? true,
+    requiresAttendeeInfo: ticketing.RequiresAttendeeInfo ?? ticketing.requiresAttendeeInfo ?? true,
+    checkInOpensBeforeMinutes:
+      ticketing.CheckInOpensBeforeMinutes ?? ticketing.checkInOpensBeforeMinutes ?? null,
+    checkInClosesAfterMinutes:
+      ticketing.CheckInClosesAfterMinutes ?? ticketing.checkInClosesAfterMinutes ?? null,
+  }
+}
+
 export async function fetchSessionWizardETicketing(uniqueId: string): Promise<SessionWizardETicketing> {
   const res = await client.get<unknown>(API_ROUTES.sessionWizardETicketing(uniqueId))
   const responseData = parseServicePayload(res.data)
   const ticketing = sessionETicketingSchema.parse(responseData)
 
-  return {
-    enableDigitalTicket: ticketing.EnableDigitalTicket ?? ticketing.enableDigitalTicket ?? true,
-    requiresAttendeeInfo: ticketing.RequiresAttendeeInfo ?? ticketing.requiresAttendeeInfo ?? true,
-  }
+  return toSessionWizardETicketing(ticketing)
 }
 
 export async function updateSessionWizardETicketing(
@@ -1261,10 +1284,7 @@ export async function updateSessionWizardETicketing(
   const responseData = parseServicePayload(res.data)
   const ticketing = sessionETicketingSchema.parse(responseData)
 
-  return {
-    enableDigitalTicket: ticketing.EnableDigitalTicket ?? ticketing.enableDigitalTicket ?? true,
-    requiresAttendeeInfo: ticketing.RequiresAttendeeInfo ?? ticketing.requiresAttendeeInfo ?? true,
-  }
+  return toSessionWizardETicketing(ticketing)
 }
 
 export async function fetchSessionWizardSchedule(uniqueId: string): Promise<SessionWizardSchedule[]> {

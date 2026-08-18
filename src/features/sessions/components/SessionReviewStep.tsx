@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { CheckCircle2, PencilLine, X } from "lucide-react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { format, parseISO } from "date-fns"
-import { type SessionWizardSetupState, type SessionWizardSetupStateOption, markSessionWizardReadyForReview, updateSessionWizardSetupState } from "@/api/sessions"
+import { type SessionWizardETicketing, type SessionWizardSetupState, type SessionWizardSetupStateOption, markSessionWizardReadyForReview, updateSessionWizardSetupState } from "@/api/sessions"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 import { useSessionReviewSummary } from "../hooks/useSessionReviewSummary"
@@ -122,6 +122,16 @@ function ReviewItem({ label, value, onEdit, editLabel, isLoading = false }: Revi
       </Flex>
     </Grid>
   )
+}
+
+const DEFAULT_CHECK_IN_OPENS_BEFORE_MINUTES = 120
+const DEFAULT_CHECK_IN_CLOSES_AFTER_MINUTES = 180
+
+function describeCheckInWindow(eTicketing: SessionWizardETicketing) {
+  const opensBefore = eTicketing.checkInOpensBeforeMinutes ?? DEFAULT_CHECK_IN_OPENS_BEFORE_MINUTES
+  const closesAfter = eTicketing.checkInClosesAfterMinutes ?? DEFAULT_CHECK_IN_CLOSES_AFTER_MINUTES
+
+  return `Check-in ${opensBefore}m before, ${closesAfter}m after`
 }
 
 function TextPill({ children }: { children: string }) {
@@ -595,6 +605,7 @@ export function SessionReviewStep({ sessionId }: SessionReviewStepProps) {
                 </Badge>
                 <Flex wrap="wrap" gap={2}>
                   <TextPill>{reviewSummary.eTicketing.requiresAttendeeInfo ? "Attendee info required" : "Attendee info optional"}</TextPill>
+                  <TextPill>{describeCheckInWindow(reviewSummary.eTicketing)}</TextPill>
                 </Flex>
               </Stack>
             ) : (
