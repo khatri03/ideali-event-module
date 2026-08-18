@@ -251,7 +251,7 @@
               <tr><td><code>EventCartPricingService</code></td><td>Discounts, charges and the per-method totals.</td></tr>
               <tr><td><code>EventCartAttendeeService</code></td><td>Per-seat attendee details.</td></tr>
               <tr><td><code>EventCartAnswerService</code></td><td>Questionnaire answers and answer-file uploads.</td></tr>
-              <tr><td><code>EventCheckoutService</code></td><td>Payment intents, cheques, and the confirm fast-path.</td></tr>
+              <tr><td><code>EventCheckoutService</code></td><td>Payment intents, cheques, and the confirm fast-path. Orchestration only — seats are claimed by <code>EventSeatClaim</code>, the order raised by <code>EventCheckoutInvoiceBuilder</code>, the amount decided by <code>EventCheckoutPricing</code>, and the Stripe attempt owned by <code>EventCheckoutIntents</code>.</td></tr>
               <tr><td><code>EventPaymentSettlementService</code></td><td>What happens once the money is settled — or fails.</td></tr>
               <tr><td><code>EventOrderStatusService</code></td><td>The buyer's confirmation page. A projection only.</td></tr>
               <tr><td><code>TicketingShared</code></td><td>The rules every path shares: cart gates, availability, issuance, hold duration.</td></tr>
@@ -764,7 +764,7 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
 
         <h4>Where oversell is prevented</h4>
         <p>
-          Browsing cart lines are intentionally lightweight: they validate against current availability, but they do not queue every buyer behind the ticket type and they do not make the event look sold out. The real inventory claim happens in <code>EventCheckoutService.ClaimSeatsForPaymentAsync</code>, called by <code>/checkout/intent</code>, <code>/checkout/cheque</code>, and by <code>/checkout/confirm</code> for free orders.
+          Browsing cart lines are intentionally lightweight: they validate against current availability, but they do not queue every buyer behind the ticket type and they do not make the event look sold out. The real inventory claim happens in <code>EventSeatClaim.ClaimAsync</code>, called by <code>/checkout/intent</code>, <code>/checkout/cheque</code>, and by <code>/checkout/confirm</code> for free orders.
         </p>
         <ol class="step-rail">
           <li><strong>Apply a short SQL lock wait.</strong> <code>SET LOCK_TIMEOUT 3000</code> keeps a rush from tying up request threads and pooled connections for the full command timeout.</li>
@@ -1080,7 +1080,7 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
 
         <h4>Why two simultaneous intents for one cart collapse into one</h4>
         <p>
-          <code>EventCheckoutService.BuildIntentIdempotencyKey</code> derives the key from the cart, the
+          <code>EventCheckoutIntents.BuildIdempotencyKey</code> derives the key from the cart, the
           chosen method and the invoice's payment count —
           <code>event-cart-{cartUniqueId}-{method}-{paymentCount}</code> — and
           <code>StripeService.CreateEventPaymentIntentAsync</code> carries it on its own
