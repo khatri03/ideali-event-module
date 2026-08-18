@@ -6,6 +6,8 @@ import { OutstandingBalanceBadge } from "./OutstandingBalanceBadge"
 interface AttendeeRosterTableProps {
   attendees: Attendee[]
   outstandingCurrency: string | null
+  /** Admitting from a row is the same act as scanning, so it is withheld on the same clock. */
+  isDoorOpen: boolean
   busyTicketCode: string | null
   sendingTicketUniqueId: string | null
   onCheckIn: (ticketCode: string) => void
@@ -36,6 +38,7 @@ function formatArrival(checkedInAtUtc: string | null): string {
 export function AttendeeRosterTable({
   attendees,
   outstandingCurrency,
+  isDoorOpen,
   busyTicketCode,
   sendingTicketUniqueId,
   onCheckIn,
@@ -84,6 +87,9 @@ export function AttendeeRosterTable({
             // Without the order behind it there is nowhere to send the ticket from, so the action is
             // withheld rather than offered and then refused by the server.
             const canSendTicket = attendee.invoiceUniqueId !== ""
+            // Reversing a check-in is not gated by the window: it undoes something already recorded,
+            // and a mistaken admission has to be correctable after the doors have shut.
+            const canAdmit = hasArrived || isDoorOpen
 
             return (
               <Table.Row key={attendee.ticketUniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
@@ -154,27 +160,29 @@ export function AttendeeRosterTable({
                         Send ticket
                       </Button>
                     ) : null}
-                    <Button
-                      size="xs"
-                      minH="11"
-                      px={4}
-                      borderRadius="12px"
-                      fontWeight="700"
-                      variant={hasArrived ? "outline" : "solid"}
-                      color={hasArrived ? undefined : "white"}
-                      bg={hasArrived ? undefined : "brand.gradient"}
-                      // A table of identically named buttons tells a screen reader nothing, and the
-                      // label has to survive the button going into its loading state.
-                      aria-label={
-                        hasArrived ? `Undo check-in for ${attendee.ticketCode}` : `Check in ${attendee.ticketCode}`
-                      }
-                      cursor={isBusy ? "not-allowed" : "pointer"}
-                      disabled={isBusy}
-                      loading={isBusy}
-                      onClick={() => (hasArrived ? onUndo(attendee.ticketCode) : onCheckIn(attendee.ticketCode))}
-                    >
-                      {hasArrived ? "Undo" : "Check in"}
-                    </Button>
+                    {canAdmit ? (
+                      <Button
+                        size="xs"
+                        minH="11"
+                        px={4}
+                        borderRadius="12px"
+                        fontWeight="700"
+                        variant={hasArrived ? "outline" : "solid"}
+                        color={hasArrived ? undefined : "white"}
+                        bg={hasArrived ? undefined : "brand.gradient"}
+                        // A table of identically named buttons tells a screen reader nothing, and the
+                        // label has to survive the button going into its loading state.
+                        aria-label={
+                          hasArrived ? `Undo check-in for ${attendee.ticketCode}` : `Check in ${attendee.ticketCode}`
+                        }
+                        cursor={isBusy ? "not-allowed" : "pointer"}
+                        disabled={isBusy}
+                        loading={isBusy}
+                        onClick={() => (hasArrived ? onUndo(attendee.ticketCode) : onCheckIn(attendee.ticketCode))}
+                      >
+                        {hasArrived ? "Undo" : "Check in"}
+                      </Button>
+                    ) : null}
                   </Stack>
                 </Table.Cell>
               </Table.Row>

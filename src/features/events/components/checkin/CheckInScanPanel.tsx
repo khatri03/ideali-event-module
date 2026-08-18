@@ -71,32 +71,12 @@ export function CheckInScanPanel({
           </Text>
         </Box>
 
-        {isBlocked ? (
-          <Stack
-            direction="row"
-            align="flex-start"
-            gap={3}
-            borderWidth="1px"
-            borderColor="status.error"
-            borderRadius="16px"
-            bg="status.error.bg"
-            color="status.error.fg"
-            px={{ base: 4, md: 5 }}
-            py={4}
-            role="alert"
-          >
-            <Box flexShrink={0} mt="2px">
-              <WifiOff size={20} aria-hidden="true" />
-            </Box>
-            <Box minW={0}>
-              <Text fontSize="sm" fontWeight="700">
-                No connection
-              </Text>
-              <Text mt={1} fontSize="xs" lineHeight="1.5">
-                Check-in is paused until the network returns. Nothing scanned now would be recorded.
-              </Text>
-            </Box>
-          </Stack>
+        {!isOnline ? (
+          <PausedNotice
+            icon={<WifiOff size={20} aria-hidden="true" />}
+            title="No connection"
+            detail="Check-in is paused until the network returns. Nothing scanned now would be recorded."
+          />
         ) : null}
 
         <TicketScanner
@@ -121,5 +101,41 @@ export function CheckInScanPanel({
         ) : null}
       </Stack>
     </Box>
+  )
+}
+
+interface PausedNoticeProps {
+  icon: React.ReactNode
+  title: string
+  detail: string
+}
+
+function PausedNotice({ icon, title, detail }: PausedNoticeProps) {
+  return (
+    <Stack
+      direction="row"
+      align="flex-start"
+      gap={3}
+      borderWidth="1px"
+      borderColor="status.error"
+      borderRadius="16px"
+      bg="status.error.bg"
+      color="status.error.fg"
+      px={{ base: 4, md: 5 }}
+      py={4}
+      role="alert"
+    >
+      <Box flexShrink={0} mt="2px">
+        {icon}
+      </Box>
+      <Box minW={0}>
+        <Text fontSize="sm" fontWeight="700">
+          {title}
+        </Text>
+        <Text mt={1} fontSize="xs" lineHeight="1.5">
+          {detail}
+        </Text>
+      </Box>
+    </Stack>
   )
 }

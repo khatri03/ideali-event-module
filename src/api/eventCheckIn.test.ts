@@ -49,6 +49,9 @@ describe("fetchSessionAttendees", () => {
               },
             ],
           },
+          CheckInOpensAtUtc: "2026-08-18T17:15:00",
+          CheckInClosesAtUtc: "2026-08-18T22:00:00",
+          ServerTimeUtc: "2026-08-18T17:00:00",
         },
       },
     })
@@ -56,6 +59,9 @@ describe("fetchSessionAttendees", () => {
     const roster = await fetchSessionAttendees({ ...SESSION, search: "  ayesha  " })
 
     expect(roster.sessionName).toBe("Opening Night")
+    // The door screen counts down to these, so they must survive the parse the same as the rows do.
+    expect(roster.checkInOpensAtUtc).toBe("2026-08-18T17:15:00")
+    expect(roster.serverTimeUtc).toBe("2026-08-18T17:00:00")
     expect(roster.counts).toEqual({ issued: 2, arrived: 1, expected: 1 })
     expect(roster.attendees.pageData[0]).toMatchObject({ ticketCode: "TKT-1", attendeeName: "Ayesha Khan" })
     expect(getMock.mock.calls[0][1].params).toMatchObject({ search: "ayesha", scope: "All" })
@@ -63,7 +69,10 @@ describe("fetchSessionAttendees", () => {
 
   it("omits an all-whitespace search rather than asking for an empty match", async () => {
     getMock.mockResolvedValue({
-      data: { success: true, data: { sessionName: "S", counts: {}, attendees: { pageData: [] } } },
+      data: {
+        success: true,
+        data: { sessionName: "S", counts: {}, attendees: { pageData: [] }, serverTimeUtc: "2026-08-18T17:00:00" },
+      },
     })
 
     await fetchSessionAttendees({ ...SESSION, search: "   " })

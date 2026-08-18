@@ -5,6 +5,7 @@ import {
   AttendeeRosterPanel,
   CheckInCounts,
   CheckInScanPanel,
+  CheckInWindowBanner,
 } from "../components/checkin"
 import { useCheckInDesk } from "../hooks/useCheckInDesk"
 
@@ -51,6 +52,8 @@ export function EventCheckInPage() {
         </Box>
       </Box>
 
+      <CheckInWindowBanner countdown={desk.countdown} />
+
       {/*
         The roster is what the operator works from between scans, so it takes the larger share. The
         columns are floored at zero because a grid track sized "1fr" still refuses to go below its
@@ -58,18 +61,29 @@ export function EventCheckInPage() {
         it and carries the whole desk off the side of a phone instead of letting the table scroll.
       */}
       <Grid
-        templateColumns={{ base: "minmax(0, 1fr)", lg: "minmax(0, 35fr) minmax(0, 65fr)" }}
+        templateColumns={
+          desk.isDoorOpen
+            ? { base: "minmax(0, 1fr)", lg: "minmax(0, 35fr) minmax(0, 65fr)" }
+            : "minmax(0, 1fr)"
+        }
         gap={{ base: 6, lg: 8 }}
         alignItems="start"
       >
-        <CheckInScanPanel
-          attempt={desk.attempt}
-          isOnline={desk.isOnline}
-          isAdmitting={desk.isAdmitting}
-          isReversing={desk.isReversing}
-          onScan={desk.admit}
-          onUndo={desk.reverse}
-        />
+        {/*
+          Nothing in the scan panel works before the window opens, so it is left off the screen rather
+          than shown greyed out. The countdown above already says why, and a dead camera frame beside
+          it only invites an operator to try the one thing that cannot succeed.
+        */}
+        {desk.isDoorOpen ? (
+          <CheckInScanPanel
+            attempt={desk.attempt}
+            isOnline={desk.isOnline}
+            isAdmitting={desk.isAdmitting}
+            isReversing={desk.isReversing}
+            onScan={desk.admit}
+            onUndo={desk.reverse}
+          />
+        ) : null}
 
         <AttendeeRosterPanel
           roster={desk.roster}
@@ -79,6 +93,7 @@ export function EventCheckInPage() {
           scope={desk.scope}
           page={desk.page}
           pageSize={desk.pageSize}
+          isDoorOpen={desk.isDoorOpen}
           busyTicketCode={desk.busyTicketCode}
           sendingTicketUniqueId={desk.sendingTicketUniqueId}
           onSearchChange={desk.setSearch}

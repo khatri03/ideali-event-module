@@ -73,6 +73,17 @@ describe("CheckInScanPanel", () => {
     vi.useRealTimers()
   })
 
+  /**
+   * Losing the network clears on its own, so the preview is kept up and only the decoded code dropped -
+   * tearing the camera down here would cost a restart handshake the moment the connection returned.
+   */
+  it("HoldsTheCameraUpWhileOfflineAndOnlyPausesReading", () => {
+    renderPanel({ isOnline: false })
+
+    expect(screen.getByTestId("scanner")).toHaveTextContent("paused")
+    expect(screen.getByText("No connection")).toBeInTheDocument()
+  })
+
   it("ScansWhileNothingIsWaitingToBeRead", () => {
     renderPanel()
 

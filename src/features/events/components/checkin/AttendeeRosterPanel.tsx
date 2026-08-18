@@ -17,6 +17,7 @@ interface AttendeeRosterPanelProps {
   scope: AttendeeScope
   page: number
   pageSize: number
+  isDoorOpen: boolean
   busyTicketCode: string | null
   sendingTicketUniqueId: string | null
   onSearchChange: (search: string) => void
@@ -47,6 +48,7 @@ export function AttendeeRosterPanel({
   scope,
   page,
   pageSize,
+  isDoorOpen,
   busyTicketCode,
   sendingTicketUniqueId,
   onSearchChange,
@@ -158,6 +160,7 @@ export function AttendeeRosterPanel({
           <AttendeeRosterTable
             attendees={attendees}
             outstandingCurrency={roster?.outstandingCurrency ?? null}
+            isDoorOpen={isDoorOpen}
             busyTicketCode={busyTicketCode}
             sendingTicketUniqueId={sendingTicketUniqueId}
             onCheckIn={requestCheckIn}

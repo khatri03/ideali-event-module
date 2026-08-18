@@ -50,6 +50,13 @@ export const attendeeRosterSchema = z.object({
   }),
   // One currency for the whole roster: it belongs to the event taking the money, not to any one ticket.
   outstandingCurrency: z.string().nullish().transform((value) => value ?? null),
+  // The two instants a scan is judged against, null on either side when the session was never dated.
+  // Carried so the desk can be told how long is left rather than learning it from a refused scan.
+  checkInOpensAtUtc: z.string().nullish().transform((value) => value ?? null),
+  checkInClosesAtUtc: z.string().nullish().transform((value) => value ?? null),
+  // The server's clock when this roster was read. A door tablet ten minutes fast would otherwise count
+  // down to zero while the server still refuses the scan, so the countdown runs off an offset from this.
+  serverTimeUtc: z.string(),
 })
 export type AttendeeRoster = z.infer<typeof attendeeRosterSchema>
 

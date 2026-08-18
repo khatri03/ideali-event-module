@@ -1,5 +1,7 @@
 import { useCallback, useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import type { CheckInAttempt } from "@/api/eventCheckIn"
+import { useCheckInCountdown } from "./useCheckInCountdown"
 import { useDebounce } from "@/hooks/useDebounce"
 import { useOnlineStatus } from "@/hooks/useOnlineStatus"
 import { useResendAttendeeTicket, type AttendeeTicketResend } from "./useResendAttendeeTicket"
@@ -38,6 +40,15 @@ export function useCheckInDesk(eventUniqueId: string, sessionUniqueId: string) {
     { eventUniqueId, sessionUniqueId, search: debouncedSearch, scope, page, pageSize },
     isOnline,
   )
+  // The roster carries the door window, so when the countdown reaches a boundary the list is re-read
+  // rather than the page reloaded - a reload would throw away the last scan outcome and the search.
+  const queryClient = useQueryClient()
+  const refreshRoster = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["session-attendees", eventUniqueId, sessionUniqueId] })
+  }, [queryClient, eventUniqueId, sessionUniqueId])
+
+  const countdown = useCheckInCountdown(rosterQuery.data, refreshRoster)
+
   // Only mutate is closed over, never the mutation result: the result is a fresh object every render,
   // and a scan handler that changes with it restarts the scanner camera after every check-in.
   const { mutate: sendCheckIn, isPending: isAdmitting, variables: admittingCode } = useTicketCheckIn(sessionKeys)
@@ -100,5 +111,7 @@ export function useCheckInDesk(eventUniqueId: string, sessionUniqueId: string) {
     isReversing,
     busyTicketCode,
     isOnline,
+    countdown,
+    isDoorOpen: countdown.phase === "open",
   }
 }

@@ -29,6 +29,7 @@ function renderTable(
     busyTicketCode = null as string | null,
     sendingTicketUniqueId = null as string | null,
     outstandingCurrency = "USD" as string | null,
+    isDoorOpen = true,
   } = {},
 ) {
   const onCheckIn = vi.fn()
@@ -40,6 +41,7 @@ function renderTable(
       <AttendeeRosterTable
         attendees={attendees}
         outstandingCurrency={outstandingCurrency}
+        isDoorOpen={isDoorOpen}
         busyTicketCode={busyTicketCode}
         sendingTicketUniqueId={sendingTicketUniqueId}
         onCheckIn={onCheckIn}
@@ -133,6 +135,28 @@ describe("AttendeeRosterTable", () => {
     renderTable([attendee({ invoiceUniqueId: "", invoiceNo: "" })])
 
     expect(screen.queryByRole("button", { name: "Send ticket TKT-1 again" })).not.toBeInTheDocument()
+  })
+
+  /**
+   * Admitting from a row is the same act as scanning, judged by the same clock, so offering it before
+   * the window opens only produces a refusal with a guest already at the desk.
+   */
+  it("WithholdsCheckInFromARowWhileTheDoorIsShut", () => {
+    renderTable([attendee()], { isDoorOpen: false })
+
+    expect(screen.queryByRole("button", { name: "Check in TKT-1" })).not.toBeInTheDocument()
+  })
+
+  /** A mistaken admission has to stay correctable after the doors have shut. */
+  it("StillOffersUndoOnceTheDoorHasShut", async () => {
+    const { onUndo } = renderTable(
+      [attendee({ ticketStatus: "CheckedIn", checkedInAtUtc: "2026-08-17T18:00:00Z" })],
+      { isDoorOpen: false },
+    )
+
+    await userEvent.click(screen.getByRole("button", { name: "Undo check-in for TKT-1" }))
+
+    expect(onUndo).toHaveBeenCalledWith("TKT-1")
   })
 
   it("SaysTheSearchMatchedNobodyInsteadOfShowingAnEmptyTable", () => {

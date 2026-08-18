@@ -29,6 +29,9 @@ function roster(attendees: Attendee[], outstandingCurrency: string | null = "USD
     counts: { issued: attendees.length, arrived: 0, expected: attendees.length },
     attendees: { pageNo: 1, pageSize: 25, totalRecordsCount: attendees.length, pageData: attendees },
     outstandingCurrency,
+    checkInOpensAtUtc: null,
+    checkInClosesAtUtc: null,
+    serverTimeUtc: "2026-08-18T18:00:00Z",
   }
 }
 
@@ -53,6 +56,7 @@ function renderPanel(attendees: Attendee[] = [attendee()]) {
         scope="All"
         page={1}
         pageSize={25}
+        isDoorOpen
         busyTicketCode={null}
         sendingTicketUniqueId={null}
         {...handlers}
