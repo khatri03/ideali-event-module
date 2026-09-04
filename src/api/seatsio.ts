@@ -1,6 +1,7 @@
 import { isAxiosError } from "axios"
 import { z } from "zod"
 import { client } from "@/api/client"
+import { assertSuccess } from "@/api/serviceResponse"
 import type { PaginatedResponse, ServiceResponse } from "@/api/types"
 import { API_ROUTES } from "@/utils/routes"
 
@@ -408,7 +409,13 @@ export async function updateSeatsIoChartCategory(
 }
 
 export async function deleteSeatsIoChartCategory(chartUniqueId: string, categoryUniqueId: string): Promise<void> {
-  await client.delete(API_ROUTES.seatsIoChartCategory(chartUniqueId, categoryUniqueId))
+  const res = await client.delete<unknown>(API_ROUTES.seatsIoChartCategory(chartUniqueId, categoryUniqueId))
+
+  // A 200 whose envelope reports failure would otherwise read as a deletion that never happened; a delete
+  // answered with no body at all carries no such claim and stays a success.
+  if (res.data && typeof res.data === "object") {
+    assertSuccess(res.data, "Failed to delete the category.")
+  }
 }
 
 export async function createSessionSeatsIoEvent(
