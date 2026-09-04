@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom"
 import { type OrganizerEventListItem, updateEventWizardSetupState } from "@/api/events"
 import { toaster } from "@/lib/toaster"
 import { APP_ROUTES } from "@/utils/routes"
+import { formatSoldPercentage, resolveTotalTickets } from "@/utils/ticketSales"
 
 interface OrganizerEventTableRowProps {
   event: OrganizerEventListItem
@@ -80,8 +81,8 @@ export function OrganizerEventTableRow({ event }: OrganizerEventTableRowProps) {
     normalizedSetupState === "readytoreview"
   const isOnline = normalizedSetupState === "readyforsale"
   const isOffline = normalizedSetupState === "readyforreview" || normalizedSetupState === "readytoreview"
-  const totalTickets = event.totalAvailableTickets + event.ticketsSold
-  const soldPct = totalTickets > 0 ? Math.round((event.ticketsSold / totalTickets) * 100) : 0
+  const totalTickets = resolveTotalTickets(event)
+  const soldLabel = formatSoldPercentage(event.ticketsSold, totalTickets)
   const statusColor = event.isCancelled ? "red" : normalizedSetupState === "readyforsale" ? "green" : normalizedSetupState === "readyforreview" ? "orange" : "gray"
   const pendingTransition = pendingStatusAction ? STATUS_TRANSITIONS[pendingStatusAction] : null
   const registrationUrl = new URL(APP_ROUTES.eventRegister(event.uniqueId), window.location.origin).toString()
@@ -374,7 +375,7 @@ export function OrganizerEventTableRow({ event }: OrganizerEventTableRowProps) {
           {event.ticketsSold.toLocaleString()} / {totalTickets.toLocaleString()}
         </Text>
         <Text fontSize="xs" color="text.secondary">
-          {soldPct}% sold
+          {soldLabel} sold
         </Text>
       </Table.Cell>
       <Dialog.Root

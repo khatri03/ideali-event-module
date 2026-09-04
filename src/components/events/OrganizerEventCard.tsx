@@ -8,6 +8,7 @@ import { updateEventWizardSetupState } from "@/api/events"
 import type { OrganizerEventListItem } from "@/api/events"
 import { APP_ROUTES } from "@/utils/routes"
 import { hasEventInvoiceHistory, normalizeSetupStateToken } from "@/utils/eventLifecycle"
+import { formatSoldPercentage, resolveTotalTickets, soldProgressWidth } from "@/utils/ticketSales"
 
 const SETUP_STATE_LABELS: Record<string, string> = {
   InProgress: "In Progress",
@@ -59,8 +60,8 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
   const [pendingStatusAction, setPendingStatusAction] = useState<StatusTransitionKey | null>(null)
   const [isCopyToastVisible, setIsCopyToastVisible] = useState(false)
   const statusMenuPlacement: "bottom-start" | "right-start" = useBreakpointValue({ base: "bottom-start", sm: "right-start" }) ?? "right-start"
-  const totalTickets = event.totalAvailableTickets + event.ticketsSold
-  const soldPct = totalTickets > 0 ? Math.round((event.ticketsSold / totalTickets) * 100) : 0
+  const totalTickets = resolveTotalTickets(event)
+  const soldLabel = formatSoldPercentage(event.ticketsSold, totalTickets)
   const statusLabel = formatSetupState(event.setupState, event.isCancelled)
   const statusColor = event.isCancelled ? "red" : SETUP_STATE_COLORS[event.setupState] ?? "gray"
   const startDate = event.startDate ? format(new Date(event.startDate), "MMM d, yyyy") : "Not set"
@@ -588,7 +589,7 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
               </Text>
             </Flex>
             <Text fontSize="xs" fontWeight="700" style={{ color: event.themeColor ?? "#7551FF" }} alignSelf={{ base: "flex-end", sm: "auto" }}>
-              {soldPct}%
+              {soldLabel}
             </Text>
           </Flex>
 
@@ -597,7 +598,7 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
               h="full"
               borderRadius="full"
               style={{
-                width: `${Math.min(soldPct, 100)}%`,
+                width: `${soldProgressWidth(event.ticketsSold, totalTickets)}%`,
                 background: `linear-gradient(90deg, ${event.themeColor ?? "#7551FF"}, ${event.themeColor ?? "#7551FF"}cc)`,
               }}
               transition="width 0.4s ease"

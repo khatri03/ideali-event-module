@@ -21,12 +21,13 @@ function buildEvent(overrides: Partial<OrganizerEventListItem> = {}): OrganizerE
     bookingStartDate: null,
     bookingEndDate: null,
     totalAvailableTickets: 10,
+    totalTickets: 10,
     ticketsSold: 0,
     ...overrides,
   }
 }
 
-async function openActionsMenu(event: OrganizerEventListItem) {
+function renderCard(event: OrganizerEventListItem) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
   render(
@@ -38,6 +39,10 @@ async function openActionsMenu(event: OrganizerEventListItem) {
       </QueryClientProvider>
     </ChakraProvider>,
   )
+}
+
+async function openActionsMenu(event: OrganizerEventListItem) {
+  renderCard(event)
 
   await userEvent.click(screen.getByRole("button", { name: "Event actions" }))
 }
@@ -84,5 +89,23 @@ describe("OrganizerEventCard", () => {
     await openActionsMenu(buildEvent({ setupState: "ReadyForReview", ticketsSold: 3 }))
 
     expect(await screen.findByRole("menuitem", { name: /invoice/i })).toBeInTheDocument()
+  })
+
+  /**
+   * Tickets sitting in open baskets are neither sold nor buyable. Counting the room as what is left plus
+   * what is sold would shrink it whenever a stranger started a checkout, so the card reads the capacity the
+   * server states.
+   */
+  it("TicketsHeldInOpenBaskets_StillCountTowardsTheRoomOnTheCard", () => {
+    renderCard(buildEvent({ totalTickets: 4462, totalAvailableTickets: 4400, ticketsSold: 10 }))
+
+    expect(screen.getByText("10 / 4,462 tickets sold")).toBeInTheDocument()
+  })
+
+  /** A room that has started selling must not read the same as one that has sold nothing. */
+  it("FirstSalesInALargeRoom_AreNotReportedAsNoSalesAtAll", () => {
+    renderCard(buildEvent({ totalTickets: 4462, totalAvailableTickets: 4400, ticketsSold: 10 }))
+
+    expect(screen.getByText("<1%")).toBeInTheDocument()
   })
 })

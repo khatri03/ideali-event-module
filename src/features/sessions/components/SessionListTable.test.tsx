@@ -18,6 +18,7 @@ function session(overrides: Partial<SessionListItem> = {}): SessionListItem {
     startDate: "2026-08-17T18:00:00Z",
     endDate: "2026-08-17T21:00:00Z",
     totalAvailableTickets: 80,
+    totalTickets: 100,
     ticketsSold: 20,
     genreNames: [],
     ...overrides,
@@ -83,5 +84,15 @@ describe("SessionListTable", () => {
 
     expect(onOpenSession).toHaveBeenCalledWith("session-1")
     expect(onCheckInSession).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The room a sale count is read against is what was put on sale. Rebuilding it from what is still buyable
+   * would leave out the tickets held in open baskets and understate the session.
+   */
+  it("ReportsTheStatedCapacityRatherThanWhatIsStillBuyable", () => {
+    renderTable([session({ totalTickets: 100, totalAvailableTickets: 70, ticketsSold: 10 })])
+
+    expect(screen.getByText("10% sold of 100")).toBeInTheDocument()
   })
 })

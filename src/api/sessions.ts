@@ -167,6 +167,8 @@ const sessionListItemSchema = z.object({
   endDate: z.string().nullable().optional(),
   TotalAvailableTickets: z.number().int().optional(),
   totalAvailableTickets: z.number().int().optional(),
+  TotalTickets: z.number().int().optional(),
+  totalTickets: z.number().int().optional(),
   TicketsSold: z.number().int().optional(),
   ticketsSold: z.number().int().optional(),
   GenreNames: z.array(z.string()).optional(),
@@ -495,6 +497,7 @@ export interface SessionListItem {
   startDate: string | null
   endDate: string | null
   totalAvailableTickets: number
+  totalTickets: number
   ticketsSold: number
   genreNames: string[]
 }
@@ -1095,6 +1098,7 @@ function parseSessionListItem(item: z.infer<typeof sessionListItemSchema>): Sess
     startDate: item.StartDate ?? item.startDate ?? null,
     endDate: item.EndDate ?? item.endDate ?? null,
     totalAvailableTickets: item.TotalAvailableTickets ?? item.totalAvailableTickets ?? 0,
+    totalTickets: item.TotalTickets ?? item.totalTickets ?? 0,
     ticketsSold: item.TicketsSold ?? item.ticketsSold ?? 0,
     genreNames: item.GenreNames ?? item.genreNames ?? [],
   }

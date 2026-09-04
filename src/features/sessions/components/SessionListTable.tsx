@@ -2,6 +2,7 @@ import { format } from "date-fns"
 import { Box, Badge, Button, Flex, HStack, Menu, Portal, Skeleton, SkeletonText, Table, Text } from "@chakra-ui/react"
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpDown, CalendarDays, Eye, MapPin, MoreHorizontal, PencilLine, ScanLine } from "lucide-react"
 import { type SessionListItem } from "@/api/sessions"
+import { formatSoldPercentage, resolveTotalTickets } from "@/utils/ticketSales"
 
 export type SessionSortBy = "name" | "eventName" | "venue" | "bookingStatus" | "seatEnabled" | "startDate" | "endDate" | "ticketsSold"
 export type SessionSortOrder = "asc" | "desc"
@@ -34,10 +35,6 @@ const actionButtonStyles = {
   color: "text.primary",
   _hover: { bg: "gray.50", borderColor: "gray.200" },
   _dark: { bg: "navy.800", borderColor: "whiteAlpha.200", _hover: { bg: "whiteAlpha.100" } },
-}
-
-function buildTotalTickets(session: SessionListItem) {
-  return session.totalAvailableTickets + session.ticketsSold
 }
 
 function formatSessionDate(date: string | null) {
@@ -219,8 +216,8 @@ export function SessionListTable({
           </Table.Header>
           <Table.Body>
             {sessions.map((session) => {
-              const totalTickets = buildTotalTickets(session)
-              const soldPct = totalTickets > 0 ? Math.round((session.ticketsSold / totalTickets) * 100) : 0
+              const totalTickets = resolveTotalTickets(session)
+              const soldLabel = formatSoldPercentage(session.ticketsSold, totalTickets)
 
               return (
                 <Table.Row key={session.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
@@ -380,7 +377,7 @@ export function SessionListTable({
                       {session.ticketsSold.toLocaleString()}
                     </Text>
                     <Text fontSize="xs" color="text.secondary">
-                      {soldPct}% sold of {totalTickets.toLocaleString()}
+                      {soldLabel} sold of {totalTickets.toLocaleString()}
                     </Text>
                   </Table.Cell>
                 </Table.Row>

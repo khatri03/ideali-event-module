@@ -30,6 +30,7 @@ export interface OrganizerEventListItem {
   bookingStartDate: string | null
   bookingEndDate: string | null
   totalAvailableTickets: number
+  totalTickets: number
   ticketsSold: number
 }
 
@@ -102,6 +103,8 @@ const organizerEventListItemSchema = z.object({
   bookingEndDate: z.string().nullable().optional(),
   TotalAvailableTickets: z.number().int().optional(),
   totalAvailableTickets: z.number().int().optional(),
+  TotalTickets: z.number().int().optional(),
+  totalTickets: z.number().int().optional(),
   TicketsSold: z.number().int().optional(),
   ticketsSold: z.number().int().optional(),
 })
@@ -734,6 +737,7 @@ function normalizeOrganizerEventListItem(item: z.infer<typeof organizerEventList
     bookingStartDate: item.BookingStartDate ?? item.bookingStartDate ?? null,
     bookingEndDate: item.BookingEndDate ?? item.bookingEndDate ?? null,
     totalAvailableTickets: item.TotalAvailableTickets ?? item.totalAvailableTickets ?? 0,
+    totalTickets: item.TotalTickets ?? item.totalTickets ?? 0,
     ticketsSold: item.TicketsSold ?? item.ticketsSold ?? 0,
   }
 }
