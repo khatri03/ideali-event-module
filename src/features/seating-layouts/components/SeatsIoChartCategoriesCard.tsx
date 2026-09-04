@@ -324,8 +324,8 @@ export function SeatsIoChartCategoriesCard({
                                   aria-label={`Edit category ${category.name}`}
                                   borderRadius="full"
                                   minH="11"
-                                  w="40px"
-                                  minW="40px"
+                                  w="44px"
+                                  minW="44px"
                                   p={0}
                                   onClick={() => openEditCategoryDialog(category)}
                                 >
@@ -346,8 +346,8 @@ export function SeatsIoChartCategoriesCard({
                                   aria-label={`Delete category ${category.name}`}
                                   borderRadius="full"
                                   minH="11"
-                                  w="40px"
-                                  minW="40px"
+                                  w="44px"
+                                  minW="44px"
                                   p={0}
                                   onClick={() => requestDeleteCategory(category)}
                                 >
