@@ -31,6 +31,19 @@ interface ServiceFailureBody {
 
 const CART_CAPABILITY_ERROR_CODE = "cart_capability_required"
 
+const CATEGORY_IN_USE_ERROR_CODE = "CategoryInUse"
+
+/**
+ * The chart category still holds seats or areas, so deleting it is refused and will keep being refused until
+ * those objects are moved in the designer. Callers use this to stop offering a delete that cannot succeed.
+ */
+export function isCategoryInUseError(err: unknown): boolean {
+  if (!isAxiosError(err)) return false
+
+  const body = err.response?.data as ServiceFailureBody | undefined
+  return (body?.ErrorCode ?? body?.errorCode) === CATEGORY_IN_USE_ERROR_CODE
+}
+
 /**
  * The cart's capability cookie no longer reaches the server - it was never sent, it expired, or it
  * belongs to a different cart. Every later call on that cart is refused identically, so the session is

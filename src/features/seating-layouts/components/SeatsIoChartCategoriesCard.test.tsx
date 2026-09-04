@@ -22,6 +22,14 @@ vi.mock("@/api/seatsio", async (importOriginal) => {
 
 vi.mock("@/lib/toaster", () => ({ toaster: { create: vi.fn() } }))
 
+/** The refusal the API answers a delete with while seats are still drawn against the category. */
+function categoryInUseFailure() {
+  return Object.assign(new Error("Request failed"), {
+    isAxiosError: true,
+    response: { status: 400, data: { message: CATEGORY_IN_USE_MESSAGE, errorCode: "CategoryInUse" } },
+  })
+}
+
 /** Renders the card with its own query client, so one test's cache never decides another's result. */
 function renderCard() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
@@ -64,12 +72,7 @@ describe("SeatsIoChartCategoriesCard", () => {
    */
   it("keeps the dialog open and shows why when the category is still assigned to seats", async () => {
     const user = userEvent.setup()
-    seatsIoApi.deleteSeatsIoChartCategory.mockRejectedValue(
-      Object.assign(new Error("Request failed"), {
-        isAxiosError: true,
-        response: { status: 400, data: { message: CATEGORY_IN_USE_MESSAGE } },
-      }),
-    )
+    seatsIoApi.deleteSeatsIoChartCategory.mockRejectedValue(categoryInUseFailure())
 
     renderCard()
 
@@ -79,6 +82,53 @@ describe("SeatsIoChartCategoriesCard", () => {
 
     expect(await screen.findByText(CATEGORY_IN_USE_MESSAGE)).toBeInTheDocument()
     expect(screen.getByText('Delete "Stalls" from Seats.io and our database.')).toBeInTheDocument()
+  })
+
+  /**
+   * Once the seats behind the refusal are known, pressing delete again can only produce the same refusal. The
+   * action is withdrawn instead of being left on screen inviting a press that cannot work.
+   */
+  it("withdraws the delete once the category is known to be assigned to seats", async () => {
+    const user = userEvent.setup()
+    seatsIoApi.deleteSeatsIoChartCategory.mockRejectedValue(categoryInUseFailure())
+
+    renderCard()
+
+    await screen.findByText("Stalls")
+    await user.click(screen.getByRole("button", { name: "Delete category Stalls" }))
+    await user.click(await screen.findByRole("button", { name: "Delete" }))
+    await screen.findByText(CATEGORY_IN_USE_MESSAGE)
+
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument())
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument()
+    expect(
+      screen.getByText("Move its seats to another category in the designer, then delete it."),
+    ).toBeInTheDocument()
+  })
+
+  /**
+   * The refusal outlives the dialog: the seats are still assigned after it closes, so the row's delete stops
+   * being offered too rather than walking the organizer back into the same dead end.
+   */
+  it("stops offering the row delete for a category the seats are still assigned to", async () => {
+    const user = userEvent.setup()
+    seatsIoApi.deleteSeatsIoChartCategory.mockRejectedValue(categoryInUseFailure())
+
+    renderCard()
+
+    await screen.findByText("Stalls")
+    const rowDelete = screen.getByRole("button", { name: "Delete category Stalls" })
+    await user.click(rowDelete)
+    await user.click(await screen.findByRole("button", { name: "Delete" }))
+    await screen.findByText(CATEGORY_IN_USE_MESSAGE)
+    await user.click(screen.getByRole("button", { name: "Close" }))
+
+    await waitFor(() => expect(rowDelete).toHaveAttribute("aria-disabled", "true"))
+
+    await user.click(rowDelete)
+
+    expect(screen.queryByText('Delete "Stalls" from Seats.io and our database.')).not.toBeInTheDocument()
+    expect(seatsIoApi.deleteSeatsIoChartCategory).toHaveBeenCalledTimes(1)
   })
 
   /** A category nothing is drawn against is deleted, and the dialog closes rather than lingering. */

@@ -16,7 +16,7 @@ import {
   Tooltip,
 } from "@chakra-ui/react"
 import { Edit3, Plus, Trash2 } from "lucide-react"
-import { extractApiError } from "@/utils/errors"
+import { extractApiError, isCategoryInUseError } from "@/utils/errors"
 import { type SeatsIoChartCategory } from "@/api/seatsio"
 import {
   useCreateSeatsIoChartCategory,
@@ -75,6 +75,9 @@ export function SeatsIoChartCategoriesCard({
   const [pendingDeleteCategory, setPendingDeleteCategory] = useState<SeatsIoChartCategory | null>(null)
   const [formError, setFormError] = useState("")
   const [deleteError, setDeleteError] = useState("")
+  // A category Seats.io reported as still holding objects. The refusal will repeat until the objects are moved in
+  // the designer, so the delete stops being offered for it rather than being offered and refused again.
+  const [categoriesAssignedToObjects, setCategoriesAssignedToObjects] = useState<ReadonlySet<string>>(new Set())
 
   const categoriesQuery = useSeatsIoChartCategories(normalizedChartUniqueId, isEnabled)
   const createCategoryMutation = useCreateSeatsIoChartCategory()
@@ -202,6 +205,10 @@ export function SeatsIoChartCategoriesCard({
       closeDeleteDialog()
       onCategoriesChanged?.()
     } catch (error) {
+      if (isCategoryInUseError(error)) {
+        setCategoriesAssignedToObjects((current) => new Set(current).add(pendingDeleteCategory.uniqueId))
+      }
+
       setDeleteError(extractApiError(error))
     }
   }
@@ -209,6 +216,10 @@ export function SeatsIoChartCategoriesCard({
   if (!normalizedChartUniqueId || !isEnabled) {
     return null
   }
+
+  const isPendingCategoryAssignedToObjects = Boolean(
+    pendingDeleteCategory && categoriesAssignedToObjects.has(pendingDeleteCategory.uniqueId)
+  )
 
   return (
     <>
@@ -302,6 +313,8 @@ export function SeatsIoChartCategoriesCard({
                   </Table.Row>
                 ) : (
                   categories.map((category) => {
+                    const isAssignedToObjects = categoriesAssignedToObjects.has(category.uniqueId)
+
                     return (
                       <Table.Row key={category.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
                         <Table.Cell px={5} py={4}>
@@ -349,13 +362,28 @@ export function SeatsIoChartCategoriesCard({
                                   w="44px"
                                   minW="44px"
                                   p={0}
-                                  onClick={() => requestDeleteCategory(category)}
+                                  // Left focusable and hoverable rather than disabled, so the tooltip can say why
+                                  // the delete is not on offer instead of leaving a dead grey button.
+                                  aria-disabled={isAssignedToObjects}
+                                  opacity={isAssignedToObjects ? 0.5 : 1}
+                                  cursor={isAssignedToObjects ? "not-allowed" : "pointer"}
+                                  onClick={() => {
+                                    if (isAssignedToObjects) {
+                                      return
+                                    }
+
+                                    requestDeleteCategory(category)
+                                  }}
                                 >
                                   <Trash2 size={15} />
                                 </Button>
                               </Tooltip.Trigger>
                               <Tooltip.Positioner>
-                                <Tooltip.Content>Delete category</Tooltip.Content>
+                                <Tooltip.Content>
+                                  {isAssignedToObjects
+                                    ? "Seats are assigned to this category. Move them to another category in the designer first."
+                                    : "Delete category"}
+                                </Tooltip.Content>
                               </Tooltip.Positioner>
                             </Tooltip.Root>
                           </Flex>
@@ -535,7 +563,9 @@ export function SeatsIoChartCategoriesCard({
                     {pendingDeleteCategory?.name}
                   </Text>
                   <Text mt={1} fontSize="sm" color="red.600">
-                    Are you sure you want to delete this category?
+                    {isPendingCategoryAssignedToObjects
+                      ? "Move its seats to another category in the designer, then delete it."
+                      : "Are you sure you want to delete this category?"}
                   </Text>
                 </Box>
 
@@ -569,22 +599,26 @@ export function SeatsIoChartCategoriesCard({
                 minW={{ base: "full", md: "140px" }}
                 onClick={closeDeleteDialog}
               >
-                Cancel
+                {isPendingCategoryAssignedToObjects ? "Close" : "Cancel"}
               </Button>
 
-              <Button
-                type="button"
-                borderRadius="14px"
-                h="44px"
-                px={6}
-                minW={{ base: "full", md: "140px" }}
-                color="white"
-                colorPalette="red"
-                loading={deleteCategoryMutation.isPending}
-                onClick={() => void handleDeleteCategory()}
-              >
-                Delete
-              </Button>
+              {/* The refusal is final until the seats are moved in the designer, so the delete is withdrawn rather
+                  than left there to be pressed into the same refusal again. */}
+              {isPendingCategoryAssignedToObjects ? null : (
+                <Button
+                  type="button"
+                  borderRadius="14px"
+                  h="44px"
+                  px={6}
+                  minW={{ base: "full", md: "140px" }}
+                  color="white"
+                  colorPalette="red"
+                  loading={deleteCategoryMutation.isPending}
+                  onClick={() => void handleDeleteCategory()}
+                >
+                  Delete
+                </Button>
+              )}
             </Flex>
           </Dialog.Content>
         </Dialog.Positioner>
