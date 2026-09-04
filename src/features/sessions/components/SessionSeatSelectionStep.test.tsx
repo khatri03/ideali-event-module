@@ -5,8 +5,6 @@ import { ChakraProvider } from "@chakra-ui/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { system } from "@/theme"
 import { SessionWizardActionsProvider, useSessionWizardActions } from "../hooks/useSessionWizardActions"
-import { SessionWizardPreviewProvider } from "../hooks/useSessionWizardPreview"
-import { SessionWizardPreviewPanel } from "./SessionWizardPreviewPanel"
 import { SessionSeatSelectionStep } from "./SessionSeatSelectionStep"
 
 const {
@@ -16,6 +14,7 @@ const {
   fetchSessionWizardSeatSelectionMock,
   fetchSeatsIoVenueChartsMock,
   fetchSeatsIoChartEventsMock,
+  refreshSeatsIoSeatingLayoutThumbnailMock,
 } = vi.hoisted(() => ({
   fetchOrganizerVenuesMock: vi.fn(),
   fetchSessionWizardNameMock: vi.fn(),
@@ -23,6 +22,7 @@ const {
   fetchSessionWizardSeatSelectionMock: vi.fn(),
   fetchSeatsIoVenueChartsMock: vi.fn(),
   fetchSeatsIoChartEventsMock: vi.fn(),
+  refreshSeatsIoSeatingLayoutThumbnailMock: vi.fn(),
 }))
 
 vi.mock("@/api/organizer", async (importOriginal) => {
@@ -46,6 +46,7 @@ vi.mock("@/api/seatsio", async (importOriginal) => {
     ...actual,
     fetchSeatsIoVenueCharts: fetchSeatsIoVenueChartsMock,
     fetchSeatsIoChartEvents: fetchSeatsIoChartEventsMock,
+    refreshSeatsIoSeatingLayoutThumbnail: refreshSeatsIoSeatingLayoutThumbnailMock,
   }
 })
 
@@ -74,10 +75,6 @@ function chart(overrides: {
   }
 }
 
-/**
- * Mounts the step beside the wizard's preview panel, the way the wizard does. The step names the layout and the panel
- * pictures it, so neither half proves on its own that the organizer sees the right room.
- */
 function renderStep({ withCachedSeatSelection = false } = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -97,11 +94,8 @@ function renderStep({ withCachedSeatSelection = false } = {}) {
     <ChakraProvider value={system}>
       <QueryClientProvider client={queryClient}>
         <SessionWizardActionsProvider>
-          <SessionWizardPreviewProvider>
-            <SessionSeatSelectionStep sessionId={SESSION_ID} />
-            <SessionWizardPreviewPanel />
-            <PrimaryActionProbe />
-          </SessionWizardPreviewProvider>
+          <SessionSeatSelectionStep sessionId={SESSION_ID} />
+          <PrimaryActionProbe />
         </SessionWizardActionsProvider>
       </QueryClientProvider>
     </ChakraProvider>,
@@ -143,6 +137,7 @@ describe("SessionSeatSelectionStep chart preview", () => {
       seatsIoEventLabel: null,
     })
     fetchSeatsIoChartEventsMock.mockResolvedValue([])
+    refreshSeatsIoSeatingLayoutThumbnailMock.mockResolvedValue({ uniqueId: GALLERY_ID, thumbnailUrl: null })
     fetchSeatsIoVenueChartsMock.mockResolvedValue([
       chart({
         uniqueId: GROUND_FLOOR_ID,
@@ -250,5 +245,50 @@ describe("SessionSeatSelectionStep chart preview", () => {
 
     expect(await screen.findAllByText("CME 2026")).not.toHaveLength(0)
     expect(screen.queryByText(/^session-[0-9a-f]/)).not.toBeInTheDocument()
+  })
+
+  /**
+   * A layout published in Seats.io itself never reaches the callback the embedded designer fires, so its picture is
+   * missing from our own record and a published room reads as unpublished. The step asks for the picture again rather
+   * than telling the organizer to publish something they already published.
+   */
+  it("asks Seats.io for the picture of a layout it has none for", async () => {
+    renderStep()
+
+    await selectChart(GALLERY_NAME)
+
+    await waitFor(() => expect(refreshSeatsIoSeatingLayoutThumbnailMock).toHaveBeenCalledTimes(1))
+    expect(refreshSeatsIoSeatingLayoutThumbnailMock.mock.calls[0][0]).toBe(GALLERY_ID)
+  })
+
+  /**
+   * A layout with no published version answers with no picture however often it is asked. Asking again on every
+   * render would put the wizard in a request loop against Seats.io for as long as the step stays open.
+   */
+  it("asks for a missing picture once rather than on every render", async () => {
+    renderStep()
+
+    await selectChart(GALLERY_NAME)
+    await waitFor(() => expect(refreshSeatsIoSeatingLayoutThumbnailMock).toHaveBeenCalledTimes(1))
+
+    await userEvent.click(chartPicker())
+    await userEvent.click(await screen.findByRole("option", { name: new RegExp(GROUND_FLOOR_NAME, "i") }))
+    await userEvent.click(chartPicker())
+    await userEvent.click(await screen.findByRole("option", { name: new RegExp(GALLERY_NAME, "i") }))
+
+    expect(refreshSeatsIoSeatingLayoutThumbnailMock).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * A layout that already has its picture needs nothing fetched. Asking anyway spends a Seats.io call on every chart
+   * an organizer clicks through.
+   */
+  it("leaves a layout that already has a picture alone", async () => {
+    renderStep()
+
+    await selectChart(GROUND_FLOOR_NAME)
+    await screen.findByAltText(`Seating layout preview for ${GROUND_FLOOR_NAME}`)
+
+    expect(refreshSeatsIoSeatingLayoutThumbnailMock).not.toHaveBeenCalled()
   })
 })

@@ -1,5 +1,4 @@
 export { SessionWizardStepper } from "./SessionWizardStepper"
-export { SessionWizardPreviewPanel } from "./SessionWizardPreviewPanel"
 export { SessionTicketStep } from "./SessionTicketStep"
 export { SessionUtcDateTimeField } from "./SessionUtcDateTimeField"
 export { SessionTicketPricePeriodsSection } from "./SessionTicketPricePeriodsSection"

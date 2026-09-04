@@ -1,8 +1,8 @@
 import { Box, Image, Link, Text, Tooltip, VStack } from "@chakra-ui/react"
 import { ExternalLink, ImageOff } from "lucide-react"
 
-/** How much room the preview is given: a row-sized thumbnail, or the large view a preview panel affords. */
-export type SeatingLayoutPreviewSize = "thumbnail" | "panel"
+/** How much room the preview is given: a row-sized thumbnail, or the large view a form column affords. */
+export type SeatingLayoutPreviewSize = "thumbnail" | "expanded"
 
 interface SeatingLayoutPreviewLinkProps {
   /** Layout name, used to say which layout the preview belongs to. */
@@ -17,7 +17,7 @@ interface SeatingLayoutPreviewLinkProps {
 
 const SIZES = {
   thumbnail: { w: "132px", h: "84px" },
-  panel: { w: "full", h: { base: "220px", md: "300px", lg: "340px" } },
+  expanded: { w: { base: "full", md: "380px" }, h: { base: "220px", md: "260px" } },
 } as const
 
 const OPEN_PREVIEW_HINT = "Opens the full layout on Seats.io in a new tab"

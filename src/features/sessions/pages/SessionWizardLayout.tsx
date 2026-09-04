@@ -6,9 +6,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Sparkles } from "lucide-react"
 import { APP_ROUTES } from "@/utils/routes"
 import { fetchSessionWizardSetupStateOptions, skipSessionWizardStep } from "@/api/sessions"
 import { SessionWizardStepper } from "../components/SessionWizardStepper"
-import { SessionWizardPreviewPanel } from "../components/SessionWizardPreviewPanel"
 import { SessionWizardActionsProvider, useSessionWizardActions } from "../hooks/useSessionWizardActions"
-import { SessionWizardPreviewProvider } from "../hooks/useSessionWizardPreview"
 import { getSessionWizardStepNumber, useSessionWizardNavigation } from "../hooks/useSessionWizard"
 import { useSessionWizardSetupState } from "../hooks/useSessionWizardSetupState"
 import { useSessionWizardProgress } from "../hooks/useSessionWizardProgress"
@@ -54,12 +52,41 @@ function WizardLoadingState() {
   )
 }
 
+/** Stands in for the live session preview this column is reserved for, so the space reads as pending, not broken. */
+function PreviewFrame() {
+  return (
+    <Box
+      w="full"
+      minH={{ base: "240px", md: "320px" }}
+      borderRadius="24px"
+      border="1px dashed"
+      borderColor="gray.200"
+      bg="gray.50"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      px={6}
+      py={8}
+    >
+      <Stack gap={2} align="center" textAlign="center" maxW="280px">
+        <Text fontSize="xs" fontWeight="800" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
+          Preview
+        </Text>
+        <Text fontSize={{ base: "sm", md: "md" }} fontWeight="700" color="gray.700">
+          Preview container only
+        </Text>
+        <Text fontSize="sm" color="gray.500">
+          Device mockups are hidden for now.
+        </Text>
+      </Stack>
+    </Box>
+  )
+}
+
 export function SessionWizardLayout() {
   return (
     <SessionWizardActionsProvider>
-      <SessionWizardPreviewProvider>
-        <SessionWizardLayoutContent />
-      </SessionWizardPreviewProvider>
+      <SessionWizardLayoutContent />
     </SessionWizardActionsProvider>
   )
 }
@@ -337,7 +364,7 @@ function SessionWizardLayoutContent() {
                   >
                     Preview
                   </Text>
-                  <SessionWizardPreviewPanel />
+                  <PreviewFrame />
                 </Stack>
               </Box>
             </Grid>

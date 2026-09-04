@@ -115,6 +115,11 @@ export async function openSeatSelectionStep(page: Page, width: number, height: n
   await page.route("**/api/organizer/seatsio/seating-layouts/*/events", (route) =>
     route.fulfill({ json: envelope([]) }),
   )
+  // The step asks Seats.io again for a layout it has no picture for. The unpublished chart here has none to give, so
+  // the answer keeps it unpublished rather than letting the test reach the vendor for one.
+  await page.route("**/api/organizer/seatsio/seating-layouts/*/thumbnail", (route) =>
+    route.fulfill({ json: envelope({ thumbnailUrl: null, previewUrl: null }) }),
+  )
   await page.route("**/api/organizer/sessions/**", fulfilSessionRead)
   await page.route(THUMBNAIL_URL, (route) =>
     route.fulfill({ contentType: "image/png", body: THUMBNAIL_PNG }),

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Box,
@@ -24,9 +24,9 @@ import {
 } from "@/api/seatsio"
 import { fetchSessionWizardName, fetchSessionWizardSeatSelection, fetchSessionWizardVenue, updateSessionWizardSeatSelection } from "@/api/sessions"
 import { StyledSelect } from "@/components/common/StyledSelect"
+import { SeatingLayoutPreviewLink, useRefreshSeatingLayoutThumbnail } from "@/features/seating-layouts"
 import { extractApiError } from "@/utils/errors"
 import { useSessionWizardActions } from "../hooks/useSessionWizardActions"
-import { useSessionWizardPreview } from "../hooks/useSessionWizardPreview"
 
 interface SessionSeatSelectionStepProps {
   sessionId: string
@@ -49,7 +49,8 @@ function SessionSeatSelectionSkeleton() {
 export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStepProps) {
   const queryClient = useQueryClient()
   const { setPrimaryAction, setPrimaryActionReady } = useSessionWizardActions()
-  const { setPreview } = useSessionWizardPreview()
+  const refreshThumbnailMutation = useRefreshSeatingLayoutThumbnail()
+  const backfilledChartsRef = useRef(new Set<string>())
   const [draftOfferPickingSeats, setDraftOfferPickingSeats] = useState(false)
   const [draftSeatsIoEventUniqueId, setDraftSeatsIoEventUniqueId] = useState<string | null>(null)
   const [draftSeatsIoChartUniqueId, setDraftSeatsIoChartUniqueId] = useState<string | null>(null)
@@ -284,18 +285,20 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
   const isEventDisabled = !isSelectionEnabled || isFetchingChoices || !draftSeatsIoChartUniqueId
 
   useEffect(() => {
-    setPreview(
-      isSelectionEnabled && selectedChart
-        ? {
-            name: selectedChart.name,
-            thumbnailUrl: selectedChart.thumbnailUrl,
-            previewUrl: selectedChart.previewUrl,
-          }
-        : null,
-    )
-  }, [isSelectionEnabled, selectedChart, setPreview])
+    if (!selectedChart || selectedChart.thumbnailUrl || !selectedChart.seatsIoChartKey) {
+      return
+    }
 
-  useEffect(() => () => setPreview(null), [setPreview])
+    // A layout published in Seats.io itself never reaches the callback the designer fires, so its picture was never
+    // recorded and the step would report a published layout as unpublished. Asked once per layout, because a layout
+    // that genuinely has no published version answers with no picture and would otherwise be asked on every render.
+    if (backfilledChartsRef.current.has(selectedChart.uniqueId)) {
+      return
+    }
+
+    backfilledChartsRef.current.add(selectedChart.uniqueId)
+    refreshThumbnailMutation.mutate(selectedChart.uniqueId)
+  }, [refreshThumbnailMutation, selectedChart])
 
   async function handleCreateEvent() {
     const trimmedName = eventName.trim()
@@ -442,11 +445,19 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
                 </Text>
               ) : null}
               {isSelectionEnabled && selectedChart ? (
-                <Text mt={2} fontSize="sm" color="gray.600">
-                  {selectedChart.thumbnailUrl
-                    ? "The preview panel shows this layout as it is published on Seats.io."
-                    : "This layout has not been published on Seats.io yet, so there is no preview to show."}
-                </Text>
+                <Stack mt={3} gap={2} minW={0}>
+                  <SeatingLayoutPreviewLink
+                    name={selectedChart.name}
+                    thumbnailUrl={selectedChart.thumbnailUrl}
+                    previewUrl={selectedChart.previewUrl}
+                    size="expanded"
+                  />
+                  <Text fontSize="sm" color="gray.600">
+                    {selectedChart.thumbnailUrl
+                      ? `${selectedChart.name}, as it is published on Seats.io.`
+                      : `${selectedChart.name} has not been published on Seats.io yet.`}
+                  </Text>
+                </Stack>
               ) : null}
             </Box>
 
