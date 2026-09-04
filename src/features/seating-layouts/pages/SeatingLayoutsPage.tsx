@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { Badge, Box, Button, Flex, Heading, HStack, Skeleton, SkeletonText, Table, Text } from "@chakra-ui/react"
 import { ArrowLeft, ArrowRight, LayoutGrid, Plus } from "lucide-react"
@@ -6,7 +6,7 @@ import { APP_ROUTES } from "@/utils/routes"
 import type { SeatsIoSeatingLayout } from "@/api/seatsio"
 import { extractApiError } from "@/utils/errors"
 import { useSeatingLayouts } from "../hooks/useSeatingLayouts"
-import { SeatingLayoutsTableRow } from "../components"
+import { SeatingLayoutsTableRow, SeatingLayoutPreviewModal } from "../components"
 
 const PAGE_SIZE = 10
 
@@ -40,6 +40,7 @@ export function SeatingLayoutsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = Math.max(1, Number(searchParams.get("page") ?? "1") || 1)
   const query = useSeatingLayouts(page, PAGE_SIZE)
+  const [previewedLayout, setPreviewedLayout] = useState<SeatsIoSeatingLayout | null>(null)
 
   const pageNumbers = useMemo(
     () => buildPageNumbers(query.data?.page ?? page, query.data?.totalPages ?? 0),
@@ -54,6 +55,10 @@ export function SeatingLayoutsPage() {
 
   function handleEditLayout(layout: SeatsIoSeatingLayout) {
     navigate(APP_ROUTES.seatingLayouts.edit(layout.uniqueId))
+  }
+
+  function handlePreviewLayout(layout: SeatsIoSeatingLayout) {
+    setPreviewedLayout(layout)
   }
 
   if (query.isLoading && !query.data) {
@@ -136,6 +141,7 @@ export function SeatingLayoutsPage() {
                 <Table.ColumnHeader px={4} py={3} textAlign="center">
                   Actions
                 </Table.ColumnHeader>
+                <Table.ColumnHeader px={4} py={3}>Preview</Table.ColumnHeader>
                 <Table.ColumnHeader px={6} py={3}>Layout</Table.ColumnHeader>
                 <Table.ColumnHeader px={4} py={3}>Venue</Table.ColumnHeader>
                 <Table.ColumnHeader px={4} py={3}>Chart key</Table.ColumnHeader>
@@ -145,7 +151,7 @@ export function SeatingLayoutsPage() {
             <Table.Body>
               {layouts.length === 0 ? (
                 <Table.Row>
-                  <Table.Cell colSpan={5} py={12}>
+                  <Table.Cell colSpan={6} py={12}>
                     <Box textAlign="center">
                       <Text fontSize="lg" fontWeight="700" color="gray.900">
                         No seating layouts yet
@@ -162,7 +168,12 @@ export function SeatingLayoutsPage() {
                 </Table.Row>
               ) : (
                 layouts.map((layout) => (
-                  <SeatingLayoutsTableRow key={layout.uniqueId} layout={layout} onEdit={handleEditLayout} />
+                  <SeatingLayoutsTableRow
+                    key={layout.uniqueId}
+                    layout={layout}
+                    onEdit={handleEditLayout}
+                    onPreview={handlePreviewLayout}
+                  />
                 ))
               )}
             </Table.Body>
@@ -220,6 +231,8 @@ export function SeatingLayoutsPage() {
           </HStack>
         </Flex>
       </Box>
+
+      <SeatingLayoutPreviewModal layout={previewedLayout} onClose={() => setPreviewedLayout(null)} />
     </Box>
   )
 }

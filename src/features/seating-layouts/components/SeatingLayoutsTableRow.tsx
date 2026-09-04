@@ -4,10 +4,12 @@ import { CheckCircle2, CircleAlert, Edit3, MoreHorizontal } from "lucide-react"
 import { type SeatsIoSeatingLayout } from "@/api/seatsio"
 import { extractApiError } from "@/utils/errors"
 import { useSeatsIoChartValidation } from "../hooks/useSeatsIoChartValidation"
+import { SeatingLayoutPreviewButton } from "./SeatingLayoutPreviewButton"
 
 interface SeatingLayoutsTableRowProps {
   layout: SeatsIoSeatingLayout
   onEdit: (layout: SeatsIoSeatingLayout) => void
+  onPreview: (layout: SeatsIoSeatingLayout) => void
 }
 
 function SeatingLayoutsValidationCell({ layout }: { layout: SeatsIoSeatingLayout }) {
@@ -92,7 +94,7 @@ function SeatingLayoutsValidationCell({ layout }: { layout: SeatsIoSeatingLayout
   )
 }
 
-function SeatingLayoutsTableRowComponent({ layout, onEdit }: SeatingLayoutsTableRowProps) {
+function SeatingLayoutsTableRowComponent({ layout, onEdit, onPreview }: SeatingLayoutsTableRowProps) {
   return (
     <Table.Row key={layout.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
       <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} textAlign="center" verticalAlign="top">
@@ -150,6 +152,13 @@ function SeatingLayoutsTableRowComponent({ layout, onEdit }: SeatingLayoutsTable
             </Menu.Positioner>
           </Portal>
         </Menu.Root>
+      </Table.Cell>
+      <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4}>
+        <SeatingLayoutPreviewButton
+          name={layout.name}
+          thumbnailUrl={layout.thumbnailUrl}
+          onOpen={() => onPreview(layout)}
+        />
       </Table.Cell>
       <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={6} py={4}>
         <Box>

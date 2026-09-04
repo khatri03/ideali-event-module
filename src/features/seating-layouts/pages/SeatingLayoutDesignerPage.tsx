@@ -33,6 +33,8 @@ import { useSeatsIoSeatingLayoutDetail } from "../hooks/useSeatsIoSeatingLayoutD
 import { useSaveSeatsIoSeatingLayout } from "../hooks/useSaveSeatsIoSeatingLayout"
 import { seatingLayoutDesignerSchema, type SeatingLayoutDesignerValues } from "../schemas/seatingLayout.schemas"
 import { SeatsIoChartCategoriesCard } from "../components"
+import { useRefreshSeatingLayoutThumbnail } from "../hooks/useRefreshSeatingLayoutThumbnail"
+import { SUPPORTED_SEATSIO_REGIONS } from "../constants"
 
 function DesignerLoadingState() {
   return (
@@ -51,8 +53,6 @@ function DesignerLoadingState() {
   )
 }
 
-const SUPPORTED_SEATSIO_REGIONS = new Set<Region>(["eu", "na", "sa", "oc"])
-
 export function SeatingLayoutDesignerPage() {
   const navigate = useNavigate()
   const params = useParams<{ chartUniqueId?: string }>()
@@ -60,6 +60,7 @@ export function SeatingLayoutDesignerPage() {
   const isEditRoute = Boolean(routeChartUniqueId)
 
   const saveLayoutMutation = useSaveSeatsIoSeatingLayout()
+  const refreshThumbnailMutation = useRefreshSeatingLayoutThumbnail()
   const venuesQuery = useSeatingLayoutVenues()
   const layoutDetailQuery = useSeatsIoSeatingLayoutDetail(routeChartUniqueId, isEditRoute)
   const [layoutMode, setLayoutMode] = useState<"create" | "edit">(isEditRoute ? "edit" : "create")
@@ -241,6 +242,16 @@ export function SeatingLayoutDesignerPage() {
   const canRenderDesigner = Boolean(layoutMode === "edit" && isWorkspaceReady && hasSupportedRegion && layoutChartKey)
   const isCreateMode = layoutMode === "create"
   const chartUniqueId = routeChartUniqueId || layoutDetailQuery.data?.uniqueId || ""
+
+  function handleChartPublished() {
+    if (!chartUniqueId) {
+      return
+    }
+
+    // Publishing redraws the chart, so the preview the layout list shows is now the old drawing. The refresh is a
+    // background courtesy on top of a publish that already succeeded, so its own failure is not raised here.
+    refreshThumbnailMutation.mutate(chartUniqueId)
+  }
 
   function handleCategoriesChanged() {
     setIsDesignerRendered(false)
@@ -501,6 +512,7 @@ export function SeatingLayoutDesignerPage() {
                     onDesignerRenderingFailed={() => {
                       setDesignerError("Seats.io designer failed to render. Please verify the workspace secret key and region.")
                     }}
+                    onChartPublished={handleChartPublished}
                     onExitRequested={() => navigate(APP_ROUTES.seatingLayouts.list)}
                   />
                 </Box>

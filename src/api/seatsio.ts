@@ -48,6 +48,8 @@ const seatsIoSeatingLayoutSchema = z.object({
   name: z.string().nullable().optional(),
   SeatsIoChartKey: z.string().nullable().optional(),
   seatsIoChartKey: z.string().nullable().optional(),
+  ThumbnailUrl: z.string().nullable().optional(),
+  thumbnailUrl: z.string().nullable().optional(),
 })
 
 const seatsIoChartCategorySchema = z.object({
@@ -131,6 +133,8 @@ export interface SeatsIoSeatingLayout {
   venueName: string | null
   name: string
   seatsIoChartKey: string | null
+  /** Preview image Seats.io renders for the published chart; null when the chart has no published version. */
+  thumbnailUrl: string | null
 }
 
 export interface SeatsIoSeatingLayoutDetail extends SeatsIoSeatingLayout {
@@ -223,6 +227,7 @@ function normalizeSeatingLayout(item: z.infer<typeof seatsIoSeatingLayoutSchema>
     venueName: item.VenueName ?? item.venueName ?? null,
     name: item.Name ?? item.name ?? "",
     seatsIoChartKey: item.SeatsIoChartKey ?? item.seatsIoChartKey ?? null,
+    thumbnailUrl: item.ThumbnailUrl ?? item.thumbnailUrl ?? null,
   }
 }
 
@@ -336,6 +341,12 @@ export async function fetchSeatsIoSeatingLayouts(pageNo = 1, pageSize = 20): Pro
 
 export async function fetchSeatsIoSeatingLayoutDetail(chartUniqueId: string): Promise<SeatsIoSeatingLayoutDetail> {
   const res = await client.get<unknown>(API_ROUTES.seatsIoSeatingLayout(chartUniqueId))
+  const responseData = parseServiceResponseData(res.data)
+  return normalizeSeatingLayoutDetail(seatsIoSeatingLayoutDetailSchema.parse(responseData))
+}
+
+export async function refreshSeatsIoSeatingLayoutThumbnail(chartUniqueId: string): Promise<SeatsIoSeatingLayoutDetail> {
+  const res = await client.post<unknown>(API_ROUTES.seatsIoSeatingLayoutThumbnail(chartUniqueId))
   const responseData = parseServiceResponseData(res.data)
   return normalizeSeatingLayoutDetail(seatsIoSeatingLayoutDetailSchema.parse(responseData))
 }
