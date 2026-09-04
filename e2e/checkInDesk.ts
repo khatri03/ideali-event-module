@@ -33,6 +33,13 @@ const sessionResponse = envelope({
 const rosterResponse = envelope({
   sessionName: "Friday Dinner — Grand Ballroom",
   counts: { issued: 3, arrived: 1, expected: 2 },
+  // The desk runs its countdown off the server's clock rather than the tablet's, so the roster is
+  // rejected outright without it — a fixture missing this reads to the screen as an unreachable list.
+  serverTimeUtc: TIMESTAMP,
+  checkInOpensAtUtc: null,
+  checkInClosesAtUtc: null,
+  outstandingCurrency: null,
+  blockEntryUntilPaid: false,
   attendees: {
     pageNo: 1,
     pageSize: 20,

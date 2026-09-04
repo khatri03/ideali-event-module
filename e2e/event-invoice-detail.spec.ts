@@ -166,15 +166,19 @@ test("organizer can view, collapse, expand, and add invoice notes", async ({ pag
 
   await page.goto(`/organizer/events/invoices/${INVOICE_ID}`)
 
-  await expect(page.getByText("INV-2001")).toBeVisible()
-  const eventLinks = page.getByRole("link", { name: "Annual Convention" })
-  await expect(eventLinks).toHaveCount(2)
-  await expect(eventLinks.first()).toHaveAttribute("href", "/organizer/events/event-1")
-  await expect(eventLinks.first()).toHaveAttribute("target", "_blank")
-  await expect(page.getByText("Subtotal")).toBeVisible()
-  await expect(page.getByText("Sales Tax")).toBeVisible()
+  await expect(page.getByText("INV-2001", { exact: true })).toBeVisible()
+  // The event is named once, in the header. It opens in a new tab because the organizer reading an
+  // invoice is checking the event behind it, not leaving the invoice they are working on.
+  const eventLink = page.getByRole("link", { name: "Annual Convention" })
+  await expect(eventLink).toHaveCount(1)
+  await expect(eventLink).toHaveAttribute("href", "/organizer/events/event-1")
+  await expect(eventLink).toHaveAttribute("target", "_blank")
+  // Tax and card fee carry their rate in the label, so these match on the name and leave the rate to
+  // the money panel's own tests rather than pinning a percentage the organizer can change.
+  await expect(page.getByText("Line Item Total")).toBeVisible()
+  await expect(page.getByText(/^Sales Tax/)).toBeVisible()
   await expect(page.getByText("Platform Charges")).toBeVisible()
-  await expect(page.getByText("Credit Card Fee")).toBeVisible()
+  await expect(page.getByText(/^Credit Card Fee/)).toBeVisible()
   await expect(page.getByText("$75.56")).toBeVisible()
   await expect(page.getByText("$4.00")).toBeVisible()
   await expect(page.getByText("$5.00")).toBeVisible()
