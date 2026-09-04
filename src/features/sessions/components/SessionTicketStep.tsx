@@ -8,6 +8,7 @@ import {
   Dialog,
   Flex,
   Input,
+  InputGroup,
   SimpleGrid,
   Skeleton,
   Stack,
@@ -1304,44 +1305,49 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
 
                   <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                     <Box>
-                      <Flex align="center" justify="space-between" gap={3} mb={2} minH="11">
-                        <Text fontSize="sm" fontWeight="600" color="navy.700">
-                          Total Tickets <Text as="span" color="red.500">*</Text>
-                        </Text>
-                        {isSeatSelectionEnabled ? (
-                          <SeatsIoCategoryCapacityButton
-                            isBusy={capacityMutation.isPending}
-                            disabledReason={capacityDisabledReason}
-                            onPull={() => {
-                              void handlePullCapacity()
-                            }}
-                          />
-                        ) : null}
-                      </Flex>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        value={ticketTotalTickets}
-                        onChange={(event) => {
-                          setTicketTotalTickets(event.target.value.replace(/[^\d]/g, ""))
-                          setCapacityNotice("")
-                          if (ticketTotalTicketsError) {
-                            setTicketTotalTicketsError("")
-                          }
-                        }}
-                        placeholder="Total ticket count"
-                        border="1px solid"
-                        borderColor="secondaryGray.100"
-                        borderRadius="14px"
-                        h="44px"
-                        px={4}
-                        w="full"
-                        _focusVisible={{
-                          borderColor: "brand.400",
-                          boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
-                          outline: "none",
-                        }}
-                      />
+                      <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
+                        Total Tickets <Text as="span" color="red.500">*</Text>
+                      </Text>
+                      <InputGroup
+                        endElement={
+                          isSeatSelectionEnabled ? (
+                            <SeatsIoCategoryCapacityButton
+                              isBusy={capacityMutation.isPending}
+                              disabledReason={capacityDisabledReason}
+                              onPull={() => {
+                                void handlePullCapacity()
+                              }}
+                            />
+                          ) : undefined
+                        }
+                        endElementProps={{ px: 1 }}
+                      >
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          value={ticketTotalTickets}
+                          onChange={(event) => {
+                            setTicketTotalTickets(event.target.value.replace(/[^\d]/g, ""))
+                            setCapacityNotice("")
+                            if (ticketTotalTicketsError) {
+                              setTicketTotalTicketsError("")
+                            }
+                          }}
+                          placeholder="Total ticket count"
+                          border="1px solid"
+                          borderColor="secondaryGray.100"
+                          borderRadius="14px"
+                          h="44px"
+                          pl={4}
+                          pr={isSeatSelectionEnabled ? 14 : 4}
+                          w="full"
+                          _focusVisible={{
+                            borderColor: "brand.400",
+                            boxShadow: "0 0 0 3px rgba(117, 81, 255, 0.15)",
+                            outline: "none",
+                          }}
+                        />
+                      </InputGroup>
                       {ticketTotalTicketsError ? (
                         <Text mt={2} fontSize="sm" color="red.500">
                           {ticketTotalTicketsError}

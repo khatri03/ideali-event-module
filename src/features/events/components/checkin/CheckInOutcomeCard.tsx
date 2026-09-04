@@ -56,6 +56,12 @@ export function CheckInOutcomeCard({ attempt, isReversing, onUndo }: CheckInOutc
               {attempt.attendeeName}
             </Text>
           ) : null}
+          {/* The seat is what the operator says next; without it they can only wave the holder through. */}
+          {attempt.seatLabel ? (
+            <Text fontSize="sm" fontWeight="700" lineHeight="1.3" lineClamp={1}>
+              Seat {attempt.seatLabel}
+            </Text>
+          ) : null}
           <Text fontFamily="mono" fontSize="xs" opacity={0.85} lineClamp={1}>
             {attempt.ticketCode}
           </Text>

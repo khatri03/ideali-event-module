@@ -35,6 +35,8 @@ const eventTicketViewSchema = z.object({
   venueMapUrl: z.string().nullable().optional(),
   TicketTypeName: z.string().optional(),
   ticketTypeName: z.string().optional(),
+  SeatLabel: z.string().nullable().optional(),
+  seatLabel: z.string().nullable().optional(),
   AttendeeName: z.string().nullable().optional(),
   attendeeName: z.string().nullable().optional(),
   BuyerName: z.string().nullable().optional(),
@@ -62,6 +64,8 @@ export interface EventTicketView {
   venueAddress: string | null
   venueMapUrl: string | null
   ticketTypeName: string
+  /** Seat this ticket admits its holder to, or null when the session sells general admission. */
+  seatLabel: string | null
   attendeeName: string | null
   buyerName: string | null
   invoiceNo: string | null
@@ -91,6 +95,7 @@ export function normalizeEventTicketView(payload: unknown): EventTicketView {
     venueAddress: parsed.VenueAddress ?? parsed.venueAddress ?? null,
     venueMapUrl: parsed.VenueMapUrl ?? parsed.venueMapUrl ?? null,
     ticketTypeName: parsed.TicketTypeName ?? parsed.ticketTypeName ?? "",
+    seatLabel: parsed.SeatLabel ?? parsed.seatLabel ?? null,
     attendeeName: parsed.AttendeeName ?? parsed.attendeeName ?? null,
     buyerName: parsed.BuyerName ?? parsed.buyerName ?? null,
     invoiceNo: parsed.InvoiceNo ?? parsed.invoiceNo ?? null,

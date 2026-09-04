@@ -36,6 +36,16 @@ describe("SeatsIoCategoryCapacityButton", () => {
   })
 
   /**
+   * The control carries an icon and no words, so the only name a screen reader or a keyboard user ever hears is
+   * the one on the element itself. Losing it leaves an unlabelled button in the middle of a required field.
+   */
+  it("names itself for anyone who cannot see the icon", () => {
+    renderButton()
+
+    expect(screen.getByRole("button", { name: "Use layout count" })).toBeInTheDocument()
+  })
+
+  /**
    * A button that cannot act has to say why. Chakra's `disabled` would take the tooltip with it and leave a grey
    * control the organizer can only guess at, so the reason has to survive on a still-hoverable button.
    */

@@ -70,6 +70,9 @@ export function useCheckInDesk(eventUniqueId: string, sessionUniqueId: string) {
             outcome: "ManualOverride",
             ticketCode: result.ticketCode,
             attendeeName: result.attendeeName,
+            // A reversal answers about the ticket, not the seat: the holder is being sent back outside, so
+            // naming a seat they no longer have would read as an admission.
+            seatLabel: null,
             message: result.message ?? "",
             checkedInAtUtc: null,
             // A reversal puts the holder back outside, so there is nobody at the desk to ask for money.

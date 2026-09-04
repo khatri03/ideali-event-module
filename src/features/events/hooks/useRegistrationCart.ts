@@ -334,6 +334,11 @@ export function useRegistrationCart(eventUniqueId: string) {
     restoredCart,
     syncTicketSelection,
     setBuyerIdentity,
+    /**
+     * Adopts a cart the server answered with elsewhere - seat selection holds a seat through its own endpoint and
+     * gets the whole basket back, so the totals and the stored deadline follow it here rather than being refetched.
+     */
+    applyCart,
     applyCoupon,
     resetCart,
     completeCart,

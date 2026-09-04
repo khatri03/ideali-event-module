@@ -1,4 +1,4 @@
-import { Button, Tooltip } from "@chakra-ui/react"
+import { Button, Portal, Spinner, Tooltip } from "@chakra-ui/react"
 import { LayoutGrid } from "lucide-react"
 
 interface SeatsIoCategoryCapacityButtonProps {
@@ -10,13 +10,15 @@ interface SeatsIoCategoryCapacityButtonProps {
   onPull: () => void
 }
 
-const READY_HINT = "Counts the seats drawn against this category on the published layout"
+const READY_HINT = "Use layout count — counts the seats drawn against this category on the published layout"
 
 /**
  * Fills the ticket total from the seating layout instead of leaving the organizer to count seats in the designer.
  *
- * The button is never rendered dead: when the count cannot be pulled it stays hoverable and carries the reason,
- * because Chakra's `disabled` suppresses pointer events and would take the explanation with it.
+ * It sits inside the Total Tickets field rather than beside its label, so the label keeps the height and weight of
+ * every other label in the form and the two columns stay on one baseline. The button is never rendered dead: when
+ * the count cannot be pulled it stays hoverable and carries the reason, because Chakra's `disabled` suppresses
+ * pointer events and would take the explanation with it.
  */
 export function SeatsIoCategoryCapacityButton({
   isBusy,
@@ -30,18 +32,17 @@ export function SeatsIoCategoryCapacityButton({
       <Tooltip.Trigger asChild>
         <Button
           type="button"
-          variant="outline"
-          size="sm"
-          borderRadius="12px"
-          minH="11"
-          px={3}
-          gap={2}
-          fontSize="xs"
-          fontWeight="700"
+          variant="ghost"
+          aria-label={isBusy ? "Counting seats" : "Use layout count"}
           colorPalette="brand"
+          color={isBlocked ? "gray.400" : "brand.500"}
+          borderRadius="12px"
+          h="44px"
+          minW="44px"
+          px={0}
           aria-disabled={isBlocked}
-          opacity={isBlocked ? 0.55 : 1}
           cursor={isBlocked ? "not-allowed" : "pointer"}
+          _hover={{ bg: isBlocked ? "transparent" : "brand.50" }}
           onClick={() => {
             if (isBlocked) {
               return
@@ -50,13 +51,14 @@ export function SeatsIoCategoryCapacityButton({
             onPull()
           }}
         >
-          <LayoutGrid size={14} aria-hidden />
-          {isBusy ? "Counting..." : "Use layout count"}
+          {isBusy ? <Spinner size="sm" /> : <LayoutGrid size={18} aria-hidden />}
         </Button>
       </Tooltip.Trigger>
-      <Tooltip.Positioner>
-        <Tooltip.Content>{disabledReason ?? READY_HINT}</Tooltip.Content>
-      </Tooltip.Positioner>
+      <Portal>
+        <Tooltip.Positioner>
+          <Tooltip.Content maxW="260px">{disabledReason ?? READY_HINT}</Tooltip.Content>
+        </Tooltip.Positioner>
+      </Portal>
     </Tooltip.Root>
   )
 }

@@ -43,6 +43,7 @@ describe("normalizeEventTicketView", () => {
       venueAddress: "100 Main Street, Toronto",
       venueMapUrl: "https://maps.example.com/grand-hall",
       ticketTypeName: "General Admission",
+      seatLabel: null,
       attendeeName: "Attendee One",
       buyerName: "Buyer One",
       invoiceNo: "INV-1001",
@@ -123,5 +124,21 @@ describe("normalizeEventTicketView", () => {
 
   it("Normalize_UnknownStatus_Throws", () => {
     expect(() => normalizeEventTicketView({ TicketCode: "C", TicketStatus: "Exploded" })).toThrow()
+  })
+
+  /**
+   * A numbered ticket has to name its seat wherever it is shown. Dropping the seat in the mapping would leave the
+   * holder with a ticket that admits them to the room and nothing more.
+   */
+  it("Normalize_TicketForANumberedSeat_KeepsTheSeatLabel", () => {
+    expect(normalizeEventTicketView({ ...PASCAL_PAYLOAD, SeatLabel: "A-14" }).seatLabel).toBe("A-14")
+  })
+
+  /**
+   * General admission has no seat, and a blank one on screen would read as a seat that failed to load rather than
+   * a ticket that never had one.
+   */
+  it("Normalize_GeneralAdmissionTicket_CarriesNoSeat", () => {
+    expect(normalizeEventTicketView(PASCAL_PAYLOAD).seatLabel).toBeNull()
   })
 })

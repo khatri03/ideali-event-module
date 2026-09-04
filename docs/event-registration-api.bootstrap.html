@@ -77,6 +77,7 @@
         <a class="nav-link fw-semibold" href="#reg-endpoints">4. Every endpoint in the journey</a>
         <a class="nav-link fw-semibold" href="#reg-cart">5. How the cart actually works</a>
         <a class="nav-link ms-3 small" href="#reg-cart-capability">Who is allowed to touch a cart</a>
+        <a class="nav-link fw-semibold" href="#reg-seats">5b. How a numbered seat is claimed</a>
         <a class="nav-link fw-semibold" href="#reg-pricing">6. How the total is calculated</a>
         <a class="nav-link fw-semibold" href="#reg-questions">7. Attendees, questions and files</a>
         <a class="nav-link fw-semibold" href="#reg-settlement">8. Payment and settlement, step by step</a>
@@ -781,6 +782,46 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
           away the previously calculated charge lines. Any total the frontend is holding becomes stale
           the moment the cart changes. Always call <code>/price</code> again before showing a total.
         </div>
+
+      <h2 id="reg-seats">5b. How a numbered seat is claimed</h2>
+
+      <p>A session that offers seat selection sells particular seats rather than a quantity, and a seat leaves
+        inventory the moment the buyer picks it &mdash; the opposite of a general-admission line, which claims
+        nothing until payment starts. One seat sold twice cannot be repaired afterwards, so the claim is made in
+        two places that do not depend on each other:</p>
+
+      <ol>
+        <li><strong>Seats.io</strong> is asked first. It is the only party that sees every buyer of the chart at
+          once, and it refuses a hold on a seat somebody else already holds or has bought. The workspace secret key
+          the call authenticates with stays on the server; the browser only ever receives the workspace
+          <em>public</em> key and a hold token, which can take seats and nothing else.</li>
+        <li><strong>The database</strong> refuses the same duplicate independently. A filtered unique index over
+          <code>TicketReservationSeat</code> allows one live claim per seat per session, where live means held,
+          claimed or booked. If our own index refuses the row, the Seats.io hold is handed straight back rather than
+          left to lapse.</li>
+      </ol>
+
+      <p>What the buyer sends is only a session and a seat label. The seat's category is read back from the chart
+        and mapped to the session's ticket type on the server, so a browser cannot name its own category and buy a
+        stalls seat at a balcony price. The cart line's quantity is derived from the seats held, never sent.</p>
+
+      <p>At payment start the seats move from held to claimed alongside the reservation they hang from. At
+        settlement they are marked sold and each ticket is issued carrying its seat label; Seats.io is told about
+        the sale by the reconciling pass rather than from inside the settlement transaction, which must not make a
+        network call while holding its locks. Between the two, the seat is unsellable to anyone else because the
+        unique index is already occupied by the booked row.</p>
+
+      <p>The map answers with more than prices. Each category also carries the colour the chart draws it in, so the
+        legend beside the map can name what the buyer is looking at rather than leaving them to match colours by eye,
+        and a seat count where — and only where — the organizer turned on <em>Show tickets left on the registration
+        form</em> for that ticket type. A category they kept private carries no count at all rather than a hidden one,
+        and a category with no capacity recorded carries none either: zero would read as sold out on seats that are
+        still selling.</p>
+
+      <p>Seats come back on sale in three ways, all swept once a minute: a hold that ran out, an order that was
+        cancelled or cut down at checkout, and a ticket that was later cancelled or refunded. A seat whose ticket
+        still admits somebody is never swept.</p>
+
       <h2 id="reg-pricing">6. How the total is calculated</h2>
 
         <p>
@@ -1584,16 +1625,16 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
             </div>
           </div>
         </article>
-        <h3 id="ap-2-the-cart">2. The cart <span class="badge text-bg-secondary align-middle fs-6">8</span></h3>
+        <h3 id="ap-2-the-cart">2. The cart <span class="badge text-bg-secondary align-middle fs-6">11</span></h3>
         
         <article id="ep-eventcartcontroller" class="card mb-4 endpoint">
           <div class="card-header endpoint-head">
             <span class="fw-semibold">EventCartController</span>
             <code class="path text-body-secondary">/api/events/cart</code>
-            <span class="badge text-bg-secondary ms-auto">8 endpoints</span>
+            <span class="badge text-bg-secondary ms-auto">11 endpoints</span>
           </div>
           <div class="card-body">
-            <p class="mb-3">The cart itself: create, read, add and remove lines, name attendees, answer the questionnaire, upload files, and price.</p>
+            <p class="mb-3">The cart itself: create, read, add and remove lines, pick and give up numbered seats, name attendees, answer the questionnaire, upload files, and price.</p>
             
             <div class="table-responsive">
               <table class="table table-sm table-bordered align-middle mb-0">
@@ -1634,6 +1675,27 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
                 <td>Upload Answer File</td>
                 <td><span class="badge text-bg-light border access-anon">Public</span></td>
                 <td class="small"><span class="param-source">route</span> <code>cartUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">form</span> <code>fieldUniqueId</code><span class="text-body-secondary"> : Guid</span><br><code>file</code><span class="text-body-secondary"> : IFormFile</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/events/cart/{cartUniqueId:guid}/seating/{sessionUniqueId:guid}</code> <span class="badge text-bg-light border flag">RequireCartCapability</span><div class="action-doc">Everything the seat map needs to draw itself: the workspace public key, the session's Seats.io event, this cart's hold token, and every category with its colour, its price and — only where the organizer opted in — how many of its seats are left. The workspace secret key is not among them and never is.</div></td>
+                <td>Get Seating</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>cartUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">route</span> <code>sessionUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/events/cart/{cartUniqueId:guid}/seats</code> <span class="badge text-bg-light border flag">BotMitigation · RequireCartCapability</span><div class="action-doc">Claims one seat for this cart. The request names a seat and nothing else: its category, its ticket type and its price are all established on the server, because a browser naming its own category would be naming its own price.</div></td>
+                <td>Hold Seat</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>cartUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">body</span> <code>request</code><span class="text-body-secondary"> : HoldEventSeatRequest</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/events/cart/{cartUniqueId:guid}/seats/release</code> <span class="badge text-bg-light border flag">RequireCartCapability</span><div class="action-doc">Gives up one of this cart's seats, putting it back on sale for everyone else. Seats.io is told first, so a seat can never be free on the basket while the chart still holds it.</div></td>
+                <td>Release Seat</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>cartUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">body</span> <code>request</code><span class="text-body-secondary"> : ReleaseEventSeatRequest</span></td>
               </tr>
               <tr>
                 <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>

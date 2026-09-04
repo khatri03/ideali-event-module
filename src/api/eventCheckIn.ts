@@ -37,6 +37,8 @@ export interface CheckInAttempt {
   ticketCode: string
   /** Who the ticket admits, when the server could name them - a refused code names nobody. */
   attendeeName: string | null
+  /** Seat the ticket admits its holder to, or null on a general-admission ticket. */
+  seatLabel: string | null
   message: string
   checkedInAtUtc: string | null
   /**
@@ -73,6 +75,7 @@ export async function checkInTicket(command: TicketCheckInCommand): Promise<Chec
       outcome: result.checkInStatus,
       ticketCode: result.ticketCode,
       attendeeName: result.attendeeName,
+      seatLabel: result.seatLabel,
       message: result.message ?? "",
       checkedInAtUtc: result.checkedInAtUtc,
       outstandingAmount: result.outstandingAmount,
@@ -88,6 +91,7 @@ export async function checkInTicket(command: TicketCheckInCommand): Promise<Chec
       outcome: "Invalid",
       ticketCode: command.ticketCode,
       attendeeName: null,
+      seatLabel: null,
       message: refusal,
       checkedInAtUtc: null,
       outstandingAmount: null,

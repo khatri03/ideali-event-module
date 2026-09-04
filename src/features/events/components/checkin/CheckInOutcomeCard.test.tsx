@@ -22,6 +22,7 @@ const ADMITTED: CheckInAttempt = {
   outcome: "Success",
   ticketCode: "TKT-1",
   attendeeName: "Wilhelmina Featherstonehaugh",
+  seatLabel: null,
   message: "Ticket checked in successfully.",
   checkedInAtUtc: "2026-08-17T18:00:00Z",
   outstandingAmount: null,
@@ -32,6 +33,7 @@ const REFUSED: CheckInAttempt = {
   outcome: "Invalid",
   ticketCode: "TKT-9",
   attendeeName: null,
+  seatLabel: null,
   message: "Ticket code is invalid.",
   checkedInAtUtc: null,
   outstandingAmount: null,
@@ -42,6 +44,7 @@ const UNPAID: CheckInAttempt = {
   outcome: "PaymentRequired",
   ticketCode: "TKT-4",
   attendeeName: "Ayesha Khan",
+  seatLabel: null,
   message: "Payment of $40.00 is required before entry.",
   checkedInAtUtc: "2026-08-17T18:00:00Z",
   outstandingAmount: "40.00",
@@ -159,5 +162,25 @@ describe("CheckInOutcomeCard", () => {
     expect(screen.getByText("Payment required")).toBeInTheDocument()
     expect(screen.getByText(/40\.00/)).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument()
+  })
+
+  /**
+   * The operator's next sentence after "you're in" is which seat. A ticket that reaches the door without its seat
+   * leaves the holder to find it themselves, which is the job the seat map was bought to do away with.
+   */
+  it("reads out the seat the ticket admits its holder to", () => {
+    renderCard({ ...ADMITTED, seatLabel: "A-14" })
+
+    expect(screen.getByText("Seat A-14")).toBeInTheDocument()
+  })
+
+  /**
+   * A general-admission ticket has no seat, and inventing a line for it would have the operator looking for a
+   * seat number that does not exist on the ticket in their hand.
+   */
+  it("says nothing about a seat on a general-admission ticket", () => {
+    renderCard({ ...ADMITTED, seatLabel: null })
+
+    expect(screen.queryByText(/^Seat /)).not.toBeInTheDocument()
   })
 })

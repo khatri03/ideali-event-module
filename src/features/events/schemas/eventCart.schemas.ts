@@ -45,6 +45,8 @@ const eventCartLineSchema = z.object({
   discountAmount: z.number().nullable().optional(),
   ReservationStatus: ticketReservationStatusSchema.optional(),
   reservationStatus: ticketReservationStatusSchema.optional(),
+  Seats: z.array(z.string()).optional(),
+  seats: z.array(z.string()).optional(),
 })
 
 const eventCartSchema = z.object({
@@ -79,6 +81,8 @@ export interface EventCartLine {
   lineTotal: number
   discountAmount: number | null
   reservationStatus: TicketReservationStatus
+  /** Seat labels this line covers, in chart order, or empty when the session sells general admission. */
+  seats: string[]
 }
 
 export interface EventCart {
@@ -104,6 +108,7 @@ function normalizeCartLine(item: z.infer<typeof eventCartLineSchema>): EventCart
     lineTotal: item.LineTotal ?? item.lineTotal ?? 0,
     discountAmount: item.DiscountAmount ?? item.discountAmount ?? null,
     reservationStatus: item.ReservationStatus ?? item.reservationStatus ?? "Active",
+    seats: item.Seats ?? item.seats ?? [],
   }
 }
 

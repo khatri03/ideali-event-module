@@ -24,6 +24,11 @@ interface SessionsStepProps {
   onRequestRemoveAll: () => void
   /** Fired when a ticket type's hold countdown reaches zero, so the caller can refetch availability. */
   onHoldRelease?: () => void
+  /**
+   * Draws the seat map for a session that sells numbered seats. Supplied by the wizard, which owns the cart the
+   * seats are held against; this step stays a presentational one and never fetches.
+   */
+  renderSeatSelection?: (sessionUniqueId: string) => React.ReactNode
 }
 
 function TicketSearchField({
@@ -101,6 +106,7 @@ export function SessionsStep({
   onChangeQuantity,
   onRequestRemoveAll,
   onHoldRelease,
+  renderSeatSelection,
 }: SessionsStepProps) {
   if (isLoading) {
     return <SessionsStepSkeleton />
@@ -171,7 +177,9 @@ export function SessionsStep({
             onToggle={() => onToggleSession(session.uniqueId)}
             onOpenDescription={() => onOpenDescription(session.name, session.description ?? "")}
           >
-            {session.ticketTypes.length === 0 ? (
+            {session.offersSeatSelection && renderSeatSelection ? (
+              renderSeatSelection(session.uniqueId)
+            ) : session.ticketTypes.length === 0 ? (
               <Box borderWidth="1px" borderColor="gray.200" borderRadius="18px" bg="gray.50" p={4}>
                 <Text fontSize="sm" color="gray.600">
                   No tickets are currently mapped to this session.

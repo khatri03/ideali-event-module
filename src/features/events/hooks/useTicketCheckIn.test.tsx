@@ -34,6 +34,7 @@ function attempt(overrides: Partial<CheckInAttempt> = {}): CheckInAttempt {
     outcome: "Success",
     ticketCode: "TKT-1",
     attendeeName: "Amina Yusuf",
+    seatLabel: null,
     message: "Ticket checked in successfully.",
     checkedInAtUtc: "2026-08-17T18:00:00Z",
     outstandingAmount: null,

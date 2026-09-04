@@ -1,5 +1,5 @@
 import { Box, Flex, SimpleGrid, Stack, Text } from "@chakra-ui/react"
-import { CalendarDays, MapPin, Ticket, User } from "lucide-react"
+import { Armchair, CalendarDays, MapPin, Ticket, User } from "lucide-react"
 import type { EventTicketView } from "@/features/events/schemas/eventTicket.schemas"
 import { formatRegistrationDateTime } from "@/features/events/utils/registrationFormat"
 import { TicketFactRow } from "./TicketFactRow"
@@ -54,6 +54,9 @@ export function TicketStub({ ticket }: TicketStubProps) {
         <SimpleGrid columns={{ base: 1, md: 2 }} gap={{ base: 5, md: 8 }} alignItems="start">
           <Stack gap={4}>
             <TicketFactRow icon={Ticket} label="Session" value={ticket.sessionName} helperText={ticket.ticketTypeName} />
+            {ticket.seatLabel ? (
+              <TicketFactRow icon={Armchair} label="Seat" value={ticket.seatLabel} />
+            ) : null}
             <TicketFactRow icon={CalendarDays} label="When" value={formatSessionWhen(ticket)} />
             {ticket.venueName ? (
               <TicketFactRow icon={MapPin} label="Where" value={ticket.venueName} helperText={ticket.venueAddress} />

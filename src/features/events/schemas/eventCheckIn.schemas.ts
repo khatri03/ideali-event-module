@@ -72,6 +72,9 @@ export type AttendeeRoster = z.infer<typeof attendeeRosterSchema>
 export const checkInResultSchema = z.object({
   ticketCode: z.string(),
   attendeeName: z.string().nullish().transform((value) => value ?? null),
+  // The operator reads this out at the door: a numbered ticket admitted without its seat leaves the holder to
+  // find their own, which is what the seat map was bought to avoid.
+  seatLabel: z.string().nullish().transform((value) => value ?? null),
   ticketStatus: eventTicketStatusSchema,
   checkInStatus: checkInOutcomeSchema,
   checkedInAtUtc: z.string(),

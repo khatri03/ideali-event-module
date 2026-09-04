@@ -345,6 +345,8 @@ const eventRegistrationSessionSchema = z.object({
   ticketTypes: z.array(eventRegistrationTicketSchema).optional(),
   RequiresAttendeeInfo: z.boolean().optional(),
   requiresAttendeeInfo: z.boolean().optional(),
+  OffersSeatSelection: z.boolean().optional(),
+  offersSeatSelection: z.boolean().optional(),
 })
 
 const eventRegistrationResponseSchema = z.object({
@@ -919,6 +921,8 @@ export interface EventRegistrationSession {
   description: string | null
   bannerUrl: string | null
   requiresAttendeeInfo: boolean
+  /** Whether the buyer picks numbered seats on a chart rather than a quantity of tickets. */
+  offersSeatSelection: boolean
   setupState: string
   bookingStatus: string
   startDate: string | null
@@ -1030,6 +1034,7 @@ function parseEventRegistrationSession(item: z.infer<typeof eventRegistrationSes
     bookingEndDate: item.BookingEndDate ?? item.bookingEndDate ?? null,
     ticketTypes: (item.TicketTypes ?? item.ticketTypes ?? []).map(parseEventRegistrationTicket),
     requiresAttendeeInfo: item.RequiresAttendeeInfo ?? item.requiresAttendeeInfo ?? false,
+    offersSeatSelection: item.OffersSeatSelection ?? item.offersSeatSelection ?? false,
   }
 }
 

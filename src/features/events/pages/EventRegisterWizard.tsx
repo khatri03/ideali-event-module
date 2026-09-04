@@ -78,6 +78,7 @@ import { EventHeroCard } from '@/features/events/components/registration/EventHe
 import { RegistrationAcknowledgementCard } from '@/features/events/components/registration/RegistrationAcknowledgementCard'
 import { BuyerAttendeeStep } from '@/features/events/components/registration/BuyerAttendeeStep'
 import { RichTextBlock, SupportCard } from '@/features/events/components/registration/SupportCard'
+import { EventSeatSelection } from '@/features/events/components/registration/EventSeatSelection'
 import { SessionsStep } from '@/features/events/components/registration/SessionsStep'
 import type {
   EventRegisterWizardEvent,
@@ -166,6 +167,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     restoredCart,
     syncTicketSelection,
     setBuyerIdentity,
+    applyCart,
     appliedCouponCode,
     applyCoupon,
     resetCart,
@@ -1131,6 +1133,14 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                 onChangeQuantity={handleTicketQuantityChange}
                                 onRequestRemoveAll={requestRemoveAllTickets}
                                 onHoldRelease={sessionsQuery.refetch}
+                                renderSeatSelection={(sessionUniqueId) => (
+                                  <EventSeatSelection
+                                    cartUniqueId={cart?.cartUniqueId ?? null}
+                                    sessionUniqueId={sessionUniqueId}
+                                    currencyCode={event.paymentAccountCurrency}
+                                    onCartChanged={applyCart}
+                                  />
+                                )}
                               />
                             </Stack>
                           ) : null}
