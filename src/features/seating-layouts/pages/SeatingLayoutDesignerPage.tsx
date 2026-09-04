@@ -61,7 +61,7 @@ export function SeatingLayoutDesignerPage() {
   const saveLayoutMutation = useSaveSeatsIoSeatingLayout()
   const venuesQuery = useSeatingLayoutVenues()
   const layoutDetailQuery = useSeatsIoSeatingLayoutDetail(routeChartUniqueId, isEditRoute)
-  const [layoutMode, setLayoutMode] = useState<"create" | "edit">("create")
+  const [layoutMode, setLayoutMode] = useState<"create" | "edit">(isEditRoute ? "edit" : "create")
   const [layoutChartKey, setLayoutChartKey] = useState<string | null>(null)
   const [designerWorkspace, setDesignerWorkspace] = useState<SeatsIoWorkspace | null>(null)
   const [isLoadingDesignerCredentials, setIsLoadingDesignerCredentials] = useState(false)
@@ -113,10 +113,7 @@ export function SeatingLayoutDesignerPage() {
   const [prevIsEditRoute, setPrevIsEditRoute] = useState(isEditRoute)
   if (isEditRoute !== prevIsEditRoute) {
     setPrevIsEditRoute(isEditRoute)
-
-    if (isEditRoute) {
-      setLayoutMode("edit")
-    }
+    setLayoutMode(isEditRoute ? "edit" : "create")
   }
 
   const [prevLayoutDetailData, setPrevLayoutDetailData] = useState(layoutDetailQuery.data)
