@@ -57,6 +57,41 @@ test("counts only the categories whose organizer opted in", async ({ page }) => 
 })
 
 /**
+ * A buyer weighs up what a seat costs before handing over a name and email address. The legend has to be readable
+ * on the sessions tab with no cart open, which is where it previously went missing entirely.
+ */
+test("prices the chart before the buyer has identified themselves", async ({ page }) => {
+  await openSeatLegend(page, 1440, 900)
+
+  await expect(page.getByText("Tell us who you are to start picking seats")).toBeVisible()
+  await expect(page.getByRole("region", { name: "Seat categories" })).toBeVisible()
+  await expect(page.getByText("$40.00", { exact: true })).toBeVisible()
+})
+
+/**
+ * Whether a seat count is published is the organizer's choice per ticket type. If that choice changed the height of
+ * the card, a legend of three categories would look like three unlike things when only the disclosure differs.
+ */
+test("lines the category cards up whether or not their counts are published", async ({ page }) => {
+  await openSeatLegend(page, 1440, 900)
+
+  const cards = page
+    .getByRole("region", { name: "Seat categories" })
+    .getByRole("listitem")
+    .locator("> div:last-child")
+  const boxes = await cards.evaluateAll((elements) =>
+    elements.map((element) => {
+      const { top, height } = element.getBoundingClientRect()
+      return { top: Math.round(top), height: Math.round(height) }
+    }),
+  )
+
+  expect(boxes.length, "the legend cards are not on screen").toBeGreaterThan(1)
+  expect(new Set(boxes.map((box) => box.height)).size, "a published count changes its card's height").toBe(1)
+  expect(new Set(boxes.map((box) => box.top)).size, "a published count pushes its card out of line").toBe(1)
+})
+
+/**
  * A legend row carries no control, but it sits in the buyer's thumb path on a phone. It has to stay large enough
  * to read at a glance rather than collapsing to a line of text under the chart.
  */

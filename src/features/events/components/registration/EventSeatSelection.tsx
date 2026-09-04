@@ -1,6 +1,5 @@
 import { useState } from "react"
-import { Skeleton, SimpleGrid, Stack, Text } from "@chakra-ui/react"
-import { SeatCategoryLegend } from "@/features/events/components/registration/SeatCategoryLegend"
+import { SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { SeatMapPanel } from "@/features/events/components/registration/SeatMapPanel"
 import { SelectedSeatsPanel } from "@/features/events/components/registration/SelectedSeatsPanel"
 import { useEventSeating } from "@/features/events/hooks/useEventSeating"
@@ -78,11 +77,6 @@ export function EventSeatSelection({
             onSelectSeat={holdSeat}
             onDeselectSeat={releaseSeat}
           />
-          {isLoading || !seatingMap ? (
-            <Skeleton h="120px" w="full" borderRadius="16px" />
-          ) : (
-            <SeatCategoryLegend categories={seatingMap.categories} currencyCode={currencyCode} />
-          )}
         </Stack>
         <SelectedSeatsPanel
           seats={seatingMap?.selectedSeats ?? []}

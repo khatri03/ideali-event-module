@@ -812,11 +812,20 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
         unique index is already occupied by the booked row.</p>
 
       <p>The map answers with more than prices. Each category also carries the colour the chart draws it in, so the
-        legend beside the map can name what the buyer is looking at rather than leaving them to match colours by eye,
+        legend above the map can name what the buyer is looking at rather than leaving them to match colours by eye,
         and a seat count where — and only where — the organizer turned on <em>Show tickets left on the registration
         form</em> for that ticket type. A category they kept private carries no count at all rather than a hidden one,
         and a category with no capacity recorded carries none either: zero would read as sold out on seats that are
         still selling.</p>
+
+      <p>The legend itself is not drawn from that call. Seats are held in a buyer's name, so the map cannot open
+        until they have identified themselves and a cart exists — but what a seat costs is not private, and a buyer
+        deciding whether to register at all has to be able to read it first. So every seated ticket type on
+        <code class="path">/api/events/{eventUniqueId:guid}/register/sessions</code> carries
+        <code>SeatCategoryName</code> and <code>SeatCategoryColor</code> alongside its price and capacity, and the
+        form captions the chart from the sessions payload it has already loaded. A general-admission ticket type
+        carries neither: there is no chart to caption. The seat count follows the same three-state rule as the
+        cart-scoped call, computed from the ticket type's own capacity.</p>
 
       <p>Seats come back on sale in three ways, all swept once a minute: a hold that ran out, an order that was
         cancelled or cut down at checkout, and a ticket that was later cancelled or refunded. A seat whose ticket

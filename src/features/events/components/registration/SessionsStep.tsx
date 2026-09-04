@@ -1,9 +1,11 @@
 import { Badge, Box, Button, CloseButton, Flex, HStack, Input, SimpleGrid, Stack, Text, Tooltip } from "@chakra-ui/react"
 import { AlertCircle } from "lucide-react"
 import type { EventRegistrationSession, EventRegistrationTicket } from "@/api/events"
+import { SeatCategoryLegend } from "@/features/events/components/registration/SeatCategoryLegend"
 import { SessionTitleCard } from "@/features/events/components/registration/SessionTitleCard"
 import { SessionsStepSkeleton } from "@/features/events/components/registration/SessionsStep.skeleton"
 import { TicketCard } from "@/features/events/components/registration/TicketCard"
+import { toSeatCategories } from "@/features/events/utils/seatCategories"
 import { getTicketQuantityAfterDecrement } from "@/features/events/utils/ticketSelection"
 
 interface SessionsStepProps {
@@ -178,7 +180,13 @@ export function SessionsStep({
             onOpenDescription={() => onOpenDescription(session.name, session.description ?? "")}
           >
             {session.offersSeatSelection && renderSeatSelection ? (
-              renderSeatSelection(session.uniqueId)
+              <Stack gap={4}>
+                <SeatCategoryLegend
+                  categories={toSeatCategories(session.ticketTypes)}
+                  currencyCode={currencyCode}
+                />
+                {renderSeatSelection(session.uniqueId)}
+              </Stack>
             ) : session.ticketTypes.length === 0 ? (
               <Box borderWidth="1px" borderColor="gray.200" borderRadius="18px" bg="gray.50" p={4}>
                 <Text fontSize="sm" color="gray.600">

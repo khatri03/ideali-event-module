@@ -3,8 +3,11 @@ import { expect, type Page } from "@playwright/test"
 /**
  * Drives the registration form's seat picker against stubbed API answers.
  *
- * The seat map itself is drawn by a vendor script from a CDN, and the legend beside it is the part this suite is
+ * The seat map itself is drawn by a vendor script from a CDN, and the legend above it is the part this suite is
  * about. Stubbing the API keeps the run independent of both a seeded seated session and Seats.io being reachable.
+ *
+ * No cart is seeded on purpose: the legend prices the chart for a buyer who has not identified themselves yet, and
+ * seeding one would hide the very regression these tests exist to catch.
  */
 
 export const EVENT_UNIQUE_ID = "a974bd36-29a8-47e8-9c00-6754fb83031b"
@@ -53,7 +56,47 @@ const registrationResponse = envelope({
       BookingStatus: "Open",
       StartDate: HOUR_FROM_NOW,
       EndDate: HOUR_FROM_NOW,
-      TicketTypes: [],
+      TicketTypes: [
+        {
+          UniqueId: "3f5a1b22-0c34-4f8e-9a77-51d1c2f4a900",
+          Name: "Stalls seat",
+          FullPrice: 40,
+          MinPurchase: 1,
+          TotalQuantity: 20,
+          TicketsSold: 8,
+          ShowRemainingTickets: true,
+          SeatCategoryName: "Stalls",
+          SeatCategoryColor: "#7551FF",
+          IsActive: true,
+          PricePeriods: [],
+        },
+        {
+          UniqueId: "5d7c9e11-2a45-4b6c-8d1f-77aa3c2e4b55",
+          Name: "Balcony seat",
+          FullPrice: 15,
+          MinPurchase: 1,
+          TotalQuantity: 50,
+          TicketsSold: 4,
+          ShowRemainingTickets: false,
+          SeatCategoryName: "Balcony",
+          SeatCategoryColor: "#01B574",
+          IsActive: true,
+          PricePeriods: [],
+        },
+        {
+          UniqueId: "8e2f4a67-9b1c-4d3e-8f5a-6c7b8d9e0f12",
+          Name: "Private box seat",
+          FullPrice: 120,
+          MinPurchase: 1,
+          TotalQuantity: 5,
+          TicketsSold: 5,
+          ShowRemainingTickets: true,
+          SeatCategoryName: "Private boxes",
+          SeatCategoryColor: "#EE5D50",
+          IsActive: true,
+          PricePeriods: [],
+        },
+      ],
     },
   ],
 })
@@ -132,10 +175,7 @@ export async function hasHorizontalOverflow(page: Page) {
   })
 }
 
-/**
- * Opens the registration form on a session that sells numbered seats, with a cart already restored so the picker
- * is past its "tell us who you are" state and the legend is on screen.
- */
+/** Opens the registration form on a session that sells numbered seats, before any cart has been opened. */
 export async function openSeatLegend(page: Page, width: number, height: number) {
   await page.setViewportSize({ width, height })
 
@@ -155,10 +195,6 @@ export async function openSeatLegend(page: Page, width: number, height: number) 
   await page.route(`**/api/events/cart/${CART_UNIQUE_ID}/price`, (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(envelope(null)) }),
   )
-
-  await page.context().addCookies([
-    { name: "ideali_event_cart", value: CART_UNIQUE_ID, url: "https://localhost:3000/events" },
-  ])
 
   await page.goto(REGISTER_PATH)
   await expect(page.getByRole("region", { name: "Seat categories" })).toBeVisible({ timeout: 30_000 })

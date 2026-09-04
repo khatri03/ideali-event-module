@@ -14,6 +14,8 @@ function buildTicket(overrides: Partial<EventRegistrationTicket> = {}): EventReg
     totalQuantity: 2000,
     availableForSale: 1200,
     ticketsSold: 800,
+    seatCategoryName: null,
+    seatCategoryColor: null,
     nextSeatsAvailableAtUtc: null,
     isActive: true,
     salesStartDateUtc: null,

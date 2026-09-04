@@ -160,6 +160,10 @@ const eventRegistrationTicketSchema = z.object({
   ticketsSold: z.number().int().nullable().optional(),
   ShowRemainingTickets: z.boolean().optional(),
   showRemainingTickets: z.boolean().optional(),
+  SeatCategoryName: z.string().nullable().optional(),
+  seatCategoryName: z.string().nullable().optional(),
+  SeatCategoryColor: z.string().nullable().optional(),
+  seatCategoryColor: z.string().nullable().optional(),
   NextSeatsAvailableAtUtc: z.string().nullable().optional(),
   nextSeatsAvailableAtUtc: z.string().nullable().optional(),
   IsActive: z.boolean().optional(),
@@ -834,6 +838,10 @@ export interface EventRegistrationTicket {
   ticketsSold: number | null
   /** Organizer opt-in: print how many seats are left against this ticket type. */
   showRemainingTickets: boolean
+  /** Seating-chart category this ticket type prices, or null when the session sells general admission. */
+  seatCategoryName: string | null
+  /** Colour the chart draws that category in, or null when the session sells general admission. */
+  seatCategoryColor: string | null
   /** When the earliest hold another buyer is sitting on runs out. Only sent for a sold-out ticket type. */
   nextSeatsAvailableAtUtc: string | null
   isActive: boolean
@@ -1005,6 +1013,8 @@ function parseEventRegistrationTicket(item: z.infer<typeof eventRegistrationTick
     availableForSale: item.AvailableForSale ?? item.availableForSale ?? null,
     ticketsSold: item.TicketsSold ?? item.ticketsSold ?? null,
     showRemainingTickets: item.ShowRemainingTickets ?? item.showRemainingTickets ?? false,
+    seatCategoryName: item.SeatCategoryName ?? item.seatCategoryName ?? null,
+    seatCategoryColor: item.SeatCategoryColor ?? item.seatCategoryColor ?? null,
     nextSeatsAvailableAtUtc: item.NextSeatsAvailableAtUtc ?? item.nextSeatsAvailableAtUtc ?? null,
     isActive: item.IsActive ?? item.isActive ?? false,
     salesStartDateUtc: item.SalesStartDateUtc ?? item.salesStartDateUtc ?? null,

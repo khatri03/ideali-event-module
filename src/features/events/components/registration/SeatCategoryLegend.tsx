@@ -1,4 +1,4 @@
-import { Badge, Box, Flex, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Box, Flex, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import type { EventSeatingCategory } from "@/features/events/schemas/eventSeating.schemas"
 import { formatCurrencyCode } from "@/utils/format"
 
@@ -39,6 +39,11 @@ function getRemainingLabel(category: EventSeatingCategory): RemainingLabel | nul
  *
  * Colour is never the only carrier of the meaning. The swatch repeats what the category name already says, so a
  * buyer who cannot tell the colours apart still reads the same legend.
+ *
+ * The seat count sits above its card rather than inside it, because the organizer sets that disclosure per ticket
+ * type: a count inside the card would make the one category that discloses taller than its neighbours, and read as
+ * a difference in the categories rather than a difference in what the organizer chose to publish. Its line is held
+ * open on every entry for the same reason — without it the cards either side would sit at different heights.
  */
 export function SeatCategoryLegend({ categories, currencyCode }: SeatCategoryLegendProps) {
   if (categories.length === 0) {
@@ -75,48 +80,43 @@ export function SeatCategoryLegend({ categories, currencyCode }: SeatCategoryLeg
           const remaining = getRemainingLabel(category)
 
           return (
-            <Flex
-              as="li"
-              key={category.categoryKey}
-              align="center"
-              gap={3}
-              minH="11"
-              px={3}
-              py={2}
-              borderRadius="12px"
-              borderWidth="1px"
-              borderColor="gray.100"
-              bg="gray.50"
-            >
-              <Box
-                aria-hidden
-                flexShrink={0}
-                w="14px"
-                h="14px"
-                borderRadius="4px"
+            <Stack as="li" key={category.categoryKey} gap={1}>
+              <Box minH="18px" px={1}>
+                {remaining ? (
+                  <Text fontSize="xs" fontWeight="600" color={remaining.isSoldOut ? "red.600" : "green.600"}>
+                    {remaining.text}
+                  </Text>
+                ) : null}
+              </Box>
+              <Flex
+                align="center"
+                gap={3}
+                minH="11"
+                px={3}
+                py={2}
+                borderRadius="12px"
                 borderWidth="1px"
-                borderColor="blackAlpha.300"
-                bg={category.color || UNKNOWN_CATEGORY_COLOR}
-              />
-              <Stack gap={0} minW={0} flex="1">
-                <Text fontSize="sm" fontWeight="700" color="gray.900" truncate>
+                borderColor="gray.100"
+                bg="gray.50"
+              >
+                <Box
+                  aria-hidden
+                  flexShrink={0}
+                  w="14px"
+                  h="14px"
+                  borderRadius="4px"
+                  borderWidth="1px"
+                  borderColor="blackAlpha.300"
+                  bg={category.color || UNKNOWN_CATEGORY_COLOR}
+                />
+                <Text fontSize="sm" fontWeight="700" color="gray.900" minW={0} flex="1" truncate>
                   {category.categoryName || category.ticketTypeName}
                 </Text>
-                {remaining ? (
-                  <Badge
-                    alignSelf="flex-start"
-                    colorPalette={remaining.isSoldOut ? "red" : "green"}
-                    variant="subtle"
-                    fontSize="xs"
-                  >
-                    {remaining.text}
-                  </Badge>
-                ) : null}
-              </Stack>
-              <Text fontSize="sm" fontWeight="700" color="gray.900" whiteSpace="nowrap">
-                {formatCurrencyCode(category.price.toFixed(2), currencyCode)}
-              </Text>
-            </Flex>
+                <Text fontSize="sm" fontWeight="700" color="gray.900" whiteSpace="nowrap">
+                  {formatCurrencyCode(category.price.toFixed(2), currencyCode)}
+                </Text>
+              </Flex>
+            </Stack>
           )
         })}
       </SimpleGrid>

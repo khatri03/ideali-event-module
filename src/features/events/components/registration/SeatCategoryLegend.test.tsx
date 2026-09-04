@@ -93,6 +93,23 @@ describe("SeatCategoryLegend", () => {
   })
 
   /**
+   * Whether a count is published is the organizer's choice per ticket type, not a property of the category. Keeping
+   * it inside the card would make the one category that discloses taller than the ones beside it, so the legend
+   * would read as three unlike things when only the disclosure differs.
+   */
+  it("keeps the seat count outside the card it belongs to", () => {
+    renderLegend([
+      buildCategory({ showRemainingTickets: true, remainingSeats: 12 }),
+      buildCategory({ categoryKey: "cat-balcony", categoryName: "Balcony", price: 15 }),
+    ])
+
+    const card = screen.getByText("Stalls").closest("div")
+    expect(card).not.toBeNull()
+    expect(card!.textContent).toContain("$40.00")
+    expect(card!.textContent).not.toContain("12 left")
+  })
+
+  /**
    * A session whose categories are unpriced still draws a map. Rendering an empty legend beside it would leave the
    * buyer to guess why no price is shown anywhere.
    */
