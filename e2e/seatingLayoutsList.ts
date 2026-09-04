@@ -3,6 +3,7 @@ import { expect, type Page } from "@playwright/test"
 export const PUBLISHED_CHART_KEY = "90be2528-9292-4337-86d9-5ef4a64b7980"
 export const PUBLISHED_LAYOUT_NAME = "Grand Ballroom"
 export const UNPUBLISHED_LAYOUT_NAME = "Draft Hall"
+export const PREVIEW_URL = "https://app.seats.io/preview/eu/workspace-public/" + PUBLISHED_CHART_KEY
 export const LIST_PATH = "/organizer/seatsio/seating-layouts"
 
 const TIMESTAMP = "2026-09-04T00:00:00Z"
@@ -51,6 +52,7 @@ const layoutsResponse = envelope({
       name: PUBLISHED_LAYOUT_NAME,
       seatsIoChartKey: PUBLISHED_CHART_KEY,
       thumbnailUrl: THUMBNAIL_DATA_URL,
+      previewUrl: PREVIEW_URL,
     },
     {
       id: 2,
@@ -60,6 +62,7 @@ const layoutsResponse = envelope({
       name: UNPUBLISHED_LAYOUT_NAME,
       seatsIoChartKey: null,
       thumbnailUrl: null,
+      previewUrl: null,
     },
   ],
 })

@@ -118,7 +118,10 @@ export function SeatingLayoutDesignerPage() {
     setLayoutMode(isEditRoute ? "edit" : "create")
   }
 
-  const [prevLayoutDetailData, setPrevLayoutDetailData] = useState(layoutDetailQuery.data)
+  // Starts empty rather than at the query's current answer. A layout opened a second time is served from the cache,
+  // so its details are already there on the first render; seeding this with them would read as "nothing changed" and
+  // the form, the chart key and with it the designer would never be filled in.
+  const [prevLayoutDetailData, setPrevLayoutDetailData] = useState<typeof layoutDetailQuery.data>(undefined)
   if (layoutDetailQuery.data !== prevLayoutDetailData) {
     setPrevLayoutDetailData(layoutDetailQuery.data)
 

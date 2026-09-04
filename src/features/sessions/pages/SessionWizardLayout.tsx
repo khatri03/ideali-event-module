@@ -6,7 +6,9 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Sparkles } from "lucide-react"
 import { APP_ROUTES } from "@/utils/routes"
 import { fetchSessionWizardSetupStateOptions, skipSessionWizardStep } from "@/api/sessions"
 import { SessionWizardStepper } from "../components/SessionWizardStepper"
+import { SessionWizardPreviewPanel } from "../components/SessionWizardPreviewPanel"
 import { SessionWizardActionsProvider, useSessionWizardActions } from "../hooks/useSessionWizardActions"
+import { SessionWizardPreviewProvider } from "../hooks/useSessionWizardPreview"
 import { getSessionWizardStepNumber, useSessionWizardNavigation } from "../hooks/useSessionWizard"
 import { useSessionWizardSetupState } from "../hooks/useSessionWizardSetupState"
 import { useSessionWizardProgress } from "../hooks/useSessionWizardProgress"
@@ -52,40 +54,12 @@ function WizardLoadingState() {
   )
 }
 
-function PreviewFrame() {
-  return (
-    <Box
-      w="full"
-      minH={{ base: "240px", md: "320px" }}
-      borderRadius="24px"
-      border="1px dashed"
-      borderColor="gray.200"
-      bg="gray.50"
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      px={6}
-      py={8}
-    >
-      <Stack gap={2} align="center" textAlign="center" maxW="280px">
-        <Text fontSize="xs" fontWeight="800" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
-          Preview
-        </Text>
-        <Text fontSize={{ base: "sm", md: "md" }} fontWeight="700" color="gray.700">
-          Preview container only
-        </Text>
-        <Text fontSize="sm" color="gray.500">
-          Device mockups are hidden for now.
-        </Text>
-      </Stack>
-    </Box>
-  )
-}
-
 export function SessionWizardLayout() {
   return (
     <SessionWizardActionsProvider>
-      <SessionWizardLayoutContent />
+      <SessionWizardPreviewProvider>
+        <SessionWizardLayoutContent />
+      </SessionWizardPreviewProvider>
     </SessionWizardActionsProvider>
   )
 }
@@ -182,8 +156,8 @@ function SessionWizardLayoutContent() {
         bg="rgba(255,255,255,0.7)"
         backdropFilter="blur(14px)"
       >
-        <Flex align="center" justify="space-between" gap={4} w="full">
-          <Flex align="center" gap={3}>
+        <Flex align="center" justify="space-between" gap={4} w="full" wrap="wrap">
+          <Flex align="center" gap={3} minW={0}>
             <Flex
               w="42px"
               h="42px"
@@ -232,7 +206,7 @@ function SessionWizardLayoutContent() {
         </Text>
 
         <Grid
-          templateColumns={{ base: "1fr", lg: isStepsCollapsed ? "56px minmax(0, 1fr)" : "320px minmax(0, 1fr)" }}
+          templateColumns={{ base: "minmax(0, 1fr)", lg: isStepsCollapsed ? "56px minmax(0, 1fr)" : "320px minmax(0, 1fr)" }}
           gap={{ base: 5, lg: 8 }}
           mt={{ base: 6, md: 8 }}
           w="full"
@@ -318,7 +292,7 @@ function SessionWizardLayoutContent() {
             flexDirection="column"
           >
             <Grid
-              templateColumns={{ base: "1fr", lg: "minmax(0, 7fr) 1px minmax(0, 3fr)" }}
+              templateColumns={{ base: "minmax(0, 1fr)", lg: "minmax(0, 7fr) 1px minmax(0, 3fr)" }}
               gap={0}
               flex={1}
               minH={0}
@@ -363,7 +337,7 @@ function SessionWizardLayoutContent() {
                   >
                     Preview
                   </Text>
-                  <PreviewFrame />
+                  <SessionWizardPreviewPanel />
                 </Stack>
               </Box>
             </Grid>

@@ -50,6 +50,8 @@ const seatsIoSeatingLayoutSchema = z.object({
   seatsIoChartKey: z.string().nullable().optional(),
   ThumbnailUrl: z.string().nullable().optional(),
   thumbnailUrl: z.string().nullable().optional(),
+  PreviewUrl: z.string().nullable().optional(),
+  previewUrl: z.string().nullable().optional(),
 })
 
 const seatsIoChartCategorySchema = z.object({
@@ -69,6 +71,19 @@ const seatsIoChartCategorySchema = z.object({
   color: z.string().nullable().optional(),
   DisplayOrder: z.number().int().nullable().optional(),
   displayOrder: z.number().int().nullable().optional(),
+})
+
+const seatsIoChartCategoryCapacitySchema = z.object({
+  CategoryId: z.number().int().optional(),
+  categoryId: z.number().int().optional(),
+  CategoryUniqueId: z.string().nullable().optional(),
+  categoryUniqueId: z.string().nullable().optional(),
+  Key: z.string().nullable().optional(),
+  key: z.string().nullable().optional(),
+  Name: z.string().nullable().optional(),
+  name: z.string().nullable().optional(),
+  ObjectCount: z.number().int().nullable().optional(),
+  objectCount: z.number().int().nullable().optional(),
 })
 
 const seatsIoEventSchema = z.object({
@@ -135,6 +150,8 @@ export interface SeatsIoSeatingLayout {
   seatsIoChartKey: string | null
   /** Preview image Seats.io renders for the published chart; null when the chart has no published version. */
   thumbnailUrl: string | null
+  /** Public Seats.io page showing the chart; null until the chart exists in Seats.io. */
+  previewUrl: string | null
 }
 
 export interface SeatsIoSeatingLayoutDetail extends SeatsIoSeatingLayout {
@@ -156,6 +173,19 @@ export interface SeatsIoChartCategory {
   name: string
   color: string
   displayOrder: number
+}
+
+export interface SeatsIoChartCategoryCapacity {
+  categoryId: number
+  categoryUniqueId: string
+  key: string
+  name: string
+  /**
+   * How many tickets the category can carry on the published layout: a seat or a table booked as a whole counts as
+   * one, a standing area counts as its capacity. Zero means nothing is drawn against it. Null means it holds a
+   * standing area of unlimited capacity and so has no exact size.
+   */
+  objectCount: number | null
 }
 
 export interface SeatsIoChartEvent {
@@ -228,6 +258,7 @@ function normalizeSeatingLayout(item: z.infer<typeof seatsIoSeatingLayoutSchema>
     name: item.Name ?? item.name ?? "",
     seatsIoChartKey: item.SeatsIoChartKey ?? item.seatsIoChartKey ?? null,
     thumbnailUrl: item.ThumbnailUrl ?? item.thumbnailUrl ?? null,
+    previewUrl: item.PreviewUrl ?? item.previewUrl ?? null,
   }
 }
 
@@ -261,6 +292,18 @@ function normalizeChartCategory(item: z.infer<typeof seatsIoChartCategorySchema>
     name: item.Name ?? item.name ?? item.Label ?? item.label ?? "",
     color: item.Color ?? item.color ?? "",
     displayOrder: item.DisplayOrder ?? item.displayOrder ?? 0,
+  }
+}
+
+function normalizeChartCategoryCapacity(
+  item: z.infer<typeof seatsIoChartCategoryCapacitySchema>,
+): SeatsIoChartCategoryCapacity {
+  return {
+    categoryId: item.CategoryId ?? item.categoryId ?? 0,
+    categoryUniqueId: item.CategoryUniqueId ?? item.categoryUniqueId ?? "",
+    key: item.Key ?? item.key ?? "",
+    name: item.Name ?? item.name ?? "",
+    objectCount: item.ObjectCount ?? item.objectCount ?? null,
   }
 }
 
@@ -376,6 +419,21 @@ export async function fetchSeatsIoChartCategories(chartUniqueId: string): Promis
   const res = await client.get<unknown>(API_ROUTES.seatsIoChartCategories(chartUniqueId))
   const responseData = parseServiceResponseData(res.data)
   return normalizeChartCategoryList(responseData)
+}
+
+export async function fetchSeatsIoChartCategoryCapacity(
+  chartUniqueId: string,
+): Promise<SeatsIoChartCategoryCapacity[]> {
+  const res = await client.get<unknown>(API_ROUTES.seatsIoChartCategoryCapacity(chartUniqueId))
+  const responseData = parseServiceResponseData(res.data)
+
+  if (!Array.isArray(responseData)) {
+    return []
+  }
+
+  return responseData.map((item) =>
+    normalizeChartCategoryCapacity(seatsIoChartCategoryCapacitySchema.parse(item)),
+  )
 }
 
 export async function fetchSeatsIoVenueCharts(venueUniqueId: string): Promise<SeatsIoSeatingLayout[]> {

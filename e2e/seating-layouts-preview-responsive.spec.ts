@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test"
 import {
+  PREVIEW_URL,
   PUBLISHED_LAYOUT_NAME,
   THUMBNAIL_DATA_URL,
   UNPUBLISHED_LAYOUT_NAME,
@@ -8,10 +9,10 @@ import {
 } from "./seatingLayoutsList"
 
 /**
- * The seating layouts list gained a picture per row and a preview that opens over it, which is the kind of change
- * that breaks a phone quietly: an image cell widens the table, and a modal that is not full-screen on a small
- * viewport leaves the layout unreadable. These walk the CLAUDE.md breakpoints against a list holding both a
- * published layout and one that has never been published.
+ * The seating layouts list gained a picture per row that links out to Seats.io, which is the kind of change that
+ * breaks a phone quietly: an image cell widens the table, and a link too small to hit leaves the layout
+ * unreachable. These walk the CLAUDE.md breakpoints against a list holding both a published layout and one that has
+ * never been published.
  */
 
 const MIN_TOUCH_TARGET_PX = 44
@@ -34,6 +35,7 @@ for (const viewport of VIEWPORTS) {
   })
 }
 
+
 /**
  * The preview picture is the fastest way to tell two similarly named layouts apart, so it has to reach the row
  * rather than only the layout's own page.
@@ -48,61 +50,46 @@ test("a published layout shows its preview picture in the list", async ({ page }
 })
 
 /**
- * Seats.io only renders a preview of a published chart. A layout without one has to say why rather than leave an
- * empty cell, which would read as a page that failed to load instead of a step still to take.
+ * Seats.io only pictures a published chart. A layout without one has to say why rather than leave an empty cell,
+ * which would read as a page that failed to load instead of a step still to take.
  */
 test("a layout that has never been published says so instead of showing an empty cell", async ({ page }) => {
   await openSeatingLayoutsList(page, 1280, 800)
 
   await expect(page.getByText("Not published yet")).toBeVisible()
-  await expect(page.getByRole("button", { name: `Preview the ${UNPUBLISHED_LAYOUT_NAME} seating layout` })).toHaveCount(0)
+  await expect(
+    page.getByRole("link", { name: `Open the ${UNPUBLISHED_LAYOUT_NAME} seating layout on Seats.io in a new tab` }),
+  ).toHaveCount(0)
 })
 
 /**
- * Clicking the preview opens the layout over the list, named, and without offering to change it. The organizer
- * came to look, so the preview must not become a second way into the editor.
+ * The picture opens the layout on Seats.io in a new tab, and says so before it is clicked. A tab that appears with
+ * no warning reads as the page having navigated away from the organizer's work.
  */
-test("clicking the preview opens the layout read-only over the list", async ({ page }) => {
+test("the preview links out to Seats.io and says so before the click", async ({ page }) => {
   await openSeatingLayoutsList(page, 1280, 800)
 
-  await page.getByRole("button", { name: `Preview the ${PUBLISHED_LAYOUT_NAME} seating layout` }).click()
+  const link = page.getByRole("link", {
+    name: `Open the ${PUBLISHED_LAYOUT_NAME} seating layout on Seats.io in a new tab`,
+  })
 
-  const dialog = page.getByRole("dialog")
-  await expect(dialog).toBeVisible()
-  await expect(dialog.getByText(PUBLISHED_LAYOUT_NAME)).toBeVisible()
-  await expect(dialog.getByText("A read-only view of the published layout. Nothing here changes the chart.")).toBeVisible()
-  await expect(dialog.getByAltText(`Seating layout preview for ${PUBLISHED_LAYOUT_NAME}`)).toBeVisible()
-  // The picture is the whole preview. A Seats.io embed here would carry an editor, and the workspace secret key it
-  // needs, onto a screen the organizer opened only to look.
-  await expect(dialog.locator("iframe")).toHaveCount(0)
+  await expect(link).toHaveAttribute("href", PREVIEW_URL)
+  await expect(link).toHaveAttribute("target", "_blank")
+
+  await link.hover()
+  await expect(page.getByText("Opens the full layout on Seats.io in a new tab")).toBeVisible()
 })
 
-/**
- * The preview and the control that closes it are both things an organizer taps on a phone, so both have to be big
- * enough to hit deliberately.
- */
-test("the preview and its close control are full-size touch targets on a phone", async ({ page }) => {
+/** The preview is what an organizer taps on a phone, so it has to be big enough to hit deliberately. */
+test("the preview is a full-size touch target on a phone", async ({ page }) => {
   await openSeatingLayoutsList(page, 375, 812)
 
-  const preview = page.getByRole("button", { name: `Preview the ${PUBLISHED_LAYOUT_NAME} seating layout` })
-  await preview.scrollIntoViewIfNeeded()
-  await preview.click()
+  const link = page.getByRole("link", {
+    name: `Open the ${PUBLISHED_LAYOUT_NAME} seating layout on Seats.io in a new tab`,
+  })
+  await link.scrollIntoViewIfNeeded()
 
-  const closeControl = page.getByRole("button", { name: "Close the seating layout preview" })
-  await expect(closeControl).toBeVisible()
-
-  // The dialog scales up as it opens, so a box measured on the first frame is the control mid-animation rather
-  // than the size a thumb actually meets. Polling settles on the resting size and still fails a control that is
-  // genuinely too small.
-  await expect
-    .poll(async () => (await closeControl.boundingBox())?.width ?? 0, {
-      message: "the close control is too narrow to tap",
-    })
-    .toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX)
-
-  await expect
-    .poll(async () => (await closeControl.boundingBox())?.height ?? 0, {
-      message: "the close control is too short to tap",
-    })
-    .toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX)
+  const box = await link.boundingBox()
+  expect(box?.width ?? 0, "the preview is too narrow to tap").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX)
+  expect(box?.height ?? 0, "the preview is too short to tap").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX)
 })

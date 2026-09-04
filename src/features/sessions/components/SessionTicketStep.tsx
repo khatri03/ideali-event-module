@@ -42,7 +42,9 @@ import {
 import {
   fetchSeatsIoChartCategories,
 } from "@/api/seatsio"
+import { useSeatsIoChartCategoryCapacity } from "@/features/seating-layouts"
 import { StyledSelect } from "@/components/common/StyledSelect"
+import { SeatsIoCategoryCapacityButton } from "./SeatsIoCategoryCapacityButton"
 import {
   SessionTicketPricePeriodsSection,
   type SessionTicketPricePeriodsSectionHandle,
@@ -348,6 +350,70 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
       setTicketCategoryId("")
     }
   }
+  const capacityMutation = useSeatsIoChartCategoryCapacity()
+  const [capacityNotice, setCapacityNotice] = useState("")
+  const [capacityReplacement, setCapacityReplacement] = useState<number | null>(null)
+
+  const capacityDisabledReason = !selectedChartUniqueId
+    ? "Pick a seating layout for this session first."
+    : !ticketCategoryId
+      ? "Select a category first."
+      : null
+
+  function applyCapacity(objectCount: number) {
+    setTicketTotalTickets(String(objectCount))
+    setTicketTotalTicketsError("")
+    setCapacityNotice("")
+  }
+
+  async function handlePullCapacity() {
+    if (!selectedChartUniqueId || !ticketCategoryId) {
+      return
+    }
+
+    setCapacityNotice("")
+
+    try {
+      const capacities = await capacityMutation.mutateAsync(selectedChartUniqueId)
+      const selected = capacities.find((item) => String(item.categoryId) === ticketCategoryId)
+
+      if (!selected) {
+        setCapacityNotice("This category is no longer on the published layout.")
+        return
+      }
+
+      if (selected.objectCount === null) {
+        setCapacityNotice(
+          "This category includes a standing area with no capacity set, so it has no exact number. Enter the total yourself.",
+        )
+        return
+      }
+
+      if (selected.objectCount <= 0) {
+        setCapacityNotice("No seats are assigned to this category on the published layout.")
+        return
+      }
+
+      const layoutCount = selected.objectCount
+
+      const currentTotal = Number.parseInt(ticketTotalTickets, 10)
+
+      if (!ticketTotalTickets.trim() || !Number.isInteger(currentTotal)) {
+        applyCapacity(layoutCount)
+        return
+      }
+
+      if (currentTotal === layoutCount) {
+        setCapacityNotice("Total tickets already matches the layout.")
+        return
+      }
+
+      setCapacityReplacement(layoutCount)
+    } catch {
+      return
+    }
+  }
+
   const createTicketMutation = useMutation({
     mutationFn: (payload: {
       name: string
@@ -1238,15 +1304,27 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
 
                   <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                     <Box>
-                      <Text fontSize="sm" fontWeight="600" color="navy.700" mb={2}>
-                        Total Tickets <Text as="span" color="red.500">*</Text>
-                      </Text>
+                      <Flex align="center" justify="space-between" gap={3} mb={2} minH="11">
+                        <Text fontSize="sm" fontWeight="600" color="navy.700">
+                          Total Tickets <Text as="span" color="red.500">*</Text>
+                        </Text>
+                        {isSeatSelectionEnabled ? (
+                          <SeatsIoCategoryCapacityButton
+                            isBusy={capacityMutation.isPending}
+                            disabledReason={capacityDisabledReason}
+                            onPull={() => {
+                              void handlePullCapacity()
+                            }}
+                          />
+                        ) : null}
+                      </Flex>
                       <Input
                         type="text"
                         inputMode="numeric"
                         value={ticketTotalTickets}
                         onChange={(event) => {
                           setTicketTotalTickets(event.target.value.replace(/[^\d]/g, ""))
+                          setCapacityNotice("")
                           if (ticketTotalTicketsError) {
                             setTicketTotalTicketsError("")
                           }
@@ -1267,6 +1345,15 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                       {ticketTotalTicketsError ? (
                         <Text mt={2} fontSize="sm" color="red.500">
                           {ticketTotalTicketsError}
+                        </Text>
+                      ) : null}
+                      {capacityMutation.isError ? (
+                        <Text mt={2} fontSize="sm" color="red.500">
+                          {extractApiError(capacityMutation.error)}
+                        </Text>
+                      ) : capacityNotice ? (
+                        <Text mt={2} fontSize="sm" color="gray.600">
+                          {capacityNotice}
                         </Text>
                       ) : null}
 
@@ -1641,6 +1728,79 @@ export function SessionTicketStep({ sessionId }: SessionTicketStepProps) {
                   }}
                 >
                   Delete
+                </Button>
+              </Stack>
+            </Box>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+
+      <Dialog.Root
+        open={capacityReplacement !== null}
+        onOpenChange={(details) => {
+          if (!details.open) {
+            setCapacityReplacement(null)
+          }
+        }}
+      >
+        <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
+        <Dialog.Positioner>
+          <Dialog.Content
+            bg="white"
+            borderRadius={{ base: 0, md: "24px" }}
+            maxW={{ base: "100vw", md: "460px" }}
+            m={{ base: 0, md: "auto" }}
+            overflow="hidden"
+          >
+            <Box px={6} pt={6} pb={4} borderBottom="1px solid" borderColor="gray.200">
+              <Text fontSize="lg" fontWeight="800" color="gray.900">
+                Replace the total tickets?
+              </Text>
+            </Box>
+
+            <Dialog.Body px={6} py={6}>
+              <Text fontSize="sm" color="gray.700">
+                The published layout has{" "}
+                <Text as="span" fontWeight="700">{capacityReplacement}</Text> seats in this category. This replaces
+                the <Text as="span" fontWeight="700">{ticketTotalTickets}</Text> you entered.
+              </Text>
+            </Dialog.Body>
+
+            <Box px={6} py={4} borderTop="1px solid" borderColor="gray.200" bg="gray.50">
+              <Stack
+                direction={{ base: "column-reverse", md: "row" }}
+                gap={3}
+                align={{ base: "stretch", md: "center" }}
+                justify="flex-end"
+              >
+                <Button
+                  variant="outline"
+                  colorPalette="gray"
+                  borderRadius="14px"
+                  h="44px"
+                  px={6}
+                  minW={{ base: "full", md: "120px" }}
+                  onClick={() => {
+                    setCapacityReplacement(null)
+                  }}
+                >
+                  Keep mine
+                </Button>
+                <Button
+                  colorPalette="brand"
+                  borderRadius="14px"
+                  h="44px"
+                  px={6}
+                  minW={{ base: "full", md: "120px" }}
+                  onClick={() => {
+                    if (capacityReplacement !== null) {
+                      applyCapacity(capacityReplacement)
+                    }
+
+                    setCapacityReplacement(null)
+                  }}
+                >
+                  Use layout count
                 </Button>
               </Stack>
             </Box>

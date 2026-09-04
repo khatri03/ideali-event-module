@@ -26,6 +26,7 @@ import { fetchSessionWizardName, fetchSessionWizardSeatSelection, fetchSessionWi
 import { StyledSelect } from "@/components/common/StyledSelect"
 import { extractApiError } from "@/utils/errors"
 import { useSessionWizardActions } from "../hooks/useSessionWizardActions"
+import { useSessionWizardPreview } from "../hooks/useSessionWizardPreview"
 
 interface SessionSeatSelectionStepProps {
   sessionId: string
@@ -48,6 +49,7 @@ function SessionSeatSelectionSkeleton() {
 export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStepProps) {
   const queryClient = useQueryClient()
   const { setPrimaryAction, setPrimaryActionReady } = useSessionWizardActions()
+  const { setPreview } = useSessionWizardPreview()
   const [draftOfferPickingSeats, setDraftOfferPickingSeats] = useState(false)
   const [draftSeatsIoEventUniqueId, setDraftSeatsIoEventUniqueId] = useState<string | null>(null)
   const [draftSeatsIoChartUniqueId, setDraftSeatsIoChartUniqueId] = useState<string | null>(null)
@@ -175,7 +177,10 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
     },
   })
 
-  const [prevSeatSelectionData, setPrevSeatSelectionData] = useState(seatSelectionQuery.data)
+  // Starts empty rather than at the query's current answer. A step revisited inside the same wizard is served from
+  // the cache, so its answer is already there on the first render; seeding this with it would read as "nothing
+  // arrived", leaving the saved values unrestored and the step forever waiting to hydrate.
+  const [prevSeatSelectionData, setPrevSeatSelectionData] = useState<typeof seatSelectionQuery.data>(undefined)
   if (seatSelectionQuery.data !== prevSeatSelectionData) {
     setPrevSeatSelectionData(seatSelectionQuery.data)
 
@@ -265,7 +270,6 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
       (chartEventsQuery.data ?? []).map((event) => ({
         label: event.label,
         value: event.uniqueId,
-        description: event.seatsIoEventKey ?? undefined,
       })),
     [chartEventsQuery.data],
   )
@@ -278,6 +282,20 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
   const isFetchingChoices = venueChartsQuery.isFetching || chartEventsQuery.isFetching
   const isChartDisabled = !isSelectionEnabled || isFetchingChoices || !currentVenueUniqueId
   const isEventDisabled = !isSelectionEnabled || isFetchingChoices || !draftSeatsIoChartUniqueId
+
+  useEffect(() => {
+    setPreview(
+      isSelectionEnabled && selectedChart
+        ? {
+            name: selectedChart.name,
+            thumbnailUrl: selectedChart.thumbnailUrl,
+            previewUrl: selectedChart.previewUrl,
+          }
+        : null,
+    )
+  }, [isSelectionEnabled, selectedChart, setPreview])
+
+  useEffect(() => () => setPreview(null), [setPreview])
 
   async function handleCreateEvent() {
     const trimmedName = eventName.trim()
@@ -421,6 +439,13 @@ export function SessionSeatSelectionStep({ sessionId }: SessionSeatSelectionStep
               {isSelectionEnabled && currentVenueUniqueId && hasNoVenueCharts && !venueChartsQuery.isLoading ? (
                 <Text mt={2} fontSize="sm" color="gray.600">
                   No charts are mapped to this venue yet.
+                </Text>
+              ) : null}
+              {isSelectionEnabled && selectedChart ? (
+                <Text mt={2} fontSize="sm" color="gray.600">
+                  {selectedChart.thumbnailUrl
+                    ? "The preview panel shows this layout as it is published on Seats.io."
+                    : "This layout has not been published on Seats.io yet, so there is no preview to show."}
                 </Text>
               ) : null}
             </Box>

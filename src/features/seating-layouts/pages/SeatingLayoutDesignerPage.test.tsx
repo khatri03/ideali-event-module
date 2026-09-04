@@ -48,8 +48,18 @@ vi.mock("@seatsio/seatsio-react", async () => {
  * Renders the designer at a route, mirroring how the router mounts it: a layout id in the path is
  * the only signal the page gets that it is editing rather than creating.
  */
-function renderAt(path: string) {
+function renderAt(path: string, { withCachedDetail = false } = {}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+  if (withCachedDetail) {
+    queryClient.setQueryData(["seatsio", "seating-layout-detail", { chartUniqueId: CHART_UNIQUE_ID }], {
+      uniqueId: CHART_UNIQUE_ID,
+      venueUniqueId: null,
+      name: "E2E Phase7 Verification Hall",
+      seatsIoChartKey: CHART_KEY,
+      categories: [],
+    })
+  }
 
   return render(
     <ChakraProvider value={system}>
@@ -145,6 +155,19 @@ describe("SeatingLayoutDesignerPage", () => {
     renderAt(`/organizer/seatsio/seating-layouts/${CHART_UNIQUE_ID}`)
 
     expect(await screen.findByRole("heading", { name: "Edit seating layout" })).toBeInTheDocument()
+  })
+
+  /**
+   * A layout opened a second time answers from the cache, so no request is made and the answer is
+   * already present on the first render. The page has to read it then, or reopening a layout leaves
+   * an empty name, an unsavable form and a designer that never appears — with nothing on the wire to
+   * explain it.
+   */
+  it("opens a layout whose details were already loaded once", async () => {
+    renderAt(`/organizer/seatsio/seating-layouts/${CHART_UNIQUE_ID}`, { withCachedDetail: true })
+
+    expect(await screen.findByDisplayValue("E2E Phase7 Verification Hall")).toBeInTheDocument()
+    expect(await screen.findByTestId("seatsio-designer")).toBeInTheDocument()
   })
 
   /**

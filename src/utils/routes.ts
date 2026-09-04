@@ -229,6 +229,8 @@ export const API_ROUTES = {
     `/api/organizer/seatsio/seating-layouts/${encodeURIComponent(chartKey)}/validation`,
   seatsIoVenueCharts: (venueUniqueId: string) => `/api/organizer/seatsio/venues/${venueUniqueId}/charts`,
   seatsIoChartCategories: (chartUniqueId: string) => `/api/organizer/seatsio/seating-layouts/${chartUniqueId}/categories`,
+  seatsIoChartCategoryCapacity: (chartUniqueId: string) =>
+    `/api/organizer/seatsio/seating-layouts/${chartUniqueId}/categories/capacity`,
   seatsIoChartEvents: (chartUniqueId: string) => `/api/organizer/seatsio/seating-layouts/${chartUniqueId}/events`,
   seatsIoChartCategory: (chartUniqueId: string, categoryUniqueId: string) =>
     `/api/organizer/seatsio/seating-layouts/${chartUniqueId}/categories/${categoryUniqueId}`,

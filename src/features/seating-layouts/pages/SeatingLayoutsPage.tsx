@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { Badge, Box, Button, Flex, Heading, HStack, Skeleton, SkeletonText, Table, Text } from "@chakra-ui/react"
 import { ArrowLeft, ArrowRight, LayoutGrid, Plus } from "lucide-react"
@@ -6,7 +6,7 @@ import { APP_ROUTES } from "@/utils/routes"
 import type { SeatsIoSeatingLayout } from "@/api/seatsio"
 import { extractApiError } from "@/utils/errors"
 import { useSeatingLayouts } from "../hooks/useSeatingLayouts"
-import { SeatingLayoutsTableRow, SeatingLayoutPreviewModal } from "../components"
+import { SeatingLayoutsTableRow } from "../components"
 
 const PAGE_SIZE = 10
 
@@ -40,7 +40,6 @@ export function SeatingLayoutsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = Math.max(1, Number(searchParams.get("page") ?? "1") || 1)
   const query = useSeatingLayouts(page, PAGE_SIZE)
-  const [previewedLayout, setPreviewedLayout] = useState<SeatsIoSeatingLayout | null>(null)
 
   const pageNumbers = useMemo(
     () => buildPageNumbers(query.data?.page ?? page, query.data?.totalPages ?? 0),
@@ -55,10 +54,6 @@ export function SeatingLayoutsPage() {
 
   function handleEditLayout(layout: SeatsIoSeatingLayout) {
     navigate(APP_ROUTES.seatingLayouts.edit(layout.uniqueId))
-  }
-
-  function handlePreviewLayout(layout: SeatsIoSeatingLayout) {
-    setPreviewedLayout(layout)
   }
 
   if (query.isLoading && !query.data) {
@@ -172,7 +167,6 @@ export function SeatingLayoutsPage() {
                     key={layout.uniqueId}
                     layout={layout}
                     onEdit={handleEditLayout}
-                    onPreview={handlePreviewLayout}
                   />
                 ))
               )}
@@ -231,8 +225,6 @@ export function SeatingLayoutsPage() {
           </HStack>
         </Flex>
       </Box>
-
-      <SeatingLayoutPreviewModal layout={previewedLayout} onClose={() => setPreviewedLayout(null)} />
     </Box>
   )
 }
