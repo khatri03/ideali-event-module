@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest"
 import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { ChakraProvider } from "@chakra-ui/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
@@ -13,7 +14,11 @@ const seatsIoApi = vi.hoisted(() => ({
   fetchSeatsIoSeatingLayoutDetail: vi.fn(),
   fetchSeatsIoChartCategories: vi.fn(),
   createSeatsIoWorkspace: vi.fn(),
+  saveSeatsIoSeatingLayout: vi.fn(),
 }))
+
+/** Counts how many times the designer has been mounted, so a remount is distinguishable from a re-render. */
+const designer = vi.hoisted(() => ({ mountCount: 0 }))
 
 vi.mock("@/api/seatsio", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/api/seatsio")>()
@@ -25,9 +30,19 @@ vi.mock("@/api/organizer", async (importOriginal) => {
   return { ...actual, fetchOrganizerVenues: vi.fn().mockResolvedValue([]) }
 })
 
-vi.mock("@seatsio/seatsio-react", () => ({
-  SeatsioDesigner: () => <div data-testid="seatsio-designer" />,
-}))
+vi.mock("@seatsio/seatsio-react", async () => {
+  const { useEffect } = await import("react")
+
+  return {
+    SeatsioDesigner: () => {
+      useEffect(() => {
+        designer.mountCount += 1
+      }, [])
+
+      return <div data-testid="seatsio-designer" />
+    },
+  }
+})
 
 /**
  * Renders the designer at a route, mirroring how the router mounts it: a layout id in the path is
@@ -68,6 +83,14 @@ describe("SeatingLayoutDesignerPage", () => {
       designerKey: "workspace-designer",
       region: "eu",
     })
+    seatsIoApi.saveSeatsIoSeatingLayout.mockReset().mockResolvedValue({
+      uniqueId: CHART_UNIQUE_ID,
+      venueUniqueId: null,
+      name: "E2E Phase7 Verification Hall",
+      seatsIoChartKey: CHART_KEY,
+      categories: [],
+    })
+    designer.mountCount = 0
   })
 
   /**
@@ -78,7 +101,7 @@ describe("SeatingLayoutDesignerPage", () => {
   it("opens an existing layout in edit mode when loaded directly from its route", async () => {
     renderAt(`/organizer/seatsio/seating-layouts/${CHART_UNIQUE_ID}`)
 
-    expect(await screen.findByRole("button", { name: "Save changes" })).toBeInTheDocument()
+    expect(await screen.findByRole("button", { name: "Save details" })).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Create chart layout" })).not.toBeInTheDocument()
   })
 
@@ -113,5 +136,32 @@ describe("SeatingLayoutDesignerPage", () => {
     expect(await screen.findByRole("button", { name: "Create chart layout" })).toBeInTheDocument()
     expect(seatsIoApi.fetchSeatsIoSeatingLayoutDetail).not.toHaveBeenCalled()
     expect(seatsIoApi.createSeatsIoWorkspace).not.toHaveBeenCalled()
+  })
+  /**
+   * The page names the job it is doing. An editor headed "Create seating layout" reads as a second
+   * layout about to be made, which is the opposite of what the screen does.
+   */
+  it("heads an existing layout as an edit rather than a creation", async () => {
+    renderAt(`/organizer/seatsio/seating-layouts/${CHART_UNIQUE_ID}`)
+
+    expect(await screen.findByRole("heading", { name: "Edit seating layout" })).toBeInTheDocument()
+  })
+
+  /**
+   * Saving the name and venue leaves the designer alone. The drawing lives in the designer and is
+   * saved from its own toolbar, so tearing the designer down on an unrelated save blanks the canvas
+   * and takes any drawing that has not been saved there with it.
+   */
+  it("keeps the designer mounted when only the layout details are saved", async () => {
+    const user = userEvent.setup()
+    renderAt(`/organizer/seatsio/seating-layouts/${CHART_UNIQUE_ID}`)
+
+    await screen.findByTestId("seatsio-designer")
+    await waitFor(() => expect(designer.mountCount).toBe(1))
+
+    await user.click(screen.getByRole("button", { name: "Save details" }))
+
+    await waitFor(() => expect(seatsIoApi.saveSeatsIoSeatingLayout).toHaveBeenCalledTimes(1))
+    expect(designer.mountCount).toBe(1)
   })
 })

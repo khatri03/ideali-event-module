@@ -66,7 +66,7 @@ test("every category action is a full-size touch target on a phone", async ({ pa
     page.getByRole("button", { name: "Edit category Stalls" }),
     page.getByRole("button", { name: "Delete category Stalls" }),
     page.getByRole("button", { name: "Add chart category" }),
-    page.getByRole("button", { name: "Save changes" }),
+    page.getByRole("button", { name: "Save details" }),
   ]
 
   for (const target of targets) {

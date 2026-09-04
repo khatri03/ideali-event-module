@@ -74,7 +74,7 @@ export async function openSeatingLayoutDesigner(page: Page, width: number, heigh
   await page.route("**/*.seatsio.net/**", (route) => route.abort())
 
   await page.goto(DESIGNER_PATH)
-  await expect(page.getByRole("button", { name: "Save changes" })).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole("button", { name: "Save details" })).toBeVisible({ timeout: 30_000 })
   await expect(page.getByText("Chart categories")).toBeVisible({ timeout: 30_000 })
 }
 

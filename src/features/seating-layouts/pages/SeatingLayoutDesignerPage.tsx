@@ -25,6 +25,7 @@ import { ArrowLeft, LayoutGrid, Plus, Sparkles } from "lucide-react"
 import { StyledSelect } from "@/components/common"
 import { APP_ROUTES } from "@/utils/routes"
 import { extractApiError } from "@/utils/errors"
+import { toaster } from "@/lib/toaster"
 import { createOrganizerVenue } from "@/api/organizer"
 import { createSeatsIoWorkspace, type SeatsIoWorkspace } from "@/api/seatsio"
 import { useSeatingLayoutVenues } from "../hooks/useSeatingLayoutVenues"
@@ -229,8 +230,9 @@ export function SeatingLayoutDesignerPage() {
         return
       }
 
-      setIsDesignerRendered(false)
-      setDesignerRevision((current) => current + 1)
+      // Only the name and venue were saved. Remounting the designer here would blank the canvas and drop any
+      // drawing that has not been saved from the designer's own toolbar.
+      toaster.create({ type: "success", title: "Layout details saved" })
     } catch (error) {
       setDesignerError(error instanceof Error ? error.message : "Failed to save chart layout.")
     }
@@ -253,10 +255,12 @@ export function SeatingLayoutDesignerPage() {
             Seats.io builder
           </Badge>
           <Heading fontSize={{ base: "2xl", md: "3xl" }} fontWeight="800" letterSpacing="-0.03em">
-            Create seating layout
+            {isCreateMode ? "Create seating layout" : "Edit seating layout"}
           </Heading>
           <Text mt={2} color="gray.600" fontSize={{ base: "sm", md: "md" }}>
-            Choose a layout name first. Venue is optional for now and can be mapped later when venues are ready.
+            {isCreateMode
+              ? "Choose a layout name first. Venue is optional for now and can be mapped later when venues are ready."
+              : "The name and venue save from here. The seating itself is saved from the designer's own toolbar."}
           </Text>
         </Box>
 
@@ -361,7 +365,7 @@ export function SeatingLayoutDesignerPage() {
               onClick={handlePersistLayout}
               disabled={!hasLayoutDetails}
             >
-              {isCreateMode ? "Create chart layout" : "Save changes"}
+              {isCreateMode ? "Create chart layout" : "Save details"}
             </Button>
           </Flex>
 
