@@ -2,15 +2,19 @@ import { useState } from "react"
 import { Badge, Button, Flex, Stack, Text } from "@chakra-ui/react"
 import { Trash2, X } from "lucide-react"
 import { ConfirmRemoveDialog } from "@/features/events/components/registration/RegistrationDialogs"
-import type { EventSeat } from "@/features/events/schemas/eventSeating.schemas"
-import { describeSeat, groupSeatsByParent, type SeatGroup } from "@/features/events/utils/seatGrouping"
+import {
+  describeSeat,
+  groupSeatsByParent,
+  type BasketSeat,
+  type SeatGroup,
+} from "@/features/events/utils/seatGrouping"
 import { formatCurrencyCode } from "@/utils/format"
 
 interface SelectedSeatsPanelProps {
   /** Session the seats belong to, which heads the list and names what a whole-session removal gives up. */
   sessionName: string
   /** Seats this cart is holding on the open session. */
-  seats: EventSeat[]
+  seats: BasketSeat[]
   /** Currency the prices are shown in, or null when the event has none set. */
   currencyCode: string | null
   /** Whether a seat is being taken or given up, so the buttons cannot fire twice. */

@@ -3,7 +3,9 @@ import { client } from "@/api/client"
 import { API_ROUTES } from "@/utils/routes"
 import { normalizeEventCart, type EventCart } from "@/features/events/schemas/eventCart.schemas"
 import {
+  normalizeEventSeatHoldToken,
   normalizeEventSeatingMap,
+  type EventSeatHoldToken,
   type EventSeatingMap,
   type HoldEventSeatRequest,
   type ReleaseEventSeatRequest,
@@ -37,6 +39,28 @@ export async function fetchEventSessionSeating(
 ): Promise<EventSeatingMap> {
   const res = await client.get<unknown>(API_ROUTES.eventRegistrationSessionSeating(eventUniqueId, sessionUniqueId))
   return normalizeEventSeatingMap(readResponseData(res.data))
+}
+
+/**
+ * Gives the chart the token it holds seats under before a cart exists.
+ *
+ * The form asks for a name and email a step after it shows the seats, and a cart cannot open without them, so
+ * without this the buyer could look at the chart but not pick on it. The cart takes the token over when it opens.
+ *
+ * A token this browser was already holding is presented so the server can hand it back rather than mint a second
+ * one. Whether it still holds anything is settled with Seats.io, so the answer is a live token either way.
+ */
+export async function issueSessionHoldToken(
+  eventUniqueId: string,
+  sessionUniqueId: string,
+  presentedHoldToken?: string | null,
+): Promise<EventSeatHoldToken> {
+  const res = await client.post<unknown>(
+    API_ROUTES.eventRegistrationSessionHoldToken(eventUniqueId, sessionUniqueId),
+    { holdToken: presentedHoldToken ?? null },
+  )
+
+  return normalizeEventSeatHoldToken(readResponseData(res.data))
 }
 
 /** Holds one seat for the cart, and answers with the basket the seat now sits in. */

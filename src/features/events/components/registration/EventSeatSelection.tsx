@@ -29,6 +29,10 @@ interface EventSeatSelectionProps {
   currencyCode: string | null
   /** The organizer's form colour, worn by the button that opens the map. */
   accentColor: string
+  /** Token this browser holds seats under while there is no cart, or null before one has been issued. */
+  holdToken: string | null
+  /** Issues that token, so the chart the buyer just opened can hold what they pick on it. */
+  onEnsureHoldToken: () => Promise<string | null>
   /** Called with a seat the buyer picked, priced from the chart's own categories. */
   onPickSeat: (pick: SeatPick) => void
   /** Called with every seat label the buyer gave up, which is one seat or a whole table's worth of them. */
@@ -85,6 +89,8 @@ export function EventSeatSelection({
   isSeatChanging,
   currencyCode,
   accentColor,
+  holdToken,
+  onEnsureHoldToken,
   onPickSeat,
   onUnpickSeats,
   onAdoptHeldSeats,
@@ -113,7 +119,15 @@ export function EventSeatSelection({
       return
     }
 
-    adoptHeldSeatsRef.current(seatingMap.selectedSeats.map((seat) => ({ sessionUniqueId, ...seat })))
+    adoptHeldSeatsRef.current(
+      seatingMap.selectedSeats.map((seat) => ({
+        sessionUniqueId,
+        objectLabel: seat.objectLabel,
+        ticketTypeUniqueId: seat.ticketTypeUniqueId,
+        ticketTypeName: seat.ticketTypeName,
+        price: seat.price,
+      })),
+    )
   }, [seatingMap, sessionUniqueId])
 
   const handleOpen = () => {
@@ -121,8 +135,16 @@ export function EventSeatSelection({
 
     if (cartUniqueId) {
       void refreshSeating()
+      return
     }
+
+    void onEnsureHoldToken()
   }
+
+  // The chart read before a cart exists carries no token of its own, so the browser's is put on it. Without one the
+  // map would draw and let the buyer pick seats that nothing anywhere is holding for them.
+  const pickableSeatingMap =
+    seatingMap && !seatingMap.holdToken && holdToken ? { ...seatingMap, holdToken } : seatingMap
 
   const handleSelectSeat = (objectLabel: string, categoryKey: string) => {
     const category = findCategory(seatingMap?.categories ?? [], categoryKey)
@@ -136,7 +158,6 @@ export function EventSeatSelection({
     onPickSeat({
       sessionUniqueId,
       objectLabel,
-      categoryKey: category.categoryKey,
       ticketTypeUniqueId: category.ticketTypeUniqueId,
       ticketTypeName: category.ticketTypeName,
       price: category.price,
@@ -180,7 +201,7 @@ export function EventSeatSelection({
             <SimpleGrid columns={{ base: 1, lg: 3 }} gap={4} w="full">
               <Stack gridColumn={{ lg: "span 2" }} gap={3}>
                 <SeatMapPanel
-                  seatingMap={isFetching ? null : seatingMap}
+                  seatingMap={isFetching ? null : pickableSeatingMap}
                   isBusy={isSeatChanging}
                   selectedSeatLabels={seats.map((seat) => seat.objectLabel)}
                   currencyCode={currencyCode}

@@ -85,7 +85,12 @@ export async function hasHorizontalOverflow(page: Page) {
  * The cart is restored the way a returning buyer restores it — through the `ideali_event_cart` cookie the form
  * writes itself — rather than by driving the buyer-details step, so the run stays independent of that form.
  */
-export async function openSeatPicker(page: Page, width: number, height: number) {
+export async function openSeatPicker(
+  page: Page,
+  width: number,
+  height: number,
+  options: { seatingUnavailable?: boolean } = {},
+) {
   await page.setViewportSize({ width, height })
 
   await page.route("**/*.seatsio.net/**", (route) => route.abort())
@@ -94,18 +99,36 @@ export async function openSeatPicker(page: Page, width: number, height: number) 
   await page.route("**/api/events/*/register**", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(registrationResponse) }),
   )
+  // Refusing the map is how a buyer who never opened the session is imitated: nothing has read the chart, so the
+  // seats on the basket can only have come from the cart.
   await page.route(`**/api/events/cart/${CART_UNIQUE_ID}/seating/**`, (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(seatingWithHeldSeatResponse),
-    }),
+    options.seatingUnavailable
+      ? route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify(envelope(null)) })
+      : route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(seatingWithHeldSeatResponse),
+        }),
   )
   await page.route(`**/api/events/cart/${CART_UNIQUE_ID}`, (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(cartResponse) }),
   )
+  // Priced for real rather than answered with nothing: a cart whose price cannot be read is dropped on restore, and
+  // a dropped cart takes the seats it was holding with it.
   await page.route(`**/api/events/cart/${CART_UNIQUE_ID}/price`, (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(envelope(null)) }),
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(
+        envelope({
+          CartUniqueId: CART_UNIQUE_ID,
+          SubTotal: 40,
+          DiscountAmount: 0,
+          NetSubtotal: 40,
+          PaymentBreakdowns: [],
+        }),
+      ),
+    }),
   )
   // Releases are answered with the same basket: these tests are about what the buyer is asked and what the panel
   // does with the answer, not about the server's accounting.

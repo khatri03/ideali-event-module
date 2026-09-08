@@ -1,19 +1,21 @@
 import { useCallback, useMemo, useRef, useState } from "react"
-import { holdEventSeat, releaseEventSeat } from "@/api/eventSeating"
+import { holdEventSeat, issueSessionHoldToken, releaseEventSeat } from "@/api/eventSeating"
 import type { EventCart } from "@/features/events/schemas/eventCart.schemas"
+import { readStoredHoldToken, storeHoldToken } from "@/features/events/utils/seatHoldTokenCookie"
 import { extractApiError } from "@/utils/errors"
 
 /** One seat the buyer has picked, carrying what it costs and which ticket type it is sold as. */
 export interface SeatPick {
   sessionUniqueId: string
   objectLabel: string
-  categoryKey: string
   ticketTypeUniqueId: string
   ticketTypeName: string
   price: number
 }
 
 interface UseSeatSelectionOptions {
+  /** Event the sessions belong to, which is what a hold token is issued against before a cart exists. */
+  eventUniqueId: string
   /** Cart the seats are held in, or null while the buyer has not identified themselves yet. */
   cartUniqueId: string | null
   /** Opens the cart on demand, so a seat-only order still has one to be held against. */
@@ -35,10 +37,26 @@ function seatKey(sessionUniqueId: string, objectLabel: string): string {
  * the buyer's intention, not their property, so a seat lost in between is taken off the selection and said out loud
  * rather than carried silently into the checkout.
  */
-export function useSeatSelection({ cartUniqueId, ensureCart, onCartChanged }: UseSeatSelectionOptions) {
+export function useSeatSelection({
+  eventUniqueId,
+  cartUniqueId,
+  ensureCart,
+  onCartChanged,
+}: UseSeatSelectionOptions) {
   const [seats, setSeats] = useState<SeatPick[]>([])
   const [refusalBySession, setRefusalBySession] = useState<Record<string, string>>({})
   const [pendingCount, setPendingCount] = useState(0)
+  const [holdToken, setHoldToken] = useState<string | null>(null)
+  const [holdTokenExpiresAtUtc, setHoldTokenExpiresAtUtc] = useState<string | null>(null)
+
+  // Read from a ref as well, because a claim in flight was started under whatever token was live when it began.
+  // Seeded from the cookie so a reload presents the token this browser was already holding seats under instead of
+  // asking for a second one and stranding them.
+  const holdTokenRef = useRef<string | null>(readStoredHoldToken())
+
+  // A token restored from the cookie is the browser's claim, not a fact: only Seats.io knows whether it still holds
+  // anything, so it is presented for checking once before it is treated as live.
+  const holdTokenCheckedRef = useRef(false)
 
   /** Seats the server has confirmed a hold on. A pick outside this set is still only local. */
   const heldKeysRef = useRef<Set<string>>(new Set())
@@ -75,6 +93,9 @@ export function useSeatSelection({ cartUniqueId, ensureCart, onCartChanged }: Us
         const cart = await holdEventSeat(targetCartUniqueId, {
           sessionUniqueId: pick.sessionUniqueId,
           objectLabel: pick.objectLabel,
+          // The cart takes this token over the first time it is offered one, so the seats picked on the chart
+          // before the buyer had a cart stay held rather than being handed back the moment it opens.
+          holdToken: holdTokenRef.current ?? undefined,
         })
 
         heldKeysRef.current.add(key)
@@ -228,6 +249,68 @@ export function useSeatSelection({ cartUniqueId, ensureCart, onCartChanged }: Us
     [applySeats],
   )
 
+  /**
+   * Issues the token this browser holds seats under while there is no cart, and keeps it for the rest of the form.
+   *
+   * The buyer picks seats a step before they give the name a cart needs, so without a token of their own the chart
+   * would let them pick seats nothing was holding. One token covers every session on the form, because Seats.io
+   * issues it per buyer rather than per chart.
+   */
+  const ensureHoldToken = useCallback(
+    async (sessionUniqueId: string): Promise<string | null> => {
+      if (holdTokenRef.current && holdTokenCheckedRef.current) {
+        return holdTokenRef.current
+      }
+
+      try {
+        const issued = await issueSessionHoldToken(eventUniqueId, sessionUniqueId, holdTokenRef.current)
+
+        holdTokenRef.current = issued.holdToken
+        holdTokenCheckedRef.current = true
+        setHoldToken(issued.holdToken)
+        setHoldTokenExpiresAtUtc(issued.expiresAtUtc)
+        storeHoldToken(issued.holdToken, issued.expiresAtUtc)
+
+        return issued.holdToken
+      } catch (error) {
+        // Said out loud rather than swallowed: a chart drawn with no token looks exactly like one that works, and
+        // the buyer would find out at the first seat they picked.
+        reportRefusal(sessionUniqueId, extractApiError(error))
+        return null
+      }
+    },
+    [eventUniqueId, reportRefusal],
+  )
+
+  /**
+   * Takes over every seat the cart came back holding, after a refresh emptied this browser's memory of them.
+   *
+   * The cart is what actually holds seats, and it says so on its own lines. Reading them back from the chart
+   * instead would only work for a session the buyer happens to have expanded, so a buyer who refreshed with two
+   * sessions on the form saw an empty basket over seats they were still being charged for.
+   */
+  const adoptCartSeats = useCallback(
+    (cart: EventCart) => {
+      for (const line of cart.lines) {
+        if (line.seats.length === 0) {
+          continue
+        }
+
+        adoptHeldSeats(
+          line.sessionUniqueId,
+          line.seats.map((objectLabel) => ({
+            sessionUniqueId: line.sessionUniqueId,
+            objectLabel,
+            ticketTypeUniqueId: line.ticketTypeUniqueId,
+            ticketTypeName: line.ticketTypeName,
+            price: line.unitPrice,
+          })),
+        )
+      }
+    },
+    [adoptHeldSeats],
+  )
+
   const seatsBySession = useMemo(
     () =>
       seats.reduce<Record<string, SeatPick[]>>((grouped, seat) => {
@@ -265,6 +348,9 @@ export function useSeatSelection({ cartUniqueId, ensureCart, onCartChanged }: Us
   )
 
   return {
+    holdToken,
+    holdTokenExpiresAtUtc,
+    ensureHoldToken,
     seatsBySession,
     seatQuantitiesByTicketType,
     seatLabelsByTicketType,
@@ -273,6 +359,7 @@ export function useSeatSelection({ cartUniqueId, ensureCart, onCartChanged }: Us
     pickSeat,
     unpickSeats,
     adoptHeldSeats,
+    adoptCartSeats,
     claimPendingSeats,
   }
 }

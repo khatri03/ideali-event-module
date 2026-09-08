@@ -99,6 +99,44 @@ export interface EventSeatingMap {
 export interface HoldEventSeatRequest {
   sessionUniqueId: string
   objectLabel: string
+  /**
+   * Token the browser was already holding seats under before this cart existed, or omitted when it holds none.
+   * A cart with no token of its own takes it over, so seats picked before the buyer gave their name stay theirs.
+   */
+  holdToken?: string
+}
+
+/** A token the chart can hold seats under before there is a cart to hold them in. */
+export interface EventSeatHoldToken {
+  holdToken: string
+  expiresAtUtc: string | null
+}
+
+const seatHoldTokenSchema = z.object({
+  HoldToken: z.string().nullable().optional(),
+  holdToken: z.string().nullable().optional(),
+  ExpiresAtUtc: z.string().nullable().optional(),
+  expiresAtUtc: z.string().nullable().optional(),
+})
+
+/**
+ * Reads the hold token the API issued.
+ *
+ * An empty token is refused rather than carried: a chart drawn against one holds nothing, and every seat the buyer
+ * picks on it stays on sale for somebody else to take.
+ */
+export function normalizeEventSeatHoldToken(payload: unknown): EventSeatHoldToken {
+  const parsed = seatHoldTokenSchema.parse(payload)
+  const holdToken = parsed.HoldToken ?? parsed.holdToken ?? ""
+
+  if (!holdToken) {
+    throw new Error("The seat map could not be opened for picking.")
+  }
+
+  return {
+    holdToken,
+    expiresAtUtc: parsed.ExpiresAtUtc ?? parsed.expiresAtUtc ?? null,
+  }
 }
 
 /** Asks for one held seat to go back on sale. */

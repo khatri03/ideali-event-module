@@ -185,6 +185,9 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [sessionTicketSearch, setSessionTicketSearch] = useState<Record<string, string>>({})
   const [selectedTicketQuantities, setSelectedTicketQuantities] = useState<Record<string, number>>({})
   const {
+    holdToken: seatHoldToken,
+    holdTokenExpiresAtUtc: seatHoldTokenExpiresAtUtc,
+    ensureHoldToken: ensureSeatHoldToken,
     seatsBySession,
     seatQuantitiesByTicketType,
     seatLabelsByTicketType,
@@ -193,8 +196,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     pickSeat,
     unpickSeats,
     adoptHeldSeats,
+    adoptCartSeats,
     claimPendingSeats,
   } = useSeatSelection({
+    eventUniqueId: event.uniqueId,
     cartUniqueId: cart?.cartUniqueId ?? null,
     ensureCart: ensureCartNow,
     onCartChanged: applyCart,
@@ -413,11 +418,17 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   }
 
   // The hold deadline is the server's; the chip only counts down to it.
-  const purchaseTimerVisible = Boolean(expiresAtUtc)
+  // Seats leave inventory the moment they are picked, a whole step before the cart that owns the deadline exists.
+  // Showing nothing until then let that first hold run out in silence, with the buyer still on the chart.
+  const purchaseDeadlineUtc = expiresAtUtc ?? seatHoldTokenExpiresAtUtc
+  const purchaseTimerVisible = Boolean(purchaseDeadlineUtc)
 
   // A cart that survived a refresh brings its lines back with it. Seeding the quantities rebuilds
   // the whole selection, because that one map drives the visible tabs, the summary and the
   // attendee slots. Buyer and attendee details are only sent at confirm time, so they are retyped.
+  //
+  // A seated line is restored as its seats rather than as a quantity: the buyer chose particular chairs, and a
+  // count of them would leave the basket unable to say which, or to give one back.
   const [prevRestoredCart, setPrevRestoredCart] = useState(restoredCart)
   if (restoredCart !== prevRestoredCart) {
     setPrevRestoredCart(restoredCart)
@@ -425,10 +436,14 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     if (restoredCart) {
       setSelectedTicketQuantities(
         restoredCart.lines.reduce<Record<string, number>>((quantities, line) => {
-          quantities[line.ticketTypeUniqueId] = line.quantity
+          if (line.seats.length === 0) {
+            quantities[line.ticketTypeUniqueId] = line.quantity
+          }
+
           return quantities
         }, {}),
       )
+      adoptCartSeats(restoredCart)
     }
   }
 
@@ -1173,6 +1188,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                     accentColor={formAccent}
                                     onPickSeat={pickSeat}
                                     onUnpickSeats={(objectLabels) => unpickSeats(sessionUniqueId, objectLabels)}
+                                    holdToken={seatHoldToken}
+                                    onEnsureHoldToken={() => ensureSeatHoldToken(sessionUniqueId)}
                                     onAdoptHeldSeats={(heldSeats) => adoptHeldSeats(sessionUniqueId, heldSeats)}
                                   />
                                 )}
@@ -1347,12 +1364,14 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
             position='fixed'
             top={{ base: 3, md: 4 }}
             right={{ base: 3, md: 4 }}
-            zIndex={1300}
+            // Above the dialog layer, which Chakra puts at 1500. The seat picker opens over the whole viewport, and
+            // the moment the buyer is on the chart is exactly when the countdown to losing those seats matters most.
+            zIndex={1600}
             pointerEvents='none'
           >
             <Box pointerEvents='auto'>
               <PurchaseTimerChip
-                expiresAtUtc={expiresAtUtc}
+                expiresAtUtc={purchaseDeadlineUtc}
                 accentColor={formAccent}
                 onExpire={handlePurchaseTimerExpire}
               />

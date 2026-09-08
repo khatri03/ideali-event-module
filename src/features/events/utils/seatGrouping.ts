@@ -1,8 +1,23 @@
-import type { EventSeat } from "@/features/events/schemas/eventSeating.schemas"
+/**
+ * What listing a seat in the basket needs of it: which chair it is, what it is sold as, and what it costs.
+ *
+ * Narrower than the seat the map answers with on purpose. Seats reach the basket from two places - the chart the
+ * buyer picked them on, and the cart that outlived their refresh - and these are the facts both can give.
+ */
+export interface BasketSeat {
+  /** Label the seating plan draws the seat under, e.g. "19-2". */
+  objectLabel: string
+  /** Ticket type the seat is sold as, which groups objects the plan gives no parent. */
+  ticketTypeUniqueId: string
+  /** What that ticket type is called, as the buyer reads it. */
+  ticketTypeName: string
+  /** What the seat costs, in the event's currency. */
+  price: number
+}
 
 /** One seat under its group heading, named the short way now that the table it belongs to is stated above it. */
 export interface SeatGroupEntry {
-  seat: EventSeat
+  seat: BasketSeat
   /** What the row calls the seat, e.g. "Seat 2" for object label "19-2". */
   name: string
 }
@@ -64,7 +79,7 @@ export function describeSeatParent(parentLabel: string): string {
  * no parent on the plan are grouped by what they are sold as, because a table booked whole is one object with one
  * price and belongs under its own ticket type rather than under a table number it does not have.
  */
-export function groupSeatsByParent(seats: EventSeat[]): SeatGroup[] {
+export function groupSeatsByParent(seats: BasketSeat[]): SeatGroup[] {
   const groups = new Map<string, SeatGroup>()
 
   for (const seat of seats) {

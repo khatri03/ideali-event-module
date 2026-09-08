@@ -162,6 +162,8 @@ export const API_ROUTES = {
     `/api/events/cart/${cartUniqueId}/lines/${lineUniqueId}/attendees`,
   eventRegistrationSessionSeating: (eventUniqueId: string, sessionUniqueId: string) =>
     `/api/events/${eventUniqueId}/register/sessions/${sessionUniqueId}/seating`,
+  eventRegistrationSessionHoldToken: (eventUniqueId: string, sessionUniqueId: string) =>
+    `/api/events/${eventUniqueId}/register/sessions/${sessionUniqueId}/hold-token`,
   eventCartSeating: (cartUniqueId: string, sessionUniqueId: string) =>
     `/api/events/cart/${cartUniqueId}/seating/${sessionUniqueId}`,
   eventCartSeats: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/seats`,

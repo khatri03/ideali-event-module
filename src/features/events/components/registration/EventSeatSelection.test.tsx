@@ -38,7 +38,6 @@ vi.mock("@seatsio/seatsio-react", () => ({
 const PICKED_SEAT: SeatPick = {
   sessionUniqueId: "session-1",
   objectLabel: "A-12",
-  categoryKey: "cat-stalls",
   ticketTypeUniqueId: "ticket-1",
   ticketTypeName: "Stalls",
   price: 40,
@@ -77,6 +76,7 @@ function renderSelection({ cartUniqueId = "cart-1", seats = [], refusal = null }
   const onPickSeat = vi.fn()
   const onUnpickSeats = vi.fn()
   const onAdoptHeldSeats = vi.fn()
+  const onEnsureHoldToken = vi.fn().mockResolvedValue("browser-token")
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
   const tree = (currentSeats: SeatPick[]) => (
@@ -92,6 +92,8 @@ function renderSelection({ cartUniqueId = "cart-1", seats = [], refusal = null }
           isSeatChanging={false}
           currencyCode="USD"
           accentColor="#7551FF"
+          holdToken={null}
+          onEnsureHoldToken={() => onEnsureHoldToken()}
           // Written as fresh closures, because that is what the registration form passes and what the adoption
           // effect has to survive.
           onPickSeat={(pick) => onPickSeat(pick)}
@@ -108,6 +110,7 @@ function renderSelection({ cartUniqueId = "cart-1", seats = [], refusal = null }
     onPickSeat,
     onUnpickSeats,
     onAdoptHeldSeats,
+    onEnsureHoldToken,
     /** Renders again the way the form does after any of its state moved, with handlers built anew. */
     rerenderWith: (nextSeats: SeatPick[]) => view.rerender(tree(nextSeats)),
   }
@@ -137,6 +140,30 @@ describe("EventSeatSelection", () => {
   })
 
   /**
+   * The buyer picks seats a step before they give the name a cart needs. Without a token of their own the chart
+   * would draw and let them pick seats that nothing anywhere is holding.
+   */
+  it("takes a hold token before the buyer can pick without a cart", async () => {
+    const { onEnsureHoldToken } = renderSelection({ cartUniqueId: null })
+
+    await openSeatMap()
+
+    await waitFor(() => expect(onEnsureHoldToken).toHaveBeenCalled())
+  })
+
+  /**
+   * A cart holds seats under a token of its own, minted and renewed server-side. Asking the browser for a second
+   * one would leave the buyer's seats split across two claims.
+   */
+  it("asks for no browser token once the cart holds one", async () => {
+    const { onEnsureHoldToken } = renderSelection()
+
+    await openSeatMap()
+
+    expect(onEnsureHoldToken).not.toHaveBeenCalled()
+  })
+
+  /**
    * A seat travels as a label, and a label buys nothing on its own. The category it was drawn in is what says
    * which ticket type it is sold as and what it costs, so the order can account for it.
    */
@@ -149,7 +176,6 @@ describe("EventSeatSelection", () => {
     expect(onPickSeat).toHaveBeenCalledWith({
       sessionUniqueId: "session-1",
       objectLabel: "A-14",
-      categoryKey: "cat-stalls",
       ticketTypeUniqueId: "ticket-1",
       ticketTypeName: "Stalls",
       price: 40,

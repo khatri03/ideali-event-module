@@ -1,15 +1,25 @@
 import { describe, expect, it, vi, beforeEach } from "vitest"
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { ServiceResponseError } from "@/api/serviceResponse"
-import type { EventCart } from "@/features/events/schemas/eventCart.schemas"
+import type { EventCart, EventCartLine } from "@/features/events/schemas/eventCart.schemas"
 import { useSeatSelection, type SeatPick } from "./useSeatSelection"
 
 const holdEventSeat = vi.fn()
 const releaseEventSeat = vi.fn()
+const issueSessionHoldToken = vi.fn()
 
 vi.mock("@/api/eventSeating", () => ({
   holdEventSeat: (...args: unknown[]) => holdEventSeat(...args),
   releaseEventSeat: (...args: unknown[]) => releaseEventSeat(...args),
+  issueSessionHoldToken: (...args: unknown[]) => issueSessionHoldToken(...args),
+}))
+
+const readStoredHoldToken = vi.fn()
+const storeHoldToken = vi.fn()
+
+vi.mock("@/features/events/utils/seatHoldTokenCookie", () => ({
+  readStoredHoldToken: () => readStoredHoldToken(),
+  storeHoldToken: (...args: unknown[]) => storeHoldToken(...args),
 }))
 
 const CART = { cartUniqueId: "cart-1", lines: [] } as unknown as EventCart
@@ -19,7 +29,6 @@ function seatPick(objectLabel: string, overrides: Partial<SeatPick> = {}): SeatP
   return {
     sessionUniqueId: "session-1",
     objectLabel,
-    categoryKey: "cat-stalls",
     ticketTypeUniqueId: "ticket-1",
     ticketTypeName: "Stalls",
     price: 40,
@@ -27,12 +36,34 @@ function seatPick(objectLabel: string, overrides: Partial<SeatPick> = {}): SeatP
   }
 }
 
+/** A cart as it comes back after a refresh, carrying one line per ticket type with the seats it holds. */
+function restoredCart(lines: Partial<EventCartLine>[]): EventCart {
+  return {
+    cartUniqueId: "cart-1",
+    lines: lines.map((line) => ({
+      lineUniqueId: "line-1",
+      sessionUniqueId: "session-1",
+      ticketTypeUniqueId: "ticket-1",
+      ticketTypeName: "Stalls",
+      quantity: line.seats?.length ?? 1,
+      unitPrice: 40,
+      lineTotal: 40,
+      discountAmount: null,
+      reservationStatus: "Active" as const,
+      seats: [],
+      ...line,
+    })),
+  } as unknown as EventCart
+}
+
 /** Renders the selection against a cart that may or may not exist yet, which is what every rule here turns on. */
 function renderSeatSelection(cartUniqueId: string | null) {
   const ensureCart = vi.fn().mockResolvedValue(CART)
   const onCartChanged = vi.fn()
 
-  const view = renderHook(() => useSeatSelection({ cartUniqueId, ensureCart, onCartChanged }))
+  const view = renderHook(() =>
+    useSeatSelection({ eventUniqueId: "event-1", cartUniqueId, ensureCart, onCartChanged }),
+  )
 
   return { ...view, ensureCart, onCartChanged }
 }
@@ -40,6 +71,9 @@ function renderSeatSelection(cartUniqueId: string | null) {
 beforeEach(() => {
   holdEventSeat.mockReset().mockResolvedValue(CART)
   releaseEventSeat.mockReset().mockResolvedValue(CART)
+  issueSessionHoldToken.mockReset().mockResolvedValue({ holdToken: "browser-token", expiresAtUtc: null })
+  readStoredHoldToken.mockReset().mockReturnValue(null)
+  storeHoldToken.mockReset()
 })
 
 describe("useSeatSelection", () => {
@@ -204,5 +238,166 @@ describe("useSeatSelection", () => {
     act(() => result.current.pickSeat(seatPick("A-14")))
 
     expect(result.current.seatLabelsByTicketType["ticket-1"]).toEqual(["A-14", "A-15"])
+  })
+  /**
+   * A refresh empties this browser's memory of what was picked, but not the cart, which is what actually holds the
+   * seats. Rebuilding the basket from its lines is the only thing standing between the buyer and an empty card over
+   * seats they are still being charged for.
+   */
+  it("takes over the seats a restored cart is holding", () => {
+    const { result } = renderSeatSelection("cart-1")
+
+    act(() => result.current.adoptCartSeats(restoredCart([{ seats: ["A-14", "A-15"] }])))
+
+    expect(result.current.seatsBySession["session-1"]).toEqual([
+      { sessionUniqueId: "session-1", objectLabel: "A-14", ticketTypeUniqueId: "ticket-1", ticketTypeName: "Stalls", price: 40 },
+      { sessionUniqueId: "session-1", objectLabel: "A-15", ticketTypeUniqueId: "ticket-1", ticketTypeName: "Stalls", price: 40 },
+    ])
+    expect(holdEventSeat).not.toHaveBeenCalled()
+  })
+
+  /**
+   * A restored seat is already held server-side. Treating it as a fresh pick would ask Seats.io to hold a seat this
+   * very cart is holding, and giving it up again would then release nothing.
+   */
+  it("gives a restored seat back to the server rather than only forgetting it", async () => {
+    const { result } = renderSeatSelection("cart-1")
+
+    act(() => result.current.adoptCartSeats(restoredCart([{ seats: ["A-14"] }])))
+    act(() => result.current.unpickSeats("session-1", ["A-14"]))
+
+    await waitFor(() =>
+      expect(releaseEventSeat).toHaveBeenCalledWith("cart-1", { sessionUniqueId: "session-1", objectLabel: "A-14" }),
+    )
+  })
+
+  /**
+   * A general-admission line is a count, not a chair. Restoring one as a seat would put a label on the basket that
+   * no chart draws and no attendee can be sat in.
+   */
+  it("restores no seats from a line that sells general admission", () => {
+    const { result } = renderSeatSelection("cart-1")
+
+    act(() => result.current.adoptCartSeats(restoredCart([{ seats: [], quantity: 3 }])))
+
+    expect(result.current.seatsBySession["session-1"]).toBeUndefined()
+  })
+  /**
+   * Seats.io issues a hold token per buyer, not per chart. Minting one for every session the buyer opens would
+   * scatter their seats across tokens, and the cart could only ever take over the last of them.
+   */
+  it("issues one hold token for the whole form", async () => {
+    const { result } = renderSeatSelection(null)
+
+    await act(async () => {
+      await result.current.ensureHoldToken("session-1")
+      await result.current.ensureHoldToken("session-2")
+    })
+
+    expect(issueSessionHoldToken).toHaveBeenCalledOnce()
+    expect(result.current.holdToken).toBe("browser-token")
+  })
+
+  /**
+   * A seat picked before the cart existed is held under the browser's own token. Claiming it without offering that
+   * token would have the cart mint another, and the seat would stay held by a token nothing can book it under.
+   */
+  it("offers the browser's token when claiming a seat against the cart", async () => {
+    const { result } = renderSeatSelection("cart-1")
+
+    await act(async () => {
+      await result.current.ensureHoldToken("session-1")
+    })
+    act(() => result.current.pickSeat(seatPick("A-14")))
+
+    await waitFor(() =>
+      expect(holdEventSeat).toHaveBeenCalledWith("cart-1", {
+        sessionUniqueId: "session-1",
+        objectLabel: "A-14",
+        holdToken: "browser-token",
+      }),
+    )
+  })
+
+  /**
+   * A chart drawn without a token looks exactly like one that works. The buyer would find out only at the first
+   * seat they picked, having been told nothing, so the failure is said out loud instead.
+   */
+  it("says so when no hold token could be issued", async () => {
+    issueSessionHoldToken.mockRejectedValue(new ServiceResponseError("Seat selection is unavailable right now."))
+
+    const { result } = renderSeatSelection(null)
+
+    await act(async () => {
+      expect(await result.current.ensureHoldToken("session-1")).toBeNull()
+    })
+
+    expect(result.current.refusalBySession["session-1"]).toBe("Seat selection is unavailable right now.")
+  })
+  /**
+   * A reload empties the page's memory but not the vendor's. Asking for a second token would leave the seats picked
+   * before the refresh held by one nobody has: the buyer cannot pay for them and nobody else can take them until
+   * the first token lapses of its own accord.
+   */
+  it("presents the token it was already holding rather than asking for another", async () => {
+    readStoredHoldToken.mockReturnValue("token-from-before-the-reload")
+
+    const { result } = renderSeatSelection(null)
+
+    await act(async () => {
+      await result.current.ensureHoldToken("session-1")
+    })
+
+    expect(issueSessionHoldToken).toHaveBeenCalledWith("event-1", "session-1", "token-from-before-the-reload")
+  })
+
+  /**
+   * The token is only worth presenting later if it outlives this page. Keeping it in memory alone is what made a
+   * refresh strand the buyer's seats in the first place.
+   */
+  it("keeps the token the server answered with so the next page load can present it", async () => {
+    issueSessionHoldToken.mockResolvedValue({ holdToken: "browser-token", expiresAtUtc: "2026-09-09T12:00:00" })
+
+    const { result } = renderSeatSelection(null)
+
+    await act(async () => {
+      await result.current.ensureHoldToken("session-1")
+    })
+
+    expect(storeHoldToken).toHaveBeenCalledWith("browser-token", "2026-09-09T12:00:00")
+  })
+
+  /**
+   * The browser's word that its token is live is worth nothing; only Seats.io knows. A stored token is therefore
+   * presented for checking once, and the answer - the same token or a fresh one - is what the chart draws against.
+   */
+  it("draws against the token the server confirmed, not the one it presented", async () => {
+    readStoredHoldToken.mockReturnValue("token-that-already-lapsed")
+    issueSessionHoldToken.mockResolvedValue({ holdToken: "replacement-token", expiresAtUtc: null })
+
+    const { result } = renderSeatSelection(null)
+
+    await act(async () => {
+      expect(await result.current.ensureHoldToken("session-1")).toBe("replacement-token")
+    })
+
+    expect(result.current.holdToken).toBe("replacement-token")
+  })
+
+  /**
+   * Seats leave inventory the moment they are picked, a whole step before the cart that owns the purchase deadline
+   * exists. Without the token's own deadline the form has nothing to count down to, and that first hold runs out in
+   * silence with the buyer still looking at the chart.
+   */
+  it("says how long its token holds seats for, so the form can count down before a cart exists", async () => {
+    issueSessionHoldToken.mockResolvedValue({ holdToken: "browser-token", expiresAtUtc: "2026-09-09T12:10:00" })
+
+    const { result } = renderSeatSelection(null)
+
+    await act(async () => {
+      await result.current.ensureHoldToken("session-1")
+    })
+
+    expect(result.current.holdTokenExpiresAtUtc).toBe("2026-09-09T12:10:00")
   })
 })

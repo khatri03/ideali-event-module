@@ -849,8 +849,28 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
         session is shown before it, so the seat map reads from
         <code class="path">GET /api/events/{eventUniqueId:guid}/register/sessions/{sessionUniqueId:guid}/seating</code>
         until there is a cart to read from instead. That route is anonymous and carries the workspace public key,
-        the session's Seats.io event and each category's price and colour — no hold token, no held seats, never the
-        secret key.</p>
+        the session's Seats.io event and each category's price and colour — no held seats, never the secret key.</p>
+
+      <p>The token those seats are held under comes from
+        <code class="path">POST /api/events/{eventUniqueId:guid}/register/sessions/{sessionUniqueId:guid}/hold-token</code>,
+        asked for as the map opens. One token covers the whole form, because Seats.io issues it per buyer rather than
+        per chart, and it lasts as long as the organizer's purchase time limit rather than the vendor's default
+        quarter of an hour. It holds nothing by itself: a seat still leaves inventory only through
+        <code class="path">POST /api/events/cart/{cartUniqueId:guid}/seats</code>. The route is anonymous and every
+        call spends a Seats.io call, so it is rate limited per IP address.</p>
+
+      <p>A browser that already holds a token presents it in the body as <code>HoldToken</code> and gets the same one
+        back, so reloading the page does not cost the buyer the seats they picked. Whether it still holds anything is
+        settled with Seats.io rather than taken on the browser's word: a token that has lapsed, or one nobody issued,
+        is answered with a fresh one. Without this a refresh minted a second token and stranded the first token's
+        seats &mdash; the buyer could neither pay for them nor give them up, and nobody else could have them until
+        that token lapsed on its own.</p>
+
+      <p>When the cart opens it takes that token over rather than minting its own: the hold request carries
+        <code>HoldToken</code>, and a cart holding none adopts it once Seats.io confirms the token is still live.
+        The browser is not believed about it — an expired or unknown token is answered with a fresh one — and this
+        is what keeps the seats picked before the buyer gave their name from being handed back the moment the cart
+        is opened.</p>
 
       <p>Seats are picked on that chart whether or not a cart exists. A pick made beforehand is kept in the browser
         and claimed against
@@ -1733,6 +1753,13 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
                 <td class="small"><span class="param-source">route</span> <code>cartUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">form</span> <code>fieldUniqueId</code><span class="text-body-secondary"> : Guid</span><br><code>file</code><span class="text-body-secondary"> : IFormFile</span></td>
               </tr>
               <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/events/{eventUniqueId:guid}/register/sessions/{sessionUniqueId:guid}/hold-token</code> <span class="badge text-bg-light border flag">RateLimiting: seat-hold-token</span><div class="action-doc">Gives the chart the token it holds seats under before a cart exists, lasting as long as the organizer gives the buyer to finish paying. A browser already holding one presents it and keeps it, so a reload does not strand the seats it picked; whether it still holds them is settled with Seats.io, never taken on the browser's word. The token holds nothing by itself — a seat leaves inventory only through the cart's own seat routes, which take this token over when the cart opens. Anonymous and rate limited per IP address, because every call spends a Seats.io call.</div></td>
+                <td>Issue Session Hold Token</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>eventUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">route</span> <code>sessionUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">body</span> <code>HoldToken</code><span class="text-body-secondary"> : string?</span></td>
+              </tr>
+              <tr>
                 <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
                 <td><code class="path">/api/events/cart/{cartUniqueId:guid}/seating/{sessionUniqueId:guid}</code> <span class="badge text-bg-light border flag">RequireCartCapability</span><div class="action-doc">Everything the seat map needs to draw itself: the workspace public key, the session's Seats.io event, this cart's hold token, and every category with its colour, its price and — only where the organizer opted in — how many of its seats are left. The workspace secret key is not among them and never is.</div></td>
                 <td>Get Seating</td>
@@ -1741,7 +1768,7 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
               </tr>
               <tr>
                 <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
-                <td><code class="path">/api/events/cart/{cartUniqueId:guid}/seats</code> <span class="badge text-bg-light border flag">BotMitigation · RequireCartCapability</span><div class="action-doc">Claims one seat for this cart. The request names a seat and nothing else: its category, its ticket type and its price are all established on the server, because a browser naming its own category would be naming its own price.</div></td>
+                <td><code class="path">/api/events/cart/{cartUniqueId:guid}/seats</code> <span class="badge text-bg-light border flag">BotMitigation · RequireCartCapability</span><div class="action-doc">Claims one seat for this cart. The request names a seat and, where the browser was already holding seats before the cart existed, the token it held them under: a cart with no token of its own adopts it once Seats.io confirms it is still live. Everything else — the seat's category, its ticket type and its price — is established on the server, because a browser naming its own category would be naming its own price.</div></td>
                 <td>Hold Seat</td>
                 <td><span class="badge text-bg-light border access-anon">Public</span></td>
                 <td class="small"><span class="param-source">route</span> <code>cartUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">body</span> <code>request</code><span class="text-body-secondary"> : HoldEventSeatRequest</span></td>
