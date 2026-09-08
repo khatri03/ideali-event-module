@@ -10,6 +10,8 @@
 *.jpg
 *.jpeg
 !src/assets/**
+# Screenshots a document depends on are part of the document, not dev leftovers.
+!docs/screenshots/**
 
 # Environment
 .env
