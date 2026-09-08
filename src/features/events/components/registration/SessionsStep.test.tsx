@@ -48,11 +48,13 @@ function buildSession(overrides: Partial<EventRegistrationSession> = {}): EventR
   }
 }
 
-function renderStep(session: EventRegistrationSession) {
+function renderStep(...sessions: EventRegistrationSession[]) {
+  const [session] = sessions
+
   return render(
     <ChakraProvider value={system}>
       <SessionsStep
-        sessions={[session]}
+        sessions={sessions}
         isLoading={false}
         selectedTicketQuantities={{}}
         selectedTicketCount={0}
@@ -74,6 +76,65 @@ function renderStep(session: EventRegistrationSession) {
 }
 
 describe("SessionsStep", () => {
+  /**
+   * An expanded session runs long enough that the next one reads as a continuation of it. A buyer who has lost
+   * track of which session they are picking seats for buys the wrong ticket.
+   */
+  it("separates one session from the next", () => {
+    renderStep(buildSession(), buildSession({ uniqueId: "session-2", name: "Closing Night" }))
+
+    expect(screen.getAllByRole("separator")).toHaveLength(1)
+  })
+
+  /** A rule above the first session would divide it from the toolbar, which is not a session boundary. */
+  it("draws no separator above a lone session", () => {
+    renderStep(buildSession())
+
+    expect(screen.queryByRole("separator")).not.toBeInTheDocument()
+  })
+
+  /**
+   * A buyer who reaches the attendee step with a basket full of tickets and no names to hand either abandons the
+   * registration or invents them. A seated session asks for those names exactly as a quantity one does, so it has
+   * to say so on the session card too.
+   */
+  it("warns that a seated session will ask who each ticket is for", () => {
+    renderStep(buildSession({ requiresAttendeeInfo: true }))
+
+    expect(screen.getByText("Requires Attendee Info")).toBeInTheDocument()
+  })
+
+  /** The same warning on a session sold by quantity, which is where it was first shown. */
+  it("warns that a session sold by quantity will ask who each ticket is for", () => {
+    renderStep(buildSession({ offersSeatSelection: false, requiresAttendeeInfo: true }))
+
+    expect(screen.getByText("Requires Attendee Info")).toBeInTheDocument()
+  })
+
+  /**
+   * A collapsed card says nothing about how its tickets are bought, and the two kinds behave differently once
+   * opened. The badge lets a buyer scanning the list see which sessions will hand them a seating plan.
+   */
+  it("marks a session whose tickets are picked from a seating plan", () => {
+    renderStep(buildSession({ offersSeatSelection: true }))
+
+    expect(screen.getByRole("img", { name: "Seat selection" })).toBeInTheDocument()
+  })
+
+  /** A session sold by quantity has no plan to pick from, and the badge would promise one that never opens. */
+  it("leaves a session sold by quantity unmarked", () => {
+    renderStep(buildSession({ offersSeatSelection: false }))
+
+    expect(screen.queryByRole("img", { name: "Seat selection" })).not.toBeInTheDocument()
+  })
+
+  /** A session that asks for no attendee names must not warn about a step the buyer will never see. */
+  it("stays quiet on a session that asks for no attendee names", () => {
+    renderStep(buildSession({ requiresAttendeeInfo: false }))
+
+    expect(screen.queryByText("Requires Attendee Info")).not.toBeInTheDocument()
+  })
+
   /**
    * The seat picker holds seats in the buyer's name and so cannot open until they identify themselves. What a seat
    * costs is not private, and a buyer deciding whether to register at all has to be able to read it first.

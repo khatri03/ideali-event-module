@@ -812,7 +812,7 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
         unique index is already occupied by the booked row.</p>
 
       <p>The map answers with more than prices. Each category also carries the colour the chart draws it in, so the
-        legend above the map can name what the buyer is looking at rather than leaving them to match colours by eye,
+        legend on the session card can name what the buyer is looking at rather than leaving them to match colours by eye,
         and a seat count where — and only where — the organizer turned on <em>Show tickets left on the registration
         form</em> for that ticket type. A category they kept private carries no count at all rather than a hidden one,
         and a category with no capacity recorded carries none either: zero would read as sold out on seats that are
@@ -826,6 +826,53 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
         form captions the chart from the sessions payload it has already loaded. A general-admission ticket type
         carries neither: there is no chart to caption. The seat count follows the same three-state rule as the
         cart-scoped call, computed from the ticket type's own capacity.</p>
+
+      <p>The map is fetched when a cart exists but drawn only when the buyer asks for it. A registration form can
+        carry several seated sessions, and mounting a chart for each would run several vendor renderers at once for
+        maps nobody is looking at, inside a tab body that is already a scroll box. So each seated session shows the
+        legend and a button, and the button opens the chart full screen. Opening re-reads
+        <code class="path">/api/events/cart/{cartUniqueId:guid}/seating/{sessionUniqueId:guid}</code> first, because
+        the cart's hold token expires and the server reissues it on that read; a chart drawn against a dead token
+        refuses every seat with nothing on screen to explain it. The seats the cart is holding stay listed on the
+        session card once the map is closed, so nothing the buyer is paying for is hidden behind a dismissed
+        dialog.</p>
+
+      <p>Each category also carries <code>MaxPurchase</code>, the ticket type's own per-order maximum. The legend
+        prints it at the far end of the line that carries the seats left, so the cap is read before a seat is chosen
+        rather than met as a refusal afterwards; the chart is given the same numbers as
+        <code>maxSelectedObjects</code> category limits so it stops the pick itself. Neither is trusted:
+        <code class="path">POST /api/events/cart/{cartUniqueId:guid}/seats</code> counts the seats the cart already
+        holds of that ticket type and refuses the one that would pass the maximum, because a browser limit is a
+        courtesy and not a rule.</p>
+
+      <p>The chart is drawn whether or not a cart exists. A cart is opened at the buyer details step, and a seated
+        session is shown before it, so the seat map reads from
+        <code class="path">GET /api/events/{eventUniqueId:guid}/register/sessions/{sessionUniqueId:guid}/seating</code>
+        until there is a cart to read from instead. That route is anonymous and carries the workspace public key,
+        the session's Seats.io event and each category's price and colour — no hold token, no held seats, never the
+        secret key.</p>
+
+      <p>Seats are picked on that chart whether or not a cart exists. A pick made beforehand is kept in the browser
+        and claimed against
+        <code class="path">POST /api/events/cart/{cartUniqueId:guid}/seats</code> the moment the buyer's name and
+        email open the cart, one seat at a time so each answer's basket cannot overwrite the last. An order made
+        entirely of seats opens its cart at that same moment, since it never adds a ticket line to do it for them.
+        Until the claim goes through nothing on the server is holding the seat, so a seat somebody else bought in
+        between is dropped from the selection and named to the buyer rather than carried into the checkout. Picks
+        made before the cart exists are handed back to the chart when the map is reopened, and the vendor keeps no
+        session of its own for them: seats are held by this server against the cart, never by the chart against
+        itself.</p>
+
+      <p>A picked seat is counted as a ticket of its category's type, which is what puts it on the order summary and
+        gives it an attendee slot. Where the organizer asks for attendee details, a seated session asks once per
+        seat and names each slot by its seat label rather than by a number, and the labels are ordered the way the
+        server orders a reservation's seats so the details land on the right ticket. Where the organizer does not,
+        no attendee step appears for it at all.</p>
+
+      <p>A chart that cannot be drawn says so where the chart would have been. A session whose response carries no
+        workspace key or no Seats.io event is not published for seating yet and is named as such, and a chart the
+        vendor renderer reports as failed is named as a failure the buyer can retry — neither is left as an empty
+        frame, which reads as a map that is still loading and never arrives.</p>
 
       <p>Seats come back on sale in three ways, all swept once a minute: a hold that ran out, an order that was
         cancelled or cut down at checkout, and a ticket that was later cancelled or refunded. A seat whose ticket

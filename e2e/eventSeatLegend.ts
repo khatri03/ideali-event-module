@@ -15,13 +15,14 @@ export const SESSION_UNIQUE_ID = "6b9f13b4-1f0f-4a3f-9a04-6f0f5f3b12c7"
 export const CART_UNIQUE_ID = "c0f1a3d2-88b1-4d47-9f2e-1c1c8f4d55aa"
 export const REGISTER_PATH = `/events/${EVENT_UNIQUE_ID}/register`
 
-const HOUR_FROM_NOW = new Date(Date.now() + 60 * 60 * 1000).toISOString()
+export const HOUR_FROM_NOW = new Date(Date.now() + 60 * 60 * 1000).toISOString()
 
-function envelope(data: unknown) {
+/** Wraps a fixture the way the API wraps every answer, so the client's own unwrapping is exercised. */
+export function envelope(data: unknown) {
   return { success: true, message: null, timestamp: new Date().toISOString(), data }
 }
 
-const registrationResponse = envelope({
+export const registrationResponse = envelope({
   UniqueId: EVENT_UNIQUE_ID,
   Name: "Seated Gala",
   Description: null,
@@ -101,7 +102,7 @@ const registrationResponse = envelope({
   ],
 })
 
-const cartResponse = envelope({
+export const cartResponse = envelope({
   CartUniqueId: CART_UNIQUE_ID,
   InvoiceNo: "INV-1001",
   EventUniqueId: EVENT_UNIQUE_ID,
@@ -124,7 +125,7 @@ const cartResponse = envelope({
   ],
 })
 
-const seatingResponse = envelope({
+export const seatingResponse = envelope({
   SessionUniqueId: SESSION_UNIQUE_ID,
   SeatsIoPublicKey: "workspace-public-key",
   Region: "eu",
@@ -166,6 +167,17 @@ const seatingResponse = envelope({
   SelectedSeats: [],
 })
 
+/**
+ * The same map as the anonymous route answers with: no hold token, and no seats held, because a hold belongs to a
+ * cart and this read has none.
+ */
+export const sessionSeatingResponse = envelope({
+  ...(seatingResponse.data as Record<string, unknown>),
+  HoldToken: "",
+  HoldTokenExpiresAtUtc: null,
+  SelectedSeats: [],
+})
+
 /** True when the document itself scrolls sideways, which is what hides half a form on a phone. */
 export async function hasHorizontalOverflow(page: Page) {
   return await page.evaluate(() => {
@@ -185,6 +197,9 @@ export async function openSeatLegend(page: Page, width: number, height: number) 
 
   await page.route("**/api/events/*/register**", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(registrationResponse) }),
+  )
+  await page.route(`**/api/events/*/register/sessions/*/seating`, (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(sessionSeatingResponse) }),
   )
   await page.route(`**/api/events/cart/${CART_UNIQUE_ID}/seating/**`, (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(seatingResponse) }),

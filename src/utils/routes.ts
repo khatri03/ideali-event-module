@@ -160,6 +160,8 @@ export const API_ROUTES = {
   eventCartPrice: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/price`,
   eventCartLineAttendees: (cartUniqueId: string, lineUniqueId: string) =>
     `/api/events/cart/${cartUniqueId}/lines/${lineUniqueId}/attendees`,
+  eventRegistrationSessionSeating: (eventUniqueId: string, sessionUniqueId: string) =>
+    `/api/events/${eventUniqueId}/register/sessions/${sessionUniqueId}/seating`,
   eventCartSeating: (cartUniqueId: string, sessionUniqueId: string) =>
     `/api/events/cart/${cartUniqueId}/seating/${sessionUniqueId}`,
   eventCartSeats: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/seats`,

@@ -14,6 +14,7 @@ function buildCategory(overrides: Partial<EventSeatingCategory> = {}): EventSeat
     ticketTypeName: "Stalls ticket",
     price: 40,
     color: "#7551FF",
+    maxPurchase: null,
     showRemainingTickets: false,
     remainingSeats: null,
     ...overrides,
@@ -117,5 +118,25 @@ describe("SeatCategoryLegend", () => {
     renderLegend([])
 
     expect(screen.getByText("No seat prices published yet")).toBeInTheDocument()
+  })
+
+  /**
+   * The cap is only met today when the chart refuses a seat the buyer already reached for. Naming it beside the
+   * seats left tells them what they may take before they choose, rather than after.
+   */
+  it("names the most of a category one order may take", () => {
+    renderLegend([buildCategory({ maxPurchase: 2 })])
+
+    expect(screen.getByText("Max 2 per order")).toBeInTheDocument()
+  })
+
+  /**
+   * Most categories are uncapped. Saying so on every one of them would bury the single line that carries a real
+   * restriction among lines that carry none.
+   */
+  it("says nothing about a maximum the organizer never set", () => {
+    renderLegend([buildCategory({ maxPurchase: null })])
+
+    expect(screen.queryByText(/per order/i)).not.toBeInTheDocument()
   })
 })

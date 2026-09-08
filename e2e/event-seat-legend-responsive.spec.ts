@@ -63,9 +63,12 @@ test("counts only the categories whose organizer opted in", async ({ page }) => 
 test("prices the chart before the buyer has identified themselves", async ({ page }) => {
   await openSeatLegend(page, 1440, 900)
 
-  await expect(page.getByText("Tell us who you are to start picking seats")).toBeVisible()
   await expect(page.getByRole("region", { name: "Seat categories" })).toBeVisible()
   await expect(page.getByText("$40.00", { exact: true })).toBeVisible()
+
+  // The plan itself is drawn without a cart, and says when the picked seats become the buyer's.
+  await page.getByRole("button", { name: "Pick seats" }).click()
+  await expect(page.getByText(/reserved in your name as soon as you give us your details/i)).toBeVisible()
 })
 
 /**

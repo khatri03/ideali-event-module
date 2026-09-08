@@ -25,6 +25,20 @@ export async function fetchEventSeating(cartUniqueId: string, sessionUniqueId: s
   return normalizeEventSeatingMap(readResponseData(res.data))
 }
 
+/**
+ * Reads a session's seat map before any cart exists.
+ *
+ * It carries no hold token, so the chart drawn from it is read-only: seats are claimed against a cart, and there
+ * is none until the buyer has identified themselves further along the form.
+ */
+export async function fetchEventSessionSeating(
+  eventUniqueId: string,
+  sessionUniqueId: string,
+): Promise<EventSeatingMap> {
+  const res = await client.get<unknown>(API_ROUTES.eventRegistrationSessionSeating(eventUniqueId, sessionUniqueId))
+  return normalizeEventSeatingMap(readResponseData(res.data))
+}
+
 /** Holds one seat for the cart, and answers with the basket the seat now sits in. */
 export async function holdEventSeat(cartUniqueId: string, request: HoldEventSeatRequest): Promise<EventCart> {
   const res = await client.post<unknown>(API_ROUTES.eventCartSeats(cartUniqueId), request)

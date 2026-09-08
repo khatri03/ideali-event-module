@@ -1,50 +1,55 @@
 import { z } from "zod"
 
+// Every field is read as optional and nullable: the API sends PascalCase, an older deployment may omit a field, and
+// a null anywhere in the payload must not cost the buyer the whole seat map when a sensible default exists.
+
 const seatingCategorySchema = z.object({
-  CategoryKey: z.string().optional(),
-  categoryKey: z.string().optional(),
-  CategoryName: z.string().optional(),
-  categoryName: z.string().optional(),
-  TicketTypeUniqueId: z.string().optional(),
-  ticketTypeUniqueId: z.string().optional(),
-  TicketTypeName: z.string().optional(),
-  ticketTypeName: z.string().optional(),
-  Price: z.number().optional(),
-  price: z.number().optional(),
-  Color: z.string().optional(),
-  color: z.string().optional(),
-  ShowRemainingTickets: z.boolean().optional(),
-  showRemainingTickets: z.boolean().optional(),
+  CategoryKey: z.string().nullable().optional(),
+  categoryKey: z.string().nullable().optional(),
+  CategoryName: z.string().nullable().optional(),
+  categoryName: z.string().nullable().optional(),
+  TicketTypeUniqueId: z.string().nullable().optional(),
+  ticketTypeUniqueId: z.string().nullable().optional(),
+  TicketTypeName: z.string().nullable().optional(),
+  ticketTypeName: z.string().nullable().optional(),
+  Price: z.number().nullable().optional(),
+  price: z.number().nullable().optional(),
+  Color: z.string().nullable().optional(),
+  color: z.string().nullable().optional(),
+  MaxPurchase: z.number().nullable().optional(),
+  maxPurchase: z.number().nullable().optional(),
+  ShowRemainingTickets: z.boolean().nullable().optional(),
+  showRemainingTickets: z.boolean().nullable().optional(),
   RemainingSeats: z.number().nullable().optional(),
   remainingSeats: z.number().nullable().optional(),
 })
 
 const selectedSeatSchema = z.object({
-  ObjectLabel: z.string().optional(),
-  objectLabel: z.string().optional(),
-  CategoryKey: z.string().optional(),
-  categoryKey: z.string().optional(),
-  TicketTypeUniqueId: z.string().optional(),
-  ticketTypeUniqueId: z.string().optional(),
-  TicketTypeName: z.string().optional(),
-  ticketTypeName: z.string().optional(),
-  Price: z.number().optional(),
-  price: z.number().optional(),
+  ObjectLabel: z.string().nullable().optional(),
+  objectLabel: z.string().nullable().optional(),
+  CategoryKey: z.string().nullable().optional(),
+  categoryKey: z.string().nullable().optional(),
+  TicketTypeUniqueId: z.string().nullable().optional(),
+  ticketTypeUniqueId: z.string().nullable().optional(),
+  TicketTypeName: z.string().nullable().optional(),
+  ticketTypeName: z.string().nullable().optional(),
+  Price: z.number().nullable().optional(),
+  price: z.number().nullable().optional(),
 })
 
 const seatingMapSchema = z.object({
-  SessionUniqueId: z.string().optional(),
-  sessionUniqueId: z.string().optional(),
-  SeatsIoPublicKey: z.string().optional(),
-  seatsIoPublicKey: z.string().optional(),
-  Region: z.string().optional(),
-  region: z.string().optional(),
-  SeatsIoEventKey: z.string().optional(),
-  seatsIoEventKey: z.string().optional(),
-  HoldToken: z.string().optional(),
-  holdToken: z.string().optional(),
-  HoldTokenExpiresAtUtc: z.string().optional(),
-  holdTokenExpiresAtUtc: z.string().optional(),
+  SessionUniqueId: z.string().nullable().optional(),
+  sessionUniqueId: z.string().nullable().optional(),
+  SeatsIoPublicKey: z.string().nullable().optional(),
+  seatsIoPublicKey: z.string().nullable().optional(),
+  Region: z.string().nullable().optional(),
+  region: z.string().nullable().optional(),
+  SeatsIoEventKey: z.string().nullable().optional(),
+  seatsIoEventKey: z.string().nullable().optional(),
+  HoldToken: z.string().nullable().optional(),
+  holdToken: z.string().nullable().optional(),
+  HoldTokenExpiresAtUtc: z.string().nullable().optional(),
+  holdTokenExpiresAtUtc: z.string().nullable().optional(),
   Categories: z.array(seatingCategorySchema).optional(),
   categories: z.array(seatingCategorySchema).optional(),
   SelectedSeats: z.array(selectedSeatSchema).optional(),
@@ -60,6 +65,8 @@ export interface EventSeatingCategory {
   price: number
   /** Colour the chart draws this category in, used as the legend swatch. */
   color: string
+  /** The most seats of this category one order may take, or null when the organizer set no limit. */
+  maxPurchase: number | null
   /** Whether the organizer chose to tell buyers how many seats are left in this category. */
   showRemainingTickets: boolean
   /** Seats still on sale, or null when there is no capacity to count down from. Zero means sold out. */
@@ -123,6 +130,7 @@ export function normalizeEventSeatingMap(payload: unknown): EventSeatingMap {
       ticketTypeName: item.TicketTypeName ?? item.ticketTypeName ?? "",
       price: item.Price ?? item.price ?? 0,
       color: item.Color ?? item.color ?? "",
+      maxPurchase: item.MaxPurchase ?? item.maxPurchase ?? null,
       showRemainingTickets: item.ShowRemainingTickets ?? item.showRemainingTickets ?? false,
       remainingSeats: item.RemainingSeats ?? item.remainingSeats ?? null,
     })),

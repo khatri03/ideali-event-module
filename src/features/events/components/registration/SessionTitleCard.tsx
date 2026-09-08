@@ -1,11 +1,14 @@
-﻿import type { ReactNode } from "react"
+import type { ReactNode } from "react"
 import { Badge, Box, Button, Flex, HStack, Heading, Link, Separator, Stack } from "@chakra-ui/react"
 import { ChevronRight } from "lucide-react"
+import { SessionSeatingBadge } from "@/features/events/components/registration/SessionSeatingBadge"
 
 interface SessionTitleCardProps {
   title: string
   description?: string | null
   ticketCount: number
+  /** Whether this session sells numbered seats, which is what the seating badge announces. */
+  offersSeatSelection?: boolean
   isExpanded: boolean
   onToggle: () => void
   onOpenDescription: () => void
@@ -16,6 +19,7 @@ export function SessionTitleCard({
   title,
   description,
   ticketCount,
+  offersSeatSelection = false,
   isExpanded,
   onToggle,
   onOpenDescription,
@@ -31,7 +35,7 @@ export function SessionTitleCard({
       boxShadow="0 16px 40px rgba(15, 23, 42, 0.06)"
     >
       <Stack gap={4}>
-        <Flex align="center" justify="space-between" gap={4}>
+        <Flex align="center" justify="space-between" gap={4} wrap="wrap">
           {description ? (
             <Link
               as="button"
@@ -56,7 +60,8 @@ export function SessionTitleCard({
             </Heading>
           )}
 
-          <HStack gap={3}>
+          <HStack gap={3} wrap="wrap" justify="flex-end">
+            {offersSeatSelection ? <SessionSeatingBadge /> : null}
             <Badge colorPalette="gray" variant="subtle" borderRadius="full" px={3} py={1}>
               {ticketCount} {ticketCount === 1 ? "ticket" : "tickets"}
             </Badge>
@@ -87,7 +92,9 @@ export function SessionTitleCard({
             </Button>
           </HStack>
         </Flex>
-        <Separator borderColor="gray.200" />
+        {/* Decorative: the rule underlines this card's own heading rather than dividing one session from the next,
+            so announcing it as a separator would put a boundary where the content has none. */}
+        <Separator aria-hidden borderColor="gray.200" />
         {isExpanded ? children : null}
       </Stack>
     </Box>

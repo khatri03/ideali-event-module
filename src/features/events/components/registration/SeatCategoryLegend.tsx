@@ -35,6 +35,20 @@ function getRemainingLabel(category: EventSeatingCategory): RemainingLabel | nul
 }
 
 /**
+ * What the legend says about the most of a category one order may take.
+ *
+ * A category the organizer left uncapped says nothing rather than "unlimited": the cap is the exception, and naming
+ * its absence on every other category makes the one that has a cap harder to spot, not easier.
+ */
+function getMaximumLabel(category: EventSeatingCategory): string | null {
+  if (category.maxPurchase === null || category.maxPurchase <= 0) {
+    return null
+  }
+
+  return category.maxPurchase === 1 ? "Max 1 per order" : `Max ${category.maxPurchase} per order`
+}
+
+/**
  * The key to the seat map: every colour on the chart named, priced, and — where the organizer opted in — counted.
  *
  * Colour is never the only carrier of the meaning. The swatch repeats what the category name already says, so a
@@ -43,7 +57,9 @@ function getRemainingLabel(category: EventSeatingCategory): RemainingLabel | nul
  * The seat count sits above its card rather than inside it, because the organizer sets that disclosure per ticket
  * type: a count inside the card would make the one category that discloses taller than its neighbours, and read as
  * a difference in the categories rather than a difference in what the organizer chose to publish. Its line is held
- * open on every entry for the same reason — without it the cards either side would sit at different heights.
+ * open on every entry for the same reason — without it the cards either side would sit at different heights. The
+ * per-order maximum shares that line, pinned to its far end, so the buyer reads what is left and what they may take
+ * of it in one glance instead of meeting the cap only when the chart refuses their next seat.
  */
 export function SeatCategoryLegend({ categories, currencyCode }: SeatCategoryLegendProps) {
   if (categories.length === 0) {
@@ -78,16 +94,24 @@ export function SeatCategoryLegend({ categories, currencyCode }: SeatCategoryLeg
       <SimpleGrid as="ul" listStyleType="none" columns={{ base: 1, md: 2, xl: 3 }} gap={{ base: 2, md: 3 }}>
         {categories.map((category) => {
           const remaining = getRemainingLabel(category)
+          const maximum = getMaximumLabel(category)
 
           return (
             <Stack as="li" key={category.categoryKey} gap={1}>
-              <Box minH="18px" px={1}>
+              <Flex minH="18px" px={1} align="center" justify="space-between" gap={2}>
                 {remaining ? (
                   <Text fontSize="xs" fontWeight="600" color={remaining.isSoldOut ? "red.600" : "green.600"}>
                     {remaining.text}
                   </Text>
+                ) : (
+                  <Box />
+                )}
+                {maximum ? (
+                  <Text fontSize="xs" fontWeight="600" color="gray.600" whiteSpace="nowrap">
+                    {maximum}
+                  </Text>
                 ) : null}
-              </Box>
+              </Flex>
               <Flex
                 align="center"
                 gap={3}
@@ -104,7 +128,7 @@ export function SeatCategoryLegend({ categories, currencyCode }: SeatCategoryLeg
                   flexShrink={0}
                   w="14px"
                   h="14px"
-                  borderRadius="4px"
+                  borderRadius="full"
                   borderWidth="1px"
                   borderColor="blackAlpha.300"
                   bg={category.color || UNKNOWN_CATEGORY_COLOR}

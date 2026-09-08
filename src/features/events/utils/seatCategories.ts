@@ -21,6 +21,7 @@ export function toSeatCategories(ticketTypes: EventRegistrationTicket[]): EventS
       ticketTypeName: ticket.name,
       price: ticket.fullPrice,
       color: ticket.seatCategoryColor ?? "",
+      maxPurchase: ticket.maxPurchase,
       showRemainingTickets: ticket.showRemainingTickets,
       // Withheld counts are dropped here rather than passed on, so a category the organizer kept private cannot
       // be read back off the rendered legend.

@@ -79,6 +79,8 @@ import { RegistrationAcknowledgementCard } from '@/features/events/components/re
 import { BuyerAttendeeStep } from '@/features/events/components/registration/BuyerAttendeeStep'
 import { RichTextBlock, SupportCard } from '@/features/events/components/registration/SupportCard'
 import { EventSeatSelection } from '@/features/events/components/registration/EventSeatSelection'
+import { useSeatSelection } from '@/features/events/hooks/useSeatSelection'
+import { getInitiallyExpandedSessionIds } from '@/features/events/utils/sessionExpansion'
 import { SessionsStep } from '@/features/events/components/registration/SessionsStep'
 import type {
   EventRegisterWizardEvent,
@@ -166,6 +168,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     lineByTicketTypeId,
     restoredCart,
     syncTicketSelection,
+    ensureCartNow,
     setBuyerIdentity,
     applyCart,
     appliedCouponCode,
@@ -181,7 +184,29 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [activeSessionDescription, setActiveSessionDescription] = useState<{ title: string; description: string } | null>(null)
   const [sessionTicketSearch, setSessionTicketSearch] = useState<Record<string, string>>({})
   const [selectedTicketQuantities, setSelectedTicketQuantities] = useState<Record<string, number>>({})
-  const tabs = useMemo(() => getVisibleTabs(event, selectedTicketQuantities), [event, selectedTicketQuantities])
+  const {
+    seatsBySession,
+    seatQuantitiesByTicketType,
+    seatLabelsByTicketType,
+    refusalBySession: seatRefusalBySession,
+    isSeatChanging,
+    pickSeat,
+    unpickSeats,
+    adoptHeldSeats,
+    claimPendingSeats,
+  } = useSeatSelection({
+    cartUniqueId: cart?.cartUniqueId ?? null,
+    ensureCart: ensureCartNow,
+    onCartChanged: applyCart,
+  })
+
+  // A picked seat is a ticket of its category's type. Merging the two counts is what lets the visible tabs, the
+  // order summary and the attendee slots go on reading one map, instead of each learning about seats separately.
+  const ticketQuantities = useMemo(
+    () => ({ ...selectedTicketQuantities, ...seatQuantitiesByTicketType }),
+    [selectedTicketQuantities, seatQuantitiesByTicketType],
+  )
+  const tabs = useMemo(() => getVisibleTabs(event, ticketQuantities), [event, ticketQuantities])
   const firstTab = tabs[0]?.id ?? 'sessions'
   const [activeTab, setActiveTab] = useState<WizardTabId>(firstTab)
   const [highestUnlockedIndex, setHighestUnlockedIndex] = useState(0)
@@ -290,7 +315,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     attendeeSlotEntries,
     attendeeSlotEntryByKey,
     requiresAttendeeInfo,
-  } = useTicketSelectionSummary(sessionsData, selectedTicketQuantities, cartPrice)
+  } = useTicketSelectionSummary(sessionsData, ticketQuantities, cartPrice, seatLabelsByTicketType)
   const {
     buyerInfo,
     attendeeInfoBySlot,
@@ -384,7 +409,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [prevSessions, setPrevSessions] = useState(sessions)
   if (sessions !== prevSessions) {
     setPrevSessions(sessions)
-    setExpandedSessionIds(sessions.map((session) => session.uniqueId))
+    setExpandedSessionIds(getInitiallyExpandedSessionIds(sessions.map((session) => session.uniqueId)))
   }
 
   // The hold deadline is the server's; the chip only counts down to it.
@@ -418,8 +443,10 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
       return
     }
 
-    void setBuyerIdentity({ name, email: buyerInfo.email })
-  }, [buyerInfo.firstName, buyerInfo.lastName, buyerInfo.email, setBuyerIdentity])
+    // Seats are claimed after the buffered ticket quantities, so both land against the same cart and the seat
+    // holds are never asked for against a cart that is still being opened.
+    void setBuyerIdentity({ name, email: buyerInfo.email }).then(() => claimPendingSeats())
+  }, [buyerInfo.firstName, buyerInfo.lastName, buyerInfo.email, claimPendingSeats, setBuyerIdentity])
 
   const handlePurchaseTimerExpire = useCallback(() => {
     setPurchaseTimerExpired(true)
@@ -1119,7 +1146,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                               <SessionsStep
                                 sessions={sessions}
                                 isLoading={sessionsLoading}
-                                selectedTicketQuantities={selectedTicketQuantities}
+                                selectedTicketQuantities={ticketQuantities}
                                 selectedTicketCount={selectedTicketCount}
                                 expandedSessionIds={expandedSessionIds}
                                 ticketSearchBySession={sessionTicketSearch}
@@ -1133,12 +1160,20 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                 onChangeQuantity={handleTicketQuantityChange}
                                 onRequestRemoveAll={requestRemoveAllTickets}
                                 onHoldRelease={sessionsQuery.refetch}
-                                renderSeatSelection={(sessionUniqueId) => (
+                                renderSeatSelection={(sessionUniqueId, sessionName) => (
                                   <EventSeatSelection
+                                    eventUniqueId={event.uniqueId}
                                     cartUniqueId={cart?.cartUniqueId ?? null}
                                     sessionUniqueId={sessionUniqueId}
+                                    sessionName={sessionName}
+                                    seats={seatsBySession[sessionUniqueId] ?? []}
+                                    refusal={seatRefusalBySession[sessionUniqueId] ?? null}
+                                    isSeatChanging={isSeatChanging}
                                     currencyCode={event.paymentAccountCurrency}
-                                    onCartChanged={applyCart}
+                                    accentColor={formAccent}
+                                    onPickSeat={pickSeat}
+                                    onUnpickSeats={(objectLabels) => unpickSeats(sessionUniqueId, objectLabels)}
+                                    onAdoptHeldSeats={(heldSeats) => adoptHeldSeats(sessionUniqueId, heldSeats)}
                                   />
                                 )}
                               />

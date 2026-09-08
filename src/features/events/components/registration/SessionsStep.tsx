@@ -1,7 +1,8 @@
-import { Badge, Box, Button, CloseButton, Flex, HStack, Input, SimpleGrid, Stack, Text, Tooltip } from "@chakra-ui/react"
-import { AlertCircle } from "lucide-react"
+import { Fragment } from "react"
+import { Box, Button, CloseButton, Flex, HStack, Input, Separator, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import type { EventRegistrationSession, EventRegistrationTicket } from "@/api/events"
 import { SeatCategoryLegend } from "@/features/events/components/registration/SeatCategoryLegend"
+import { SessionAttendeeInfoBadge } from "@/features/events/components/registration/SessionAttendeeInfoBadge"
 import { SessionTitleCard } from "@/features/events/components/registration/SessionTitleCard"
 import { SessionsStepSkeleton } from "@/features/events/components/registration/SessionsStep.skeleton"
 import { TicketCard } from "@/features/events/components/registration/TicketCard"
@@ -30,7 +31,7 @@ interface SessionsStepProps {
    * Draws the seat map for a session that sells numbered seats. Supplied by the wizard, which owns the cart the
    * seats are held against; this step stays a presentational one and never fetches.
    */
-  renderSeatSelection?: (sessionUniqueId: string) => React.ReactNode
+  renderSeatSelection?: (sessionUniqueId: string, sessionName: string) => React.ReactNode
 }
 
 function TicketSearchField({
@@ -165,107 +166,94 @@ export function SessionsStep({
         </Box>
       </Flex>
 
-      {sessions.map((session) => {
+      {sessions.map((session, index) => {
         const searchValue = ticketSearchBySession[session.uniqueId] ?? ""
         const filteredTickets = session.ticketTypes.filter((ticket) => matchesSearch(ticket, searchValue))
 
         return (
-          <SessionTitleCard
-            key={session.uniqueId}
-            title={session.name}
-            description={session.description}
-            ticketCount={session.ticketTypes.length}
-            isExpanded={expandedSessionIds.includes(session.uniqueId)}
-            onToggle={() => onToggleSession(session.uniqueId)}
-            onOpenDescription={() => onOpenDescription(session.name, session.description ?? "")}
-          >
-            {session.offersSeatSelection && renderSeatSelection ? (
-              <Stack gap={4}>
-                <SeatCategoryLegend
-                  categories={toSeatCategories(session.ticketTypes)}
-                  currencyCode={currencyCode}
-                />
-                {renderSeatSelection(session.uniqueId)}
-              </Stack>
-            ) : session.ticketTypes.length === 0 ? (
-              <Box borderWidth="1px" borderColor="gray.200" borderRadius="18px" bg="gray.50" p={4}>
-                <Text fontSize="sm" color="gray.600">
-                  No tickets are currently mapped to this session.
-                </Text>
-              </Box>
-            ) : (
-              <Stack gap={4}>
-                {session.requiresAttendeeInfo ? (
-                  <SimpleGrid columns={{ base: 1, md: 2 }} gap={3} alignItems="center">
+          <Fragment key={session.uniqueId}>
+            {/* An expanded session runs long enough that the next card reads as more of the same without a break
+                between them, and a buyer picking seats has to know which session they are picking for. */}
+            {index > 0 ? <Separator borderColor="gray.300" borderTopWidth="2px" my={2} /> : null}
+            <SessionTitleCard
+              title={session.name}
+              description={session.description}
+              ticketCount={session.ticketTypes.length}
+              offersSeatSelection={session.offersSeatSelection}
+              isExpanded={expandedSessionIds.includes(session.uniqueId)}
+              onToggle={() => onToggleSession(session.uniqueId)}
+              onOpenDescription={() => onOpenDescription(session.name, session.description ?? "")}
+            >
+              {session.offersSeatSelection && renderSeatSelection ? (
+                <Stack gap={4}>
+                  {session.requiresAttendeeInfo ? (
                     <HStack gap={2} minW={0} align="center">
-                      <Tooltip.Root openDelay={250} closeDelay={100}>
-                        <Tooltip.Trigger asChild>
-                          <Badge
-                            colorPalette="blue"
-                            variant="subtle"
-                            borderRadius="full"
-                            px={3}
-                            py={1}
-                            fontSize="xs"
-                            fontWeight="800"
-                            letterSpacing="0.08em"
-                            textTransform="uppercase"
-                            cursor="help"
-                          >
-                            <HStack gap={1.5}>
-                              <AlertCircle size={14} />
-                              <Text as="span">Requires Attendee Info</Text>
-                            </HStack>
-                          </Badge>
-                        </Tooltip.Trigger>
-                        <Tooltip.Positioner>
-                          <Tooltip.Content>Buying this session would require attendee info.</Tooltip.Content>
-                        </Tooltip.Positioner>
-                      </Tooltip.Root>
+                      <SessionAttendeeInfoBadge />
                     </HStack>
+                  ) : null}
+                  <SeatCategoryLegend
+                    categories={toSeatCategories(session.ticketTypes)}
+                    currencyCode={currencyCode}
+                  />
+                  {renderSeatSelection(session.uniqueId, session.name)}
+                </Stack>
+              ) : session.ticketTypes.length === 0 ? (
+                <Box borderWidth="1px" borderColor="gray.200" borderRadius="18px" bg="gray.50" p={4}>
+                  <Text fontSize="sm" color="gray.600">
+                    No tickets are currently mapped to this session.
+                  </Text>
+                </Box>
+              ) : (
+                <Stack gap={4}>
+                  {session.requiresAttendeeInfo ? (
+                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={3} alignItems="center">
+                      <HStack gap={2} minW={0} align="center">
+                        <SessionAttendeeInfoBadge />
+                      </HStack>
+                      <TicketSearchField
+                        value={searchValue}
+                        onChange={(value) => onSearchChange(session.uniqueId, value)}
+                        isStretched
+                      />
+                    </SimpleGrid>
+                  ) : (
                     <TicketSearchField
                       value={searchValue}
                       onChange={(value) => onSearchChange(session.uniqueId, value)}
-                      isStretched
+                      isStretched={false}
                     />
-                  </SimpleGrid>
-                ) : (
-                  <TicketSearchField
-                    value={searchValue}
-                    onChange={(value) => onSearchChange(session.uniqueId, value)}
-                    isStretched={false}
-                  />
-                )}
+                  )}
 
-                {filteredTickets.length > 0 ? (
-                  <SimpleGrid columns={{ base: 1, xl: 3 }} gap={4}>
-                    {filteredTickets.map((ticket) => {
-                      const quantity = selectedTicketQuantities[ticket.uniqueId] ?? 0
+                  {filteredTickets.length > 0 ? (
+                    <SimpleGrid columns={{ base: 1, xl: 3 }} gap={4}>
+                      {filteredTickets.map((ticket) => {
+                        const quantity = selectedTicketQuantities[ticket.uniqueId] ?? 0
 
-                      return (
-                        <TicketCard
-                          key={ticket.uniqueId}
-                          ticket={ticket}
-                          quantity={quantity}
-                          currencyCode={currencyCode}
-                          onDecrease={() => onChangeQuantity(ticket, getTicketQuantityAfterDecrement(ticket, quantity))}
-                          onIncrease={() => onChangeQuantity(ticket, quantity + 1)}
-                          onSelectQuantity={(value) => onChangeQuantity(ticket, value)}
-                          onHoldRelease={onHoldRelease}
-                        />
-                      )
-                    })}
-                  </SimpleGrid>
-                ) : (
-                  <Box borderWidth="1px" borderColor="gray.200" borderRadius="18px" bg="gray.50" p={4}>
-                    <Text fontSize="sm" color="gray.600">
-                      No tickets matched your search for this session.
-                    </Text>
-                  </Box>
-                )}
-              </Stack>
-            )}
-          </SessionTitleCard>
+                        return (
+                          <TicketCard
+                            key={ticket.uniqueId}
+                            ticket={ticket}
+                            quantity={quantity}
+                            currencyCode={currencyCode}
+                            onDecrease={() => onChangeQuantity(ticket, getTicketQuantityAfterDecrement(ticket, quantity))}
+                            onIncrease={() => onChangeQuantity(ticket, quantity + 1)}
+                            onSelectQuantity={(value) => onChangeQuantity(ticket, value)}
+                            onHoldRelease={onHoldRelease}
+                          />
+                        )
+                      })}
+                    </SimpleGrid>
+                  ) : (
+                    <Box borderWidth="1px" borderColor="gray.200" borderRadius="18px" bg="gray.50" p={4}>
+                      <Text fontSize="sm" color="gray.600">
+                        No tickets matched your search for this session.
+                      </Text>
+                    </Box>
+                  )}
+                </Stack>
+              )}
+            </SessionTitleCard>
+          </Fragment>
         )
       })}
     </>

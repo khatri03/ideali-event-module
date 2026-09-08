@@ -210,6 +210,21 @@ export function useRegistrationCart(eventUniqueId: string) {
   )
 
   /**
+   * Opens the cart without adding anything to it.
+   *
+   * Seats are held through their own endpoint, so an order made entirely of seats never reaches `applySelection`
+   * and would otherwise have no cart to be held against. Runs through the same queue as every other mutation, so
+   * it cannot race a selection already in flight.
+   */
+  const ensureCartNow = useCallback(() => {
+    let opened: EventCart | null = null
+
+    return enqueue(async () => {
+      opened = await ensureCart()
+    }).then(() => opened)
+  }, [ensureCart, enqueue])
+
+  /**
    * Resumes the cart left behind by a refresh. Runs through the same queue as every other mutation
    * so a selection made while the fetch is in flight cannot overwrite it. Failures are swallowed on
    * purpose: a buyer arriving with a dead cookie should get a clean form, not an error banner.
@@ -333,6 +348,8 @@ export function useRegistrationCart(eventUniqueId: string) {
     /** Set once when a cart survived a refresh, so the wizard can rebuild its selection from it. */
     restoredCart,
     syncTicketSelection,
+    /** Opens the cart on demand, for seats that are held outside the ticket-quantity path. */
+    ensureCartNow,
     setBuyerIdentity,
     /**
      * Adopts a cart the server answered with elsewhere - seat selection holds a seat through its own endpoint and

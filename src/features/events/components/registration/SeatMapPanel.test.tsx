@@ -1,0 +1,235 @@
+import { describe, expect, it, vi } from "vitest"
+import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { ChakraProvider } from "@chakra-ui/react"
+import { system } from "@/theme"
+import type { EventSeatingMap } from "@/features/events/schemas/eventSeating.schemas"
+import { SeatMapPanel } from "./SeatMapPanel"
+
+/**
+ * Stands in for the vendor renderer, which draws to a WebGL canvas served by Seats.io. The chart itself is theirs
+ * to test; what this file protects is how it is addressed and what the buyer is shown when it cannot be drawn.
+ */
+const deselectObjects = vi.fn().mockResolvedValue(undefined)
+
+vi.mock("@seatsio/seatsio-react", () => ({
+  SeatsioSeatingChart: ({
+    mode,
+    session,
+    holdToken,
+    selectedObjects,
+    maxSelectedObjects,
+    priceFormatter,
+    onRenderStarted,
+    onObjectSelected,
+    onChartRenderingFailed,
+  }: {
+    mode: string
+    session: string
+    holdToken?: string
+    selectedObjects: Array<{ label: string }>
+    maxSelectedObjects: Array<{ category: string; quantity: number }>
+    priceFormatter: (price: number) => string
+    onRenderStarted: (chart: unknown) => void
+    onObjectSelected: (object: { label: string; category?: { key: string | number } }) => void
+    onChartRenderingFailed: () => void
+  }) => (
+    <div
+      ref={() => onRenderStarted({ deselectObjects })}
+      data-mode={mode}
+      data-session={session}
+      data-hold-token={holdToken ?? ""}
+      data-selected={selectedObjects.map((object) => object.label).join(",")}
+      data-max-selected={maxSelectedObjects.map((limit) => `${limit.category}:${limit.quantity}`).join(",")}
+      data-example-price={priceFormatter(40)}
+    >
+      <button type="button" onClick={() => onObjectSelected({ label: "A-14", category: { key: "stalls" } })}>
+        Pick seat A-14
+      </button>
+      <button type="button" onClick={onChartRenderingFailed}>
+        Fail the chart
+      </button>
+    </div>
+  ),
+}))
+
+const SEATING_MAP: EventSeatingMap = {
+  sessionUniqueId: "session-1",
+  seatsIoPublicKey: "public-key",
+  region: "eu",
+  seatsIoEventKey: "event-key",
+  holdToken: "hold-token",
+  holdTokenExpiresAtUtc: null,
+  categories: [
+    {
+      categoryKey: "stalls",
+      categoryName: "Stalls",
+      ticketTypeUniqueId: "ticket-1",
+      ticketTypeName: "Stalls",
+      price: 40,
+      color: "#7551FF",
+      maxPurchase: 1,
+      showRemainingTickets: false,
+      remainingSeats: null,
+    },
+    {
+      categoryKey: "balcony",
+      categoryName: "Balcony",
+      ticketTypeUniqueId: "ticket-2",
+      ticketTypeName: "Balcony",
+      price: 15,
+      color: "#01B574",
+      maxPurchase: null,
+      showRemainingTickets: false,
+      remainingSeats: null,
+    },
+  ],
+  selectedSeats: [],
+}
+
+/** Renders the panel around one seating map, since every rule here turns on what that map carries. */
+function renderPanel(seatingMap: EventSeatingMap | null, selectedSeatLabels: string[] = []) {
+  const onSelectSeat = vi.fn()
+
+  const view = render(
+    <ChakraProvider value={system}>
+      <SeatMapPanel
+        seatingMap={seatingMap}
+        isBusy={false}
+        selectedSeatLabels={selectedSeatLabels}
+        currencyCode="USD"
+        onSelectSeat={onSelectSeat}
+        onDeselectSeat={vi.fn()}
+      />
+    </ChakraProvider>,
+  )
+
+  return { onSelectSeat, rerender: view.rerender }
+}
+
+describe("SeatMapPanel", () => {
+  /**
+   * A session whose seating plan was never published has no chart to address. Handing the renderer an empty event
+   * key leaves a grey box the buyer reads as still loading, and they wait for a map that is never coming.
+   */
+  it("says the seating plan is unpublished rather than drawing an unaddressable chart", () => {
+    renderPanel({ ...SEATING_MAP, seatsIoEventKey: "" })
+
+    expect(screen.getByRole("alert")).toHaveTextContent("has not been published yet")
+  })
+
+  /**
+   * The renderer fails silently - it reports the failure and leaves its container empty. Without this the buyer is
+   * left staring at blank space with no way to tell a broken map from a slow one.
+   */
+  it("names a chart that failed to draw instead of leaving an empty frame", async () => {
+    renderPanel(SEATING_MAP)
+
+    await userEvent.click(screen.getByRole("button", { name: "Fail the chart" }))
+
+    expect(screen.getByRole("alert")).toHaveTextContent("The seating plan failed to load")
+  })
+
+  /**
+   * Seats are chosen on the sessions step, before the buyer has given the name a cart needs. A chart that refused
+   * picks until then would make the buyer identify themselves to find out what they are even choosing between.
+   */
+  it("lets seats be picked before a cart exists to hold them", async () => {
+    const { onSelectSeat } = renderPanel({ ...SEATING_MAP, holdToken: "" })
+
+    await userEvent.click(screen.getByRole("button", { name: "Pick seat A-14" }))
+
+    expect(onSelectSeat).toHaveBeenCalledWith("A-14", "stalls")
+    expect(screen.getByText(/reserved in your name as soon as you give us your details/i)).toBeInTheDocument()
+  })
+
+  /**
+   * Nothing on the server holds a seat picked before the cart opened, so the vendor must not keep a session of its
+   * own for it either: two parties holding the same seats is how a chart and a basket end up disagreeing.
+   */
+  it("keeps no vendor session while there is no hold token", () => {
+    renderPanel({ ...SEATING_MAP, holdToken: "" })
+
+    const chart = screen.getByRole("button", { name: "Pick seat A-14" }).parentElement
+    expect(chart).toHaveAttribute("data-session", "none")
+    expect(chart).toHaveAttribute("data-hold-token", "")
+  })
+
+  /**
+   * The chart is torn down every time the map is closed. Seats already picked have to be handed back to it on the
+   * way in, or reopening shows the buyer an empty plan and invites them to pick the same seats twice.
+   */
+  it("hands seats already picked back to a freshly drawn chart", () => {
+    renderPanel(SEATING_MAP, ["A-14", "A-15"])
+
+    expect(screen.getByRole("button", { name: "Pick seat A-14" }).parentElement).toHaveAttribute(
+      "data-selected",
+      "A-14,A-15",
+    )
+  })
+
+  /**
+   * The chart prints prices beside its own seats. Left to its own default it shows a bare number next to a legend
+   * that already priced the same category in the event's currency, and the buyer reads two prices for one seat.
+   */
+  it("prices the chart in the event's own currency", () => {
+    renderPanel(SEATING_MAP)
+
+    expect(screen.getByRole("button", { name: "Pick seat A-14" }).parentElement).toHaveAttribute(
+      "data-example-price",
+      "$40.00",
+    )
+  })
+
+  /**
+   * Giving a seat up from the basket beside the map used to redraw the whole chart, which throws away the view the
+   * buyer had zoomed and panned to. The chart is told about the one seat instead.
+   */
+  it("deselects a seat given up elsewhere instead of redrawing the chart", () => {
+    deselectObjects.mockClear()
+
+    const { rerender } = renderPanel(SEATING_MAP, ["A-14", "A-15"])
+
+    rerender(
+      <ChakraProvider value={system}>
+        <SeatMapPanel
+          seatingMap={SEATING_MAP}
+          isBusy={false}
+          selectedSeatLabels={["A-15"]}
+          currencyCode="USD"
+          onSelectSeat={vi.fn()}
+          onDeselectSeat={vi.fn()}
+        />
+      </ChakraProvider>,
+    )
+
+    expect(deselectObjects).toHaveBeenCalledWith(["A-14"])
+    expect(screen.getByRole("button", { name: "Pick seat A-14" }).parentElement).toHaveAttribute(
+      "data-selected",
+      "A-14,A-15",
+    )
+  })
+
+  /**
+   * The organizer caps how many seats of a category one order may take. A chart that lets the buyer pick past the
+   * cap sends them on to a server refusal for a seat the map had already coloured in as theirs.
+   */
+  it("holds the chart to the organizer's per-order limit", () => {
+    renderPanel(SEATING_MAP)
+
+    expect(screen.getByRole("button", { name: "Pick seat A-14" }).parentElement).toHaveAttribute(
+      "data-max-selected",
+      "stalls:1",
+    )
+  })
+
+  /**
+   * A map that is still being read is not a broken one, and saying so would send the buyer to the organizer over a
+   * request that is about to succeed.
+   */
+  it("keeps its place while the map is still being read", () => {
+    renderPanel(null)
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+})

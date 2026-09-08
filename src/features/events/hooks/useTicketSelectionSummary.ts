@@ -36,6 +36,7 @@ export function useTicketSelectionSummary(
   sessions: EventRegistrationSession[],
   selectedTicketQuantities: Record<string, number>,
   cartPrice: EventCartPrice | null | undefined,
+  seatLabelsByTicketType: Record<string, string[]> = {},
 ): TicketSelectionSummary {
   const selectedTicketSummary = useMemo<SelectedTicketSummaryItem[]>(
     () =>
@@ -100,9 +101,13 @@ export function useTicketSelectionSummary(
         attendeeCount: sessionSummary.attendeeCount,
         requiresAttendeeInfo: sessionSummary.requiresAttendeeInfo,
         tickets: sessionSummary.selectedTickets.map((selectedTicket) => {
+          // A seated ticket names the seat the attendee is sitting in. "Attendee 2" tells a buyer filling in four
+          // rows nothing about which of their four seats they are naming.
+          const seatLabels = seatLabelsByTicketType[selectedTicket.ticket.uniqueId] ?? []
+
           const slots = Array.from({ length: selectedTicket.quantity }, (_, index) => ({
             key: `${sessionSummary.session.uniqueId}:${selectedTicket.ticket.uniqueId}:${index + 1}`,
-            attendeeLabel: `Attendee ${index + 1}`,
+            attendeeLabel: seatLabels[index] ? `Seat ${seatLabels[index]}` : `Attendee ${index + 1}`,
           }))
 
           return {
@@ -117,7 +122,7 @@ export function useTicketSelectionSummary(
           }
         }),
       })),
-    [selectedSessionSummaries],
+    [selectedSessionSummaries, seatLabelsByTicketType],
   )
 
   const attendeeSlotEntries = useMemo<AttendeeSlotEntry[]>(
