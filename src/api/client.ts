@@ -2,6 +2,7 @@ import axios from "axios"
 import { auth } from "@/lib/auth"
 import { isTurnstileConfigured, requestTurnstileToken } from "@/lib/turnstile"
 import { API_AUTH_ROUTES, APP_ROUTES } from "@/utils/routes"
+import { recordServerTime } from "@/lib/serverClock"
 
 export const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5000",
@@ -65,8 +66,13 @@ client.interceptors.request.use(async (config) => {
 })
 
 client.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    recordServerTime(response.headers?.date as string | undefined)
+    return response
+  },
   async (error) => {
+    recordServerTime(error.response?.headers?.date as string | undefined)
+
     const original = error.config
 
     if (

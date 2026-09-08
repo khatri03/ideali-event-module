@@ -2,9 +2,13 @@ import { useEffect, useState } from "react"
 import { Box, Text } from "@chakra-ui/react"
 import { Clock3 } from "lucide-react"
 import { formatPurchaseCountdown, hexToRgba, parseUtcDateTime } from "@/features/events/utils/registrationFormat"
+import { serverNow } from "@/lib/serverClock"
 
 interface PurchaseTimerChipProps {
-  /** Absolute UTC deadline owned by the server cart. Null before a cart exists. */
+  /**
+   * Absolute UTC deadline the seats are held until: the cart's once one is open, and before that the hold token's.
+   * Null only when the buyer is holding nothing at all.
+   */
   expiresAtUtc: string | null
   accentColor: string
   onExpire: () => void
@@ -13,17 +17,21 @@ interface PurchaseTimerChipProps {
 const LOW_TIME_THRESHOLD_MS = 2 * 60 * 1000
 
 /**
- * Counts down to the cart's server-issued deadline. The client never decides when the window
- * starts - it only renders the time left until `expiresAtUtc`.
+ * Counts down to the server-issued deadline the buyer's seats are held until. The client never decides when the
+ * window starts - it only renders the time left until `expiresAtUtc`.
+ *
+ * The countdown is measured against the server's clock rather than the device's. The deadline is the server's
+ * reading; comparing it to a device running minutes fast would retire a cart that is still alive, and one running
+ * slow would keep counting down over seats already back on sale.
  */
 export function PurchaseTimerChip({ expiresAtUtc, accentColor, onExpire }: PurchaseTimerChipProps) {
   const expiresAt = parseUtcDateTime(expiresAtUtc)
-  const [now, setNow] = useState(() => Date.now())
+  const [now, setNow] = useState(() => serverNow())
 
   useEffect(() => {
     if (!expiresAtUtc) return
 
-    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    const timer = window.setInterval(() => setNow(serverNow()), 1000)
     return () => window.clearInterval(timer)
   }, [expiresAtUtc])
 
