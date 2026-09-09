@@ -75,11 +75,9 @@ npm run lint       # eslint
 npm run preview    # preview dist
 ```
 
-No test runner yet. When adding tests:
-
 ```bash
-npm install -D vitest @testing-library/react @testing-library/user-event @testing-library/jest-dom msw happy-dom
-npm install -D playwright @playwright/test
+npx vitest run     # unit tests — run freely, finishes in seconds
+npx playwright test  # e2e — on demand only, see Testing below
 ```
 
 ## Routing Rule
@@ -564,7 +562,7 @@ function EventBadge({ status }: { status: EventStatus }) {
 
 ---
 
-## Testing (When Configured)
+## Testing
 
 **Frontend:** Vitest + React Testing Library + MSW for network interception.
 
@@ -574,6 +572,26 @@ Do not test: implementation details, Chakra internals, snapshot tests.
 **Backend (.NET):** xUnit + FluentAssertions + Moq (unit) + Testcontainers (integration).
 
 Test naming: `[Scenario]_[Condition]_[ExpectedResult]` — e.g., `Publish_DraftEvent_ChangesStatusToPublished`.
+
+### Which suites run, and when
+
+Unit tests are written or updated in the same change as the code they cover, frontend and backend alike. That is not negotiable and has not changed.
+
+| Suite | Command | When it runs |
+|---|---|---|
+| Frontend unit | `npx vitest run` | Freely, and before every commit |
+| Backend | `dotnet test tests/Ideas.API.Tests/Ideas.API.Tests.csproj` | Before a commit that touches the API |
+| Playwright e2e | `npx playwright test` | **On request only** |
+
+The e2e suite is not a commit gate. It takes several minutes and blocks the person waiting on it, which is not repaid by what it catches that the unit suites do not. Run it when asked, then fix what it reports in that same session.
+
+Backend SQL Server tests need `IDEALI_TEST_SQLSERVER` set, or 59 oversell and concurrency tests skip without saying so:
+
+```bash
+$env:IDEALI_TEST_SQLSERVER = "Server=localhost;Integrated Security=true;TrustServerCertificate=true;Encrypt=false;Connect Timeout=60"
+```
+
+`Ideas.API` must be stopped first, or the build fails with `MSB3027 ... locked by "Ideas.API"`.
 
 ---
 
