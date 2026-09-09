@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react"
-import { holdEventSeat, issueSessionHoldToken, releaseEventSeat } from "@/api/eventSeating"
+import { holdEventSeat, issueSessionHoldToken, releaseEventSeat, releaseSessionSeats } from "@/api/eventSeating"
 import type { EventCart } from "@/features/events/schemas/eventCart.schemas"
 import { readStoredHoldToken, storeHoldToken } from "@/features/events/utils/seatHoldTokenCookie"
 import { extractApiError } from "@/utils/errors"
@@ -160,11 +160,41 @@ export function useSeatSelection({
   )
 
   /**
+   * Hands back seats the chart is holding under this browser's own token, before any cart exists.
+   *
+   * Every seat picked on the chart is held at Seats.io under the token it was drawn with, and the chart selects
+   * those seats again the next time it is opened under that token. So a seat dropped from the basket has to be
+   * given back to Seats.io, or the buyer removes it, reopens the map and finds it picked again. They all go in one
+   * call because there is no basket coming back to be overwritten.
+   */
+  const releasePickedSeats = useCallback(
+    async (sessionUniqueId: string, presentedHoldToken: string, removed: SeatPick[]) => {
+      try {
+        await releaseSessionSeats(eventUniqueId, sessionUniqueId, {
+          holdToken: presentedHoldToken,
+          objectLabels: removed.map((seat) => seat.objectLabel),
+        })
+
+        for (const seat of removed) {
+          heldKeysRef.current.delete(seatKey(seat.sessionUniqueId, seat.objectLabel))
+        }
+      } catch (error) {
+        applySeats((current) => [...current, ...removed])
+        reportRefusal(sessionUniqueId, extractApiError(error))
+      }
+    },
+    [applySeats, eventUniqueId, reportRefusal],
+  )
+
+  /**
    * Gives up seats on one session, whether that is a single seat or every seat at a table.
    *
    * Seats already gone are released one at a time rather than together: each answer carries the whole basket, and
    * two in flight would let the older one overwrite the newer. Seats nothing is holding are given up by forgetting
    * them, because asking the server to release one it never took answers with a refusal the buyer cannot act on.
+   *
+   * Before a cart exists the seats are held at Seats.io under this browser's token instead, so they are handed back
+   * there. Only a token this browser never obtained means nothing is holding them and nothing needs saying.
    */
   const unpickSeats = useCallback(
     (sessionUniqueId: string, objectLabels: string[]) => {
@@ -178,9 +208,20 @@ export function useSeatSelection({
       clearRefusal(sessionUniqueId)
       applySeats((current) => current.filter((seat) => !keys.has(seatKey(seat.sessionUniqueId, seat.objectLabel))))
 
+      if (!cartUniqueId) {
+        const presentedHoldToken = holdTokenRef.current
+
+        if (!presentedHoldToken) {
+          return
+        }
+
+        void runExclusively(() => releasePickedSeats(sessionUniqueId, presentedHoldToken, removed))
+        return
+      }
+
       const held = removed.filter((seat) => heldKeysRef.current.has(seatKey(seat.sessionUniqueId, seat.objectLabel)))
 
-      if (!cartUniqueId || held.length === 0) {
+      if (held.length === 0) {
         return
       }
 
@@ -190,8 +231,22 @@ export function useSeatSelection({
         }
       })
     },
-    [applySeats, cartUniqueId, clearRefusal, releaseSeat, runExclusively],
+    [applySeats, cartUniqueId, clearRefusal, releasePickedSeats, releaseSeat, runExclusively],
   )
+
+  /**
+   * Forgets every seat this browser is holding, without asking the server to release them.
+   *
+   * For the one case where the cart itself is being walked away from: the buyer emptied their whole registration,
+   * so there is no cart left to release seats against. The holds lapse on their own deadline and the seats go back
+   * on sale then, exactly as they do for a buyer who closes the tab. Giving up individual seats always goes
+   * through `unpickSeats` instead, which does tell the server.
+   */
+  const forgetSeats = useCallback(() => {
+    heldKeysRef.current = new Set()
+    applySeats(() => [])
+    setRefusalBySession({})
+  }, [applySeats])
 
   /**
    * Claims every seat picked before the cart existed.
@@ -358,6 +413,7 @@ export function useSeatSelection({
     isSeatChanging: pendingCount > 0,
     pickSeat,
     unpickSeats,
+    forgetSeats,
     adoptHeldSeats,
     adoptCartSeats,
     claimPendingSeats,

@@ -866,6 +866,17 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
         seats &mdash; the buyer could neither pay for them nor give them up, and nobody else could have them until
         that token lapsed on its own.</p>
 
+      <p>Seats picked on that chart are held at Seats.io under the token it was drawn with, and the chart chooses
+        them again the next time it is drawn under the same token. So a seat dropped from the basket before a cart
+        exists is handed back through
+        <code class="path">POST /api/events/{eventUniqueId:guid}/register/sessions/{sessionUniqueId:guid}/seats/release</code>,
+        which names the seats and presents the token holding them. Without it the buyer removed a seat, reopened the
+        map and found it picked again, because nothing on this side could reach the vendor's hold. The presented
+        token is the whole of the caller's authority: Seats.io frees only what that token holds, so no browser can
+        free another buyer's seats. A token the vendor no longer honours holds nothing, and is answered with success
+        rather than an error over a seat that already went back on sale. Nothing is written to our own records,
+        because a seat picked before a cart exists has no claim row and no cart line to remove.</p>
+
       <p>When the cart opens it takes that token over rather than minting its own: the hold request carries
         <code>HoldToken</code>, and a cart holding none adopts it once Seats.io confirms the token is still live.
         The browser is not believed about it — an expired or unknown token is answered with a fresh one — and this
@@ -1758,6 +1769,13 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
                 <td>Issue Session Hold Token</td>
                 <td><span class="badge text-bg-light border access-anon">Public</span></td>
                 <td class="small"><span class="param-source">route</span> <code>eventUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">route</span> <code>sessionUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">body</span> <code>HoldToken</code><span class="text-body-secondary"> : string?</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
+                <td><code class="path">/api/events/{eventUniqueId:guid}/register/sessions/{sessionUniqueId:guid}/seats/release</code> <span class="badge text-bg-light border flag">RateLimiting: seat-session-release</span><div class="action-doc">Puts seats back on sale that were picked on the chart before a cart existed. The chart holds every seat picked on it under the token it was drawn with and chooses those seats again under the same token, so a seat dropped from the basket while the map is closed can only be freed here. The presented token is the caller's whole authority — Seats.io frees only what that token holds — and a token it no longer honours is answered with success, since the seats are already back on sale. Anonymous and rate limited per IP address, because every call spends a Seats.io call.</div></td>
+                <td>Release Session Seats</td>
+                <td><span class="badge text-bg-light border access-anon">Public</span></td>
+                <td class="small"><span class="param-source">route</span> <code>eventUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">route</span> <code>sessionUniqueId</code><span class="text-body-secondary"> : Guid</span><br><span class="param-source">body</span> <code>HoldToken</code><span class="text-body-secondary"> : string</span><br><span class="param-source">body</span> <code>ObjectLabels</code><span class="text-body-secondary"> : string[]</span></td>
               </tr>
               <tr>
                 <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>

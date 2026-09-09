@@ -9,6 +9,7 @@ import {
   type EventSeatingMap,
   type HoldEventSeatRequest,
   type ReleaseEventSeatRequest,
+  type ReleaseSessionSeatsRequest,
 } from "@/features/events/schemas/eventSeating.schemas"
 
 const serviceResponseSchema = z.object({
@@ -61,6 +62,25 @@ export async function issueSessionHoldToken(
   )
 
   return normalizeEventSeatHoldToken(readResponseData(res.data))
+}
+
+/**
+ * Puts seats back on sale that the buyer picked before a cart existed.
+ *
+ * The chart holds every seat picked on it under the token it was given, and draws those seats as chosen again the
+ * next time it is opened under the same token. So a seat taken out of the basket while the map is closed has to be
+ * given back here: nothing else on this side can reach the hold, and without it the buyer removes a seat, reopens
+ * the map and finds it picked again.
+ */
+export async function releaseSessionSeats(
+  eventUniqueId: string,
+  sessionUniqueId: string,
+  request: ReleaseSessionSeatsRequest,
+): Promise<void> {
+  await client.post<unknown>(
+    API_ROUTES.eventRegistrationSessionSeatRelease(eventUniqueId, sessionUniqueId),
+    request,
+  )
 }
 
 /** Holds one seat for the cart, and answers with the basket the seat now sits in. */

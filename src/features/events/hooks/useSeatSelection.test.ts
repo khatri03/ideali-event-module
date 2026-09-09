@@ -7,11 +7,13 @@ import { useSeatSelection, type SeatPick } from "./useSeatSelection"
 const holdEventSeat = vi.fn()
 const releaseEventSeat = vi.fn()
 const issueSessionHoldToken = vi.fn()
+const releaseSessionSeats = vi.fn()
 
 vi.mock("@/api/eventSeating", () => ({
   holdEventSeat: (...args: unknown[]) => holdEventSeat(...args),
   releaseEventSeat: (...args: unknown[]) => releaseEventSeat(...args),
   issueSessionHoldToken: (...args: unknown[]) => issueSessionHoldToken(...args),
+  releaseSessionSeats: (...args: unknown[]) => releaseSessionSeats(...args),
 }))
 
 const readStoredHoldToken = vi.fn()
@@ -72,6 +74,7 @@ beforeEach(() => {
   holdEventSeat.mockReset().mockResolvedValue(CART)
   releaseEventSeat.mockReset().mockResolvedValue(CART)
   issueSessionHoldToken.mockReset().mockResolvedValue({ holdToken: "browser-token", expiresAtUtc: null })
+  releaseSessionSeats.mockReset().mockResolvedValue(undefined)
   readStoredHoldToken.mockReset().mockReturnValue(null)
   storeHoldToken.mockReset()
 })
@@ -152,10 +155,10 @@ describe("useSeatSelection", () => {
   })
 
   /**
-   * A seat the server never took cannot be given back to it. Asking anyway answers with a refusal the buyer has no
-   * way to act on, over a seat they have already dropped.
+   * A seat the server never took cannot be given back to it. Without a hold token nothing anywhere is holding the
+   * seat, so asking would answer with a refusal the buyer has no way to act on, over a seat they already dropped.
    */
-  it("gives up an unclaimed seat without troubling the server", () => {
+  it("gives up a seat nothing is holding without troubling the server", () => {
     const { result } = renderSeatSelection(null)
 
     act(() => result.current.pickSeat(seatPick("A-14")))
@@ -163,6 +166,70 @@ describe("useSeatSelection", () => {
 
     expect(result.current.seatsBySession["session-1"]).toBeUndefined()
     expect(releaseEventSeat).not.toHaveBeenCalled()
+    expect(releaseSessionSeats).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The chart holds every seat picked on it under the browser's token, and selects those seats again the next time
+   * it is drawn under the same token. A seat dropped from the basket while the map is closed must therefore be
+   * handed back to Seats.io, or it reappears picked the moment the buyer reopens the chart.
+   */
+  it("hands a seat held under the browser's own token back to Seats.io", async () => {
+    const { result } = renderSeatSelection(null)
+
+    await act(async () => {
+      await result.current.ensureHoldToken("session-1")
+    })
+    act(() => result.current.pickSeat(seatPick("A-14")))
+    act(() => result.current.unpickSeats("session-1", ["A-14"]))
+
+    await waitFor(() =>
+      expect(releaseSessionSeats).toHaveBeenCalledWith("event-1", "session-1", {
+        holdToken: "browser-token",
+        objectLabels: ["A-14"],
+      }),
+    )
+    expect(releaseEventSeat).not.toHaveBeenCalled()
+  })
+
+  /**
+   * A whole table goes back in one call, because no basket comes back to be overwritten before a cart exists.
+   */
+  it("hands a whole table back in a single call before the cart exists", async () => {
+    const { result } = renderSeatSelection(null)
+
+    await act(async () => {
+      await result.current.ensureHoldToken("session-1")
+    })
+    act(() => {
+      result.current.pickSeat(seatPick("19-2"))
+      result.current.pickSeat(seatPick("19-3"))
+    })
+    act(() => result.current.unpickSeats("session-1", ["19-2", "19-3"]))
+
+    await waitFor(() => expect(releaseSessionSeats).toHaveBeenCalledOnce())
+    expect(releaseSessionSeats).toHaveBeenCalledWith("event-1", "session-1", {
+      holdToken: "browser-token",
+      objectLabels: ["19-2", "19-3"],
+    })
+  })
+
+  /**
+   * A seat Seats.io would not free is still held, and still drawn as picked on the next chart. Showing it gone from
+   * the basket would leave the buyer unable to explain why the map keeps choosing it for them.
+   */
+  it("puts a seat back when Seats.io refuses to free it before the cart exists", async () => {
+    releaseSessionSeats.mockRejectedValue(new ServiceResponseError("That seat could not be given up."))
+    const { result } = renderSeatSelection(null)
+
+    await act(async () => {
+      await result.current.ensureHoldToken("session-1")
+    })
+    act(() => result.current.pickSeat(seatPick("A-14")))
+    act(() => result.current.unpickSeats("session-1", ["A-14"]))
+
+    await waitFor(() => expect(result.current.seatsBySession["session-1"]).toHaveLength(1))
+    expect(result.current.refusalBySession["session-1"]).toBe("That seat could not be given up.")
   })
 
   /**
@@ -239,6 +306,21 @@ describe("useSeatSelection", () => {
 
     expect(result.current.seatLabelsByTicketType["ticket-1"]).toEqual(["A-14", "A-15"])
   })
+  /**
+   * A buyer who empties their whole registration has walked away from the cart, so there is nothing left to release
+   * seats against. The basket has to come back empty all the same, or the summary keeps listing seats over an order
+   * that no longer exists.
+   */
+  it("empties the basket when the whole registration is given up", () => {
+    const { result } = renderSeatSelection("cart-1")
+
+    act(() => result.current.pickSeat(seatPick("A-14")))
+    act(() => result.current.forgetSeats())
+
+    expect(result.current.seatsBySession).toEqual({})
+    expect(result.current.seatQuantitiesByTicketType).toEqual({})
+  })
+
   /**
    * A refresh empties this browser's memory of what was picked, but not the cart, which is what actually holds the
    * seats. Rebuilding the basket from its lines is the only thing standing between the buyer and an empty card over

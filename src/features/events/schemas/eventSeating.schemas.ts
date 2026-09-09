@@ -139,6 +139,12 @@ export function normalizeEventSeatHoldToken(payload: unknown): EventSeatHoldToke
   }
 }
 
+/** Asks for seats this browser holds before any cart exists to go back on sale. */
+export interface ReleaseSessionSeatsRequest {
+  holdToken: string
+  objectLabels: string[]
+}
+
 /** Asks for one held seat to go back on sale. */
 export interface ReleaseEventSeatRequest {
   sessionUniqueId: string
