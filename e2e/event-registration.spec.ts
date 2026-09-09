@@ -21,6 +21,9 @@ async function goToSessions(page: Page) {
   }
 
   await expect(page.getByText(/Friday Dinner/i).first()).toBeVisible({ timeout: 30_000 })
+
+  // Sessions arrive collapsed, and a ticket row only exists once its session is open.
+  await page.getByRole("button", { name: /^Expand All$/i }).click()
 }
 
 async function selectFirstTicket(page: Page) {

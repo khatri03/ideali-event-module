@@ -2,7 +2,7 @@ import { expect, type Page } from "@playwright/test"
 
 /** Shared drive-the-wizard steps, so each spec only expresses what it is actually asserting. */
 
-export const EVENT_UNIQUE_ID = "d1e9ef9e-3ff0-4542-9869-629fda7afb8a"
+export const EVENT_UNIQUE_ID = "a974bd36-29a8-47e8-9c00-6754fb83031b"
 export const REGISTER_PATH = `/events/${EVENT_UNIQUE_ID}/register`
 
 /**
@@ -24,6 +24,9 @@ export async function goToSessions(page: Page) {
 
   await page.getByRole("button", { name: /^Continue$/ }).click()
   await expect(page.getByText(/Friday Dinner/i).first()).toBeVisible({ timeout: 30_000 })
+
+  // Sessions arrive collapsed, and a ticket row only exists once its session is open.
+  await page.getByRole("button", { name: /^Expand All$/i }).click()
 }
 
 export async function selectFirstTicket(page: Page) {
