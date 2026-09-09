@@ -67,6 +67,35 @@ describe("normalizeEventSeatingMap", () => {
   })
 
   /**
+   * A table sold as one object and a chair sitting at that table both reach the browser as a bare label, so the
+   * kind of object has to survive the read. Dropping it leaves the basket calling a whole table "Seat 8".
+   */
+  it("keeps the kind of object the chart reported for each held seat", () => {
+    const seating = normalizeEventSeatingMap({
+      SessionUniqueId: "session-1",
+      SelectedSeats: [
+        { ObjectLabel: "8", ObjectType: "table", CategoryKey: "cat-tables", Price: 1000 },
+        { ObjectLabel: "20-11", ObjectType: "seat", CategoryKey: "cat-stalls", Price: 150 },
+      ],
+    })
+
+    expect(seating.selectedSeats.map((seat) => seat.objectType)).toEqual(["table", "seat"])
+  })
+
+  /**
+   * A payload that names no object type must leave it empty rather than defaulting to a seat. Defaulting is what
+   * produced the wrong label in the first place, and an empty type makes the basket fall back to the label alone.
+   */
+  it("leaves the kind of object empty when the server named none", () => {
+    const seating = normalizeEventSeatingMap({
+      SessionUniqueId: "session-1",
+      SelectedSeats: [{ ObjectLabel: "8", CategoryKey: "cat-tables", Price: 1000 }],
+    })
+
+    expect(seating.selectedSeats[0].objectType).toBe("")
+  })
+
+  /**
    * A session whose chart has no categories priced yet still has to render rather than throw, because the buyer is
    * shown the map before they are shown a price.
    */

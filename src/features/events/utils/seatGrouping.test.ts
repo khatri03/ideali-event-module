@@ -1,16 +1,29 @@
 import { describe, expect, it } from "vitest"
 import type { EventSeat } from "@/features/events/schemas/eventSeating.schemas"
-import { describeSeat, describeSeatParent, groupSeatLabels, groupSeatsByParent, splitSeatLabel } from "./seatGrouping"
+import type { SeatIdentity } from "./seatGrouping"
+import {
+  describeObject,
+  describeSeat,
+  describeSeatParent,
+  groupSeatLabels,
+  groupSeatsByParent,
+  splitSeatLabel,
+} from "./seatGrouping"
 
 function seat(objectLabel: string, overrides: Partial<EventSeat> = {}): EventSeat {
   return {
     objectLabel,
+    objectType: "seat",
     categoryKey: "cat-standard",
     ticketTypeUniqueId: "ticket-standard",
     ticketTypeName: "Standard Seat",
     price: 150,
     ...overrides,
   }
+}
+
+function label(objectLabel: string): SeatIdentity {
+  return { objectLabel, objectType: "seat" }
 }
 
 describe("splitSeatLabel", () => {
@@ -74,12 +87,17 @@ describe("groupSeatsByParent", () => {
    */
   it("groups an object with no parent by what it is sold as", () => {
     const groups = groupSeatsByParent([
-      seat("9", { ticketTypeUniqueId: "ticket-table", ticketTypeName: "Standard Table", price: 1000 }),
+      seat("9", {
+        objectType: "table",
+        ticketTypeUniqueId: "ticket-table",
+        ticketTypeName: "Standard Table",
+        price: 1000,
+      }),
     ])
 
     expect(groups).toHaveLength(1)
     expect(groups[0].name).toBe("Standard Table")
-    expect(groups[0].entries[0].name).toBe("Seat 9")
+    expect(groups[0].entries[0].name).toBe("Table 9")
   })
 
   /**
@@ -87,13 +105,13 @@ describe("groupSeatsByParent", () => {
    * table, and a seat handed back on that misreading goes on sale again immediately.
    */
   it("names a seat by both its table and its own number", () => {
-    expect(describeSeat("18-1")).toBe("Seat 1 at Table 18")
-    expect(describeSeat("A-14")).toBe("Seat 14 at Row A")
+    expect(describeSeat({ objectLabel: "18-1", objectType: "seat" })).toBe("Seat 1 at Table 18")
+    expect(describeSeat({ objectLabel: "A-14", objectType: "seat" })).toBe("Seat 14 at Row A")
   })
 
   /** An object with no parent has only its own label, so nothing is invented to sit it at. */
-  it("names a parentless object by its label alone", () => {
-    expect(describeSeat("9")).toBe("Seat 9")
+  it("names a parentless object by its own kind and label", () => {
+    expect(describeSeat({ objectLabel: "9", objectType: "table" })).toBe("Table 9")
   })
 })
 
@@ -103,7 +121,7 @@ describe("groupSeatLabels", () => {
    * "18-9" makes them work out which table each belongs to before they can tell whether the order is right.
    */
   it("lists seats under the table they sit at", () => {
-    expect(groupSeatLabels(["18-2", "15-11", "18-9"])).toEqual([
+    expect(groupSeatLabels([label("18-2"), label("15-11"), label("18-9")])).toEqual([
       { key: "parent:15", parentName: "Table 15", seatNames: ["Seat 11"] },
       { key: "parent:18", parentName: "Table 18", seatNames: ["Seat 2", "Seat 9"] },
     ])
@@ -114,7 +132,7 @@ describe("groupSeatLabels", () => {
    * puts the buyer's seats in an order that matches neither the map nor how they were picked.
    */
   it("orders tables and seats the way a person counts", () => {
-    const groups = groupSeatLabels(["19-11", "9-2", "19-2"])
+    const groups = groupSeatLabels([label("19-11"), label("9-2"), label("19-2")])
 
     expect(groups.map((group) => group.parentName)).toEqual(["Table 9", "Table 19"])
     expect(groups[1].seatNames).toEqual(["Seat 2", "Seat 11"])
@@ -125,6 +143,30 @@ describe("groupSeatLabels", () => {
    * inventing a heading for it would tell the buyer they hold a seat at a table that does not exist.
    */
   it("lists an object with no parent under no heading", () => {
-    expect(groupSeatLabels(["VIP1"])).toEqual([{ key: "no-parent", parentName: null, seatNames: ["Seat VIP1"] }])
+    expect(groupSeatLabels([{ objectLabel: "VIP1", objectType: "table" }])).toEqual([
+      { key: "no-parent", parentName: null, seatNames: ["Table VIP1"] },
+    ])
+  })
+})
+
+describe("describeObject", () => {
+  /**
+   * The bug this exists for: a table sold as one object was listed as "Seat 8" because the label "8" reads the same
+   * as a seat's. A buyer holding a whole table has to be told they hold a table.
+   */
+  it("names each kind of object by what the plan draws it as", () => {
+    expect(describeObject("table", "8")).toBe("Table 8")
+    expect(describeObject("seat", "11")).toBe("Seat 11")
+    expect(describeObject("booth", "3")).toBe("Booth 3")
+    expect(describeObject("generalAdmission", "Lawn")).toBe("Area Lawn")
+  })
+
+  /**
+   * An object whose type nothing reported is named by its label alone. Falling back to "Seat" would reintroduce the
+   * exact wrong answer for the table this was written for, and a wrong noun is worse than no noun.
+   */
+  it("names an object of unknown kind by its label alone", () => {
+    expect(describeObject("", "8")).toBe("8")
+    expect(describeObject("mezzanine", "8")).toBe("8")
   })
 })

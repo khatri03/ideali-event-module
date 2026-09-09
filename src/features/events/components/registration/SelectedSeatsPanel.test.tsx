@@ -8,6 +8,7 @@ import type { EventSeat } from "@/features/events/schemas/eventSeating.schemas"
 
 const STALLS_SEAT: EventSeat = {
   objectLabel: "A-14",
+  objectType: "seat",
   categoryKey: "cat-stalls",
   ticketTypeUniqueId: "ticket-1",
   ticketTypeName: "Stalls",
@@ -256,5 +257,42 @@ describe("SelectedSeatsPanel", () => {
     renderPanel({ seats: [] })
 
     expect(screen.getByText("No seats chosen yet")).toBeInTheDocument()
+  })
+})
+
+describe("SelectedSeatsPanel object naming", () => {
+  /**
+   * The reported defect: a whole table picked under a "Standard Table" category was listed as "Seat 8", because
+   * the plan labels a table sold whole with a bare number just as it labels a chair. The basket has to name back
+   * what the buyer actually took, or they are told they bought a chair for the price of a table.
+   */
+  it("names a table sold as one object a table rather than a seat", () => {
+    renderPanel({
+      seats: [
+        {
+          objectLabel: "8",
+          objectType: "table",
+          categoryKey: "cat-tables",
+          ticketTypeUniqueId: "ticket-2",
+          ticketTypeName: "Standard Table",
+          price: 1000,
+        },
+      ],
+      seatColorByTicketType: { "ticket-2": STALLS_COLOR },
+    })
+
+    expect(screen.getByText("Table 8")).toBeInTheDocument()
+    expect(screen.queryByText("Seat 8")).not.toBeInTheDocument()
+  })
+
+  /**
+   * A chair at a table keeps reading as a seat under its table's heading. The fix for the table must not rename
+   * every ordinary seat along with it.
+   */
+  it("still names a chair at a table a seat", () => {
+    renderPanel({ seats: [tableSeat("20-11")] })
+
+    expect(screen.getByText("Table 20")).toBeInTheDocument()
+    expect(screen.getByText("Seat 11")).toBeInTheDocument()
   })
 })

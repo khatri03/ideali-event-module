@@ -40,7 +40,7 @@ vi.mock("@seatsio/seatsio-react", () => ({
     ) => string
     extraConfig: Record<string, unknown>
     onRenderStarted: (chart: unknown) => void
-    onObjectSelected: (object: { label: string; category?: { key: string | number } }) => void
+    onObjectSelected: (object: { label: string; objectType?: string; category?: { key: string | number } }) => void
     onChartRenderingFailed: () => void
   }) => (
     <div
@@ -56,7 +56,7 @@ vi.mock("@seatsio/seatsio-react", () => ({
       data-free-seat-color={objectColor({ isSelectable: () => true }, "#7551FF", extraConfig)}
       data-unverdicted-color={objectColor({}, "#7551FF", extraConfig)}
     >
-      <button type="button" onClick={() => onObjectSelected({ label: "A-14", category: { key: "stalls" } })}>
+      <button type="button" onClick={() => onObjectSelected({ label: "A-14", objectType: "seat", category: { key: "stalls" } })}>
         Pick seat A-14
       </button>
       <button type="button" onClick={onChartRenderingFailed}>
@@ -152,7 +152,7 @@ describe("SeatMapPanel", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Pick seat A-14" }))
 
-    expect(onSelectSeat).toHaveBeenCalledWith("A-14", "stalls")
+    expect(onSelectSeat).toHaveBeenCalledWith("A-14", "stalls", "seat")
     expect(screen.getByText(/reserved in your name as soon as you give us your details/i)).toBeInTheDocument()
   })
 

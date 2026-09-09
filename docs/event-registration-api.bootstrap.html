@@ -805,6 +805,15 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
         and mapped to the session's ticket type on the server, so a browser cannot name its own category and buy a
         stalls seat at a balcony price. The cart line's quantity is derived from the seats held, never sent.</p>
 
+      <p>The same read answers <em>what kind of object</em> the chart draws &mdash; <code>seat</code>,
+        <code>table</code>, <code>booth</code> or <code>generalAdmission</code> &mdash; and that is kept on the claim
+        as <code>TicketReservationSeat.ObjectType</code>. A label cannot say it: a table sold whole is drawn as a bare
+        number just as a chair at a table is, so a basket working from the label alone listed a buyer&rsquo;s whole
+        table as &ldquo;Seat 8&rdquo;. It is read from the chart rather than taken from the browser, for the same
+        reason the category is. Both <code>selectedSeats</code> on the seating map and each cart line&rsquo;s
+        <code>seats</code> now carry <code>objectLabel</code> and <code>objectType</code> together; a seat held before
+        the type was recorded carries an empty type, which the form names by its label alone rather than guessing.</p>
+
       <p>At payment start the seats move from held to claimed alongside the reservation they hang from. At
         settlement they are marked sold and each ticket is issued carrying its seat label; Seats.io is told about
         the sale by the reconciling pass rather than from inside the settlement transaction, which must not make a

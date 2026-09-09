@@ -27,9 +27,9 @@ vi.mock("@seatsio/seatsio-react", () => ({
   SeatsioSeatingChart: ({
     onObjectSelected,
   }: {
-    onObjectSelected: (object: { label: string; category?: { key: string } }) => void
+    onObjectSelected: (object: { label: string; objectType?: string; category?: { key: string } }) => void
   }) => (
-    <button type="button" onClick={() => onObjectSelected({ label: "A-14", category: { key: "cat-stalls" } })}>
+    <button type="button" onClick={() => onObjectSelected({ label: "A-14", objectType: "seat", category: { key: "cat-stalls" } })}>
       Pick seat A-14
     </button>
   ),
@@ -38,6 +38,7 @@ vi.mock("@seatsio/seatsio-react", () => ({
 const PICKED_SEAT: SeatPick = {
   sessionUniqueId: "session-1",
   objectLabel: "A-12",
+  objectType: "seat",
   ticketTypeUniqueId: "ticket-1",
   ticketTypeName: "Stalls",
   price: 40,
@@ -176,6 +177,7 @@ describe("EventSeatSelection", () => {
     expect(onPickSeat).toHaveBeenCalledWith({
       sessionUniqueId: "session-1",
       objectLabel: "A-14",
+      objectType: "seat",
       ticketTypeUniqueId: "ticket-1",
       ticketTypeName: "Stalls",
       price: 40,
@@ -243,6 +245,7 @@ describe("EventSeatSelection", () => {
       selectedSeats: [
         {
           objectLabel: "A-12",
+          objectType: "seat",
           categoryKey: "cat-stalls",
           ticketTypeUniqueId: "ticket-1",
           ticketTypeName: "Stalls",
@@ -293,6 +296,7 @@ describe("EventSeatSelection", () => {
       selectedSeats: [
         {
           objectLabel: "A-12",
+          objectType: "seat",
           categoryKey: "cat-stalls",
           ticketTypeUniqueId: "ticket-1",
           ticketTypeName: "Stalls",

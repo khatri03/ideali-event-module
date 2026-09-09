@@ -27,7 +27,7 @@ function buildItem(overrides: Partial<SelectedTicketSummaryItem> = {}): Selected
     quantity: 1,
     unitPrice: 150,
     lineTotal: 150,
-    seatLabels: [],
+    seats: [],
     ...overrides,
   }
 }
@@ -71,7 +71,7 @@ describe("CartSummaryPanel", () => {
         ticketName: "Standard Seat",
         ticket: SEATED_TICKET,
         quantity: 2,
-        seatLabels: ["18-2", "18-9"],
+        seats: [{ objectLabel: "18-2", objectType: "seat" }, { objectLabel: "18-9", objectType: "seat" }],
       }),
     ])
 
@@ -89,7 +89,7 @@ describe("CartSummaryPanel", () => {
         ticketName: "Standard Seat",
         ticket: SEATED_TICKET,
         quantity: 2,
-        seatLabels: ["18-2", "15-11"],
+        seats: [{ objectLabel: "18-2", objectType: "seat" }, { objectLabel: "15-11", objectType: "seat" }],
       }),
     ])
 
@@ -115,7 +115,7 @@ describe("CartSummaryPanel", () => {
    */
   it("says where seats are chosen while a seated line has none listed yet", () => {
     renderSummary([
-      buildItem({ ticketId: "ticket-2", ticketName: "Standard Seat", ticket: SEATED_TICKET, seatLabels: [] }),
+      buildItem({ ticketId: "ticket-2", ticketName: "Standard Seat", ticket: SEATED_TICKET, seats: [] }),
     ])
 
     expect(screen.getByText("Pick seats on the seat map in Sessions and they appear here.")).toBeInTheDocument()

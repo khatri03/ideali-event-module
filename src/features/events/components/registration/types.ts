@@ -5,6 +5,7 @@ import type {
   EventRegistrationSession,
   EventRegistrationTicket,
 } from "@/api/events"
+import type { SeatIdentity } from "@/features/events/utils/seatGrouping"
 
 export type WizardTabId =
   | "description"
@@ -100,10 +101,10 @@ export interface SelectedTicketSummaryItem {
   unitPrice: number
   lineTotal: number
   /**
-   * Seat labels this line is holding, in the order the server lists them. Empty for a general admission ticket
-   * type, which has a quantity and no seats behind it.
+   * Objects this line is holding, in the order the server lists them. Empty for a general admission ticket type,
+   * which has a quantity and no seats behind it.
    */
-  seatLabels: string[]
+  seats: SeatIdentity[]
 }
 
 export type PendingDeleteAction =

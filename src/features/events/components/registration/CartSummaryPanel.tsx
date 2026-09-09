@@ -365,7 +365,7 @@ export function CartSummaryPanel({
                                     stepper here would let the buyer ask for a fourth seat without saying which
                                     chair it is, and nothing on the map would hold it. */}
                                 {item.ticket.seatCategoryName ? (
-                                  <SeatLabelSummary seatLabels={item.seatLabels} />
+                                  <SeatLabelSummary seats={item.seats} />
                                 ) : (
                                   <SummaryQuantityControl item={item} onChangeQuantity={onChangeQuantity} />
                                 )}

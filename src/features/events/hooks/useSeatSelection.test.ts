@@ -26,11 +26,17 @@ vi.mock("@/features/events/utils/seatHoldTokenCookie", () => ({
 
 const CART = { cartUniqueId: "cart-1", lines: [] } as unknown as EventCart
 
+/** One seat as a restored cart line lists it, which carries the object's kind alongside its label. */
+function cartSeat(objectLabel: string, objectType = "seat") {
+  return { objectLabel, objectType }
+}
+
 /** One seat of a two-seat category, so a second pick can be added without repeating the whole shape. */
 function seatPick(objectLabel: string, overrides: Partial<SeatPick> = {}): SeatPick {
   return {
     sessionUniqueId: "session-1",
     objectLabel,
+    objectType: "seat",
     ticketTypeUniqueId: "ticket-1",
     ticketTypeName: "Stalls",
     price: 40,
@@ -304,7 +310,10 @@ describe("useSeatSelection", () => {
     act(() => result.current.pickSeat(seatPick("A-15")))
     act(() => result.current.pickSeat(seatPick("A-14")))
 
-    expect(result.current.seatLabelsByTicketType["ticket-1"]).toEqual(["A-14", "A-15"])
+    expect(result.current.seatsByTicketType["ticket-1"]).toEqual([
+      { objectLabel: "A-14", objectType: "seat" },
+      { objectLabel: "A-15", objectType: "seat" },
+    ])
   })
   /**
    * A buyer who empties their whole registration has walked away from the cart, so there is nothing left to release
@@ -329,11 +338,11 @@ describe("useSeatSelection", () => {
   it("takes over the seats a restored cart is holding", () => {
     const { result } = renderSeatSelection("cart-1")
 
-    act(() => result.current.adoptCartSeats(restoredCart([{ seats: ["A-14", "A-15"] }])))
+    act(() => result.current.adoptCartSeats(restoredCart([{ seats: [cartSeat("A-14"), cartSeat("A-15")] }])))
 
     expect(result.current.seatsBySession["session-1"]).toEqual([
-      { sessionUniqueId: "session-1", objectLabel: "A-14", ticketTypeUniqueId: "ticket-1", ticketTypeName: "Stalls", price: 40 },
-      { sessionUniqueId: "session-1", objectLabel: "A-15", ticketTypeUniqueId: "ticket-1", ticketTypeName: "Stalls", price: 40 },
+      seatPick("A-14"),
+      seatPick("A-15"),
     ])
     expect(holdEventSeat).not.toHaveBeenCalled()
   })
@@ -345,7 +354,7 @@ describe("useSeatSelection", () => {
   it("gives a restored seat back to the server rather than only forgetting it", async () => {
     const { result } = renderSeatSelection("cart-1")
 
-    act(() => result.current.adoptCartSeats(restoredCart([{ seats: ["A-14"] }])))
+    act(() => result.current.adoptCartSeats(restoredCart([{ seats: [cartSeat("A-14")] }])))
     act(() => result.current.unpickSeats("session-1", ["A-14"]))
 
     await waitFor(() =>

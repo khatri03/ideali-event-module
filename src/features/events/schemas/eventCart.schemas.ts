@@ -26,6 +26,13 @@ export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>
 export const ticketReservationStatusSchema = z.enum(["Active", "Confirmed", "Expired", "Cancelled"])
 export type TicketReservationStatus = z.infer<typeof ticketReservationStatusSchema>
 
+const eventCartSeatSchema = z.object({
+  ObjectLabel: z.string().optional(),
+  objectLabel: z.string().optional(),
+  ObjectType: z.string().nullable().optional(),
+  objectType: z.string().nullable().optional(),
+})
+
 const eventCartLineSchema = z.object({
   LineUniqueId: z.string().optional(),
   lineUniqueId: z.string().optional(),
@@ -45,8 +52,8 @@ const eventCartLineSchema = z.object({
   discountAmount: z.number().nullable().optional(),
   ReservationStatus: ticketReservationStatusSchema.optional(),
   reservationStatus: ticketReservationStatusSchema.optional(),
-  Seats: z.array(z.string()).optional(),
-  seats: z.array(z.string()).optional(),
+  Seats: z.array(eventCartSeatSchema).optional(),
+  seats: z.array(eventCartSeatSchema).optional(),
 })
 
 const eventCartSchema = z.object({
@@ -81,8 +88,19 @@ export interface EventCartLine {
   lineTotal: number
   discountAmount: number | null
   reservationStatus: TicketReservationStatus
-  /** Seat labels this line covers, in chart order, or empty when the session sells general admission. */
-  seats: string[]
+  /** Seats this line covers, in chart order, or empty when the session sells general admission. */
+  seats: EventCartSeat[]
+}
+
+/** One seat on a cart line, as the chart draws it. */
+export interface EventCartSeat {
+  /** Label the seating plan draws the object under, e.g. "20-11" or "8". */
+  objectLabel: string
+  /**
+   * What the plan draws the object as — "seat", "table", "booth" or "generalAdmission" — or empty when the server
+   * knows of none. The label alone cannot tell a table sold whole from a chair sitting at one.
+   */
+  objectType: string
 }
 
 export interface EventCart {
@@ -108,7 +126,10 @@ function normalizeCartLine(item: z.infer<typeof eventCartLineSchema>): EventCart
     lineTotal: item.LineTotal ?? item.lineTotal ?? 0,
     discountAmount: item.DiscountAmount ?? item.discountAmount ?? null,
     reservationStatus: item.ReservationStatus ?? item.reservationStatus ?? "Active",
-    seats: item.Seats ?? item.seats ?? [],
+    seats: (item.Seats ?? item.seats ?? []).map((seat) => ({
+      objectLabel: seat.ObjectLabel ?? seat.objectLabel ?? "",
+      objectType: seat.ObjectType ?? seat.objectType ?? "",
+    })),
   }
 }
 

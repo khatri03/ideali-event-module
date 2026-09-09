@@ -1,9 +1,9 @@
 import { Badge, Flex, Stack, Text } from "@chakra-ui/react"
-import { groupSeatLabels } from "@/features/events/utils/seatGrouping"
+import { groupSeatLabels, type SeatIdentity } from "@/features/events/utils/seatGrouping"
 
 interface SeatLabelSummaryProps {
-  /** Seat labels the line is holding, as the plan draws them, e.g. "18-2". */
-  seatLabels: string[]
+  /** Objects the line is holding, as the plan draws them, e.g. "18-2" or "8". */
+  seats: SeatIdentity[]
   /** Whether to frame the list, which suits a card but not a table cell that already has its own borders. */
   isFramed?: boolean
 }
@@ -18,8 +18,8 @@ interface SeatLabelSummaryProps {
  * An empty list says where seats come from rather than showing an empty frame, because a seated line can be in the
  * cart for a moment before the seats it is holding have been read back.
  */
-export function SeatLabelSummary({ seatLabels, isFramed = true }: SeatLabelSummaryProps) {
-  if (seatLabels.length === 0) {
+export function SeatLabelSummary({ seats, isFramed = true }: SeatLabelSummaryProps) {
+  if (seats.length === 0) {
     return (
       <Text fontSize="xs" color="gray.500" lineHeight="1.5">
         Pick seats on the seat map in Sessions and they appear here.
@@ -37,7 +37,7 @@ export function SeatLabelSummary({ seatLabels, isFramed = true }: SeatLabelSumma
       px={isFramed ? 3 : 0}
       py={isFramed ? 2.5 : 0}
     >
-      {groupSeatLabels(seatLabels).map((group) => (
+      {groupSeatLabels(seats).map((group) => (
         <Stack key={group.key} gap={1}>
           {group.parentName ? (
             <Text fontSize="xs" fontWeight="700" color="gray.600">

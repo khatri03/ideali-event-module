@@ -75,7 +75,7 @@ interface SeatMapPanelProps {
   /** Currency the chart prices its seats in, or null when the event has none set. */
   currencyCode: string | null
   /** Called with the label of a seat the buyer picked and the key of the category it is drawn in. */
-  onSelectSeat: (objectLabel: string, categoryKey: string) => void
+  onSelectSeat: (objectLabel: string, categoryKey: string, objectType: string) => void
   /** Called with a seat label the buyer gave up. */
   onDeselectSeat: (objectLabel: string) => void
 }
@@ -193,7 +193,9 @@ export function SeatMapPanel({
           }}
           // The renderer hands back a far larger object; only the seat's own name and the category it is drawn in
           // decide anything here. Category keys arrive as numbers on charts whose categories were never named.
-          onObjectSelected={(object) => onSelectSeat(object.label, String(object.category?.key ?? ""))}
+          onObjectSelected={(object) =>
+            onSelectSeat(object.label, String(object.category?.key ?? ""), String(object.objectType ?? ""))
+          }
           onObjectDeselected={(object) => onDeselectSeat(object.label)}
           // Held so a seat given up elsewhere can be deselected on the chart instead of redrawing it.
           onRenderStarted={(chart) => {

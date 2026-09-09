@@ -27,6 +27,8 @@ const seatingCategorySchema = z.object({
 const selectedSeatSchema = z.object({
   ObjectLabel: z.string().nullable().optional(),
   objectLabel: z.string().nullable().optional(),
+  ObjectType: z.string().nullable().optional(),
+  objectType: z.string().nullable().optional(),
   CategoryKey: z.string().nullable().optional(),
   categoryKey: z.string().nullable().optional(),
   TicketTypeUniqueId: z.string().nullable().optional(),
@@ -76,6 +78,11 @@ export interface EventSeatingCategory {
 /** One seat this cart is holding. */
 export interface EventSeat {
   objectLabel: string
+  /**
+   * What the plan draws the object as — "seat", "table", "booth" or "generalAdmission" — or empty when the server
+   * knows of none. The label alone cannot tell a table sold whole from a chair sitting at one.
+   */
+  objectType: string
   categoryKey: string
   ticketTypeUniqueId: string
   ticketTypeName: string
@@ -180,6 +187,7 @@ export function normalizeEventSeatingMap(payload: unknown): EventSeatingMap {
     })),
     selectedSeats: (parsed.SelectedSeats ?? parsed.selectedSeats ?? []).map((item) => ({
       objectLabel: item.ObjectLabel ?? item.objectLabel ?? "",
+      objectType: item.ObjectType ?? item.objectType ?? "",
       categoryKey: item.CategoryKey ?? item.categoryKey ?? "",
       ticketTypeUniqueId: item.TicketTypeUniqueId ?? item.ticketTypeUniqueId ?? "",
       ticketTypeName: item.TicketTypeName ?? item.ticketTypeName ?? "",

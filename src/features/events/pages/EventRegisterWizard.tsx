@@ -190,7 +190,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     ensureHoldToken: ensureSeatHoldToken,
     seatsBySession,
     seatQuantitiesByTicketType,
-    seatLabelsByTicketType,
+    seatsByTicketType,
     refusalBySession: seatRefusalBySession,
     isSeatChanging,
     pickSeat,
@@ -321,7 +321,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     attendeeSlotEntries,
     attendeeSlotEntryByKey,
     requiresAttendeeInfo,
-  } = useTicketSelectionSummary(sessionsData, ticketQuantities, cartPrice, seatLabelsByTicketType)
+  } = useTicketSelectionSummary(sessionsData, ticketQuantities, cartPrice, seatsByTicketType)
   const {
     buyerInfo,
     attendeeInfoBySlot,
@@ -938,10 +938,13 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
    */
   function handleRemoveTicket(ticket: EventRegistrationTicket) {
     const session = sessionsData.find((item) => item.ticketTypes.some((type) => type.uniqueId === ticket.uniqueId))
-    const seatLabels = seatLabelsByTicketType[ticket.uniqueId] ?? []
+    const pickedSeats = seatsByTicketType[ticket.uniqueId] ?? []
 
-    if (session && ticket.seatCategoryName && seatLabels.length > 0) {
-      unpickSeats(session.uniqueId, seatLabels)
+    if (session && ticket.seatCategoryName && pickedSeats.length > 0) {
+      unpickSeats(
+        session.uniqueId,
+        pickedSeats.map((seat) => seat.objectLabel),
+      )
       return
     }
 

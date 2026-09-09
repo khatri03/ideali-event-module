@@ -122,7 +122,7 @@ export function PaymentBreakdownTable({
                       {/* A seated ticket type's count is the seats picked on the plan, so there is no quantity
                           to set here: a fourth seat asked for without naming a chair is one nothing holds. */}
                       {item.ticket.seatCategoryName ? (
-                        <SeatLabelSummary seatLabels={item.seatLabels} isFramed={false} />
+                        <SeatLabelSummary seats={item.seats} isFramed={false} />
                       ) : (
                         <TicketQuantityStepper
                           ticket={item.ticket}

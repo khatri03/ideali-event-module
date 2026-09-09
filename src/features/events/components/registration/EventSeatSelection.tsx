@@ -123,6 +123,7 @@ export function EventSeatSelection({
       seatingMap.selectedSeats.map((seat) => ({
         sessionUniqueId,
         objectLabel: seat.objectLabel,
+        objectType: seat.objectType,
         ticketTypeUniqueId: seat.ticketTypeUniqueId,
         ticketTypeName: seat.ticketTypeName,
         price: seat.price,
@@ -148,7 +149,7 @@ export function EventSeatSelection({
 
   const seatColorByTicketType = readSeatColors(seatingMap?.categories ?? [])
 
-  const handleSelectSeat = (objectLabel: string, categoryKey: string) => {
+  const handleSelectSeat = (objectLabel: string, categoryKey: string, objectType: string) => {
     const category = findCategory(seatingMap?.categories ?? [], categoryKey)
 
     // A seat whose category is not on sale in this session has no ticket type behind it, so there is nothing to
@@ -160,6 +161,7 @@ export function EventSeatSelection({
     onPickSeat({
       sessionUniqueId,
       objectLabel,
+      objectType,
       ticketTypeUniqueId: category.ticketTypeUniqueId,
       ticketTypeName: category.ticketTypeName,
       price: category.price,

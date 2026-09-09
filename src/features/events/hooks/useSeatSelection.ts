@@ -2,12 +2,12 @@ import { useCallback, useMemo, useRef, useState } from "react"
 import { holdEventSeat, issueSessionHoldToken, releaseEventSeat, releaseSessionSeats } from "@/api/eventSeating"
 import type { EventCart } from "@/features/events/schemas/eventCart.schemas"
 import { readStoredHoldToken, storeHoldToken } from "@/features/events/utils/seatHoldTokenCookie"
+import type { SeatIdentity } from "@/features/events/utils/seatGrouping"
 import { extractApiError } from "@/utils/errors"
 
-/** One seat the buyer has picked, carrying what it costs and which ticket type it is sold as. */
-export interface SeatPick {
+/** One object the buyer has picked, carrying what it costs and which ticket type it is sold as. */
+export interface SeatPick extends SeatIdentity {
   sessionUniqueId: string
-  objectLabel: string
   ticketTypeUniqueId: string
   ticketTypeName: string
   price: number
@@ -353,9 +353,10 @@ export function useSeatSelection({
 
         adoptHeldSeats(
           line.sessionUniqueId,
-          line.seats.map((objectLabel) => ({
+          line.seats.map((seat) => ({
             sessionUniqueId: line.sessionUniqueId,
-            objectLabel,
+            objectLabel: seat.objectLabel,
+            objectType: seat.objectType,
             ticketTypeUniqueId: line.ticketTypeUniqueId,
             ticketTypeName: line.ticketTypeName,
             price: line.unitPrice,
@@ -388,15 +389,20 @@ export function useSeatSelection({
 
   // Sorted by label, because that is the order the server lists a reservation's seats in, and the attendee typed
   // against the second slot has to be the one sitting in the second seat.
-  const seatLabelsByTicketType = useMemo(
+  const seatsByTicketType = useMemo(
     () =>
       Object.entries(
-        seats.reduce<Record<string, string[]>>((labels, seat) => {
-          labels[seat.ticketTypeUniqueId] = [...(labels[seat.ticketTypeUniqueId] ?? []), seat.objectLabel]
-          return labels
+        seats.reduce<Record<string, SeatIdentity[]>>((grouped, seat) => {
+          grouped[seat.ticketTypeUniqueId] = [
+            ...(grouped[seat.ticketTypeUniqueId] ?? []),
+            { objectLabel: seat.objectLabel, objectType: seat.objectType },
+          ]
+          return grouped
         }, {}),
-      ).reduce<Record<string, string[]>>((sorted, [ticketTypeUniqueId, labels]) => {
-        sorted[ticketTypeUniqueId] = [...labels].sort((left, right) => left.localeCompare(right))
+      ).reduce<Record<string, SeatIdentity[]>>((sorted, [ticketTypeUniqueId, picked]) => {
+        sorted[ticketTypeUniqueId] = [...picked].sort((left, right) =>
+          left.objectLabel.localeCompare(right.objectLabel),
+        )
         return sorted
       }, {}),
     [seats],
@@ -408,7 +414,7 @@ export function useSeatSelection({
     ensureHoldToken,
     seatsBySession,
     seatQuantitiesByTicketType,
-    seatLabelsByTicketType,
+    seatsByTicketType,
     refusalBySession,
     isSeatChanging: pendingCount > 0,
     pickSeat,

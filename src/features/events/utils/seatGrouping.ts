@@ -1,12 +1,27 @@
 /**
- * What listing a seat in the basket needs of it: which chair it is, what it is sold as, and what it costs.
+ * Which object on the plan this is, and what kind of object it is.
+ *
+ * Everything that names an object back to the buyer needs both: the label alone cannot tell a table sold whole
+ * from a chair sitting at one, since "8" reads the same either way.
+ */
+export interface SeatIdentity {
+  /** Label the seating plan draws the object under, e.g. "19-2" or "8". */
+  objectLabel: string
+  /**
+   * What the plan draws the object as — "seat", "table", "booth" or "generalAdmission" — or empty when nothing
+   * said. Read from the chart rather than guessed from the label, because "8" reads the same whether it names a
+   * table sold whole or a chair sitting at one.
+   */
+  objectType: string
+}
+
+/**
+ * What listing a seat in the basket needs of it: which object it is, what it is sold as, and what it costs.
  *
  * Narrower than the seat the map answers with on purpose. Seats reach the basket from two places - the chart the
  * buyer picked them on, and the cart that outlived their refresh - and these are the facts both can give.
  */
-export interface BasketSeat {
-  /** Label the seating plan draws the seat under, e.g. "19-2". */
-  objectLabel: string
+export interface BasketSeat extends SeatIdentity {
   /** Ticket type the seat is sold as, which groups objects the plan gives no parent. */
   ticketTypeUniqueId: string
   /** What that ticket type is called, as the buyer reads it. */
@@ -15,10 +30,10 @@ export interface BasketSeat {
   price: number
 }
 
-/** One seat under its group heading, named the short way now that the table it belongs to is stated above it. */
+/** One object under its group heading, named the short way now that the table it belongs to is stated above it. */
 export interface SeatGroupEntry {
   seat: BasketSeat
-  /** What the row calls the seat, e.g. "Seat 2" for object label "19-2". */
+  /** What the row calls the object, e.g. "Seat 2" for object label "19-2", or "Table 8" for "8". */
   name: string
 }
 
@@ -34,6 +49,28 @@ export interface SeatGroup {
 }
 
 const SEAT_LABEL_SEPARATOR = "-"
+
+/** What Seats.io calls each kind of object it draws, which is what decides the noun the basket uses for it. */
+const OBJECT_TYPE_NOUNS: Record<string, string> = {
+  seat: "Seat",
+  table: "Table",
+  booth: "Booth",
+  generalAdmission: "Area",
+}
+
+/**
+ * Names one object the way the buyer reads it, e.g. "Table 8" or "Seat 2".
+ *
+ * A table sold whole and a chair at that table are both one object with one label, and the label alone cannot tell
+ * them apart — "8" is a table here and a seat elsewhere. Calling every object a seat is what told a buyer holding
+ * table 8 that they had "Seat 8". An object whose type nothing reported is named by its label alone rather than
+ * guessed at, since guessing "seat" is the wrong answer in exactly the case this exists for.
+ */
+export function describeObject(objectType: string, label: string): string {
+  const noun = OBJECT_TYPE_NOUNS[objectType]
+
+  return noun ? `${noun} ${label}` : label
+}
 
 /** Compares two plan labels the way a person reads them, so table 9 comes before table 19 rather than after it. */
 function compareLabels(left: string, right: string): number {
@@ -88,7 +125,10 @@ export function groupSeatsByParent(seats: BasketSeat[]): SeatGroup[] {
     const name = parts ? describeSeatParent(parts.parentLabel) : seat.ticketTypeName || "Other seats"
     const group = groups.get(key) ?? { key, name, entries: [], totalPrice: 0 }
 
-    group.entries.push({ seat, name: `Seat ${parts ? parts.seatLabel : seat.objectLabel}` })
+    group.entries.push({
+      seat,
+      name: describeObject(seat.objectType, parts ? parts.seatLabel : seat.objectLabel),
+    })
     group.totalPrice += seat.price
     groups.set(key, group)
   }
@@ -106,22 +146,22 @@ export interface SeatLabelGroup {
   key: string
   /** Heading the seats are listed under, e.g. "Table 18", or null for objects the plan gives no parent. */
   parentName: string | null
-  /** What each seat is called under that heading, e.g. "Seat 2". */
+  /** What each object is called under that heading, e.g. "Seat 2" or "Table 8". */
   seatNames: string[]
 }
 
 /**
- * Gathers plain seat labels into the tables and rows they sit at.
+ * Gathers seats into the tables and rows they sit at.
  *
- * Takes labels rather than priced seats because the places that only ever knew the labels — a cart summary, an
- * attendee list — should not have to invent a price to read them. Seats with no parent on the plan are listed
+ * Takes identities rather than priced seats because the places that never knew the price — a cart summary, an
+ * attendee list — should not have to invent one to read them. Seats with no parent on the plan are listed
  * together under no heading, since a table booked whole has no table number of its own to sit under.
  */
-export function groupSeatLabels(objectLabels: string[]): SeatLabelGroup[] {
+export function groupSeatLabels(seats: SeatIdentity[]): SeatLabelGroup[] {
   const groups = new Map<string, SeatLabelGroup>()
 
-  for (const objectLabel of [...objectLabels].sort(compareLabels)) {
-    const parts = splitSeatLabel(objectLabel)
+  for (const seat of [...seats].sort((left, right) => compareLabels(left.objectLabel, right.objectLabel))) {
+    const parts = splitSeatLabel(seat.objectLabel)
     const key = parts ? `parent:${parts.parentLabel}` : "no-parent"
     const group = groups.get(key) ?? {
       key,
@@ -129,7 +169,7 @@ export function groupSeatLabels(objectLabels: string[]): SeatLabelGroup[] {
       seatNames: [],
     }
 
-    group.seatNames.push(`Seat ${parts ? parts.seatLabel : objectLabel}`)
+    group.seatNames.push(describeObject(seat.objectType, parts ? parts.seatLabel : seat.objectLabel))
     groups.set(key, group)
   }
 
@@ -137,15 +177,17 @@ export function groupSeatLabels(objectLabels: string[]): SeatLabelGroup[] {
 }
 
 /**
- * Names one seat in full, as "Seat 1 at Table 18".
+ * Names one object in full, as "Seat 1 at Table 18" or "Table 8".
  *
  * A plan label reads "18-1" and says nothing about which half is the table and which the seat, so a buyer asked to
  * confirm giving up "18-1" is being asked about a code rather than about a chair. Spelling both parts out is what
  * lets them check the answer against the map before a seat goes back on sale. An object with no parent has only its
  * own label to give.
  */
-export function describeSeat(objectLabel: string): string {
-  const parts = splitSeatLabel(objectLabel)
+export function describeSeat(seat: SeatIdentity): string {
+  const parts = splitSeatLabel(seat.objectLabel)
 
-  return parts ? `Seat ${parts.seatLabel} at ${describeSeatParent(parts.parentLabel)}` : `Seat ${objectLabel}`
+  return parts
+    ? `${describeObject(seat.objectType, parts.seatLabel)} at ${describeSeatParent(parts.parentLabel)}`
+    : describeObject(seat.objectType, seat.objectLabel)
 }

@@ -6,6 +6,7 @@ import type {
   AttendeeSlotEntry,
   SelectedTicketSummaryItem,
 } from "@/features/events/components/registration/types"
+import { describeObject, type SeatIdentity } from "@/features/events/utils/seatGrouping"
 import { getSelectedSessionSummaries, getTicketDisplayPrice } from "@/features/events/utils/ticketSelection"
 
 export interface SelectedTicketSessionGroup {
@@ -36,7 +37,7 @@ export function useTicketSelectionSummary(
   sessions: EventRegistrationSession[],
   selectedTicketQuantities: Record<string, number>,
   cartPrice: EventCartPrice | null | undefined,
-  seatLabelsByTicketType: Record<string, string[]> = {},
+  seatsByTicketType: Record<string, SeatIdentity[]> = {},
 ): TicketSelectionSummary {
   const selectedTicketSummary = useMemo<SelectedTicketSummaryItem[]>(
     () =>
@@ -57,12 +58,12 @@ export function useTicketSelectionSummary(
               quantity,
               unitPrice,
               lineTotal: unitPrice * quantity,
-              seatLabels: seatLabelsByTicketType[ticket.uniqueId] ?? [],
+              seats: seatsByTicketType[ticket.uniqueId] ?? [],
             },
           ]
         }),
       ),
-    [sessions, selectedTicketQuantities, seatLabelsByTicketType],
+    [sessions, selectedTicketQuantities, seatsByTicketType],
   )
 
   const selectedTicketSummaryBySession = useMemo(
@@ -104,11 +105,13 @@ export function useTicketSelectionSummary(
         tickets: sessionSummary.selectedTickets.map((selectedTicket) => {
           // A seated ticket names the seat the attendee is sitting in. "Attendee 2" tells a buyer filling in four
           // rows nothing about which of their four seats they are naming.
-          const seatLabels = seatLabelsByTicketType[selectedTicket.ticket.uniqueId] ?? []
+          const pickedSeats = seatsByTicketType[selectedTicket.ticket.uniqueId] ?? []
 
           const slots = Array.from({ length: selectedTicket.quantity }, (_, index) => ({
             key: `${sessionSummary.session.uniqueId}:${selectedTicket.ticket.uniqueId}:${index + 1}`,
-            attendeeLabel: seatLabels[index] ? `Seat ${seatLabels[index]}` : `Attendee ${index + 1}`,
+            attendeeLabel: pickedSeats[index]
+              ? describeObject(pickedSeats[index].objectType, pickedSeats[index].objectLabel)
+              : `Attendee ${index + 1}`,
           }))
 
           return {
@@ -123,7 +126,7 @@ export function useTicketSelectionSummary(
           }
         }),
       })),
-    [selectedSessionSummaries, seatLabelsByTicketType],
+    [selectedSessionSummaries, seatsByTicketType],
   )
 
   const attendeeSlotEntries = useMemo<AttendeeSlotEntry[]>(

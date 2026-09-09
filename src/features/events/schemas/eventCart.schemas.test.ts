@@ -58,6 +58,38 @@ describe("normalizeEventCart", () => {
     expect(cart.lines).toEqual([])
   })
 
+  /**
+   * A cart line names the seats behind it, and a table sold as one object is not a seat. Losing the kind of object
+   * on the way in is what let a buyer holding table 8 be told they held "Seat 8" after a refresh.
+   */
+  it("Normalize_SeatedLine_KeepsTheKindOfObjectBehindEachSeat", () => {
+    const cart = normalizeEventCart({
+      ...OPEN_CART_PAYLOAD,
+      Lines: [
+        {
+          ...OPEN_CART_PAYLOAD.Lines[0],
+          Seats: [
+            { ObjectLabel: "8", ObjectType: "table" },
+            { ObjectLabel: "20-11", ObjectType: "seat" },
+          ],
+        },
+      ],
+    })
+
+    expect(cart.lines[0].seats).toEqual([
+      { objectLabel: "8", objectType: "table" },
+      { objectLabel: "20-11", objectType: "seat" },
+    ])
+  })
+
+  /**
+   * A general admission line has a quantity and no seats behind it, so an absent list has to read as no seats
+   * rather than throwing the whole cart away.
+   */
+  it("Normalize_GeneralAdmissionLine_ReadsAsHoldingNoSeats", () => {
+    expect(normalizeEventCart(OPEN_CART_PAYLOAD).lines[0].seats).toEqual([])
+  })
+
   it("Normalize_PayloadMissingTheCartId_Throws", () => {
     expect(() => normalizeEventCart({ CartUniqueId: 42 })).toThrow()
   })

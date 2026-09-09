@@ -258,7 +258,7 @@ export function SelectedSeatsPanel({
               {group.entries.map((entry) => (
                 <Button
                   key={entry.seat.objectLabel}
-                  aria-label={`Remove ${describeSeat(entry.seat.objectLabel)}`}
+                  aria-label={`Remove ${describeSeat(entry.seat)}`}
                   aria-disabled={isBusy}
                   variant="outline"
                   h="11"
@@ -277,7 +277,7 @@ export function SelectedSeatsPanel({
                     }
 
                     setPendingRemoval({
-                      title: `Remove ${describeSeat(entry.seat.objectLabel)}?`,
+                      title: `Remove ${describeSeat(entry.seat)}?`,
                       description:
                         "This seat goes back on sale and someone else can take it. You can pick it again while it is still free.",
                       objectLabels: [entry.seat.objectLabel],
