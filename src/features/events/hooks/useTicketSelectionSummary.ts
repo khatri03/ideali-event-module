@@ -57,11 +57,12 @@ export function useTicketSelectionSummary(
               quantity,
               unitPrice,
               lineTotal: unitPrice * quantity,
+              seatLabels: seatLabelsByTicketType[ticket.uniqueId] ?? [],
             },
           ]
         }),
       ),
-    [sessions, selectedTicketQuantities],
+    [sessions, selectedTicketQuantities, seatLabelsByTicketType],
   )
 
   const selectedTicketSummaryBySession = useMemo(

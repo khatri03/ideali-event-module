@@ -100,6 +100,42 @@ export function groupSeatsByParent(seats: BasketSeat[]): SeatGroup[] {
   return [...groups.values()].sort((left, right) => compareLabels(left.name, right.name))
 }
 
+/** Seat labels the plan draws together, named the way the buyer reads them. */
+export interface SeatLabelGroup {
+  /** Identifies the group inside one ticket type, and is stable across renders so React can key on it. */
+  key: string
+  /** Heading the seats are listed under, e.g. "Table 18", or null for objects the plan gives no parent. */
+  parentName: string | null
+  /** What each seat is called under that heading, e.g. "Seat 2". */
+  seatNames: string[]
+}
+
+/**
+ * Gathers plain seat labels into the tables and rows they sit at.
+ *
+ * Takes labels rather than priced seats because the places that only ever knew the labels — a cart summary, an
+ * attendee list — should not have to invent a price to read them. Seats with no parent on the plan are listed
+ * together under no heading, since a table booked whole has no table number of its own to sit under.
+ */
+export function groupSeatLabels(objectLabels: string[]): SeatLabelGroup[] {
+  const groups = new Map<string, SeatLabelGroup>()
+
+  for (const objectLabel of [...objectLabels].sort(compareLabels)) {
+    const parts = splitSeatLabel(objectLabel)
+    const key = parts ? `parent:${parts.parentLabel}` : "no-parent"
+    const group = groups.get(key) ?? {
+      key,
+      parentName: parts ? describeSeatParent(parts.parentLabel) : null,
+      seatNames: [],
+    }
+
+    group.seatNames.push(`Seat ${parts ? parts.seatLabel : objectLabel}`)
+    groups.set(key, group)
+  }
+
+  return [...groups.values()].sort((left, right) => compareLabels(left.parentName ?? "", right.parentName ?? ""))
+}
+
 /**
  * Names one seat in full, as "Seat 1 at Table 18".
  *

@@ -99,6 +99,11 @@ export interface SelectedTicketSummaryItem {
   quantity: number
   unitPrice: number
   lineTotal: number
+  /**
+   * Seat labels this line is holding, in the order the server lists them. Empty for a general admission ticket
+   * type, which has a quantity and no seats behind it.
+   */
+  seatLabels: string[]
 }
 
 export type PendingDeleteAction =

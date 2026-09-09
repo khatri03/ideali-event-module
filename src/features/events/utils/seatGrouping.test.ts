@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { EventSeat } from "@/features/events/schemas/eventSeating.schemas"
-import { describeSeat, describeSeatParent, groupSeatsByParent, splitSeatLabel } from "./seatGrouping"
+import { describeSeat, describeSeatParent, groupSeatLabels, groupSeatsByParent, splitSeatLabel } from "./seatGrouping"
 
 function seat(objectLabel: string, overrides: Partial<EventSeat> = {}): EventSeat {
   return {
@@ -94,5 +94,37 @@ describe("groupSeatsByParent", () => {
   /** An object with no parent has only its own label, so nothing is invented to sit it at. */
   it("names a parentless object by its label alone", () => {
     expect(describeSeat("9")).toBe("Seat 9")
+  })
+})
+
+describe("groupSeatLabels", () => {
+  /**
+   * A buyer checking a summary against the seat map reads by table, not by plan label. A flat list of "18-2" and
+   * "18-9" makes them work out which table each belongs to before they can tell whether the order is right.
+   */
+  it("lists seats under the table they sit at", () => {
+    expect(groupSeatLabels(["18-2", "15-11", "18-9"])).toEqual([
+      { key: "parent:15", parentName: "Table 15", seatNames: ["Seat 11"] },
+      { key: "parent:18", parentName: "Table 18", seatNames: ["Seat 2", "Seat 9"] },
+    ])
+  })
+
+  /**
+   * Tables are numbered, so table 9 has to come before table 19 and seat 2 before seat 11. Ordering them as text
+   * puts the buyer's seats in an order that matches neither the map nor how they were picked.
+   */
+  it("orders tables and seats the way a person counts", () => {
+    const groups = groupSeatLabels(["19-11", "9-2", "19-2"])
+
+    expect(groups.map((group) => group.parentName)).toEqual(["Table 9", "Table 19"])
+    expect(groups[1].seatNames).toEqual(["Seat 2", "Seat 11"])
+  })
+
+  /**
+   * An object the plan gives no parent - a table sold whole, most often - has no table number to sit under, and
+   * inventing a heading for it would tell the buyer they hold a seat at a table that does not exist.
+   */
+  it("lists an object with no parent under no heading", () => {
+    expect(groupSeatLabels(["VIP1"])).toEqual([{ key: "no-parent", parentName: null, seatNames: ["Seat VIP1"] }])
   })
 })

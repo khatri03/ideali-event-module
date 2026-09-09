@@ -48,6 +48,16 @@ describe("SeatCategoryLegend", () => {
   })
 
   /**
+   * Taken seats are drawn in a colour of their own, and a colour nothing explains is one more thing for the buyer
+   * to work out by clicking. The legend names it so the chart reads without trial and error.
+   */
+  it("names the colour taken seats are drawn in", () => {
+    renderLegend([buildCategory()])
+
+    expect(screen.getByText("Seats in this colour are already taken")).toBeInTheDocument()
+  })
+
+  /**
    * The swatch is what ties a legend row to the colour on the chart. Drawing it in anything but the category's own
    * colour would point the buyer at the wrong seats.
    */

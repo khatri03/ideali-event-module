@@ -2,6 +2,7 @@ import { Fragment } from "react"
 import { Badge, Box, HStack, Separator, Stack, Table, Text } from "@chakra-ui/react"
 import type { EventRegistrationTicket } from "@/api/events"
 import type { EventCartPaymentBreakdown } from "@/features/events/schemas/eventCart.schemas"
+import { SeatLabelSummary } from "@/features/events/components/registration/SeatLabelSummary"
 import type { SelectedTicketSummaryItem } from "@/features/events/components/registration/types"
 import { TicketQuantityStepper } from "@/features/events/components/registration/TicketQuantityStepper"
 import { formatAmount, formatChargeRate } from "@/features/events/utils/registrationFormat"
@@ -118,13 +119,19 @@ export function PaymentBreakdownTable({
                       </Text>
                     </Table.Cell>
                     <Table.Cell borderColor="gray.200" px={4} py={3}>
-                      <TicketQuantityStepper
-                        ticket={item.ticket}
-                        ticketName={item.ticketName}
-                        quantity={item.quantity}
-                        onChangeQuantity={(quantity) => onChangeQuantity(item.ticket, quantity)}
-                        onRequestRemove={() => onRequestRemove(item.ticket, item.ticketName)}
-                      />
+                      {/* A seated ticket type's count is the seats picked on the plan, so there is no quantity
+                          to set here: a fourth seat asked for without naming a chair is one nothing holds. */}
+                      {item.ticket.seatCategoryName ? (
+                        <SeatLabelSummary seatLabels={item.seatLabels} isFramed={false} />
+                      ) : (
+                        <TicketQuantityStepper
+                          ticket={item.ticket}
+                          ticketName={item.ticketName}
+                          quantity={item.quantity}
+                          onChangeQuantity={(quantity) => onChangeQuantity(item.ticket, quantity)}
+                          onRequestRemove={() => onRequestRemove(item.ticket, item.ticketName)}
+                        />
+                      )}
                     </Table.Cell>
                     <Table.Cell borderColor="gray.200" px={4} py={3} textAlign="right">
                       <Text fontWeight="700" color="gray.900">

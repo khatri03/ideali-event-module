@@ -1,6 +1,7 @@
 import { Badge, Box, Button, Flex, HStack, Portal, Separator, Stack, Text, chakra } from "@chakra-ui/react"
 import { ChevronDown, Trash2, X } from "lucide-react"
 import type { EventRegistrationTicket } from "@/api/events"
+import { SeatLabelSummary } from "@/features/events/components/registration/SeatLabelSummary"
 import type { SelectedTicketSummaryItem } from "@/features/events/components/registration/types"
 import { formatAmount, hexToRgba } from "@/features/events/utils/registrationFormat"
 import {
@@ -360,7 +361,14 @@ export function CartSummaryPanel({
                                   </Button>
                                 </Flex>
 
-                                <SummaryQuantityControl item={item} onChangeQuantity={onChangeQuantity} />
+                                {/* A seated ticket type's count is the seats picked on the plan. Offering a
+                                    stepper here would let the buyer ask for a fourth seat without saying which
+                                    chair it is, and nothing on the map would hold it. */}
+                                {item.ticket.seatCategoryName ? (
+                                  <SeatLabelSummary seatLabels={item.seatLabels} />
+                                ) : (
+                                  <SummaryQuantityControl item={item} onChangeQuantity={onChangeQuantity} />
+                                )}
                               </Stack>
                             </Box>
                           ))}

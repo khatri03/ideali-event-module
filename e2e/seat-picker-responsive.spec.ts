@@ -176,3 +176,24 @@ test("prices the categories on the card without opening the map", async ({ page 
   await expect(legend).toBeVisible()
   await expect(legend.getByText("Stalls", { exact: true })).toBeVisible()
 })
+
+/**
+ * A seated line's count is the seats picked on the plan, not a number the buyer typed. Removing it by zeroing that
+ * number left the seats held, and the held seats put the line straight back — so the buyer confirmed a removal and
+ * watched nothing happen.
+ */
+test("removes a seated line from the summary once the buyer confirms it", async ({ page }) => {
+  await openSeatPicker(page, 1440, 900)
+
+  await page.getByText("Summary", { exact: true }).click()
+
+  const removeLine = page.getByRole("button", { name: "Remove Stalls" })
+  await expect(removeLine).toBeVisible()
+
+  await removeLine.click()
+  await page.getByRole("button", { name: "Remove", exact: true }).click()
+
+  await expect(removeLine).toBeHidden()
+  await expect(sessionsStep(page).getByRole("button", { name: `Remove ${HELD_SEAT_NAME}` })).toBeHidden()
+  await expect(sessionsStep(page).getByText(`Table ${HELD_TABLE_LABEL}`)).toBeHidden()
+})

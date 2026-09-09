@@ -3,6 +3,7 @@ import { Box, Skeleton, Stack, Text } from "@chakra-ui/react"
 import { SeatsioSeatingChart } from "@seatsio/seatsio-react"
 import type { CategoryLimiter, SeatingChart } from "@seatsio/seatsio-types"
 import type { EventSeatingCategory, EventSeatingMap } from "@/features/events/schemas/eventSeating.schemas"
+import { UNAVAILABLE_SEAT_COLOR } from "@/features/events/utils/seatColors"
 import { formatCurrencyCode } from "@/utils/format"
 
 /** Regions Seats.io serves charts from. Anything else means the workspace was configured with a region we cannot draw. */
@@ -171,6 +172,25 @@ export function SeatMapPanel({
           // The chart prints prices of its own, in its own default format. Left alone it shows a bare number beside
           // seats the legend has already priced in the event's currency, and the two disagree on the same screen.
           priceFormatter={(price: number) => formatCurrencyCode(String(price), currencyCode)}
+          // The one channel this colour has into the renderer's frame. Reaching for the constant from inside
+          // objectColor instead throws there, and a throw inside the drawing loop takes the whole chart down.
+          extraConfig={{ unavailableSeatColor: UNAVAILABLE_SEAT_COLOR }}
+          // Seats that cannot be picked are drawn grey by default, close enough to the chart's own background that
+          // a sold row reads as empty floor and buyers keep clicking it. The rule is written out here rather than
+          // called from a helper because this runs inside the renderer's own frame, which reaches nothing in this
+          // module. `isSelectable()` is the renderer's own verdict and covers every reason a buyer cannot take the
+          // object - sold, held by somebody else, out of channel, or a section, which is never selectable to begin
+          // with. It is missing from the published types but present on the object the renderer hands in, so an
+          // object without it keeps its category colour rather than throwing inside the drawing loop.
+          objectColor={(object, defaultColor, extraConfig) => {
+            const isSelectable = (object as unknown as { isSelectable?: () => boolean }).isSelectable
+
+            if (typeof isSelectable !== "function") {
+              return defaultColor
+            }
+
+            return isSelectable.call(object) ? defaultColor : String(extraConfig.unavailableSeatColor)
+          }}
           // The renderer hands back a far larger object; only the seat's own name and the category it is drawn in
           // decide anything here. Category keys arrive as numbers on charts whose categories were never named.
           onObjectSelected={(object) => onSelectSeat(object.label, String(object.category?.key ?? ""))}

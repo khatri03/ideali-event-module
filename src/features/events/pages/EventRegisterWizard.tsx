@@ -195,6 +195,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     isSeatChanging,
     pickSeat,
     unpickSeats,
+    forgetSeats,
     adoptHeldSeats,
     adoptCartSeats,
     claimPendingSeats,
@@ -928,19 +929,37 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     void applyCoupon(null)
   }
 
+  /**
+   * Gives up one line the buyer asked to remove.
+   *
+   * A seated line has no quantity of its own to zero - its count is the seats picked on the plan - so it is removed
+   * by giving those seats up. Zeroing the quantity instead left the line on the summary, because the seats were
+   * still held and put the count straight back.
+   */
   function handleRemoveTicket(ticket: EventRegistrationTicket) {
+    const session = sessionsData.find((item) => item.ticketTypes.some((type) => type.uniqueId === ticket.uniqueId))
+    const seatLabels = seatLabelsByTicketType[ticket.uniqueId] ?? []
+
+    if (session && ticket.seatCategoryName && seatLabels.length > 0) {
+      unpickSeats(session.uniqueId, seatLabels)
+      return
+    }
+
     handleTicketQuantityChange(ticket, 0)
   }
 
   function handleRemoveSession(items: SelectedTicketSummaryItem[]) {
     items.forEach((item) => {
-      handleTicketQuantityChange(item.ticket, 0)
+      handleRemoveTicket(item.ticket)
     })
   }
 
   function handleRemoveAllTickets() {
     const resetIndex = sessionsStepIndex >= 0 ? sessionsStepIndex : 0
     setSelectedTicketQuantities({})
+    // The cart itself is being walked away from, so there is nothing left to release the seats against. They lapse
+    // on their own deadline, the same as they do for a buyer who closes the tab.
+    forgetSeats()
     setSelectedPaymentMethod(null)
     resetBuyerAttendeeInfo()
     setTermsAccepted(false)

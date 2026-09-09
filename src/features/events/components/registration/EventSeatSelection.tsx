@@ -146,6 +146,8 @@ export function EventSeatSelection({
   const pickableSeatingMap =
     seatingMap && !seatingMap.holdToken && holdToken ? { ...seatingMap, holdToken } : seatingMap
 
+  const seatColorByTicketType = readSeatColors(seatingMap?.categories ?? [])
+
   const handleSelectSeat = (objectLabel: string, categoryKey: string) => {
     const category = findCategory(seatingMap?.categories ?? [], categoryKey)
 
@@ -173,6 +175,7 @@ export function EventSeatSelection({
           sessionName={sessionName}
           seats={seats}
           currencyCode={currencyCode}
+          seatColorByTicketType={seatColorByTicketType}
           isBusy={isSeatChanging}
           onReleaseSeats={onUnpickSeats}
         />
@@ -213,6 +216,7 @@ export function EventSeatSelection({
                 sessionName={sessionName}
                 seats={seats}
                 currencyCode={currencyCode}
+                seatColorByTicketType={seatColorByTicketType}
                 isBusy={isSeatChanging}
                 onReleaseSeats={onUnpickSeats}
               />
@@ -226,6 +230,17 @@ export function EventSeatSelection({
         )}
       </SeatPickerDialog>
     </Stack>
+  )
+}
+
+/**
+ * Maps each ticket type on sale to the colour its seats are drawn in, so the basket can wear the chart's own
+ * colours. Categories the chart gave no colour for are left out rather than defaulted, since a colour that matches
+ * nothing on the map would point the buyer at the wrong seats.
+ */
+function readSeatColors(categories: EventSeatingCategory[]): Record<string, string> {
+  return Object.fromEntries(
+    categories.filter((category) => Boolean(category.color)).map((category) => [category.ticketTypeUniqueId, category.color]),
   )
 }
 

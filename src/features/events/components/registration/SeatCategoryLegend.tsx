@@ -1,5 +1,6 @@
 import { Box, Flex, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import type { EventSeatingCategory } from "@/features/events/schemas/eventSeating.schemas"
+import { UNAVAILABLE_SEAT_COLOR } from "@/features/events/utils/seatColors"
 import { formatCurrencyCode } from "@/utils/format"
 
 /** Fallback swatch colour for a category the chart never gave one, so the row still reads as a legend entry. */
@@ -53,6 +54,9 @@ function getMaximumLabel(category: EventSeatingCategory): string | null {
  *
  * Colour is never the only carrier of the meaning. The swatch repeats what the category name already says, so a
  * buyer who cannot tell the colours apart still reads the same legend.
+ *
+ * Seats already taken are on the chart too, in a colour no category uses, so the legend names that colour as well.
+ * Without the line a buyer meets it only by clicking a seat and being refused.
  *
  * The seat count sits above its card rather than inside it, because the organizer sets that disclosure per ticket
  * type: a count inside the card would make the one category that discloses taller than its neighbours, and read as
@@ -144,6 +148,21 @@ export function SeatCategoryLegend({ categories, currencyCode }: SeatCategoryLeg
           )
         })}
       </SimpleGrid>
+      <Flex align="center" gap={3} px={1}>
+        <Box
+          aria-hidden
+          flexShrink={0}
+          w="14px"
+          h="14px"
+          borderRadius="full"
+          borderWidth="1px"
+          borderColor="blackAlpha.300"
+          bg={UNAVAILABLE_SEAT_COLOR}
+        />
+        <Text fontSize="xs" fontWeight="600" color="gray.600">
+          Seats in this colour are already taken
+        </Text>
+      </Flex>
     </Stack>
   )
 }

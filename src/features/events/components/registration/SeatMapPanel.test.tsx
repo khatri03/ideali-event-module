@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event"
 import { ChakraProvider } from "@chakra-ui/react"
 import { system } from "@/theme"
 import type { EventSeatingMap } from "@/features/events/schemas/eventSeating.schemas"
+import { UNAVAILABLE_SEAT_COLOR } from "@/features/events/utils/seatColors"
 import { SeatMapPanel } from "./SeatMapPanel"
 
 /**
@@ -20,6 +21,8 @@ vi.mock("@seatsio/seatsio-react", () => ({
     selectedObjects,
     maxSelectedObjects,
     priceFormatter,
+    objectColor,
+    extraConfig,
     onRenderStarted,
     onObjectSelected,
     onChartRenderingFailed,
@@ -30,6 +33,12 @@ vi.mock("@seatsio/seatsio-react", () => ({
     selectedObjects: Array<{ label: string }>
     maxSelectedObjects: Array<{ category: string; quantity: number }>
     priceFormatter: (price: number) => string
+    objectColor: (
+      object: { isSelectable?: () => boolean },
+      defaultColor: string,
+      extraConfig: Record<string, unknown>,
+    ) => string
+    extraConfig: Record<string, unknown>
     onRenderStarted: (chart: unknown) => void
     onObjectSelected: (object: { label: string; category?: { key: string | number } }) => void
     onChartRenderingFailed: () => void
@@ -42,6 +51,10 @@ vi.mock("@seatsio/seatsio-react", () => ({
       data-selected={selectedObjects.map((object) => object.label).join(",")}
       data-max-selected={maxSelectedObjects.map((limit) => `${limit.category}:${limit.quantity}`).join(",")}
       data-example-price={priceFormatter(40)}
+      data-extra-config-color={String(extraConfig.unavailableSeatColor)}
+      data-taken-seat-color={objectColor({ isSelectable: () => false }, "#7551FF", extraConfig)}
+      data-free-seat-color={objectColor({ isSelectable: () => true }, "#7551FF", extraConfig)}
+      data-unverdicted-color={objectColor({}, "#7551FF", extraConfig)}
     >
       <button type="button" onClick={() => onObjectSelected({ label: "A-14", category: { key: "stalls" } })}>
         Pick seat A-14
@@ -165,6 +178,57 @@ describe("SeatMapPanel", () => {
     expect(screen.getByRole("button", { name: "Pick seat A-14" }).parentElement).toHaveAttribute(
       "data-selected",
       "A-14,A-15",
+    )
+  })
+
+  /**
+   * The renderer draws a seat nobody can pick in a pale grey that reads as empty floor, so buyers keep clicking
+   * rows that are long gone. A colour of its own is what tells them the room is filling up rather than broken.
+   */
+  it("draws a seat that cannot be picked in the taken colour", () => {
+    renderPanel(SEATING_MAP)
+
+    expect(screen.getByRole("button", { name: "Pick seat A-14" }).parentElement).toHaveAttribute(
+      "data-taken-seat-color",
+      UNAVAILABLE_SEAT_COLOR,
+    )
+  })
+
+  /**
+   * A seat still on sale must keep its category colour, or the legend beside the chart prices a colour the buyer
+   * can no longer find on it.
+   */
+  it("leaves a seat still on sale in its category colour", () => {
+    renderPanel(SEATING_MAP)
+
+    const chart = screen.getByRole("button", { name: "Pick seat A-14" }).parentElement
+    expect(chart).toHaveAttribute("data-free-seat-color", "#7551FF")
+  })
+
+  /**
+   * The colour function runs inside the renderer's own frame, where nothing in this module is in scope. Reaching
+   * for the constant directly threw there and took the whole chart down with it, so the colour has to travel in
+   * as configuration and be read back off the argument the renderer hands in.
+   */
+  it("hands the taken colour to the chart as configuration", () => {
+    renderPanel(SEATING_MAP)
+
+    expect(screen.getByRole("button", { name: "Pick seat A-14" }).parentElement).toHaveAttribute(
+      "data-extra-config-color",
+      UNAVAILABLE_SEAT_COLOR,
+    )
+  })
+
+  /**
+   * The renderer's verdict arrives as a method that the published types do not declare. A renderer that stops
+   * handing it over must leave the chart drawn in its category colours rather than take the whole map down.
+   */
+  it("leaves an object the renderer gives no verdict on in its category colour", () => {
+    renderPanel(SEATING_MAP)
+
+    expect(screen.getByRole("button", { name: "Pick seat A-14" }).parentElement).toHaveAttribute(
+      "data-unverdicted-color",
+      "#7551FF",
     )
   })
 

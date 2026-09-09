@@ -19,23 +19,38 @@ function tableSeat(objectLabel: string): EventSeat {
   return { ...STALLS_SEAT, objectLabel, ticketTypeName: "Standard Seat", price: 150 }
 }
 
+/** The chart's own colour for the ticket type the seats here are sold as. */
+const STALLS_COLOR = "rgb(117, 81, 255)"
+
 /** Renders the panel inside the theme the registration form draws it in. */
-function renderPanel(props: { seats?: EventSeat[]; isBusy?: boolean } = {}) {
+function renderPanel(
+  props: { seats?: EventSeat[]; isBusy?: boolean; seatColorByTicketType?: Record<string, string> } = {},
+) {
   const onReleaseSeats = vi.fn()
 
-  render(
+  const view = render(
     <ChakraProvider value={system}>
       <SelectedSeatsPanel
         sessionName="Opening Night"
         seats={props.seats ?? [STALLS_SEAT]}
         currencyCode="USD"
+        seatColorByTicketType={props.seatColorByTicketType ?? { "ticket-1": STALLS_COLOR }}
         isBusy={props.isBusy ?? false}
         onReleaseSeats={onReleaseSeats}
       />
     </ChakraProvider>,
   )
 
-  return { onReleaseSeats }
+  return { onReleaseSeats, container: view.container }
+}
+
+/** Every colour the panel drew, in document order, so a rule can say which seats wore which. */
+function readSeatColors(container: HTMLElement): string[] {
+  const isPainted = (color: string) => color !== "" && color !== "transparent" && color !== "rgba(0, 0, 0, 0)"
+
+  return [...container.querySelectorAll('[aria-hidden="true"]')]
+    .map((dot) => window.getComputedStyle(dot).backgroundColor)
+    .filter(isPainted)
 }
 
 /** Answers the confirmation the way a buyer who meant it does. */
@@ -44,6 +59,52 @@ async function confirmRemoval() {
 }
 
 describe("SelectedSeatsPanel", () => {
+  /**
+   * The basket is where the buyer checks what they have taken of each category, and the chart's colour is what
+   * carries that at a glance. A basket in neutral greys makes them match seat numbers back to the map by hand.
+   */
+  it("wears the colour the chart draws those seats in", () => {
+    const { container } = renderPanel()
+
+    expect(readSeatColors(container)).toContain(STALLS_COLOR)
+  })
+
+  /**
+   * Colour never carries the meaning on its own. The ticket type is named beside the dot, so a buyer who cannot
+   * tell two categories apart by colour reads the same basket.
+   */
+  it("names the ticket type beside the colour it is drawn in", () => {
+    renderPanel()
+
+    expect(screen.getByText("Stalls")).toBeInTheDocument()
+  })
+
+  /**
+   * A ticket type the chart gave no colour for has nothing on the map to match. Drawing a swatch anyway would
+   * point the buyer at seats of some other category.
+   */
+  it("draws no colour for a ticket type the chart never coloured", () => {
+    const { container } = renderPanel({ seatColorByTicketType: {} })
+
+    expect(readSeatColors(container)).toHaveLength(0)
+  })
+
+  /**
+   * Seats at one table sold as different ticket types have no single colour between them, so the heading must not
+   * claim one - each seat carries its own instead, or the buyer reads the whole table as one category.
+   */
+  it("colours each seat of a table sold as a mixture on its own", () => {
+    const { container } = renderPanel({
+      seats: [
+        tableSeat("18-1"),
+        { ...tableSeat("18-2"), ticketTypeUniqueId: "ticket-2", ticketTypeName: "Premium Seat", price: 300 },
+      ],
+      seatColorByTicketType: { "ticket-1": STALLS_COLOR, "ticket-2": "rgb(1, 181, 116)" },
+    })
+
+    expect(readSeatColors(container)).toEqual([STALLS_COLOR, "rgb(1, 181, 116)"])
+  })
+
   /**
    * The buyer chose particular seats, so the basket has to name them: a count cannot be checked against the map,
    * and a wrong seat found at the door is not something anybody can fix then.

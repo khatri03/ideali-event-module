@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Badge, Button, Flex, Stack, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, Flex, Stack, Text } from "@chakra-ui/react"
 import { Trash2, X } from "lucide-react"
 import { ConfirmRemoveDialog } from "@/features/events/components/registration/RegistrationDialogs"
 import {
@@ -17,6 +17,12 @@ interface SelectedSeatsPanelProps {
   seats: BasketSeat[]
   /** Currency the prices are shown in, or null when the event has none set. */
   currencyCode: string | null
+  /**
+   * The colour each ticket type's seats are drawn in on the chart, keyed by ticket type. A ticket type the chart
+   * gave no colour for is left out, and its seats are listed without one rather than under a colour that matches
+   * nothing on the map.
+   */
+  seatColorByTicketType: Record<string, string>
   /** Whether a seat is being taken or given up, so the buttons cannot fire twice. */
   isBusy: boolean
   /** Called with every seat label the buyer confirmed giving up, which is one label or a whole table's worth. */
@@ -45,7 +51,7 @@ function describeSeatTotal(seatCount: number, totalPrice: number, currencyCode: 
  * the buyer and the seat numbers they came to check. Said once on the heading it stays available and stops
  * competing; a table sold as a mixture has no single answer, so each seat names its own category instead.
  */
-function readSharedTicketType(group: SeatGroup): { name: string; price: number } | null {
+function readSharedTicketType(group: SeatGroup): { name: string; price: number; ticketTypeUniqueId: string } | null {
   const [first, ...rest] = group.entries
 
   if (!first) {
@@ -56,7 +62,39 @@ function readSharedTicketType(group: SeatGroup): { name: string; price: number }
     (entry) => entry.seat.ticketTypeName === first.seat.ticketTypeName && entry.seat.price === first.seat.price,
   )
 
-  return isShared ? { name: first.seat.ticketTypeName, price: first.seat.price } : null
+  return isShared
+    ? {
+        name: first.seat.ticketTypeName,
+        price: first.seat.price,
+        ticketTypeUniqueId: first.seat.ticketTypeUniqueId,
+      }
+    : null
+}
+
+/**
+ * The dot that ties a line in the basket to a colour on the seat map.
+ *
+ * The colour repeats what the ticket type beside it already says, so it carries no meaning of its own: a buyer who
+ * cannot tell two categories apart by colour reads the same basket. Nothing is drawn for a ticket type the chart
+ * gave no colour for, which is truer than a grey dot the map has no counterpart for.
+ */
+function SeatColorDot({ color }: { color: string | undefined }) {
+  if (!color) {
+    return null
+  }
+
+  return (
+    <Box
+      aria-hidden
+      flexShrink={0}
+      w="10px"
+      h="10px"
+      borderRadius="full"
+      borderWidth="1px"
+      borderColor="blackAlpha.300"
+      bg={color}
+    />
+  )
 }
 
 /** The trash control every heading and every seat row carries, sized to stay pressable on a phone. */
@@ -95,6 +133,10 @@ function RemoveButton({ label, isBusy, onRemove }: { label: string; isBusy: bool
  * because that is how the buyer picked them and how they will want to drop them - a party that shrank gives up a
  * table, not nine seats one at a time.
  *
+ * Each heading wears the colour its seats are drawn in on the chart, so the buyer reads what they have already
+ * taken of each category without matching seat numbers back to the map by hand. A group sold as a mixture has no
+ * single colour to wear, so its seats carry their own instead.
+ *
  * Every removal is confirmed and every confirmation names what is going, since a seat handed back goes on sale
  * again immediately and the buyer may not get it a second time.
  */
@@ -102,6 +144,7 @@ export function SelectedSeatsPanel({
   sessionName,
   seats,
   currencyCode,
+  seatColorByTicketType,
   isBusy,
   onReleaseSeats,
 }: SelectedSeatsPanelProps) {
@@ -160,6 +203,9 @@ export function SelectedSeatsPanel({
 
       {groups.map((group) => {
         const sharedTicketType = readSharedTicketType(group)
+        const sharedSeatColor = sharedTicketType
+          ? seatColorByTicketType[sharedTicketType.ticketTypeUniqueId]
+          : undefined
 
         return (
           <Stack
@@ -170,6 +216,8 @@ export function SelectedSeatsPanel({
             borderRadius="16px"
             borderWidth="1px"
             borderColor="gray.200"
+            borderLeftWidth={sharedSeatColor ? "4px" : undefined}
+            borderLeftColor={sharedSeatColor}
             bg="gray.50"
           >
             <Flex align="center" justify="space-between" gap={3} wrap="wrap">
@@ -179,7 +227,8 @@ export function SelectedSeatsPanel({
                     {group.name}
                   </Text>
                   {sharedTicketType ? (
-                    <Badge colorPalette="gray" fontSize="xs">
+                    <Badge colorPalette="gray" fontSize="xs" gap={1.5}>
+                      <SeatColorDot color={sharedSeatColor} />
                       {sharedTicketType.name}
                     </Badge>
                   ) : null}
@@ -237,9 +286,12 @@ export function SelectedSeatsPanel({
                 >
                   <Text>{entry.name}</Text>
                   {sharedTicketType ? null : (
-                    <Text fontWeight="500" fontSize="xs" color="gray.600">
-                      {entry.seat.ticketTypeName}
-                    </Text>
+                    <>
+                      <SeatColorDot color={seatColorByTicketType[entry.seat.ticketTypeUniqueId]} />
+                      <Text fontWeight="500" fontSize="xs" color="gray.600">
+                        {entry.seat.ticketTypeName}
+                      </Text>
+                    </>
                   )}
                   <X size={14} aria-hidden />
                 </Button>
