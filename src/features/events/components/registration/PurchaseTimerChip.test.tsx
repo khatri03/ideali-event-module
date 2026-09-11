@@ -66,4 +66,34 @@ describe("PurchaseTimerChip", () => {
 
     expect(screen.queryByRole("status")).toBeNull()
   })
+
+  /**
+   * Inside the last two minutes the buyer has to be told the hold is about to lapse, not left reading the same calm
+   * timer they saw with ten minutes in hand. Without the warning the seats vanish with no notice they were at risk.
+   */
+  it("WarnsTheHoldIsAboutToLapseInsideTheLastTwoMinutes", () => {
+    withBrowserClockAt("2026-09-09T12:00:00.000Z")
+    recordServerTime(new Date("2026-09-09T12:08:30.000Z").toUTCString())
+
+    renderChip(DEADLINE)
+
+    const chip = screen.getByRole("status")
+    expect(chip).toHaveTextContent("01:30")
+    expect(chip).toHaveAccessibleName("Time is running out. Your ticket hold is about to be released.")
+  })
+
+  /**
+   * Once the window has passed the buyer keeps a chip that reads zero and says the limit was reached, rather than
+   * one that disappears. A vanished timer reads as seats still held, and they wait on a hold that is already gone.
+   */
+  it("ReadsZeroAndNamesTheLimitReachedOnceTheWindowHasPassed", () => {
+    withBrowserClockAt("2026-09-09T12:00:00.000Z")
+    recordServerTime(new Date("2026-09-09T12:11:00.000Z").toUTCString())
+
+    renderChip(DEADLINE)
+
+    const chip = screen.getByRole("status")
+    expect(chip).toHaveTextContent("00:00")
+    expect(chip).toHaveAccessibleName("Purchase time limit reached. Remove selected tickets to start a new purchase flow.")
+  })
 })
