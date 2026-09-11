@@ -28,6 +28,10 @@ interface CartSummaryPanelProps {
   onChangeQuantity: (ticket: EventRegistrationTicket, quantity: number) => void
   onRequestRemoveTicket: (ticket: EventRegistrationTicket, ticketName: string) => void
   onRequestRemoveSession: (items: SelectedTicketSummaryItem[], sessionName: string) => void
+  /** Hands one seat back, named by the session it sits on and the object label the buyer chose to drop. */
+  onRemoveSeat: (sessionId: string, objectLabel: string) => void
+  /** Whether a seat is being taken or given up, so a summary seat cannot be dropped twice over one release. */
+  isSeatChanging: boolean
 }
 
 function SummaryQuantityControl({
@@ -161,6 +165,8 @@ export function CartSummaryPanel({
   onChangeQuantity,
   onRequestRemoveTicket,
   onRequestRemoveSession,
+  onRemoveSeat,
+  isSeatChanging,
 }: CartSummaryPanelProps) {
   return (
     <Portal>
@@ -365,7 +371,12 @@ export function CartSummaryPanel({
                                     stepper here would let the buyer ask for a fourth seat without saying which
                                     chair it is, and nothing on the map would hold it. */}
                                 {item.ticket.seatCategoryName ? (
-                                  <SeatLabelSummary seats={item.seats} />
+                                  <SeatLabelSummary
+                                    seats={item.seats}
+                                    onRemoveSeat={(objectLabel) => onRemoveSeat(sessionGroup.sessionId, objectLabel)}
+                                    isBusy={isSeatChanging}
+                                    accentColor={formAccent}
+                                  />
                                 ) : (
                                   <SummaryQuantityControl item={item} onChangeQuantity={onChangeQuantity} />
                                 )}

@@ -169,8 +169,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     restoredCart,
     syncTicketSelection,
     ensureCartNow,
-    setBuyerIdentity,
-    applyCart,
+    adoptCartAndReprice,
     appliedCouponCode,
     applyCoupon,
     resetCart,
@@ -186,6 +185,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [selectedTicketQuantities, setSelectedTicketQuantities] = useState<Record<string, number>>({})
   const {
     holdToken: seatHoldToken,
+    presentedHoldToken: presentedSeatHoldToken,
     holdTokenExpiresAtUtc: seatHoldTokenExpiresAtUtc,
     ensureHoldToken: ensureSeatHoldToken,
     seatsBySession,
@@ -203,7 +203,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     eventUniqueId: event.uniqueId,
     cartUniqueId: cart?.cartUniqueId ?? null,
     ensureCart: ensureCartNow,
-    onCartChanged: applyCart,
+    onCartChanged: adoptCartAndReprice,
   })
 
   // A picked seat is a ticket of its category's type. Merging the two counts is what lets the visible tabs, the
@@ -448,21 +448,19 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     }
   }
 
-  // The server refuses to open a cart without a buyer, so hand the identity over as soon as it is
-  // complete; tickets picked beforehand are replayed against the newly opened cart.
+  // Seats picked before a cart existed are held on Seats.io under this browser's token. Once the buyer has
+  // committed a routable identity - the step before payment - those holds are claimed into the cart so they
+  // check out as its own lines. The cart itself opens anonymously on the first selection, so this waits on
+  // nothing but a buyer complete enough to pay.
   useEffect(() => {
     const name = `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim()
 
-    // A malformed address is rejected by the cart endpoint, so it is not worth a round trip until
-    // the buyer has finished typing one that could route.
     if (!name || !isRoutableEmail(buyerInfo.email)) {
       return
     }
 
-    // Seats are claimed after the buffered ticket quantities, so both land against the same cart and the seat
-    // holds are never asked for against a cart that is still being opened.
-    void setBuyerIdentity({ name, email: buyerInfo.email }).then(() => claimPendingSeats())
-  }, [buyerInfo.firstName, buyerInfo.lastName, buyerInfo.email, claimPendingSeats, setBuyerIdentity])
+    void claimPendingSeats()
+  }, [buyerInfo.firstName, buyerInfo.lastName, buyerInfo.email, claimPendingSeats])
 
   const handlePurchaseTimerExpire = useCallback(() => {
     setPurchaseTimerExpired(true)
@@ -766,6 +764,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     const receipt = await recordChequePaymentMutation.mutateAsync({
       chequeReferenceNo: chequeReferenceNo.trim(),
       notes: chequeNotes.trim() || undefined,
+      buyerName: `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim() || null,
+      buyerEmail: buyerInfo.email || null,
       invoiceNote: invoiceNote.trim() || null,
     })
 
@@ -1064,6 +1064,8 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
               onChangeQuantity={handleTicketQuantityChange}
               onRequestRemoveTicket={requestRemoveTicket}
               onRequestRemoveSession={requestRemoveSession}
+              onRemoveSeat={(sessionId, objectLabel) => unpickSeats(sessionId, [objectLabel])}
+              isSeatChanging={isSeatChanging}
             />
 
             {currentEvent.termsConditions ? (
@@ -1211,6 +1213,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                     onPickSeat={pickSeat}
                                     onUnpickSeats={(objectLabels) => unpickSeats(sessionUniqueId, objectLabels)}
                                     holdToken={seatHoldToken}
+                                    presentedHoldToken={presentedSeatHoldToken}
                                     onEnsureHoldToken={() => ensureSeatHoldToken(sessionUniqueId)}
                                     onAdoptHeldSeats={(heldSeats) => adoptHeldSeats(sessionUniqueId, heldSeats)}
                                   />

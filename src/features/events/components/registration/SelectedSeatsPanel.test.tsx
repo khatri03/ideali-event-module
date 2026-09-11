@@ -37,6 +37,7 @@ function renderPanel(
         currencyCode="USD"
         seatColorByTicketType={props.seatColorByTicketType ?? { "ticket-1": STALLS_COLOR }}
         isBusy={props.isBusy ?? false}
+        accentColor="#7551FF"
         onReleaseSeats={onReleaseSeats}
       />
     </ChakraProvider>,

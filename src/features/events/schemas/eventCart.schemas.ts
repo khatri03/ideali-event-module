@@ -347,6 +347,9 @@ export function normalizeEventChequePaymentResult(payload: unknown): EventCheque
 export interface RecordEventChequePaymentRequest {
   chequeReferenceNo: string
   notes?: string
+  /** Who the order is addressed to. The cart opens anonymously, so the buyer reaches the server at checkout. */
+  buyerName?: string | null
+  buyerEmail?: string | null
   invoiceNote?: string | null
 }
 

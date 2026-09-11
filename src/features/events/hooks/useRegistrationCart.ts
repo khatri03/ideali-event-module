@@ -11,11 +11,6 @@ interface TicketSelectionInput {
   quantity: number
 }
 
-export interface BuyerIdentity {
-  name: string
-  email: string
-}
-
 interface RegistrationCartState {
   cart: EventCart | null
   price: EventCartPrice | null
@@ -42,10 +37,6 @@ const EMPTY_STATE: RegistrationCartState = {
  */
 const SESSION_LOST_MESSAGE = "This registration session is no longer available. Start again from the event page."
 
-function hasIdentity(identity: BuyerIdentity | null): identity is BuyerIdentity {
-  return Boolean(identity && identity.name.trim() && identity.email.trim())
-}
-
 /**
  * A cart is only worth resuming while it still holds stock. The cart itself carries no status, so
  * the line reservations are the signal: `Confirmed` means it was already paid for, `Expired` and
@@ -65,13 +56,13 @@ function isCartResumable(cart: EventCart, eventUniqueId: string): boolean {
 }
 
 /**
- * Owns the server cart for one registration session: creates it once the buyer has identified
- * themselves, reconciles their ticket choices against the cart's lines, and re-prices after every
- * change. Totals, charges and the purchase deadline all come from the server.
+ * Owns the server cart for one registration session: opens it anonymously the moment the buyer picks
+ * anything, reconciles their ticket choices against the cart's lines, and re-prices after every change.
+ * Totals, charges and the purchase deadline all come from the server.
  *
- * The wizard collects tickets before buyer details, but the server refuses to open a cart without a
- * buyer name and email. Selections made before then are buffered and flushed the moment the buyer
- * identifies themselves, so the buyer can browse and pick without hitting a wall.
+ * The cart carries no buyer while the buyer is still choosing - who the order is addressed to is stated
+ * at checkout, and the server enforces it there. Opening the cart on the first selection is what makes
+ * every choice a durable server line, so a refresh resumes it from the cart rather than losing it.
  *
  * Mutations are serialized through a promise chain because each one returns the whole cart; running
  * two concurrently would let a stale response overwrite a newer one.
@@ -86,9 +77,6 @@ export function useRegistrationCart(eventUniqueId: string) {
   const cartRef = useRef<EventCart | null>(null)
   const queueRef = useRef<Promise<void>>(Promise.resolve())
   const couponCodeRef = useRef<string | null>(null)
-  const identityRef = useRef<BuyerIdentity | null>(null)
-  /** Selections made before the buyer identified themselves, keyed by ticket type. */
-  const pendingRef = useRef<Map<string, TicketSelectionInput>>(new Map())
 
   const restoreAttemptedRef = useRef(false)
 
@@ -107,21 +95,15 @@ export function useRegistrationCart(eventUniqueId: string) {
     setState((current) => ({ ...current, cart }))
   }, [])
 
-  const ensureCart = useCallback(async (): Promise<EventCart | null> => {
+  const ensureCart = useCallback(async (): Promise<EventCart> => {
     if (cartRef.current) {
       return cartRef.current
     }
 
-    const identity = identityRef.current
-    if (!hasIdentity(identity)) {
-      return null
-    }
-
-    const created = await createEventCart({
-      eventUniqueId,
-      buyerName: identity.name.trim(),
-      buyerEmail: identity.email.trim(),
-    })
+    // Opened anonymously: the buyer identifies themselves at checkout, not here. That is what lets any
+    // selection - a seat or a general-admission quantity - become a server line the moment it is made, so
+    // a refresh resumes it from the cart instead of losing it with the browser's memory.
+    const created = await createEventCart({ eventUniqueId })
     applyCart(created)
     return created
   }, [applyCart, eventUniqueId])
@@ -131,15 +113,27 @@ export function useRegistrationCart(eventUniqueId: string) {
     setState((current) => ({ ...current, price }))
   }, [])
 
+  /**
+   * Applies a cart a seat hold or release answered with, then reprices it. A seat line changes the basket
+   * exactly as a general-admission line does, and the total, discount and payment charges the summary and
+   * payment steps read all come from the priced cart - so a seat added or dropped without a reprice leaves that
+   * total showing what the basket cost before the seat. A reprice that fails is reported through the same error
+   * as a quantity change's; the seat itself is already on the cart and stays there.
+   */
+  const adoptCartAndReprice = useCallback(
+    (cart: EventCart) => {
+      applyCart(cart)
+      void repriceCart(cart.cartUniqueId).catch((error) => {
+        setState((current) => ({ ...current, error: extractApiError(error) }))
+      })
+    },
+    [applyCart, repriceCart],
+  )
+
   /** Reconciles one ticket type against the cart. The server enforces min/max and availability. */
   const applySelection = useCallback(
     async (selection: TicketSelectionInput) => {
       const cart = await ensureCart()
-      if (!cart) {
-        // No buyer yet - remember the intent and replay it once the cart can be opened.
-        pendingRef.current.set(selection.ticketTypeUniqueId, selection)
-        return
-      }
 
       const existingLine = cart.lines.find((line) => line.ticketTypeUniqueId === selection.ticketTypeUniqueId)
       if (existingLine && existingLine.quantity === selection.quantity) {
@@ -172,8 +166,6 @@ export function useRegistrationCart(eventUniqueId: string) {
   const forgetCart = useCallback(() => {
     cartRef.current = null
     couponCodeRef.current = null
-    identityRef.current = null
-    pendingRef.current.clear()
     clearStoredCartId()
     setRestoredCart(null)
     setIsCompleted(false)
@@ -259,31 +251,6 @@ export function useRegistrationCart(eventUniqueId: string) {
     })
   }, [applyCart, enqueue, eventUniqueId, repriceCart])
 
-  /**
-   * Records who is buying. Once name and email are both present the cart is opened and any
-   * selections made beforehand are replayed against it.
-   */
-  const setBuyerIdentity = useCallback(
-    (identity: BuyerIdentity) => {
-      const wasIdentified = hasIdentity(identityRef.current)
-      identityRef.current = identity
-
-      if (wasIdentified || !hasIdentity(identity) || pendingRef.current.size === 0) {
-        return Promise.resolve()
-      }
-
-      const pending = Array.from(pendingRef.current.values())
-      pendingRef.current.clear()
-
-      return enqueue(async () => {
-        for (const selection of pending) {
-          await applySelection(selection)
-        }
-      })
-    },
-    [applySelection, enqueue],
-  )
-
   const applyCoupon = useCallback(
     (couponCode: string | null) => {
       const nextCode = couponCode?.trim() || null
@@ -350,12 +317,14 @@ export function useRegistrationCart(eventUniqueId: string) {
     syncTicketSelection,
     /** Opens the cart on demand, for seats that are held outside the ticket-quantity path. */
     ensureCartNow,
-    setBuyerIdentity,
     /**
-     * Adopts a cart the server answered with elsewhere - seat selection holds a seat through its own endpoint and
-     * gets the whole basket back, so the totals and the stored deadline follow it here rather than being refetched.
+     * Adopts a cart the server answered with elsewhere, without repricing - used to restore a cart that survived a
+     * refresh, whose price the wizard fetches for itself. A seat hold or release goes through `adoptCartAndReprice`
+     * instead, so its total is refreshed.
      */
     applyCart,
+    /** Adopts the cart a seat hold or release answered with and reprices it, so the summary total follows the seat. */
+    adoptCartAndReprice,
     applyCoupon,
     resetCart,
     completeCart,

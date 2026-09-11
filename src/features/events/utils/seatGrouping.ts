@@ -140,14 +140,22 @@ export function groupSeatsByParent(seats: BasketSeat[]): SeatGroup[] {
   return [...groups.values()].sort((left, right) => compareLabels(left.name, right.name))
 }
 
+/** One object under a heading: what to call it, and the identity a caller acts on to remove it. */
+export interface SeatLabelEntry {
+  /** What the object is called under its heading, e.g. "Seat 2" or "Table 8". */
+  name: string
+  /** The object itself, so a summary that lists it can also hand it back without re-deriving its label. */
+  identity: SeatIdentity
+}
+
 /** Seat labels the plan draws together, named the way the buyer reads them. */
 export interface SeatLabelGroup {
   /** Identifies the group inside one ticket type, and is stable across renders so React can key on it. */
   key: string
   /** Heading the seats are listed under, e.g. "Table 18", or null for objects the plan gives no parent. */
   parentName: string | null
-  /** What each object is called under that heading, e.g. "Seat 2" or "Table 8". */
-  seatNames: string[]
+  /** The objects listed under that heading, in reading order. */
+  seats: SeatLabelEntry[]
 }
 
 /**
@@ -166,10 +174,13 @@ export function groupSeatLabels(seats: SeatIdentity[]): SeatLabelGroup[] {
     const group = groups.get(key) ?? {
       key,
       parentName: parts ? describeSeatParent(parts.parentLabel) : null,
-      seatNames: [],
+      seats: [],
     }
 
-    group.seatNames.push(describeObject(seat.objectType, parts ? parts.seatLabel : seat.objectLabel))
+    group.seats.push({
+      name: describeObject(seat.objectType, parts ? parts.seatLabel : seat.objectLabel),
+      identity: seat,
+    })
     groups.set(key, group)
   }
 

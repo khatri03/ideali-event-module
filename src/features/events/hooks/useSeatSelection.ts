@@ -46,13 +46,15 @@ export function useSeatSelection({
   const [seats, setSeats] = useState<SeatPick[]>([])
   const [refusalBySession, setRefusalBySession] = useState<Record<string, string>>({})
   const [pendingCount, setPendingCount] = useState(0)
-  const [holdToken, setHoldToken] = useState<string | null>(null)
+  // Seeded from the cookie so the first render already presents the token this browser was holding seats under,
+  // rather than asking for a second one and stranding them. Reading it back off the ref during render instead would
+  // leave the query key that presents it blind to a token minted without a re-render.
+  const [holdToken, setHoldToken] = useState<string | null>(() => readStoredHoldToken())
   const [holdTokenExpiresAtUtc, setHoldTokenExpiresAtUtc] = useState<string | null>(null)
 
-  // Read from a ref as well, because a claim in flight was started under whatever token was live when it began.
-  // Seeded from the cookie so a reload presents the token this browser was already holding seats under instead of
-  // asking for a second one and stranding them.
-  const holdTokenRef = useRef<string | null>(readStoredHoldToken())
+  // Read from a ref as well, because a claim in flight was started under whatever token was live when it began, and
+  // the ref carries the freshest token into callbacks that a state read would see one render stale.
+  const holdTokenRef = useRef<string | null>(holdToken)
 
   // A token restored from the cookie is the browser's claim, not a fact: only Seats.io knows whether it still holds
   // anything, so it is presented for checking once before it is treated as live.
@@ -410,6 +412,11 @@ export function useSeatSelection({
 
   return {
     holdToken,
+    // What the cart is offered when it reads the map. The token restored from the cookie counts here even before it
+    // has been checked - the state is seeded with it - because the cart settles with Seats.io whether it still holds
+    // anything, and offering the one this browser last used is what stops a second token being minted over seats the
+    // first one is holding.
+    presentedHoldToken: holdToken,
     holdTokenExpiresAtUtc,
     ensureHoldToken,
     seatsBySession,

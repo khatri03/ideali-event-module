@@ -8,6 +8,12 @@ interface UseEventSeatingOptions {
   cartUniqueId: string | null
   /** Session whose chart is being drawn, or null while no seated session is open. */
   sessionUniqueId: string | null
+  /**
+   * Token this browser already holds seats under, or null before one has been issued. Offered to the cart's read so
+   * the cart adopts it instead of minting a second one; a chart drawn under a token different from the one the seats
+   * are held under can no longer release them.
+   */
+  presentedHoldToken: string | null
 }
 
 /**
@@ -17,7 +23,12 @@ interface UseEventSeatingOptions {
  * Reading the map is all this does. Taking and giving up seats belongs to the selection the buyer is building
  * across the whole form, which outlives any one chart and starts before the cart does.
  */
-export function useEventSeating({ eventUniqueId, cartUniqueId, sessionUniqueId }: UseEventSeatingOptions) {
+export function useEventSeating({
+  eventUniqueId,
+  cartUniqueId,
+  sessionUniqueId,
+  presentedHoldToken,
+}: UseEventSeatingOptions) {
   // Before a cart exists the chart is read from the event, which answers with the same shape minus the hold token
   // and the held seats. That is what lets a buyer pick seats without first having to identify themselves - the two
   // reads are separate cache entries because one is a cart's view and the other is nobody's.
@@ -25,7 +36,7 @@ export function useEventSeating({ eventUniqueId, cartUniqueId, sessionUniqueId }
     queryKey: ["event-seating", cartUniqueId ?? eventUniqueId, sessionUniqueId],
     queryFn: () =>
       cartUniqueId
-        ? fetchEventSeating(cartUniqueId, sessionUniqueId!)
+        ? fetchEventSeating(cartUniqueId, sessionUniqueId!, presentedHoldToken)
         : fetchEventSessionSeating(eventUniqueId, sessionUniqueId!),
     enabled: Boolean(sessionUniqueId),
     // The hold token and the seats already taken are read once per session view: refetching under the buyer would

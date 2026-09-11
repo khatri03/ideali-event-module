@@ -6,7 +6,7 @@ import type {
   AttendeeSlotEntry,
   SelectedTicketSummaryItem,
 } from "@/features/events/components/registration/types"
-import { describeObject, type SeatIdentity } from "@/features/events/utils/seatGrouping"
+import { describeSeat, type SeatIdentity } from "@/features/events/utils/seatGrouping"
 import { getSelectedSessionSummaries, getTicketDisplayPrice } from "@/features/events/utils/ticketSelection"
 
 export interface SelectedTicketSessionGroup {
@@ -103,15 +103,14 @@ export function useTicketSelectionSummary(
         attendeeCount: sessionSummary.attendeeCount,
         requiresAttendeeInfo: sessionSummary.requiresAttendeeInfo,
         tickets: sessionSummary.selectedTickets.map((selectedTicket) => {
-          // A seated ticket names the seat the attendee is sitting in. "Attendee 2" tells a buyer filling in four
-          // rows nothing about which of their four seats they are naming.
+          // A seated ticket names the seat the attendee sits in, spelled out in full so the buyer filling four rows
+          // can tell which of their seats they are naming. The bare label "18-1" hides which half is the table and
+          // which the seat, so it is described the same way the basket does - "Seat 1 at Table 18".
           const pickedSeats = seatsByTicketType[selectedTicket.ticket.uniqueId] ?? []
 
           const slots = Array.from({ length: selectedTicket.quantity }, (_, index) => ({
             key: `${sessionSummary.session.uniqueId}:${selectedTicket.ticket.uniqueId}:${index + 1}`,
-            attendeeLabel: pickedSeats[index]
-              ? describeObject(pickedSeats[index].objectType, pickedSeats[index].objectLabel)
-              : `Attendee ${index + 1}`,
+            attendeeLabel: pickedSeats[index] ? describeSeat(pickedSeats[index]) : `Attendee ${index + 1}`,
           }))
 
           return {

@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Badge, Box, Button, Flex, Stack, Text } from "@chakra-ui/react"
-import { Trash2, X } from "lucide-react"
+import { Trash2 } from "lucide-react"
 import { ConfirmRemoveDialog } from "@/features/events/components/registration/RegistrationDialogs"
 import {
   describeSeat,
@@ -25,6 +25,8 @@ interface SelectedSeatsPanelProps {
   seatColorByTicketType: Record<string, string>
   /** Whether a seat is being taken or given up, so the buttons cannot fire twice. */
   isBusy: boolean
+  /** The organizer's form colour, worn by each seat's remove icon so it reads as part of this event's theme. */
+  accentColor: string
   /** Called with every seat label the buyer confirmed giving up, which is one label or a whole table's worth. */
   onReleaseSeats: (objectLabels: string[]) => void
 }
@@ -146,6 +148,7 @@ export function SelectedSeatsPanel({
   currencyCode,
   seatColorByTicketType,
   isBusy,
+  accentColor,
   onReleaseSeats,
 }: SelectedSeatsPanelProps) {
   const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null)
@@ -293,7 +296,7 @@ export function SelectedSeatsPanel({
                       </Text>
                     </>
                   )}
-                  <X size={14} aria-hidden />
+                  <Trash2 size={11} color={accentColor} aria-hidden />
                 </Button>
               ))}
             </Flex>

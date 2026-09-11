@@ -87,6 +87,35 @@ beforeEach(() => {
 
 describe("useSeatSelection", () => {
   /**
+   * The token restored from the cookie is what this browser's seats are held under at Seats.io, so the cart has to
+   * be offered it when it reads the map. Offering nothing lets the cart mint a second token, and the seats held
+   * under the first can then be neither released nor paid for.
+   */
+  it("offers the token restored from the cookie for the cart to adopt", () => {
+    readStoredHoldToken.mockReturnValue("token-from-cookie")
+
+    const { result } = renderSeatSelection("cart-1")
+
+    expect(result.current.presentedHoldToken).toBe("token-from-cookie")
+  })
+
+  /**
+   * Once a token has been issued and checked it replaces whatever the cookie held: the checked one is the token the
+   * chart is drawing under, and the cart must read the map under that same one.
+   */
+  it("offers the issued token once one has been obtained", async () => {
+    readStoredHoldToken.mockReturnValue("token-from-cookie")
+
+    const { result } = renderSeatSelection(null)
+
+    await act(async () => {
+      await result.current.ensureHoldToken("session-1")
+    })
+
+    expect(result.current.presentedHoldToken).toBe("browser-token")
+  })
+
+  /**
    * Seats are chosen a whole step before the buyer gives the name a cart needs. Refusing the pick until then would
    * make the buyer identify themselves before finding out what they are choosing between.
    */

@@ -83,11 +83,15 @@ interface SeatMapPanelProps {
 /**
  * The seating chart itself.
  *
- * Selection is reported upward rather than acted on here: the seat is taken by the server, which holds it with the
- * workspace secret key and refuses it when somebody else got there first. The chart is given the cart's hold token
- * so seats this buyer already holds show as theirs rather than as taken, and its own session handling is left off
- * for the same reason — two parties holding the same seats under one token is how a basket and a chart end up
- * disagreeing about what the buyer has.
+ * The chart is the only party that holds and frees seats at Seats.io, under the buyer's own hold token: a click holds
+ * the seat the instant it is made, which is what takes it out of every other buyer's chart in real time, and giving
+ * it up frees it the same way. The server never holds or frees against the chart — it reads what the chart already
+ * holds, records the claim behind its own unique index, and books the seats once the buyer has paid. One holder means
+ * a release can never race a second one on the same seat, which is what a chart with its own session alongside a
+ * server that also held would have done.
+ *
+ * A manual session is what lets the chart hold under a token we minted rather than one it keeps in browser storage,
+ * so the chart cannot be drawn until that token exists — without it Seats.io refuses the session outright.
  */
 export function SeatMapPanel({
   seatingMap,
@@ -136,10 +140,17 @@ export function SeatMapPanel({
   }
 
   const isChartAddressable = Boolean(seatingMap.seatsIoPublicKey && seatingMap.seatsIoEventKey)
-  const isSeatHeldServerSide = Boolean(seatingMap.holdToken)
+  const holdToken = seatingMap.holdToken
 
   if (!isChartAddressable || hasRenderFailed) {
     return <SeatMapUnavailable isPublished={isChartAddressable} />
+  }
+
+  // The manual session holds seats under this token, so the chart is not drawn until one has been issued. An empty
+  // token here is the moment before the token call has answered, not a broken chart: showing the skeleton keeps the
+  // buyer waiting rather than sending them to the organizer over a map that is about to appear.
+  if (!holdToken) {
+    return <Skeleton h={{ base: "420px", md: "560px" }} w="full" borderRadius="16px" />
   }
 
   return (
@@ -159,11 +170,14 @@ export function SeatMapPanel({
           workspaceKey={seatingMap.seatsIoPublicKey}
           event={seatingMap.seatsIoEventKey}
           region={resolveRegion(seatingMap.region)}
-          // Seats are picked whether or not a cart exists yet. Without one there is no session for the vendor to
-          // keep, because the seats are held by our server against the cart, never by the chart against itself.
+          // The chart holds every seat it draws under this token the instant the buyer clicks it, which is what takes
+          // the seat out of every other buyer's chart in real time, and frees it the same way when it is given up. A
+          // manual session is what carries the token we minted, so the chart never mints or stores one of its own. The
+          // server reads what this token already holds rather than holding again, so there is only ever one holder and
+          // no release to race. Seats already held for this buyer are handed back through `selectedObjects`.
           mode="normal"
-          holdToken={isSeatHeldServerSide ? seatingMap.holdToken : undefined}
-          session={isSeatHeldServerSide ? "manual" : "none"}
+          session="manual"
+          holdToken={holdToken}
           selectedObjects={drawnSelection.objectLabels.map((objectLabel) => ({ label: objectLabel }))}
           pricing={seatingMap.categories.map((category) => ({
             category: category.categoryKey,
@@ -209,9 +223,8 @@ export function SeatMapPanel({
         />
       </Box>
       <Text fontSize="xs" color="gray.600">
-        {isSeatHeldServerSide
-          ? "Pick a seat on the map to add it to your order. Seats are held for you until your checkout time runs out."
-          : "Pick the seats you want. They are reserved in your name as soon as you give us your details on the next step."}
+        Pick a seat on the map to add it to your order. Seats are held for you the moment you pick them, until your
+        checkout time runs out.
       </Text>
     </Stack>
   )

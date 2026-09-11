@@ -70,10 +70,11 @@ interface RenderOptions {
   cartUniqueId?: string | null
   seats?: SeatPick[]
   refusal?: string | null
+  holdToken?: string | null
 }
 
 /** Renders the panel with a fresh query client, so one test's answers never serve another's. */
-function renderSelection({ cartUniqueId = "cart-1", seats = [], refusal = null }: RenderOptions = {}) {
+function renderSelection({ cartUniqueId = "cart-1", seats = [], refusal = null, holdToken = null }: RenderOptions = {}) {
   const onPickSeat = vi.fn()
   const onUnpickSeats = vi.fn()
   const onAdoptHeldSeats = vi.fn()
@@ -93,7 +94,8 @@ function renderSelection({ cartUniqueId = "cart-1", seats = [], refusal = null }
           isSeatChanging={false}
           currencyCode="USD"
           accentColor="#7551FF"
-          holdToken={null}
+          holdToken={holdToken}
+          presentedHoldToken={holdToken}
           onEnsureHoldToken={() => onEnsureHoldToken()}
           // Written as fresh closures, because that is what the registration form passes and what the adoption
           // effect has to survive.
@@ -189,7 +191,7 @@ describe("EventSeatSelection", () => {
    * paid for later. Waiting for a cart would leave the buyer looking at a message instead of a seating plan.
    */
   it("reads the seating plan from the event while there is no cart", async () => {
-    renderSelection({ cartUniqueId: null })
+    renderSelection({ cartUniqueId: null, holdToken: "browser-token" })
 
     await openSeatMap()
 

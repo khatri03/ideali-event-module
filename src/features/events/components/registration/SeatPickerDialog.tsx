@@ -1,5 +1,7 @@
 import type { ReactNode } from "react"
-import { Box, CloseButton, Dialog, Flex, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, Dialog, Flex, Stack, Text } from "@chakra-ui/react"
+import { CONTROL_BUTTON_PRIMARY } from "@/components/common/controlStyles"
+import { hexToRgba } from "@/features/events/utils/registrationFormat"
 
 interface SeatPickerDialogProps {
   isOpen: boolean
@@ -33,6 +35,9 @@ export function SeatPickerDialog({ isOpen, onOpenChange, sessionName, accentColo
       size="cover"
       lazyMount
       unmountOnExit
+      // A stray click on the backdrop must not throw away a map the buyer is midway through picking on. The only
+      // way out is the Close button below, so leaving is always a choice the buyer made rather than a slip.
+      closeOnInteractOutside={false}
       onOpenChange={(details) => onOpenChange(details.open)}
     >
       <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.650" />
@@ -56,24 +61,44 @@ export function SeatPickerDialog({ isOpen, onOpenChange, sessionName, accentColo
             borderBottomColor="gray.200"
             flexShrink={0}
           >
-            <Flex align="flex-start" justify="space-between" gap={4}>
-              <Stack gap={1} minW={0}>
-                <Text fontSize="xs" textTransform="uppercase" letterSpacing="0.14em" color="gray.500" fontWeight="700">
-                  Pick your seats
-                </Text>
-                <Dialog.Title fontSize={{ base: "md", md: "xl" }} fontWeight="800" color="gray.900" truncate>
-                  {sessionName}
-                </Dialog.Title>
-              </Stack>
-              <Dialog.CloseTrigger asChild>
-                <CloseButton aria-label="Close the seat map" cursor="pointer" />
-              </Dialog.CloseTrigger>
-            </Flex>
+            <Stack gap={1} minW={0}>
+              <Text fontSize="xs" textTransform="uppercase" letterSpacing="0.14em" color="gray.500" fontWeight="700">
+                Pick your seats
+              </Text>
+              <Dialog.Title fontSize={{ base: "md", md: "xl" }} fontWeight="800" color="gray.900" truncate>
+                {sessionName}
+              </Dialog.Title>
+            </Stack>
           </Box>
 
           <Dialog.Body px={{ base: 4, md: 6 }} py={{ base: 4, md: 5 }} flex="1" overflowY="auto">
             {children}
           </Dialog.Body>
+
+          <Box
+            px={{ base: 4, md: 6 }}
+            py={4}
+            borderTopWidth="1px"
+            borderTopColor="gray.200"
+            bg="gray.50"
+            flexShrink={0}
+          >
+            <Flex justify="flex-end">
+              <Button
+                {...CONTROL_BUTTON_PRIMARY}
+                bg={accentColor}
+                minH="11"
+                px={5}
+                w={{ base: "full", sm: "auto" }}
+                cursor="pointer"
+                _hover={{ bg: hexToRgba(accentColor, 0.88) }}
+                _active={{ bg: hexToRgba(accentColor, 0.95) }}
+                onClick={() => onOpenChange(false)}
+              >
+                Close
+              </Button>
+            </Flex>
+          </Box>
         </Dialog.Content>
       </Dialog.Positioner>
     </Dialog.Root>

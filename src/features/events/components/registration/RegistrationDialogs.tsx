@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { Box, Button, CloseButton, Dialog, Flex, HStack, Heading, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, CloseButton, Dialog, Flex, HStack, Heading, Portal, Stack, Text } from "@chakra-ui/react"
 import { AlertCircle, Clock3, ShieldAlert, Trash2 } from "lucide-react"
 import { CONTROL_BUTTON_OUTLINE } from "@/components/common/controlStyles"
 import { RichTextBlock } from "@/features/events/components/registration/SupportCard"
@@ -233,66 +233,71 @@ export function ConfirmRemoveDialog({
 }) {
   return (
     <Dialog.Root open={isOpen} onOpenChange={(details) => (details.open ? undefined : onCancel())} size={{ base: "xs", md: "sm" }}>
-      <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.600" />
-      <Dialog.Positioner
-        alignItems="center"
-        justifyContent="center"
-        px={{ base: 4, md: 6 }}
-        py={{ base: 6, md: 8 }}
-      >
-        <Dialog.Content
-          borderRadius="24px"
-          overflow="hidden"
-          bg="white"
-          boxShadow="0 30px 70px rgba(15, 23, 42, 0.25)"
+      {/* Portalled to the document body so the dialog is never clipped by a caller's own stacking context — the
+          docked cart summary opens it from inside a transformed, overflow-hidden panel, which would otherwise cut
+          a fixed dialog down to the card and leave the buyer with only a blurred backdrop. */}
+      <Portal>
+        <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.600" />
+        <Dialog.Positioner
+          alignItems="center"
+          justifyContent="center"
+          px={{ base: 4, md: 6 }}
+          py={{ base: 6, md: 8 }}
         >
-          <Box px={{ base: 4, md: 5 }} py={{ base: 4, md: 5 }}>
-            <Stack gap={5}>
-              <HStack gap={3} align="start">
-                <Flex
-                  w="12"
-                  h="12"
-                  borderRadius="16px"
-                  align="center"
-                  justify="center"
-                  bg="red.50"
-                  color="red.500"
-                  flexShrink={0}
-                >
-                  <Trash2 size={18} />
-                </Flex>
-                <Stack gap={1}>
-                  <Heading fontSize={{ base: "lg", md: "xl" }} color="gray.900" letterSpacing="-0.03em">
-                    {title}
-                  </Heading>
-                  <Text fontSize="sm" color="gray.600" lineHeight="1.7">
-                    {description}
-                  </Text>
-                </Stack>
-              </HStack>
+          <Dialog.Content
+            borderRadius="24px"
+            overflow="hidden"
+            bg="white"
+            boxShadow="0 30px 70px rgba(15, 23, 42, 0.25)"
+          >
+            <Box px={{ base: 4, md: 5 }} py={{ base: 4, md: 5 }}>
+              <Stack gap={5}>
+                <HStack gap={3} align="start">
+                  <Flex
+                    w="12"
+                    h="12"
+                    borderRadius="16px"
+                    align="center"
+                    justify="center"
+                    bg="red.50"
+                    color="red.500"
+                    flexShrink={0}
+                  >
+                    <Trash2 size={18} />
+                  </Flex>
+                  <Stack gap={1}>
+                    <Heading fontSize={{ base: "lg", md: "xl" }} color="gray.900" letterSpacing="-0.03em">
+                      {title}
+                    </Heading>
+                    <Text fontSize="sm" color="gray.600" lineHeight="1.7">
+                      {description}
+                    </Text>
+                  </Stack>
+                </HStack>
 
-              <Flex justify="flex-end" gap={3} direction={{ base: "column-reverse", sm: "row" }}>
-                <Button {...CONTROL_BUTTON_OUTLINE} cursor="pointer" onClick={onCancel}>
-                  Cancel
-                </Button>
-                <Button
-                  bg="red.500"
-                  color="white"
-                  borderRadius="16px"
-                  minH="11"
-                  px={5}
-                  cursor="pointer"
-                  _hover={{ bg: "red.600" }}
-                  _active={{ bg: "red.700" }}
-                  onClick={onConfirm}
-                >
-                  Remove
-                </Button>
-              </Flex>
-            </Stack>
-          </Box>
-        </Dialog.Content>
-      </Dialog.Positioner>
+                <Flex justify="flex-end" gap={3} direction={{ base: "column-reverse", sm: "row" }}>
+                  <Button {...CONTROL_BUTTON_OUTLINE} cursor="pointer" onClick={onCancel}>
+                    Cancel
+                  </Button>
+                  <Button
+                    bg="red.500"
+                    color="white"
+                    borderRadius="16px"
+                    minH="11"
+                    px={5}
+                    cursor="pointer"
+                    _hover={{ bg: "red.600" }}
+                    _active={{ bg: "red.700" }}
+                    onClick={onConfirm}
+                  >
+                    Remove
+                  </Button>
+                </Flex>
+              </Stack>
+            </Box>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Portal>
     </Dialog.Root>
   )
 }

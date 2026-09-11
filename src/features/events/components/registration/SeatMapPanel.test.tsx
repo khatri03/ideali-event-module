@@ -147,25 +147,37 @@ describe("SeatMapPanel", () => {
    * Seats are chosen on the sessions step, before the buyer has given the name a cart needs. A chart that refused
    * picks until then would make the buyer identify themselves to find out what they are even choosing between.
    */
-  it("lets seats be picked before a cart exists to hold them", async () => {
-    const { onSelectSeat } = renderPanel({ ...SEATING_MAP, holdToken: "" })
+  it("lets seats be picked as soon as a token exists to hold them under", async () => {
+    const { onSelectSeat } = renderPanel(SEATING_MAP)
 
     await userEvent.click(screen.getByRole("button", { name: "Pick seat A-14" }))
 
     expect(onSelectSeat).toHaveBeenCalledWith("A-14", "stalls", "seat")
-    expect(screen.getByText(/reserved in your name as soon as you give us your details/i)).toBeInTheDocument()
+    expect(screen.getByText(/held for you the moment you pick them/i)).toBeInTheDocument()
   })
 
   /**
-   * Nothing on the server holds a seat picked before the cart opened, so the vendor must not keep a session of its
-   * own for it either: two parties holding the same seats is how a chart and a basket end up disagreeing.
+   * A manual session holds seats under a token, and Seats.io refuses to open one without a token to hold under. So
+   * before that token has been issued the chart cannot be drawn at all: the buyer waits on a skeleton rather than
+   * being handed a chart that would fail to render the instant it mounted.
    */
-  it("keeps no vendor session while there is no hold token", () => {
+  it("does not draw the chart until a hold token has been issued", () => {
     renderPanel({ ...SEATING_MAP, holdToken: "" })
 
+    expect(screen.queryByRole("button", { name: "Pick seat A-14" })).not.toBeInTheDocument()
+  })
+
+  /**
+   * The chart holds every seat the buyer picks under this token, which is what takes the seat out of every other
+   * buyer's chart in real time. A manual session is what carries a token we minted rather than one the chart keeps
+   * for itself, so the chart must draw under exactly the token it was handed.
+   */
+  it("holds seats in a manual session under the token it was given", () => {
+    renderPanel(SEATING_MAP)
+
     const chart = screen.getByRole("button", { name: "Pick seat A-14" }).parentElement
-    expect(chart).toHaveAttribute("data-session", "none")
-    expect(chart).toHaveAttribute("data-hold-token", "")
+    expect(chart).toHaveAttribute("data-session", "manual")
+    expect(chart).toHaveAttribute("data-hold-token", "hold-token")
   })
 
   /**

@@ -44,11 +44,22 @@ describe("SeatPickerDialog", () => {
   })
 
   /** Closing is the caller's decision to record, so the buyer is never trapped on a map they are done with. */
-  it("asks the caller to close when the buyer dismisses it", async () => {
+  it("asks the caller to close when the buyer presses the Close button", async () => {
     const { onOpenChange } = renderDialog(true)
 
-    await userEvent.click(screen.getByRole("button", { name: "Close the seat map" }))
+    await userEvent.click(screen.getByRole("button", { name: "Close" }))
 
     expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  /**
+   * The corner dismiss was removed so leaving is a deliberate press of the Close CTA, never a stray click that
+   * discards a half-finished seat pick. Its return would put the accidental exit back.
+   */
+  it("offers no corner close control, only the Close button", () => {
+    renderDialog(true)
+
+    expect(screen.queryByRole("button", { name: "Close the seat map" })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument()
   })
 })

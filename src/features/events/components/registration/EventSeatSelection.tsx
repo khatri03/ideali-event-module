@@ -31,6 +31,12 @@ interface EventSeatSelectionProps {
   accentColor: string
   /** Token this browser holds seats under while there is no cart, or null before one has been issued. */
   holdToken: string | null
+  /**
+   * Token offered to the cart when it reads the map, or null when this browser has never held one. Includes a token
+   * restored from the cookie, so a cart reading the map adopts the token its seats are already held under instead of
+   * minting a second one and stranding them.
+   */
+  presentedHoldToken: string | null
   /** Issues that token, so the chart the buyer just opened can hold what they pick on it. */
   onEnsureHoldToken: () => Promise<string | null>
   /** Called with a seat the buyer picked, priced from the chart's own categories. */
@@ -90,6 +96,7 @@ export function EventSeatSelection({
   currencyCode,
   accentColor,
   holdToken,
+  presentedHoldToken,
   onEnsureHoldToken,
   onPickSeat,
   onUnpickSeats,
@@ -101,6 +108,7 @@ export function EventSeatSelection({
     eventUniqueId,
     cartUniqueId,
     sessionUniqueId,
+    presentedHoldToken,
   })
 
   // The handler is called through a ref so that adopting depends on the map alone. Its caller passes a new function
@@ -179,6 +187,7 @@ export function EventSeatSelection({
           currencyCode={currencyCode}
           seatColorByTicketType={seatColorByTicketType}
           isBusy={isSeatChanging}
+          accentColor={accentColor}
           onReleaseSeats={onUnpickSeats}
         />
       ) : null}
@@ -220,6 +229,7 @@ export function EventSeatSelection({
                 currencyCode={currencyCode}
                 seatColorByTicketType={seatColorByTicketType}
                 isBusy={isSeatChanging}
+                accentColor={accentColor}
                 onReleaseSeats={onUnpickSeats}
               />
             </SimpleGrid>

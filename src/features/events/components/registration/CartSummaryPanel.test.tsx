@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { ChakraProvider } from "@chakra-ui/react"
 import { system } from "@/theme"
 import type { EventRegistrationTicket } from "@/api/events"
@@ -34,6 +35,8 @@ function buildItem(overrides: Partial<SelectedTicketSummaryItem> = {}): Selected
 
 /** Renders the docked summary open, since everything it says is inside the panel it opens. */
 function renderSummary(items: SelectedTicketSummaryItem[]) {
+  const onRemoveSeat = vi.fn()
+
   render(
     <ChakraProvider value={system}>
       <CartSummaryPanel
@@ -54,9 +57,13 @@ function renderSummary(items: SelectedTicketSummaryItem[]) {
         onChangeQuantity={vi.fn()}
         onRequestRemoveTicket={vi.fn()}
         onRequestRemoveSession={vi.fn()}
+        onRemoveSeat={onRemoveSeat}
+        isSeatChanging={false}
       />
     </ChakraProvider>,
   )
+
+  return { onRemoveSeat }
 }
 
 describe("CartSummaryPanel", () => {
@@ -119,5 +126,26 @@ describe("CartSummaryPanel", () => {
     ])
 
     expect(screen.getByText("Pick seats on the seat map in Sessions and they appear here.")).toBeInTheDocument()
+  })
+
+  /**
+   * The summary is the second place a seat can be dropped, and it has to hand back the exact chair from the right
+   * session. Releasing on the session the line sits on, by the object label pressed, is what keeps that true.
+   */
+  it("releases the pressed seat on its own session once the buyer confirms", async () => {
+    const { onRemoveSeat } = renderSummary([
+      buildItem({
+        ticketId: "ticket-2",
+        ticketName: "Standard Seat",
+        ticket: SEATED_TICKET,
+        quantity: 2,
+        seats: [{ objectLabel: "18-2", objectType: "seat" }, { objectLabel: "18-9", objectType: "seat" }],
+      }),
+    ])
+
+    await userEvent.click(screen.getByRole("button", { name: "Remove Seat 2 at Table 18" }))
+    await userEvent.click(screen.getByRole("button", { name: "Remove" }))
+
+    expect(onRemoveSeat).toHaveBeenCalledExactlyOnceWith("session-1", "18-2")
   })
 })

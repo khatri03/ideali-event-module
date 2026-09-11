@@ -22,9 +22,21 @@ function readResponseData(payload: unknown): unknown {
   return parsed.Data ?? parsed.data
 }
 
-/** Reads the seat map for one session of a cart, together with the token its seats are held under. */
-export async function fetchEventSeating(cartUniqueId: string, sessionUniqueId: string): Promise<EventSeatingMap> {
-  const res = await client.get<unknown>(API_ROUTES.eventCartSeating(cartUniqueId, sessionUniqueId))
+/**
+ * Reads the seat map for one session of a cart, together with the token its seats are held under.
+ *
+ * The token this browser already holds seats under is offered so a cart that has held nothing yet adopts it rather
+ * than minting a second one. A chart drawn under a token different from the one the seats are held under at Seats.io
+ * can no longer release them, so a removed seat springs back into the basket the instant it is taken out.
+ */
+export async function fetchEventSeating(
+  cartUniqueId: string,
+  sessionUniqueId: string,
+  presentedHoldToken?: string | null,
+): Promise<EventSeatingMap> {
+  const res = await client.get<unknown>(API_ROUTES.eventCartSeating(cartUniqueId, sessionUniqueId), {
+    params: presentedHoldToken ? { holdToken: presentedHoldToken } : undefined,
+  })
   return normalizeEventSeatingMap(readResponseData(res.data))
 }
 

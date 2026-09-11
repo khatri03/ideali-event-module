@@ -122,8 +122,15 @@ describe("groupSeatLabels", () => {
    */
   it("lists seats under the table they sit at", () => {
     expect(groupSeatLabels([label("18-2"), label("15-11"), label("18-9")])).toEqual([
-      { key: "parent:15", parentName: "Table 15", seatNames: ["Seat 11"] },
-      { key: "parent:18", parentName: "Table 18", seatNames: ["Seat 2", "Seat 9"] },
+      { key: "parent:15", parentName: "Table 15", seats: [{ name: "Seat 11", identity: label("15-11") }] },
+      {
+        key: "parent:18",
+        parentName: "Table 18",
+        seats: [
+          { name: "Seat 2", identity: label("18-2") },
+          { name: "Seat 9", identity: label("18-9") },
+        ],
+      },
     ])
   })
 
@@ -135,7 +142,7 @@ describe("groupSeatLabels", () => {
     const groups = groupSeatLabels([label("19-11"), label("9-2"), label("19-2")])
 
     expect(groups.map((group) => group.parentName)).toEqual(["Table 9", "Table 19"])
-    expect(groups[1].seatNames).toEqual(["Seat 2", "Seat 11"])
+    expect(groups[1].seats.map((entry) => entry.name)).toEqual(["Seat 2", "Seat 11"])
   })
 
   /**
@@ -144,7 +151,11 @@ describe("groupSeatLabels", () => {
    */
   it("lists an object with no parent under no heading", () => {
     expect(groupSeatLabels([{ objectLabel: "VIP1", objectType: "table" }])).toEqual([
-      { key: "no-parent", parentName: null, seatNames: ["Table VIP1"] },
+      {
+        key: "no-parent",
+        parentName: null,
+        seats: [{ name: "Table VIP1", identity: { objectLabel: "VIP1", objectType: "table" } }],
+      },
     ])
   })
 })
