@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Badge, Box, Button, Heading, HStack, Link, SimpleGrid, Stack, Text, VisuallyHidden } from "@chakra-ui/react"
 import { format } from "date-fns"
-import { Send } from "lucide-react"
+import { Armchair, Send } from "lucide-react"
 import { ConfirmDialog } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
@@ -80,6 +80,15 @@ function LineItemCard({
             ) : (
               item.tickets.map((ticket) => (
                 <HStack key={ticket.ticketUniqueId} gap={2} wrap="wrap">
+                  {ticket.seatObjectLabel ? (
+                    <HStack gap={1} color="text.primary" title="Seat">
+                      <Armchair size={14} aria-hidden />
+                      <Text fontSize="sm" fontWeight="700">
+                        {ticket.seatObjectLabel}
+                        <VisuallyHidden> seat</VisuallyHidden>
+                      </Text>
+                    </HStack>
+                  ) : null}
                   <Link
                     href={APP_ROUTES.eventTicketView(ticket.ticketUniqueId)}
                     target="_blank"

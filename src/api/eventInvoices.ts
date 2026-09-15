@@ -113,6 +113,8 @@ const listItemSchema = z.object({
 })
 
 const attendeeSchema = z.object({
+  SlotIndex: dual(integer()),
+  slotIndex: dual(integer()),
   Name: dual(z.string()),
   name: dual(z.string()),
   Email: dual(z.string().nullable()),
@@ -126,6 +128,8 @@ const ticketSchema = z.object({
   ticketUniqueId: dual(z.string()),
   TicketCode: dual(z.string()),
   ticketCode: dual(z.string()),
+  SeatObjectLabel: dual(z.string().nullable()),
+  seatObjectLabel: dual(z.string().nullable()),
   TicketStatus: dual(z.string()),
   ticketStatus: dual(z.string()),
   TicketStatusLabel: dual(z.string()),
@@ -301,6 +305,8 @@ export interface EventInvoiceListItem {
 }
 
 export interface EventInvoiceAttendee {
+  /** Zero-based position matching the issued ticket at the same index. Used as the update key. */
+  slotIndex: number
   name: string
   email: string | null
   phone: string | null
@@ -309,6 +315,8 @@ export interface EventInvoiceAttendee {
 export interface EventInvoiceTicket {
   ticketUniqueId: string
   ticketCode: string
+  /** The seat named as its layout names it, or null for a general-admission ticket. */
+  seatObjectLabel: string | null
   ticketStatus: string
   ticketStatusLabel: string
   deliveredAtUtc: string | null
@@ -481,6 +489,7 @@ function normalizeListItem(raw: z.infer<typeof listItemSchema>): EventInvoiceLis
 
 function normalizeAttendee(raw: z.infer<typeof attendeeSchema>): EventInvoiceAttendee {
   return {
+    slotIndex: raw.SlotIndex ?? raw.slotIndex ?? 0,
     name: raw.Name ?? raw.name ?? "",
     email: raw.Email ?? raw.email ?? null,
     phone: raw.Phone ?? raw.phone ?? null,
@@ -493,6 +502,7 @@ function normalizeTicket(raw: z.infer<typeof ticketSchema>): EventInvoiceTicket 
   return {
     ticketUniqueId: raw.TicketUniqueId ?? raw.ticketUniqueId ?? "",
     ticketCode: raw.TicketCode ?? raw.ticketCode ?? "",
+    seatObjectLabel: raw.SeatObjectLabel ?? raw.seatObjectLabel ?? null,
     ticketStatus,
     ticketStatusLabel: statusLabelOr(raw.TicketStatusLabel ?? raw.ticketStatusLabel, ticketStatus),
     deliveredAtUtc: raw.DeliveredAtUtc ?? raw.deliveredAtUtc ?? null,
@@ -704,4 +714,19 @@ export async function updateEventInvoiceBuyer(
 
 export async function addEventInvoiceNote(invoiceUniqueId: string, note: string): Promise<void> {
   await client.post(API_ROUTES.eventInvoiceAddNote(invoiceUniqueId), { note: note.trim() })
+}
+
+export interface EventInvoiceAttendeeUpdate {
+  name: string
+  email: string | null
+  phone: string | null
+}
+
+export async function updateEventInvoiceAttendee(
+  invoiceUniqueId: string,
+  lineItemUniqueId: string,
+  slotIndex: number,
+  data: EventInvoiceAttendeeUpdate,
+): Promise<void> {
+  await client.put(API_ROUTES.eventInvoiceLineItemAttendee(invoiceUniqueId, lineItemUniqueId, slotIndex), data)
 }

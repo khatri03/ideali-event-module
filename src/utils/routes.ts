@@ -358,6 +358,8 @@ export const API_ROUTES = {
   eventInvoiceCancel: (invoiceUniqueId: string) => `/api/organizer/events/invoices/${invoiceUniqueId}/cancel`,
   eventInvoiceTicketResend: (invoiceUniqueId: string, ticketUniqueId: string) =>
     `/api/organizer/events/invoices/${invoiceUniqueId}/tickets/${ticketUniqueId}/resend`,
+  eventInvoiceLineItemAttendee: (invoiceUniqueId: string, lineItemUniqueId: string, slotIndex: number) =>
+    `/api/organizer/events/invoices/${invoiceUniqueId}/line-items/${lineItemUniqueId}/attendees/${slotIndex}`,
   stripePublicCredentials: (paymentAccountUniqueId: string) =>
     `/api/public/stripe/${paymentAccountUniqueId}/credentials`,
   sessionAttendees: (eventUniqueId: string, sessionUniqueId: string) =>

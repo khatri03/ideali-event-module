@@ -1,8 +1,13 @@
+import { useState } from "react"
 import { Box, Flex, HStack, Separator, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { format } from "date-fns"
-import type { EventInvoiceDetail } from "@/api/eventInvoices"
+import type { EventInvoiceDetail, EventInvoiceLineItem } from "@/api/eventInvoices"
 import { EMPTY_VALUE, formatCurrency, formatCurrencyMagnitude, moneySign, subtractMoney } from "@/utils/format"
 import { parseUtcDateTime } from "@/utils/utcDates"
+import { extractApiError } from "@/utils/errors"
+import { useResendEventInvoiceLineItem } from "../hooks/useEventInvoices"
+import { AttendeeDetailModal } from "./AttendeeDetailModal"
+import { ConfirmDialog } from "@/components/common"
 import { EventInvoiceBuyerPanel } from "./EventInvoiceBuyerPanel"
 import { EventInvoiceItemsTable } from "./EventInvoiceItemsTable"
 import { InvoiceDetailPanel, InvoiceMutedLine } from "./InvoiceDetailPanel"
@@ -86,7 +91,7 @@ function formatChargeRate(charge: EventInvoiceDetail["charges"][number]) {
 
 function ChargeRow({ label, rate, value }: { label: string; rate: string | null; value: string }) {
   return (
-    <Flex justify="space-between" gap={4} py={1.5} pl={3}>
+    <Flex justify="space-between" gap={4} py={1.5}>
       <Text fontSize="sm" fontWeight="600" color="text.secondary">
         {label}
         {rate ? (
@@ -114,7 +119,23 @@ export function EventInvoiceMoneyPanel({ invoice }: EventInvoiceMoneyPanelProps)
   const standing = balanceAmount === null ? null : balanceStanding(balanceAmount)
   const hasIssuedTickets = invoice.lineItems.some((item) => item.tickets.length > 0)
 
+  const [viewingItem, setViewingItem] = useState<EventInvoiceLineItem | null>(null)
+  const [resendRowItem, setResendRowItem] = useState<EventInvoiceLineItem | null>(null)
+
+  const resendRowMutation = useResendEventInvoiceLineItem(invoice.invoiceUniqueId)
+
+  async function handleConfirmResendRow() {
+    if (!resendRowItem) return
+    try {
+      await resendRowMutation.mutateAsync(resendRowItem)
+      setResendRowItem(null)
+    } catch {
+      // Error surfaced via mutation's own state — keep dialog open.
+    }
+  }
+
   return (
+    <>
     <Box border="1px solid" borderColor="border.subtle" borderRadius="20px" bg="card.bg" boxShadow="card" p={{ base: 4, md: 7 }}>
       <Stack gap={{ base: 5, md: 6 }}>
         <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
@@ -146,7 +167,12 @@ export function EventInvoiceMoneyPanel({ invoice }: EventInvoiceMoneyPanelProps)
           </InvoiceDetailPanel>
         </SimpleGrid>
 
-        <EventInvoiceItemsTable lineItems={invoice.lineItems} currencySymbol={invoice.currencySymbol} />
+        <EventInvoiceItemsTable
+          lineItems={invoice.lineItems}
+          currencySymbol={invoice.currencySymbol}
+          onViewAttendees={hasIssuedTickets ? setViewingItem : undefined}
+          onResendRow={invoice.canResendTickets && hasIssuedTickets ? setResendRowItem : undefined}
+        />
 
         <Flex justify="flex-end">
           <Box w={{ base: "full", md: "360px" }}>
@@ -202,5 +228,35 @@ export function EventInvoiceMoneyPanel({ invoice }: EventInvoiceMoneyPanelProps)
         </Flex>
       </Stack>
     </Box>
+
+    {viewingItem ? (
+      <AttendeeDetailModal
+        invoiceUniqueId={invoice.invoiceUniqueId}
+        lineItem={viewingItem}
+        canResendTickets={invoice.canResendTickets}
+        onClose={() => setViewingItem(null)}
+      />
+    ) : null}
+
+    {resendRowItem ? (
+      <ConfirmDialog
+        title="Send all tickets"
+        description={
+          <Text>
+            Re-email all <strong>{resendRowItem.tickets.length}</strong>{" "}
+            {resendRowItem.tickets.length === 1 ? "ticket" : "tickets"} for{" "}
+            <strong>{resendRowItem.ticketTypeName}</strong>?
+          </Text>
+        }
+        confirmLabel="Send tickets"
+        loadingLabel="Sending..."
+        tone="primary"
+        errorMessage={resendRowMutation.error ? extractApiError(resendRowMutation.error) : null}
+        isPending={resendRowMutation.isPending}
+        onConfirm={handleConfirmResendRow}
+        onClose={() => setResendRowItem(null)}
+      />
+    ) : null}
+  </>
   )
 }

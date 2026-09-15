@@ -33,11 +33,12 @@ const LINE_ITEMS: EventInvoiceLineItem[] = [
     quantity: 1,
     unitPrice: "100",
     lineTotal: "100",
-    attendees: [{ name: "Jane Doe", email: "jane@example.com", phone: null }],
+    attendees: [{ slotIndex: 0, name: "Jane Doe", email: "jane@example.com", phone: null }],
     tickets: [
       {
         ticketUniqueId: "ticket-1",
         ticketCode: "EVT_ABC123",
+        seatObjectLabel: "A-14",
         ticketStatus: "CheckedIn",
         ticketStatusLabel: "Checked In",
         deliveredAtUtc: "2026-08-01T18:00:00Z",
@@ -83,6 +84,24 @@ describe("EventInvoiceLineItemsSection resend actions", () => {
     expect(link).toHaveAttribute("href", APP_ROUTES.eventTicketView("ticket-1"))
     expect(link).toHaveAttribute("target", "_blank")
     expect(link).toHaveAttribute("rel", "noopener noreferrer")
+  })
+
+  it("SeatedTicket_ShowsTheSeatItAdmitsSoTheBuyerKnowsWhichSeatTheyBought", () => {
+    renderSection()
+
+    expect(screen.getByText("A-14")).toBeInTheDocument()
+  })
+
+  it("GeneralAdmissionTicket_ShowsNoSeatLabelBecauseNoSeatIsTiedToIt", () => {
+    renderSection([
+      {
+        ...LINE_ITEMS[0],
+        tickets: [{ ...LINE_ITEMS[0].tickets[0], seatObjectLabel: null }],
+      },
+    ])
+
+    expect(screen.queryByText("A-14")).not.toBeInTheDocument()
+    expect(screen.getByText("EVT_ABC123")).toBeInTheDocument()
   })
 
   it("PerTicketResendButton_NamesTheTicketItWouldSend", () => {

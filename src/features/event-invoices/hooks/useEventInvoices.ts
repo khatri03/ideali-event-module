@@ -9,8 +9,11 @@ import {
   resendEventInvoice,
   resendEventInvoiceTicket,
   updateEventInvoiceBuyer,
+  updateEventInvoiceAttendee,
+  type EventInvoiceAttendeeUpdate,
   type EventInvoiceBuyerUpdate,
   type EventInvoiceFilters,
+  type EventInvoiceLineItem,
   type EventInvoiceSortBy,
   type EventInvoiceSortOrder,
 } from "@/api/eventInvoices"
@@ -118,6 +121,38 @@ export function useResendEventInvoiceTicket(invoiceUniqueId: string) {
   return useMutation({
     mutationFn: (ticketUniqueId: string) => resendEventInvoiceTicket(invoiceUniqueId, ticketUniqueId),
     onSuccess: () => toaster.create({ type: "success", title: "Ticket queued for resend." }),
+    onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] }),
+  })
+}
+
+/** Resends every ticket on a single line item by looping per-ticket resend calls in parallel. */
+export function useResendEventInvoiceLineItem(invoiceUniqueId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (lineItem: EventInvoiceLineItem) =>
+      Promise.all(
+        lineItem.tickets.map((ticket) => resendEventInvoiceTicket(invoiceUniqueId, ticket.ticketUniqueId)),
+      ).then(() => undefined),
+    onSuccess: () => toaster.create({ type: "success", title: "Tickets queued for resend." }),
+    onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] }),
+  })
+}
+
+export function useUpdateEventInvoiceAttendee(invoiceUniqueId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      lineItemUniqueId,
+      slotIndex,
+      data,
+    }: {
+      lineItemUniqueId: string
+      slotIndex: number
+      data: EventInvoiceAttendeeUpdate
+    }) => updateEventInvoiceAttendee(invoiceUniqueId, lineItemUniqueId, slotIndex, data),
+    onSuccess: () => toaster.create({ type: "success", title: "Attendee updated." }),
     onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] }),
   })
