@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Event Module — Further Development Plan</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root { --doc-max: 1240px; }
+    body { scroll-behavior: smooth; }
+    .doc-shell { max-width: var(--doc-max); }
+    .sidebar { position: sticky; top: 1rem; max-height: calc(100dvh - 2rem); overflow-y: auto; }
+    .sidebar .nav-link { padding: .28rem .6rem; font-size: .875rem; border-radius: .375rem; }
+    .sidebar .nav-link:hover { background: var(--bs-secondary-bg); }
+    .sidebar .nav-link.small { font-size: .8125rem; opacity: .85; }
+    code.path { font-size: .875rem; word-break: break-all; }
+    pre { background: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color); border-radius: .5rem; padding: 1rem; overflow-x: auto; font-size: .8125rem; margin-bottom: 0; }
+    pre code { color: inherit; }
+    h2 { scroll-margin-top: 1rem; border-bottom: 1px solid var(--bs-border-color); padding-bottom: .5rem; margin-top: 3rem; }
+    h3 { margin-top: 2rem; scroll-margin-top: 1rem; }
+    h4 { margin-top: 1.5rem; }
+    .table td, .table th { vertical-align: top; }
+    .table td code, .table th code, td code.path { word-break: break-word; overflow-wrap: anywhere; }
+    .plain { background: var(--bs-info-bg-subtle); border-left: 4px solid var(--bs-info); padding: .85rem 1rem; border-radius: .375rem; margin: 1rem 0; }
+    .plain::before { content: "In plain words"; display: block; font-weight: 600; font-size: .8125rem; text-transform: uppercase; letter-spacing: .04em; opacity: .75; margin-bottom: .3rem; }
+    .dont { background: var(--bs-danger-bg-subtle); border-left: 4px solid var(--bs-danger); padding: .85rem 1rem; border-radius: .375rem; margin: 1rem 0; }
+    .dont::before { content: "Trap"; display: block; font-weight: 600; font-size: .8125rem; text-transform: uppercase; letter-spacing: .04em; opacity: .75; margin-bottom: .3rem; }
+    .rule { background: var(--bs-success-bg-subtle); border-left: 4px solid var(--bs-success); padding: .85rem 1rem; border-radius: .375rem; margin: 1rem 0; }
+    .rule::before { content: "Rule"; display: block; font-weight: 600; font-size: .8125rem; text-transform: uppercase; letter-spacing: .04em; opacity: .75; margin-bottom: .3rem; }
+    .must { background: var(--bs-warning-bg-subtle); border: 2px solid var(--bs-warning); border-left-width: 8px; padding: 1rem 1.15rem; border-radius: .375rem; margin: 1.25rem 0; }
+    .must::before { content: "Do this or the report lies"; display: block; font-weight: 700; font-size: .8125rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .45rem; }
+    .must > :last-child { margin-bottom: 0; }
+    .step-rail { counter-reset: step; list-style: none; padding-left: 0; }
+    .step-rail > li { position: relative; padding-left: 3rem; padding-bottom: 1.5rem; border-left: 2px solid var(--bs-border-color); margin-left: 1rem; }
+    .step-rail > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+    .step-rail > li::before { counter-increment: step; content: counter(step); position: absolute; left: -1.05rem; top: -.15rem; width: 2.1rem; height: 2.1rem; border-radius: 50%; background: var(--bs-primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: .875rem; }
+    .lead-sm { font-size: 1.02rem; color: var(--bs-secondary-color); }
+    .diagram { border: 1px solid var(--bs-border-color); border-radius: .5rem; padding: 1rem; margin: 1.25rem 0; overflow-x: auto; background: var(--bs-body-bg); }
+    .diagram svg { display: block; min-width: 640px; width: 100%; height: auto; color: var(--bs-body-color); }
+    .diagram text { fill: var(--bs-body-color); font-size: 12px; }
+    .diagram .muted { fill: var(--bs-secondary-color); font-size: 11px; }
+    .diagram rect { stroke-width: 1.25; }
+    .diagram .box-read { fill: var(--bs-primary-bg-subtle); stroke: var(--bs-primary-border-subtle); }
+    .diagram .box-write { fill: var(--bs-secondary-bg); stroke: var(--bs-border-color); }
+    .diagram .box-money { fill: var(--bs-warning-bg-subtle); stroke: var(--bs-warning-border-subtle); }
+    .diagram .box-new { fill: var(--bs-success-bg-subtle); stroke: var(--bs-success-border-subtle); }
+    .report-card { border: 1px solid var(--bs-border-color); border-radius: .5rem; padding: 1rem 1.15rem; margin: 1rem 0; }
+    .report-card h4 { margin-top: 0; }
+    .report-card .meta { font-size: .8125rem; color: var(--bs-secondary-color); }
+    .prio { font-size: .6875rem; text-transform: uppercase; letter-spacing: .04em; }
+    .wire-note { font-size: .8125rem; color: var(--bs-secondary-color); font-style: italic; margin-top: .4rem; }
+    .navbar .doc-shell { flex-wrap: wrap; row-gap: .35rem; }
+    .navbar-brand { white-space: normal; }
+    .navbar .badge { white-space: normal; text-align: right; }
+    @media (max-width: 575.98px) { .navbar .badge { margin-left: 0 !important; } }
+    @media (max-width: 991.98px) { .sidebar { position: static; max-height: none; } }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand bg-body-tertiary border-bottom sticky-top">
+  <div class="container doc-shell">
+    <span class="navbar-brand fw-semibold mb-0">Event Module — Further Development Plan</span>
+    <span class="ms-auto badge text-bg-secondary">1 nav group · 6 reports · cross-module · 0 sidebar orphans</span>
+  </div>
+</nav>
+
+<div class="container doc-shell my-4">
+  <div class="row g-4">
+    <div class="col-lg-3">
+      <nav class="sidebar nav flex-column">
+        <a class="nav-link fw-semibold" href="#context">1. What this plans, and why now</a>
+        <a class="nav-link fw-semibold" href="#nav">2. Navigation decisions</a>
+        <a class="nav-link ms-3 small" href="#nav-before-after">Before / after the sidebar</a>
+        <a class="nav-link fw-semibold" href="#reports-group">3. The "Reports" group — exact spec</a>
+        <a class="nav-link ms-3 small" href="#reports-routes">Routes &amp; where to wire them</a>
+        <a class="nav-link fw-semibold" href="#six-reports">4. The six reports</a>
+        <a class="nav-link fw-semibold" href="#checkin">5. Check-in entry points</a>
+        <a class="nav-link fw-semibold" href="#p6p7">6. Where P6 &amp; P7 land</a>
+        <a class="nav-link fw-semibold" href="#blindspot">7. The backend blind spot</a>
+        <a class="nav-link fw-semibold" href="#folders">8. Folder &amp; file placement</a>
+        <a class="nav-link fw-semibold" href="#order">9. Build order</a>
+        <a class="nav-link fw-semibold" href="#wireframes">10. Proposed wireframes</a>
+      </nav>
+    </div>
+
+    <main class="col-lg-9">
+
+      <section id="context">
+        <h2>1. What this plans, and why now</h2>
+        <p class="lead-sm">
+          The event module is mid-build: P6 adds coupons and refund UI, P7 adds organizer check-in.
+          Before those screens land, the sidebar has two holes that will otherwise be filled ad-hoc and
+          inconsistently. This document fixes both, and defines the home for the event reports the module
+          can already back with real data. It is a plan, not code — it says <em>what</em> goes
+          <em>where</em> and <em>why</em>, so a second agent builds with no guessing.
+        </p>
+
+        <h3>The two gaps</h3>
+        <div class="plain">
+          <p class="mb-2"><strong>Gap 1 — reports have no home.</strong> The route
+          <code class="path">/analytics</code> exists but is a dead placeholder that renders
+          <code>&lt;Settings /&gt;</code> (<code class="path">App.tsx</code>). The sidebar item labelled
+          <strong>"Custom Reports"</strong> points at <code class="path">/organizer/custom-form-report</code>
+          — that is the <em>membership form-report builder</em>, a different domain. Any new item just
+          called "Reports" would collide with it in the user's head.</p>
+          <p class="mb-0"><strong>Gap 2 — check-in is an orphan.</strong> The screen
+          <code>EventCheckInPage</code> is already routed at
+          <code class="path">/organizer/events/:eventUniqueId/sessions/:sessionUniqueId/check-in</code>,
+          but nothing in the UI links to it. Door staff cannot reach it.</p>
+        </div>
+
+        <div class="rule">
+          Reports only earn a place when they map to data the module already holds <em>and</em> a decision
+          someone makes with money. No vanity dashboards. Every report below passes that bar; three
+          candidates that fail it are named in <a href="#six-reports">§4</a> so nobody rebuilds them.
+        </div>
+
+        <div class="must">
+          <p class="mb-2"><strong>Reports are organizer-wide, not event-only — build them that way now.</strong>
+          <strong>Exhibition</strong> and <strong>Trips</strong> modules are coming. Four of the six reports
+          (Unpaid, Sales, Refunds, Coupons) are pure money questions with the <em>same shape</em> across
+          every module — module is a <code>where</code> clause, not a new screen.</p>
+          <p class="mb-0">So the reports namespace, the route group, the feature folder and the sidebar group
+          are all scoped to the <strong>organizer</strong>, not to <code>events</code>. Nesting them under
+          <code class="path">/organizer/events/...</code> would force a full triplication (a second Reports
+          fold under exhibitions, a third under trips) or a painful route retrofit — bookmarks and muscle
+          memory break, the exact confusion this plan exists to kill. Nav is the one thing costly to move
+          later. Get the namespace right on the first pour. See <a href="#nav">§2</a>.</p>
+        </div>
+      </section>
+
+      <section id="nav">
+        <h2>2. Navigation decisions</h2>
+        <p>Three decisions are settled. Treat them as fixed, not open questions.</p>
+
+        <div class="table-responsive">
+        <table class="table table-sm">
+          <thead>
+            <tr><th style="width:30%">Decision</th><th>Resolution</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Reports</strong></td>
+              <td>One <strong>collapsible sidebar group</strong> named "Reports", styled exactly like the
+              existing Settings / Admin / Member collapsible sections. Six child links — one per
+              <strong>report type</strong> (not per module). Each report takes a module filter
+              (Event / Exhibition / Trip / All). <em>Not</em> six flat items, <em>not</em> a reuse of the
+              "Custom Reports" label, <em>not</em> a fold-per-module.</td>
+            </tr>
+            <tr>
+              <td><strong>Check-in</strong></td>
+              <td><strong>Contextual entry only.</strong> No sidebar item. Reached by buttons from the
+              Session row, the Event detail, and the Attendance report.</td>
+            </tr>
+            <tr>
+              <td><strong>Refund &amp; coupon (P6)</strong></td>
+              <td>Refund is an <strong>action on the invoice detail page</strong>, not a nav item. Coupon
+              usage is <strong>one of the six report child links</strong>, not its own nav item.</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+
+        <p><strong>Net new sidebar entries: one collapsible group.</strong> Everything else is reached
+        from context it already belongs to.</p>
+
+        <h3 id="nav-before-after">Before / after the sidebar</h3>
+        <div class="diagram" role="img" aria-label="Sidebar before and after: one new collapsible Reports group inserted above Settings">
+          <svg viewBox="0 0 720 430" xmlns="http://www.w3.org/2000/svg">
+            <text x="10" y="20" font-weight="600">BEFORE</text>
+            <text x="380" y="20" font-weight="600">AFTER</text>
+
+            <!-- before column -->
+            <rect class="box-read" x="10" y="32" width="300" height="26" rx="5"/><text x="24" y="49">Dashboard · Events · Sessions · Event Invoices</text>
+            <text class="muted" x="24" y="74">mainNav (flat)</text>
+            <rect class="box-write" x="10" y="84" width="300" height="26" rx="5"/><text x="24" y="101">Seating · Venues · Custom Lists · Custom Reports …</text>
+            <text class="muted" x="24" y="126">managementNav (flat)</text>
+            <rect class="box-write" x="10" y="136" width="300" height="24" rx="5"/><text x="24" y="152">▸ Settings</text>
+            <rect class="box-write" x="10" y="164" width="300" height="24" rx="5"/><text x="24" y="180">▸ Admin (admin only)</text>
+            <rect class="box-write" x="10" y="192" width="300" height="24" rx="5"/><text x="24" y="208">▸ Member (member only)</text>
+            <text class="muted" x="24" y="236">check-in: unreachable</text>
+
+            <!-- after column -->
+            <rect class="box-read" x="380" y="32" width="330" height="26" rx="5"/><text x="394" y="49">Dashboard · Events · Sessions · Event Invoices</text>
+            <text class="muted" x="394" y="74">mainNav (unchanged)</text>
+            <rect class="box-write" x="380" y="84" width="330" height="26" rx="5"/><text x="394" y="101">Seating · Venues · Custom Lists · Custom Reports …</text>
+            <text class="muted" x="394" y="126">managementNav (unchanged)</text>
+            <rect class="box-new" x="380" y="136" width="330" height="24" rx="5"/><text x="394" y="152" font-weight="600">▾ Reports  ← NEW collapsible group</text>
+            <rect class="box-new" x="400" y="162" width="310" height="20" rx="4"/><text x="412" y="176" class="muted">Unpaid · Sales · Attendance · Refunds · Sell-through · Coupons</text>
+            <rect class="box-write" x="380" y="188" width="330" height="24" rx="5"/><text x="394" y="204">▸ Settings</text>
+            <rect class="box-write" x="380" y="216" width="330" height="24" rx="5"/><text x="394" y="232">▸ Admin (admin only)</text>
+            <rect class="box-write" x="380" y="244" width="330" height="24" rx="5"/><text x="394" y="260">▸ Member (member only)</text>
+            <text class="muted" x="394" y="288">check-in: reached from Session / Event / Attendance</text>
+          </svg>
+        </div>
+        <p class="wire-note">Proposed layout, not a shipped screen. The Reports group sits first among the
+        collapsible sections — above Settings — because organizers hit it <strong>often</strong> (unpaid,
+        sales checked daily), while Settings is configure-once. Order by traffic, not by importance. One
+        cost to accept: the busiest report now sits behind a fold; if daily friction shows, promote the top
+        report (Unpaid or Sales) to a flat <code>mainNav</code> shortcut and keep the rest folded.</p>
+      </section>
+
+      <section id="reports-group">
+        <h2>3. The "Reports" group — exact spec</h2>
+        <p>Copy the pattern that already exists; invent nothing new.</p>
+        <ul>
+          <li><strong>Model on</strong> <code>SettingsSection</code> in
+          <code class="path">src/components/layout/Sidebar.tsx</code> (lines 185–316): same header button,
+          same <code>ChevronDown</code>/<code>ChevronRight</code> toggle, same auto-open when a child route
+          is active.</li>
+          <li><strong>Header icon:</strong> <code>BarChart3</code> from <code>lucide-react</code>,
+          <code>size={17}</code> to match every other section header.</li>
+          <li><strong>Gating:</strong> visible to Organizer + Admin — reuse the <code>hasOrganizerAccess</code>
+          predicate that already guards <code>SettingsSection</code>.</li>
+          <li><strong>Insertion point:</strong> in the ordered <code>Box</code> (Sidebar.tsx lines 650–678),
+          render <code>ReportsSection</code> <strong>first among the collapsible sections</strong>,
+          immediately before <code>SettingsSection</code>.</li>
+          <li><strong>Open state:</strong> add an <code>isReportsOpen</code> flag mirroring
+          <code>isSettingsOpen</code>, auto-opened when the path starts with
+          <code class="path">/organizer/reports</code>.</li>
+        </ul>
+
+        <div class="dont">
+          Do not relabel or repurpose the existing <strong>"Custom Reports"</strong> item — it is the
+          membership <code>custom-form-report</code> builder and must stay where it is. Two "report"
+          concepts in one sidebar will be mis-clicked no matter how the routes separate them, so
+          <strong>rename hard, not just re-route</strong>: the new group is plain "Reports", and if both are
+          visible to the same role, retitle the old one to "Form Reports" (or similar) so the label alone
+          tells them apart. Labels do the disambiguation; routes only enforce it.
+        </div>
+
+        <h3 id="reports-routes">Routes &amp; where to wire them</h3>
+        <p>One organizer-scoped namespace, <code class="path">/organizer/reports/*</code> — <em>not</em>
+        under <code>events</code>, so Exhibition and Trips reuse the same routes with a module filter. Add a
+        <code>reports</code> group to <code class="path">src/utils/routes.ts</code>, and register the pages
+        inside <code>AppLayout</code> in <code class="path">src/App.tsx</code>, lazy-loaded with a skeleton
+        fallback (the repo's established page pattern).</p>
+        <pre><code>// src/utils/routes.ts — new group (organizer-scoped, module is a filter, not a segment)
+reports: {
+  base:        "/organizer/reports",
+  unpaid:      "/organizer/reports/unpaid",
+  sales:       "/organizer/reports/sales",
+  attendance:  "/organizer/reports/attendance",
+  refunds:     "/organizer/reports/refunds",
+  sellThrough: "/organizer/reports/sell-through",
+  coupons:     "/organizer/reports/coupons",
+},
+// module (event | exhibition | trip | all) travels as a query param on each report,
+// e.g. /organizer/reports/unpaid?module=event — never a new route per module.</code></pre>
+        <div class="rule">
+          Every report list is <strong>server-paged, sorted and filtered</strong> in the same request, and
+          takes its total from the server — same rule the Event Invoices list already follows. No fetching
+          a whole collection and slicing in React.
+        </div>
+      </section>
+
+      <section id="six-reports">
+        <h2>4. The six reports</h2>
+        <p>Each is ordered by build priority. Priority = the money decision it unblocks soonest against data
+        already shaped. <strong>Reports 1, 2, 4, 6 are pure money</strong> — identical shape across Event,
+        Exhibition and Trip; module is a filter. <strong>Reports 3 and 5 diverge per module</strong>
+        (attendance = participants/visitors; capacity = seats/booths/slots) — one report each, module-aware
+        view inside, still no separate route.</p>
+
+        <div class="report-card">
+          <h4>1 · Unpaid Invoices <span class="badge text-bg-danger prio">Priority 1</span></h4>
+          <p>Pending invoices, aged, amount owed, buyer contact — sorted oldest first.</p>
+          <p class="meta"><strong>Reads:</strong> invoice status + <code>createdAt</code> aging.
+          <strong>Decision it drives:</strong> who to chase for cash today. Every unpaid invoice is money on
+          the table. <strong>Endpoint (unverified):</strong> <code>GET /api/reports/unpaid?module=</code>.</p>
+        </div>
+
+        <div class="report-card">
+          <h4>2 · Sales &amp; Revenue <span class="badge text-bg-danger prio">Priority 2</span></h4>
+          <p>Per event: gross sold, net after refunds, platform take-rate cut, broken down by session and
+          ticket type.</p>
+          <p class="meta"><strong>Reads:</strong> invoice line totals + refunds + take-rate.
+          <strong>Decision it drives:</strong> the settlement number — what the event made and what the
+          platform's cut is, reconciled against Stripe payout. <strong>Endpoint (unverified):</strong>
+          <code>GET /api/reports/sales?module=</code>.</p>
+        </div>
+
+        <div class="report-card">
+          <h4>3 · Attendance <span class="badge text-bg-warning prio">Priority 3</span>
+          <span class="badge text-bg-info prio">module-aware</span></h4>
+          <p>Per session: issued vs checked-in, no-show rate, check-in time distribution. Hosts the
+          "Live check-in" entry button (see §5). Label shifts per module — "attendees" for an event,
+          "participants" for a Trip, "visitors" for an Exhibition — same columns underneath.</p>
+          <p class="meta"><strong>Reads:</strong> ticket <code>ticketStatus</code> + <code>checkedInAtUtc</code>
+          (already on the invoice line items). <strong>Decision it drives:</strong> next-event capacity and
+          overbooking; live "how many in the room". <strong>Endpoint (unverified):</strong>
+          <code>GET /api/reports/attendance?module=</code>.</p>
+        </div>
+
+        <div class="report-card">
+          <h4>4 · Refunds &amp; Cancellations <span class="badge text-bg-secondary prio">Priority 4</span></h4>
+          <p>Every refund/cancel: who, when, amount, reason, which invoice. Rides with the P6 refund UI.</p>
+          <p class="meta"><strong>Reads:</strong> cancelled invoices + refund records + actor.
+          <strong>Decision it drives:</strong> reconciliation and dispute defence; refund rate as a health
+          signal (it eats the take-rate). <strong>Endpoint (unverified):</strong>
+          <code>GET /api/reports/refunds?module=</code>.</p>
+        </div>
+
+        <div class="report-card">
+          <h4>5 · Sell-through <span class="badge text-bg-secondary prio">Priority 5</span>
+          <span class="badge text-bg-info prio">module-aware</span></h4>
+          <p>Per session + ticket type: capacity, sold, held, available, % sold, sold-out time. Capacity
+          unit shifts per module — seats for an event, booths for an Exhibition, slots for a Trip — same
+          "% sold / available" math on top.</p>
+          <p class="meta"><strong>Reads:</strong> ticket types + line items + Seats.io capacity/holds.
+          <strong>Decision it drives:</strong> repricing and whether to open more seats — "VIP sold out day
+          one, GA 40% unsold". <strong>Endpoint (unverified):</strong>
+          <code>GET /api/reports/sell-through?module=</code>.</p>
+        </div>
+
+        <div class="report-card">
+          <h4>6 · Coupon Usage <span class="badge text-bg-secondary prio">Priority 6 · P6</span></h4>
+          <p>Redemptions per code, discount given, revenue with vs without.</p>
+          <p class="meta"><strong>Reads:</strong> coupon redemptions (partial until P6 lands).
+          <strong>Decision it drives:</strong> promo ROI — kill a code that gave away discount for no extra
+          sales. <strong>Endpoint (unverified):</strong> <code>GET /api/reports/coupons?module=</code>.</p>
+        </div>
+
+        <h3>Deliberately NOT built</h3>
+        <div class="dont">
+          <ul class="mb-0">
+            <li><strong>Buyer demographics / cohort dashboards</strong> — no demographic fields captured.
+            Charting nothing. Would need a new collection first.</li>
+            <li><strong>Predictive / forecast reports</strong> — no historical volume yet (pre-production).
+            A forecast on zero history is noise.</li>
+            <li><strong>Real-time streaming dashboard</strong> — over-built. On-demand refresh
+            (<code>refetchOnMount: "always"</code>, already used on invoices) is enough; no WebSocket infra
+            for a screen nobody keeps open all day.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="checkin">
+        <h2>5. Check-in entry points</h2>
+        <p>The screen exists. It needs doors into it, not a sidebar item.</p>
+        <div class="table-responsive">
+        <table class="table table-sm">
+          <thead><tr><th style="width:34%">From</th><th>Action → target</th></tr></thead>
+          <tbody>
+            <tr><td>Session list row</td><td>"Open check-in" →
+            <code>APP_ROUTES.eventCheckIn(eventUniqueId, sessionUniqueId)</code></td></tr>
+            <tr><td>Event detail (per session)</td><td>"Check-in" button on each session</td></tr>
+            <tr><td>Attendance report row</td><td>"Live check-in" button</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div class="plain">
+          <strong>No sidebar item, on purpose.</strong> Check-in needs both event <em>and</em> session
+          context; a global link would dead-end on a picker with nothing chosen. Current roles are only
+          Organizer and Admin — there is no door-staff persona yet to justify a top-level entry. Reach it
+          from the session it belongs to. Revisit only if a door-staff role is added.
+        </div>
+      </section>
+
+      <section id="p6p7">
+        <h2>6. Where P6 &amp; P7 land</h2>
+        <ul class="step-rail">
+          <li><strong>P6 — Refund UI.</strong> An action on the invoice detail page. Extend
+          <code class="path">src/features/event-invoices/components/EventInvoiceSettlementActions.tsx</code>.
+          It is a privileged, audit-logged action — confirm with the consequence named, show pending and
+          result states. No new feature folder, no nav item.</li>
+          <li><strong>P6 — Coupons.</strong> Authoring already lives in the event wizard
+          (<code>discount-coupon</code> step). The only new surface is the <em>Coupon Usage</em> report
+          (report #6). Nothing else.</li>
+          <li><strong>P7 — Check-in.</strong> Screen already routed; this plan only wires its three entry
+          buttons (§5) and surfaces its outcome in the Attendance report (#3).</li>
+        </ul>
+      </section>
+
+      <section id="blindspot">
+        <h2>7. The backend blind spot</h2>
+        <div class="must">
+          <p class="mb-2">Every report needs a <strong>server-side aggregation endpoint</strong> in
+          <code>ideali.api</code>. Before building any report screen, confirm its endpoint exists. The six
+          endpoints in §4 are listed as <strong>unverified</strong> on purpose — none is assumed to be
+          live.</p>
+          <p class="mb-0">If an endpoint is missing, that is <strong>backend work first</strong>. Do
+          <em>not</em> hand-roll aggregation in React by pulling whole collections and summing them — that
+          violates the server-side paging/aggregation rule and will not survive real data volume. A report
+          fed by client-side math is a report that lies the moment the data outgrows one page.</p>
+        </div>
+      </section>
+
+      <section id="folders">
+        <h2>8. Folder &amp; file placement</h2>
+        <div class="table-responsive">
+        <table class="table table-sm">
+          <thead><tr><th style="width:34%">What</th><th>Where</th></tr></thead>
+          <tbody>
+            <tr><td>Report pages</td><td>new <code class="path">src/features/reports/</code> (organizer-scoped,
+            <em>not</em> <code>event-reports</code>) with <code>pages/ hooks/ components/ schemas/ index.ts</code>
+            — matches the feature-based structure. Pages compose only; logic lives in sub-components. Do
+            <strong>not</strong> spawn <code>exhibition-reports</code> / <code>trip-reports</code> later — one
+            folder, module is a filter.</td></tr>
+            <tr><td>Report transport</td><td>one <code class="path">src/api/reports.ts</code> — fetch +
+            Zod parse, no React. Components never import it directly; a TanStack Query hook sits between.</td></tr>
+            <tr><td>Report hooks</td><td><code class="path">src/features/reports/hooks/</code>, query
+            key <code>["reports", kind, module, filters, page]</code>, <code>keepPreviousData</code>, server
+            paging.</td></tr>
+            <tr><td>Sidebar group</td><td>edit <code class="path">src/components/layout/Sidebar.tsx</code>
+            (new <code>ReportsSection</code>, inserted per §3).</td></tr>
+            <tr><td>Routes</td><td><code class="path">src/utils/routes.ts</code> (add <code>reports</code>
+            group) + <code class="path">src/App.tsx</code> (register lazy pages in <code>AppLayout</code>).</td></tr>
+            <tr><td>Refund action</td><td>extend
+            <code class="path">src/features/event-invoices/components/EventInvoiceSettlementActions.tsx</code>
+            — no new folder.</td></tr>
+            <tr><td>Check-in buttons</td><td>added to the Session list row, Event detail, and the new
+            Attendance report — no new route (uses the existing check-in route).</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div class="rule">
+          Each report page ships with its states designed — skeleton loading, an empty state that names
+          what is missing and the next action, a plain-language error with recovery — and a Playwright test
+          asserting no horizontal overflow at 320 / 375 / 768 / 1024 / 1440 / 1920, plus unit tests for the
+          hook and any pure formatting. Same bar as every shipped screen.
+        </div>
+      </section>
+
+      <section id="order">
+        <h2>9. Build order</h2>
+        <ol class="step-rail">
+          <li><strong>Confirm the backend aggregation endpoints exist (§7)</strong> before any screen —
+          this is step 0, not an afterthought. A missing endpoint is backend work first; no client-side
+          summing.</li>
+          <li><strong>Sidebar group + routes shell.</strong> <code>ReportsSection</code>, the organizer
+          <code>reports</code> routes, and six lazy pages rendering an empty-state skeleton. Nav is
+          correct before any data lands.</li>
+          <li><strong>Report 1 — Unpaid Invoices.</strong> Cash recovery, simplest aggregation, confirms the
+          endpoint-first flow end to end.</li>
+          <li><strong>Report 2 — Sales &amp; Revenue,</strong> then <strong>3 — Attendance</strong> (wires
+          the check-in "Live check-in" button and the other two entry points).</li>
+          <li><strong>Reports 4 — Refunds</strong> (with P6 refund UI on invoice detail) and
+          <strong>5 — Sell-through.</strong></li>
+          <li><strong>Report 6 — Coupon Usage,</strong> once P6 coupon data is flowing.</li>
+        </ol>
+        <p class="wire-note">Each step confirms its backend endpoint before the screen is built (§7), and
+        lands with its own tests. Nothing is reported done while a suite is red.</p>
+      </section>
+
+      <section id="wireframes">
+        <h2>10. Proposed wireframes</h2>
+        <p class="wire-note">Proposed layouts, not shipped screens. Real screens replace these with
+        before/after screenshots under <code class="path">docs/screenshots/</code> when built.</p>
+
+        <h3>Report page layout (all six share this frame)</h3>
+        <div class="diagram" role="img" aria-label="Report page: page header, filter bar, server-paged table, pagination">
+          <svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg">
+            <rect class="box-write" x="10" y="12" width="700" height="40" rx="6"/>
+            <text x="24" y="30">Page header — report title + event filter</text>
+            <text class="muted" x="24" y="45">reuses the invoice-list header treatment</text>
+
+            <rect class="box-read" x="10" y="64" width="700" height="34" rx="6"/>
+            <text x="24" y="85">Filter bar — event · session · status · date range  (server-side)</text>
+
+            <rect class="box-money" x="10" y="110" width="220" height="40" rx="6"/><text x="24" y="134">Total / net summary</text>
+            <rect class="box-money" x="245" y="110" width="220" height="40" rx="6"/><text x="259" y="134">Platform take-rate cut</text>
+            <rect class="box-money" x="480" y="110" width="230" height="40" rx="6"/><text x="494" y="134">Outstanding / no-show</text>
+
+            <rect class="box-read" x="10" y="162" width="700" height="150" rx="6"/>
+            <text x="24" y="184" font-weight="600">Server-paged table</text>
+            <line x1="24" y1="196" x2="696" y2="196" stroke="var(--bs-border-color)"/>
+            <text class="muted" x="24" y="216">row · sortable headers · row action → detail / check-in</text>
+            <text class="muted" x="24" y="236">row</text>
+            <text class="muted" x="24" y="256">row</text>
+            <text class="muted" x="24" y="296">wrapped in TableContainer overflowX=auto (no page scroll)</text>
+
+            <rect class="box-write" x="470" y="322" width="240" height="28" rx="6"/><text x="484" y="341">Pagination — page / total from server</text>
+          </svg>
+        </div>
+
+        <h3>Where check-in is reached from</h3>
+        <div class="diagram" role="img" aria-label="Three contextual entries into the check-in screen">
+          <svg viewBox="0 0 720 200" xmlns="http://www.w3.org/2000/svg">
+            <rect class="box-read" x="10" y="20" width="200" height="44" rx="6"/><text x="24" y="40">Session list row</text><text class="muted" x="24" y="56">[Open check-in]</text>
+            <rect class="box-read" x="10" y="78" width="200" height="44" rx="6"/><text x="24" y="98">Event detail</text><text class="muted" x="24" y="114">[Check-in] per session</text>
+            <rect class="box-read" x="10" y="136" width="200" height="44" rx="6"/><text x="24" y="156">Attendance report</text><text class="muted" x="24" y="172">[Live check-in]</text>
+            <line x1="210" y1="42" x2="470" y2="96" stroke="var(--bs-secondary-color)"/>
+            <line x1="210" y1="100" x2="470" y2="100" stroke="var(--bs-secondary-color)"/>
+            <line x1="210" y1="158" x2="470" y2="104" stroke="var(--bs-secondary-color)"/>
+            <rect class="box-new" x="470" y="76" width="240" height="48" rx="6"/><text x="484" y="98" font-weight="600">EventCheckInPage</text><text class="muted" x="484" y="115">existing nested route</text>
+          </svg>
+        </div>
+      </section>
+
+      <footer class="border-top py-4 mt-4">
+        <div class="text-body-secondary small">
+          Event Module — Further Development Plan · plan doc, not code ·
+          <code>docs/development-plan/development-plan.html</code> · verify every route and file reference
+          against <code>routes.ts</code>, <code>App.tsx</code>, <code>Sidebar.tsx</code> before building.
+        </div>
+      </footer>
+
+    </main>
+  </div>
+</div>
+
+</body>
+</html>
