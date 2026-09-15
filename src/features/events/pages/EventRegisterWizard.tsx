@@ -183,11 +183,16 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
   const [activeSessionDescription, setActiveSessionDescription] = useState<{ title: string; description: string } | null>(null)
   const [sessionTicketSearch, setSessionTicketSearch] = useState<Record<string, string>>({})
   const [selectedTicketQuantities, setSelectedTicketQuantities] = useState<Record<string, number>>({})
+  // Sessions whose chart has a Seats.io hold call outstanding. Progression waits on this alongside the local cart
+  // mutation count, so the buyer cannot advance to a step that reads seats the chart has not finished holding.
+  const [holdPendingSessionIds, setHoldPendingSessionIds] = useState<string[]>([])
   const {
     holdToken: seatHoldToken,
     presentedHoldToken: presentedSeatHoldToken,
     holdTokenExpiresAtUtc: seatHoldTokenExpiresAtUtc,
     ensureHoldToken: ensureSeatHoldToken,
+    reissueHoldToken: reissueSeatHoldToken,
+    reportRefusal: reportSeatRefusal,
     seatsBySession,
     seatQuantitiesByTicketType,
     seatsByTicketType,
@@ -503,10 +508,23 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
     selectedTicketCount > 0 ? highestUnlockedIndex : Math.min(highestUnlockedIndex, sessionsStepIndex),
     questionnaireLockIndex,
   )
+  // Seats are held and claimed asynchronously - the chart holds at Seats.io, the cart records it - and both have to
+  // settle before the step that reads them opens. This is watched only on the sessions step, the one place a chart is
+  // drawn, so a pending mutation on a later step never bars its own Continue.
+  const seatOperationsPending = activeTab === 'sessions' && (isSeatChanging || holdPendingSessionIds.length > 0)
+
+  const handleSeatHoldPendingChange = useCallback((sessionUniqueId: string, isHoldPending: boolean) => {
+    setHoldPendingSessionIds((current) => {
+      const others = current.filter((id) => id !== sessionUniqueId)
+      return isHoldPending ? [...others, sessionUniqueId] : others
+    })
+  }, [])
+
   const canContinueForward = !purchaseTimerExpired && (isDescriptionStep || selectedTicketCount > 0)
   const footerActionLabel = isFinalStep ? 'Review Purchase' : 'Continue'
   const FooterActionIcon = isFinalStep ? Check : ChevronRight
-  const footerActionDisabled = !canContinueForward || (isFinalStep && selectedTicketCount <= 0)
+  const footerActionDisabled =
+    !canContinueForward || seatOperationsPending || (isFinalStep && selectedTicketCount <= 0)
 
   function isStepEnabled(stepId: WizardTabId) {
     const index = getStepIndex(tabs, stepId)
@@ -519,6 +537,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
 
   function handleContinue() {
     if (purchaseTimerExpired) return
+    if (seatOperationsPending) return
     if (!isDescriptionStep && selectedTicketCount <= 0) return
     if (activeIndex < 0 || activeIndex >= tabs.length - 1) return
 
@@ -1212,9 +1231,14 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                     accentColor={formAccent}
                                     onPickSeat={pickSeat}
                                     onUnpickSeats={(objectLabels) => unpickSeats(sessionUniqueId, objectLabels)}
+                                    onHoldPendingChange={(isHoldPending) =>
+                                      handleSeatHoldPendingChange(sessionUniqueId, isHoldPending)
+                                    }
                                     holdToken={seatHoldToken}
                                     presentedHoldToken={presentedSeatHoldToken}
                                     onEnsureHoldToken={() => ensureSeatHoldToken(sessionUniqueId)}
+                                    onHoldTokenExpired={() => void reissueSeatHoldToken(sessionUniqueId)}
+                                    onReportRefusal={(message) => reportSeatRefusal(sessionUniqueId, message)}
                                     onAdoptHeldSeats={(heldSeats) => adoptHeldSeats(sessionUniqueId, heldSeats)}
                                   />
                                 )}

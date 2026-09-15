@@ -25,13 +25,26 @@ vi.mock("@/api/eventSeating", () => ({
  */
 vi.mock("@seatsio/seatsio-react", () => ({
   SeatsioSeatingChart: ({
-    onObjectSelected,
+    onHoldSucceeded,
+    onHoldFailed,
   }: {
-    onObjectSelected: (object: { label: string; objectType?: string; category?: { key: string } }) => void
+    onHoldSucceeded: (
+      objects: { label: string; objectType?: string; category?: { key: string } }[],
+      ticketTypes: unknown[],
+    ) => void
+    onHoldFailed: (objects: { label: string }[]) => void
   }) => (
-    <button type="button" onClick={() => onObjectSelected({ label: "A-14", objectType: "seat", category: { key: "cat-stalls" } })}>
-      Pick seat A-14
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => onHoldSucceeded([{ label: "A-14", objectType: "seat", category: { key: "cat-stalls" } }], [])}
+      >
+        Pick seat A-14
+      </button>
+      <button type="button" onClick={() => onHoldFailed([{ label: "A-14" }])}>
+        Fail the hold
+      </button>
+    </>
   ),
 }))
 
@@ -79,6 +92,7 @@ function renderSelection({ cartUniqueId = "cart-1", seats = [], refusal = null, 
   const onUnpickSeats = vi.fn()
   const onAdoptHeldSeats = vi.fn()
   const onEnsureHoldToken = vi.fn().mockResolvedValue("browser-token")
+  const onReportRefusal = vi.fn()
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
   const tree = (currentSeats: SeatPick[]) => (
@@ -97,10 +111,13 @@ function renderSelection({ cartUniqueId = "cart-1", seats = [], refusal = null, 
           holdToken={holdToken}
           presentedHoldToken={holdToken}
           onEnsureHoldToken={() => onEnsureHoldToken()}
+          onHoldTokenExpired={vi.fn()}
+          onReportRefusal={(message) => onReportRefusal(message)}
           // Written as fresh closures, because that is what the registration form passes and what the adoption
           // effect has to survive.
           onPickSeat={(pick) => onPickSeat(pick)}
           onUnpickSeats={(objectLabels) => onUnpickSeats(objectLabels)}
+          onHoldPendingChange={vi.fn()}
           onAdoptHeldSeats={(heldSeats) => onAdoptHeldSeats(heldSeats)}
         />
       </QueryClientProvider>
@@ -114,6 +131,7 @@ function renderSelection({ cartUniqueId = "cart-1", seats = [], refusal = null, 
     onUnpickSeats,
     onAdoptHeldSeats,
     onEnsureHoldToken,
+    onReportRefusal,
     /** Renders again the way the form does after any of its state moved, with handlers built anew. */
     rerenderWith: (nextSeats: SeatPick[]) => view.rerender(tree(nextSeats)),
   }
@@ -325,5 +343,25 @@ describe("EventSeatSelection", () => {
     await openSeatMap()
 
     await waitFor(() => expect(fetchEventSeating).toHaveBeenCalledTimes(2))
+  })
+
+  /**
+   * A hold Seats.io refuses is the "could not be reserved" dead-end - the seat was taken between the draw and the
+   * click, or the token lapsed. Rather than leaving the buyer to reload the whole page, the map is read again so the
+   * seat is redrawn as it now stands and the buyer is told in plain words to pick another.
+   */
+  it("refreshes the map and explains itself when the chart cannot hold a seat", async () => {
+    const { onReportRefusal } = renderSelection()
+
+    await waitFor(() => expect(fetchEventSeating).toHaveBeenCalledTimes(1))
+
+    await openSeatMap()
+
+    await waitFor(() => expect(fetchEventSeating).toHaveBeenCalledTimes(2))
+
+    await userEvent.click(screen.getByRole("button", { name: "Fail the hold" }))
+
+    await waitFor(() => expect(fetchEventSeating).toHaveBeenCalledTimes(3))
+    expect(onReportRefusal).toHaveBeenCalledWith(expect.stringContaining("could not be held"))
   })
 })

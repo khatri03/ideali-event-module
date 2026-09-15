@@ -74,10 +74,18 @@ interface SeatMapPanelProps {
   selectedSeatLabels: string[]
   /** Currency the chart prices its seats in, or null when the event has none set. */
   currencyCode: string | null
-  /** Called with the label of a seat the buyer picked and the key of the category it is drawn in. */
+  /** Called with the label of a seat the chart has confirmed a hold on and the key of the category it is drawn in. */
   onSelectSeat: (objectLabel: string, categoryKey: string, objectType: string) => void
   /** Called with a seat label the buyer gave up. */
   onDeselectSeat: (objectLabel: string) => void
+  /** Called as the chart's own hold calls start and finish, so progression can be barred while any is outstanding. */
+  onHoldPendingChange: (isHoldPending: boolean) => void
+  /** Called when the chart reports its hold token has lapsed, so a fresh one can be minted in its place. */
+  onHoldTokenExpired: () => void
+  /** Called with the labels of seats Seats.io refused to hold, so the map can be refreshed and the buyer told why. */
+  onHoldFailed: (objectLabels: string[]) => void
+  /** Called with the rule violations that made a selection invalid, so they can be shown in the buyer's own words. */
+  onSelectionInvalid: (violations: string[]) => void
 }
 
 /**
@@ -100,6 +108,10 @@ export function SeatMapPanel({
   currencyCode,
   onSelectSeat,
   onDeselectSeat,
+  onHoldPendingChange,
+  onHoldTokenExpired,
+  onHoldFailed,
+  onSelectionInvalid,
 }: SeatMapPanelProps) {
   // The failure is remembered against the chart it belongs to rather than as a flag: a chart drawn for a different
   // event, or under a renewed hold token, is a different chart, and its predecessor's failure says nothing about it.
@@ -205,12 +217,31 @@ export function SeatMapPanel({
 
             return isSelectable.call(object) ? defaultColor : String(extraConfig.unavailableSeatColor)
           }}
-          // The renderer hands back a far larger object; only the seat's own name and the category it is drawn in
-          // decide anything here. Category keys arrive as numbers on charts whose categories were never named.
-          onObjectSelected={(object) =>
-            onSelectSeat(object.label, String(object.category?.key ?? ""), String(object.objectType ?? ""))
-          }
+          // A pick enters the order only once the chart has confirmed its Seats.io hold, not the instant it is
+          // clicked. The manual session holds asynchronously after the click, and claiming from the click instead
+          // raced the server's own read against a hold that had not yet landed - the seat coming back free, or held
+          // under this token a beat later, both leaving the buyer the chart's "could not be reserved" dead-end. A
+          // table hands back every one of its seats in one call, so a label already seen in this batch is passed on
+          // once. The renderer hands back a far larger object; only the seat's name, its category and its type decide
+          // anything here, and category keys arrive as numbers on charts whose categories were never named.
+          onHoldSucceeded={(objects) => {
+            const claimed = new Set<string>()
+
+            for (const object of objects) {
+              if (claimed.has(object.label)) {
+                continue
+              }
+
+              claimed.add(object.label)
+              onSelectSeat(object.label, String(object.category?.key ?? ""), String(object.objectType ?? ""))
+            }
+          }}
           onObjectDeselected={(object) => onDeselectSeat(object.label)}
+          // The chart's hold calls run asynchronously after a click. Progression is barred from the first one
+          // starting until the last one finishes, so the buyer cannot advance to a step that reads seats the chart
+          // has not yet finished holding.
+          onHoldCallsInProgress={() => onHoldPendingChange(true)}
+          onHoldCallsComplete={() => onHoldPendingChange(false)}
           // Held so a seat given up elsewhere can be deselected on the chart instead of redrawing it.
           onRenderStarted={(chart) => {
             chartRef.current = chart as SeatingChart
@@ -218,6 +249,17 @@ export function SeatMapPanel({
           // Category limits are the organizer's own per-order maximum. The chart refuses the seat before it is
           // picked, which is kinder than the server refusing it after; the server enforces it again regardless.
           maxSelectedObjects={buildCategoryLimits(seatingMap.categories)}
+          // Seats.io does not renew a manual-session token, so one left running lapses under the buyer and every
+          // pick after is refused with the chart's own "could not be reserved" dead-end. Catching the expiry lets a
+          // fresh token be minted in place, so the buyer picks again here rather than being sent to reload the page.
+          onHoldTokenExpired={onHoldTokenExpired}
+          // A hold Seats.io refuses is the "could not be reserved" dead-end: the seat went to another buyer between
+          // the chart drawing it free and the click, or the token lapsed. The refused seats are named so the map can
+          // be redrawn against fresh availability and the buyer told why, rather than being left to reload the page.
+          onHoldFailed={(objects) => onHoldFailed(objects.map((object) => object.label))}
+          // A selection the chart's own rules reject - a table that must be booked whole, a per-order maximum - is
+          // surfaced in the buyer's words instead of the chart's bare refusal.
+          onSelectionInvalid={onSelectionInvalid}
           onChartRendered={() => setFailedChartKey(null)}
           onChartRenderingFailed={() => setFailedChartKey(chartKey)}
         />

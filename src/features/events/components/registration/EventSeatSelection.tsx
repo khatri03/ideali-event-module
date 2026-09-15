@@ -39,10 +39,16 @@ interface EventSeatSelectionProps {
   presentedHoldToken: string | null
   /** Issues that token, so the chart the buyer just opened can hold what they pick on it. */
   onEnsureHoldToken: () => Promise<string | null>
+  /** Mints a fresh token for this session after the chart reports the old one lapsed. */
+  onHoldTokenExpired: () => void
+  /** Says why a seat could not be held, so the buyer reads a plain reason instead of the chart's bare refusal. */
+  onReportRefusal: (message: string) => void
   /** Called with a seat the buyer picked, priced from the chart's own categories. */
   onPickSeat: (pick: SeatPick) => void
   /** Called with every seat label the buyer gave up, which is one seat or a whole table's worth of them. */
   onUnpickSeats: (objectLabels: string[]) => void
+  /** Called as this session's chart starts and finishes its hold calls, so progression can wait on them. */
+  onHoldPendingChange: (isHoldPending: boolean) => void
   /** Called with the seats the server says the cart already holds on this session. */
   onAdoptHeldSeats: (seats: SeatPick[]) => void
 }
@@ -98,8 +104,11 @@ export function EventSeatSelection({
   holdToken,
   presentedHoldToken,
   onEnsureHoldToken,
+  onHoldTokenExpired,
+  onReportRefusal,
   onPickSeat,
   onUnpickSeats,
+  onHoldPendingChange,
   onAdoptHeldSeats,
 }: EventSeatSelectionProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false)
@@ -150,6 +159,17 @@ export function EventSeatSelection({
     void onEnsureHoldToken()
   }
 
+  // Closing the map tears the chart down, and a chart torn down mid-hold never fires its own completion. The pending
+  // flag is cleared here so a hold call still outstanding at close cannot leave progression barred with no chart left
+  // to release it.
+  const handlePickerOpenChange = (isOpen: boolean) => {
+    setIsPickerOpen(isOpen)
+
+    if (!isOpen) {
+      onHoldPendingChange(false)
+    }
+  }
+
   // The chart read before a cart exists carries no token of its own, so the browser's is put on it. Without one the
   // map would draw and let the buyer pick seats that nothing anywhere is holding for them.
   const pickableSeatingMap =
@@ -174,6 +194,23 @@ export function EventSeatSelection({
       ticketTypeName: category.ticketTypeName,
       price: category.price,
     })
+  }
+
+  // A hold Seats.io refuses is the "could not be reserved" dead-end. The failed seat never entered the selection -
+  // the chart only reports a pick once its hold lands - so there is nothing to take out of the basket. The map is
+  // read again so a seat another buyer took between the draw and the click is redrawn unavailable rather than
+  // inviting the same failed pick, and the buyer is told why in plain words instead of being sent to reload.
+  const handleHoldFailed = () => {
+    void refreshSeating()
+    onReportRefusal(
+      "That seat could not be held — it may have just been taken. The map has been refreshed; please pick another.",
+    )
+  }
+
+  const handleSelectionInvalid = (violations: string[]) => {
+    onReportRefusal(
+      violations.length > 0 ? violations.join(" ") : "That selection is not allowed. Please choose a different seat.",
+    )
   }
 
   return (
@@ -201,7 +238,7 @@ export function EventSeatSelection({
 
       <SeatPickerDialog
         isOpen={isPickerOpen}
-        onOpenChange={setIsPickerOpen}
+        onOpenChange={handlePickerOpenChange}
         sessionName={sessionName}
         accentColor={accentColor}
       >
@@ -221,6 +258,10 @@ export function EventSeatSelection({
                   currencyCode={currencyCode}
                   onSelectSeat={handleSelectSeat}
                   onDeselectSeat={(objectLabel) => onUnpickSeats([objectLabel])}
+                  onHoldPendingChange={onHoldPendingChange}
+                  onHoldTokenExpired={onHoldTokenExpired}
+                  onHoldFailed={handleHoldFailed}
+                  onSelectionInvalid={handleSelectionInvalid}
                 />
               </Stack>
               <SelectedSeatsPanel

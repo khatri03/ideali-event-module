@@ -102,3 +102,43 @@ describe("useTicketSelectionSummary attendee slot labels", () => {
     expect(labels).toEqual(["Seat 1 at Table 18", "Seat 2 at Table 18", "Attendee 3"])
   })
 })
+
+describe("useTicketSelectionSummary attendee-info gate", () => {
+  /**
+   * The organizer turning attendee info off for a session means the buyer is never asked for it: that
+   * session produces no attendee groups and no slots, so nothing is rendered and nothing is submitted.
+   */
+  it("builds no attendee slots for a selected session the organizer left attendee-info off", () => {
+    const session = buildSession({ requiresAttendeeInfo: false })
+    const { result } = renderHook(() => useTicketSelectionSummary([session], { "ticket-1": 2 }, null))
+
+    expect(result.current.attendeeSessionGroups).toEqual([])
+    expect(result.current.attendeeSlotEntries).toEqual([])
+    expect(result.current.requiresAttendeeInfo).toBe(false)
+  })
+
+  /**
+   * With two sessions in the cart, only the one marked attendee-info-required contributes slots. This is
+   * the reported bug's core: a disabled session must not drag attendee questions in beside an enabled one.
+   */
+  it("keeps slots only for the required session when the cart mixes required and disabled sessions", () => {
+    const required = buildSession({
+      uniqueId: "session-required",
+      requiresAttendeeInfo: true,
+      ticketTypes: [buildTicket({ uniqueId: "ticket-required", name: "Required Seat" })],
+    })
+    const disabled = buildSession({
+      uniqueId: "session-disabled",
+      requiresAttendeeInfo: false,
+      ticketTypes: [buildTicket({ uniqueId: "ticket-disabled", name: "Open Seat" })],
+    })
+
+    const { result } = renderHook(() =>
+      useTicketSelectionSummary([required, disabled], { "ticket-required": 1, "ticket-disabled": 1 }, null),
+    )
+
+    expect(result.current.attendeeSessionGroups.map((group) => group.sessionId)).toEqual(["session-required"])
+    expect(result.current.attendeeSlotEntries.map((slot) => slot.ticketId)).toEqual(["ticket-required"])
+    expect(result.current.requiresAttendeeInfo).toBe(true)
+  })
+})

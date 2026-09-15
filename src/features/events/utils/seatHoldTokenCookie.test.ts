@@ -10,7 +10,13 @@ import {
   storeHoldToken,
 } from "@/features/events/utils/seatHoldTokenCookie"
 
-afterEach(clearStoredHoldToken)
+const EVENT = "E1"
+const OTHER_EVENT = "E2"
+
+afterEach(() => {
+  clearStoredHoldToken(EVENT)
+  clearStoredHoldToken(OTHER_EVENT)
+})
 
 function toUtcString(date: Date) {
   return date.toISOString().replace("Z", "")
@@ -23,9 +29,9 @@ describe("seatHoldTokenCookie", () => {
    * old token lapses on its own.
    */
   it("Store_ThenRead_ReturnsTheHoldToken", () => {
-    storeHoldToken("token-123", toUtcString(addMinutes(new Date(), 15)))
+    storeHoldToken(EVENT, "token-123", toUtcString(addMinutes(new Date(), 15)))
 
-    expect(readStoredHoldToken()).toBe("token-123")
+    expect(readStoredHoldToken(EVENT)).toBe("token-123")
   })
 
   /**
@@ -33,7 +39,18 @@ describe("seatHoldTokenCookie", () => {
    * invented one.
    */
   it("Read_NothingStored_ReturnsNull", () => {
-    expect(readStoredHoldToken()).toBeNull()
+    expect(readStoredHoldToken(EVENT)).toBeNull()
+  })
+
+  /**
+   * The token is keyed by event because Seats.io issues it per workspace, and two events can belong to different
+   * organizers with different workspaces. One event's token must never be read for another, or its chart would draw
+   * against a token minted in a workspace that does not know it and refuse every pick.
+   */
+  it("Read_ForADifferentEvent_DoesNotSeeAnotherEventsToken", () => {
+    storeHoldToken(EVENT, "token-123", toUtcString(addMinutes(new Date(), 15)))
+
+    expect(readStoredHoldToken(OTHER_EVENT)).toBeNull()
   })
 
   /**
@@ -41,10 +58,10 @@ describe("seatHoldTokenCookie", () => {
    * offering a dead token for checking on every page load for the rest of the browser's life.
    */
   it("Clear_AfterStoring_RemovesTheHoldToken", () => {
-    storeHoldToken("token-123", toUtcString(addMinutes(new Date(), 15)))
-    clearStoredHoldToken()
+    storeHoldToken(EVENT, "token-123", toUtcString(addMinutes(new Date(), 15)))
+    clearStoredHoldToken(EVENT)
 
-    expect(readStoredHoldToken()).toBeNull()
+    expect(readStoredHoldToken(EVENT)).toBeNull()
   })
 
   /**
@@ -52,8 +69,8 @@ describe("seatHoldTokenCookie", () => {
    * present a token whose seats had long since gone back on sale.
    */
   it("Store_WithoutAnExpiry_StillReadsBackWithinTheSession", () => {
-    storeHoldToken("token-123", null)
+    storeHoldToken(EVENT, "token-123", null)
 
-    expect(readStoredHoldToken()).toBe("token-123")
+    expect(readStoredHoldToken(EVENT)).toBe("token-123")
   })
 })

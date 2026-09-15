@@ -13,6 +13,8 @@ import { SeatMapPanel } from "./SeatMapPanel"
  */
 const deselectObjects = vi.fn().mockResolvedValue(undefined)
 
+type MockObject = { label: string; objectType?: string; category?: { key: string | number } }
+
 vi.mock("@seatsio/seatsio-react", () => ({
   SeatsioSeatingChart: ({
     mode,
@@ -25,6 +27,9 @@ vi.mock("@seatsio/seatsio-react", () => ({
     extraConfig,
     onRenderStarted,
     onObjectSelected,
+    onHoldSucceeded,
+    onHoldCallsInProgress,
+    onHoldCallsComplete,
     onChartRenderingFailed,
   }: {
     mode: string
@@ -40,7 +45,10 @@ vi.mock("@seatsio/seatsio-react", () => ({
     ) => string
     extraConfig: Record<string, unknown>
     onRenderStarted: (chart: unknown) => void
-    onObjectSelected: (object: { label: string; objectType?: string; category?: { key: string | number } }) => void
+    onObjectSelected: (object: MockObject) => void
+    onHoldSucceeded: (objects: MockObject[], ticketTypes: unknown[]) => void
+    onHoldCallsInProgress: () => void
+    onHoldCallsComplete: () => void
     onChartRenderingFailed: () => void
   }) => (
     <div
@@ -56,8 +64,38 @@ vi.mock("@seatsio/seatsio-react", () => ({
       data-free-seat-color={objectColor({ isSelectable: () => true }, "#7551FF", extraConfig)}
       data-unverdicted-color={objectColor({}, "#7551FF", extraConfig)}
     >
-      <button type="button" onClick={() => onObjectSelected({ label: "A-14", objectType: "seat", category: { key: "stalls" } })}>
-        Pick seat A-14
+      <button
+        type="button"
+        onClick={() => onObjectSelected({ label: "A-14", objectType: "seat", category: { key: "stalls" } })}
+      >
+        Click seat A-14
+      </button>
+      <button
+        type="button"
+        onClick={() => onHoldSucceeded([{ label: "A-14", objectType: "seat", category: { key: "stalls" } }], [])}
+      >
+        Confirm hold A-14
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onHoldSucceeded(
+            [
+              { label: "T1-1", objectType: "seat", category: { key: "stalls" } },
+              { label: "T1-2", objectType: "seat", category: { key: "stalls" } },
+              { label: "T1-1", objectType: "seat", category: { key: "stalls" } },
+            ],
+            [],
+          )
+        }
+      >
+        Confirm table hold
+      </button>
+      <button type="button" onClick={onHoldCallsInProgress}>
+        Hold calls started
+      </button>
+      <button type="button" onClick={onHoldCallsComplete}>
+        Hold calls complete
       </button>
       <button type="button" onClick={onChartRenderingFailed}>
         Fail the chart
@@ -103,6 +141,7 @@ const SEATING_MAP: EventSeatingMap = {
 /** Renders the panel around one seating map, since every rule here turns on what that map carries. */
 function renderPanel(seatingMap: EventSeatingMap | null, selectedSeatLabels: string[] = []) {
   const onSelectSeat = vi.fn()
+  const onHoldPendingChange = vi.fn()
 
   const view = render(
     <ChakraProvider value={system}>
@@ -113,11 +152,15 @@ function renderPanel(seatingMap: EventSeatingMap | null, selectedSeatLabels: str
         currencyCode="USD"
         onSelectSeat={onSelectSeat}
         onDeselectSeat={vi.fn()}
+        onHoldPendingChange={onHoldPendingChange}
+        onHoldTokenExpired={vi.fn()}
+        onHoldFailed={vi.fn()}
+        onSelectionInvalid={vi.fn()}
       />
     </ChakraProvider>,
   )
 
-  return { onSelectSeat, rerender: view.rerender }
+  return { onSelectSeat, onHoldPendingChange, rerender: view.rerender }
 }
 
 describe("SeatMapPanel", () => {
@@ -144,16 +187,60 @@ describe("SeatMapPanel", () => {
   })
 
   /**
-   * Seats are chosen on the sessions step, before the buyer has given the name a cart needs. A chart that refused
-   * picks until then would make the buyer identify themselves to find out what they are even choosing between.
+   * A click only schedules the chart's asynchronous hold; the seat is not the buyer's until that hold lands. Entering
+   * it into the order on the click raced the server's read against a hold that had not yet been placed, which is the
+   * "could not be reserved" dead-end this whole panel exists to avoid. So a bare selection claims nothing.
    */
-  it("lets seats be picked as soon as a token exists to hold them under", async () => {
+  it("does not enter a seat into the order on selection alone, before its hold is confirmed", async () => {
     const { onSelectSeat } = renderPanel(SEATING_MAP)
 
-    await userEvent.click(screen.getByRole("button", { name: "Pick seat A-14" }))
+    await userEvent.click(screen.getByRole("button", { name: "Click seat A-14" }))
 
-    expect(onSelectSeat).toHaveBeenCalledWith("A-14", "stalls", "seat")
+    expect(onSelectSeat).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The confirmed hold is the seat becoming the buyer's, and only then does it enter the order - carrying its label,
+   * the category that prices it, and its object type. Claiming from here rather than the click is what keeps the
+   * server's read and the chart's hold from racing on the same seat.
+   */
+  it("enters a seat into the order once the chart confirms its hold", async () => {
+    const { onSelectSeat } = renderPanel(SEATING_MAP)
+
+    await userEvent.click(screen.getByRole("button", { name: "Confirm hold A-14" }))
+
+    expect(onSelectSeat).toHaveBeenCalledExactlyOnceWith("A-14", "stalls", "seat")
     expect(screen.getByText(/held for you the moment you pick them/i)).toBeInTheDocument()
+  })
+
+  /**
+   * A table hands back every seat it holds in one confirmation, the same seat can arrive twice in it, and each seat
+   * is a ticket the order must account for exactly once. A label entered twice is a seat charged twice, so a repeat
+   * within the batch is passed on only the first time.
+   */
+  it("enters each seat of a confirmed table hold exactly once", async () => {
+    const { onSelectSeat } = renderPanel(SEATING_MAP)
+
+    await userEvent.click(screen.getByRole("button", { name: "Confirm table hold" }))
+
+    expect(onSelectSeat).toHaveBeenCalledTimes(2)
+    expect(onSelectSeat).toHaveBeenCalledWith("T1-1", "stalls", "seat")
+    expect(onSelectSeat).toHaveBeenCalledWith("T1-2", "stalls", "seat")
+  })
+
+  /**
+   * Progression must wait on the chart's own hold calls, not only the local cart mutations. The panel reports the
+   * first call starting and the last one finishing, so a step that reads held seats cannot open while the chart is
+   * still placing them.
+   */
+  it("reports when the chart's hold calls are outstanding and when they clear", async () => {
+    const { onHoldPendingChange } = renderPanel(SEATING_MAP)
+
+    await userEvent.click(screen.getByRole("button", { name: "Hold calls started" }))
+    expect(onHoldPendingChange).toHaveBeenLastCalledWith(true)
+
+    await userEvent.click(screen.getByRole("button", { name: "Hold calls complete" }))
+    expect(onHoldPendingChange).toHaveBeenLastCalledWith(false)
   })
 
   /**
@@ -164,7 +251,7 @@ describe("SeatMapPanel", () => {
   it("does not draw the chart until a hold token has been issued", () => {
     renderPanel({ ...SEATING_MAP, holdToken: "" })
 
-    expect(screen.queryByRole("button", { name: "Pick seat A-14" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Click seat A-14" })).not.toBeInTheDocument()
   })
 
   /**
@@ -175,7 +262,7 @@ describe("SeatMapPanel", () => {
   it("holds seats in a manual session under the token it was given", () => {
     renderPanel(SEATING_MAP)
 
-    const chart = screen.getByRole("button", { name: "Pick seat A-14" }).parentElement
+    const chart = screen.getByRole("button", { name: "Click seat A-14" }).parentElement
     expect(chart).toHaveAttribute("data-session", "manual")
     expect(chart).toHaveAttribute("data-hold-token", "hold-token")
   })
@@ -187,7 +274,7 @@ describe("SeatMapPanel", () => {
   it("hands seats already picked back to a freshly drawn chart", () => {
     renderPanel(SEATING_MAP, ["A-14", "A-15"])
 
-    expect(screen.getByRole("button", { name: "Pick seat A-14" }).parentElement).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Click seat A-14" }).parentElement).toHaveAttribute(
       "data-selected",
       "A-14,A-15",
     )
@@ -200,7 +287,7 @@ describe("SeatMapPanel", () => {
   it("draws a seat that cannot be picked in the taken colour", () => {
     renderPanel(SEATING_MAP)
 
-    expect(screen.getByRole("button", { name: "Pick seat A-14" }).parentElement).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Click seat A-14" }).parentElement).toHaveAttribute(
       "data-taken-seat-color",
       UNAVAILABLE_SEAT_COLOR,
     )
@@ -213,7 +300,7 @@ describe("SeatMapPanel", () => {
   it("leaves a seat still on sale in its category colour", () => {
     renderPanel(SEATING_MAP)
 
-    const chart = screen.getByRole("button", { name: "Pick seat A-14" }).parentElement
+    const chart = screen.getByRole("button", { name: "Click seat A-14" }).parentElement
     expect(chart).toHaveAttribute("data-free-seat-color", "#7551FF")
   })
 
@@ -225,7 +312,7 @@ describe("SeatMapPanel", () => {
   it("hands the taken colour to the chart as configuration", () => {
     renderPanel(SEATING_MAP)
 
-    expect(screen.getByRole("button", { name: "Pick seat A-14" }).parentElement).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Click seat A-14" }).parentElement).toHaveAttribute(
       "data-extra-config-color",
       UNAVAILABLE_SEAT_COLOR,
     )
@@ -238,7 +325,7 @@ describe("SeatMapPanel", () => {
   it("leaves an object the renderer gives no verdict on in its category colour", () => {
     renderPanel(SEATING_MAP)
 
-    expect(screen.getByRole("button", { name: "Pick seat A-14" }).parentElement).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Click seat A-14" }).parentElement).toHaveAttribute(
       "data-unverdicted-color",
       "#7551FF",
     )
@@ -251,7 +338,7 @@ describe("SeatMapPanel", () => {
   it("prices the chart in the event's own currency", () => {
     renderPanel(SEATING_MAP)
 
-    expect(screen.getByRole("button", { name: "Pick seat A-14" }).parentElement).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Click seat A-14" }).parentElement).toHaveAttribute(
       "data-example-price",
       "$40.00",
     )
@@ -275,12 +362,16 @@ describe("SeatMapPanel", () => {
           currencyCode="USD"
           onSelectSeat={vi.fn()}
           onDeselectSeat={vi.fn()}
+          onHoldPendingChange={vi.fn()}
+          onHoldTokenExpired={vi.fn()}
+          onHoldFailed={vi.fn()}
+          onSelectionInvalid={vi.fn()}
         />
       </ChakraProvider>,
     )
 
     expect(deselectObjects).toHaveBeenCalledWith(["A-14"])
-    expect(screen.getByRole("button", { name: "Pick seat A-14" }).parentElement).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Click seat A-14" }).parentElement).toHaveAttribute(
       "data-selected",
       "A-14,A-15",
     )
@@ -293,7 +384,7 @@ describe("SeatMapPanel", () => {
   it("holds the chart to the organizer's per-order limit", () => {
     renderPanel(SEATING_MAP)
 
-    expect(screen.getByRole("button", { name: "Pick seat A-14" }).parentElement).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Click seat A-14" }).parentElement).toHaveAttribute(
       "data-max-selected",
       "stalls:1",
     )

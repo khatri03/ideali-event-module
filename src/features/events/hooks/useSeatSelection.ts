@@ -1,9 +1,22 @@
-import { useCallback, useMemo, useRef, useState } from "react"
-import { holdEventSeat, issueSessionHoldToken, releaseEventSeat, releaseSessionSeats } from "@/api/eventSeating"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  extendHoldToken,
+  holdEventSeat,
+  issueSessionHoldToken,
+  releaseEventSeat,
+  releaseSessionSeats,
+} from "@/api/eventSeating"
 import type { EventCart } from "@/features/events/schemas/eventCart.schemas"
 import { readStoredHoldToken, storeHoldToken } from "@/features/events/utils/seatHoldTokenCookie"
+import { parseUtcDateTime } from "@/features/events/utils/registrationFormat"
 import type { SeatIdentity } from "@/features/events/utils/seatGrouping"
 import { extractApiError } from "@/utils/errors"
+
+/**
+ * How long before a hold token lapses its renewal is fired. Wide enough to cover a slow round-trip, so the fresh
+ * expiry lands before the old one passes and the buyer's seats are never freed between the two.
+ */
+const HOLD_TOKEN_RENEW_LEAD_MS = 60_000
 
 /** One object the buyer has picked, carrying what it costs and which ticket type it is sold as. */
 export interface SeatPick extends SeatIdentity {
@@ -49,7 +62,7 @@ export function useSeatSelection({
   // Seeded from the cookie so the first render already presents the token this browser was holding seats under,
   // rather than asking for a second one and stranding them. Reading it back off the ref during render instead would
   // leave the query key that presents it blind to a token minted without a re-render.
-  const [holdToken, setHoldToken] = useState<string | null>(() => readStoredHoldToken())
+  const [holdToken, setHoldToken] = useState<string | null>(() => readStoredHoldToken(eventUniqueId))
   const [holdTokenExpiresAtUtc, setHoldTokenExpiresAtUtc] = useState<string | null>(null)
 
   // Read from a ref as well, because a claim in flight was started under whatever token was live when it began, and
@@ -63,6 +76,33 @@ export function useSeatSelection({
   /** Seats the server has confirmed a hold on. A pick outside this set is still only local. */
   const heldKeysRef = useRef<Set<string>>(new Set())
   const seatsRef = useRef<SeatPick[]>([])
+
+  // Every cart-seat mutation is threaded through one promise chain, so a claim and a release - or two claims - can
+  // never reach the same cart at once and overwrite each other's basket. Each answer carries the whole cart, and the
+  // later write has to see the earlier one's result before it computes its own.
+  const mutationChainRef = useRef<Promise<void>>(Promise.resolve())
+
+  // Seats a mutation is already in flight for, closed synchronously before the first await so two callers that both
+  // read the same seat as unclaimed cannot each send a request for it. A seat charged twice would begin here.
+  const inFlightKeysRef = useRef<Set<string>>(new Set())
+
+  /**
+   * Runs one cart-seat mutation after every earlier one has settled, and counts it as pending the whole time.
+   *
+   * The pending count rises the moment the work is queued rather than when it starts, so progression is barred from
+   * the instant a mutation is asked for, not only once it reaches the front of the chain. A failure in one mutation
+   * neither skips the next nor is swallowed here: the chain steps past it so later work still runs, while the caller
+   * still sees the rejection to reconcile its own seat.
+   */
+  const enqueueMutation = useCallback((work: () => Promise<void>): Promise<void> => {
+    setPendingCount((count) => count + 1)
+
+    const settled = mutationChainRef.current.catch(() => undefined).then(work)
+    mutationChainRef.current = settled.catch(() => undefined)
+    void settled.catch(() => undefined).finally(() => setPendingCount((count) => count - 1))
+
+    return settled
+  }, [])
 
   // The next selection is computed off the ref rather than inside the state updater, so two picks - or two reads of
   // the same cart - landing in one render still see each other. A seat added twice is a seat charged twice.
@@ -86,10 +126,23 @@ export function useSeatSelection({
     setRefusalBySession((current) => ({ ...current, [sessionUniqueId]: message }))
   }, [])
 
-  /** Claims one already-picked seat, and drops it from the selection when somebody else got there first. */
+  /**
+   * Claims one already-picked seat, and drops it from the selection when somebody else got there first.
+   *
+   * A seat already held, or one a claim is already in flight for, is left alone: the chart confirmed its Seats.io hold
+   * before this ran, so a second cart-seat request would only insert a duplicate row and give another chance for a
+   * status race. The in-flight key is closed before the first await and cleared once the request settles, so the guard
+   * holds across the round-trip rather than only within this tick.
+   */
   const claimSeat = useCallback(
     async (targetCartUniqueId: string, pick: SeatPick) => {
       const key = seatKey(pick.sessionUniqueId, pick.objectLabel)
+
+      if (heldKeysRef.current.has(key) || inFlightKeysRef.current.has(key)) {
+        return
+      }
+
+      inFlightKeysRef.current.add(key)
 
       try {
         const cart = await holdEventSeat(targetCartUniqueId, {
@@ -105,20 +158,12 @@ export function useSeatSelection({
       } catch (error) {
         applySeats((current) => current.filter((seat) => seatKey(seat.sessionUniqueId, seat.objectLabel) !== key))
         reportRefusal(pick.sessionUniqueId, extractApiError(error))
+      } finally {
+        inFlightKeysRef.current.delete(key)
       }
     },
     [applySeats, onCartChanged, reportRefusal],
   )
-
-  const runExclusively = useCallback(async (work: () => Promise<void>) => {
-    setPendingCount((count) => count + 1)
-
-    try {
-      await work()
-    } finally {
-      setPendingCount((count) => count - 1)
-    }
-  }, [])
 
   const pickSeat = useCallback(
     (pick: SeatPick) => {
@@ -135,9 +180,9 @@ export function useSeatSelection({
         return
       }
 
-      void runExclusively(() => claimSeat(cartUniqueId, pick))
+      void enqueueMutation(() => claimSeat(cartUniqueId, pick))
     },
-    [applySeats, cartUniqueId, claimSeat, clearRefusal, runExclusively],
+    [applySeats, cartUniqueId, claimSeat, clearRefusal, enqueueMutation],
   )
 
   /** Hands one held seat back, and puts it on the selection again when the server refuses to take it. */
@@ -217,7 +262,7 @@ export function useSeatSelection({
           return
         }
 
-        void runExclusively(() => releasePickedSeats(sessionUniqueId, presentedHoldToken, removed))
+        void enqueueMutation(() => releasePickedSeats(sessionUniqueId, presentedHoldToken, removed))
         return
       }
 
@@ -227,13 +272,13 @@ export function useSeatSelection({
         return
       }
 
-      void runExclusively(async () => {
+      void enqueueMutation(async () => {
         for (const pick of held) {
           await releaseSeat(cartUniqueId, pick)
         }
       })
     },
-    [applySeats, cartUniqueId, clearRefusal, releasePickedSeats, releaseSeat, runExclusively],
+    [applySeats, cartUniqueId, clearRefusal, enqueueMutation, releasePickedSeats, releaseSeat],
   )
 
   /**
@@ -258,11 +303,11 @@ export function useSeatSelection({
    * claiming, and the buyer is told which one they lost.
    */
   const claimPendingSeats = useCallback(async () => {
-    const pending = seatsRef.current.filter(
+    const hasUnclaimed = seatsRef.current.some(
       (seat) => !heldKeysRef.current.has(seatKey(seat.sessionUniqueId, seat.objectLabel)),
     )
 
-    if (pending.length === 0) {
+    if (!hasUnclaimed) {
       return
     }
 
@@ -271,12 +316,21 @@ export function useSeatSelection({
       return
     }
 
-    await runExclusively(async () => {
+    // The set of seats still to claim is read inside the queue, not before entering it: a second call that re-enters
+    // while this one is in flight - React Strict Mode, or the buyer-info effect firing again - recomputes against the
+    // seats the earlier claims have by then marked held, so each seat is asked for once however many callers arrive.
+    await enqueueMutation(async () => {
+      const pending = seatsRef.current.filter(
+        (seat) =>
+          !heldKeysRef.current.has(seatKey(seat.sessionUniqueId, seat.objectLabel)) &&
+          !inFlightKeysRef.current.has(seatKey(seat.sessionUniqueId, seat.objectLabel)),
+      )
+
       for (const pick of pending) {
         await claimSeat(cart.cartUniqueId, pick)
       }
     })
-  }, [claimSeat, ensureCart, runExclusively])
+  }, [claimSeat, ensureCart, enqueueMutation])
 
   /**
    * Takes over the seats the server says this cart is already holding.
@@ -326,7 +380,7 @@ export function useSeatSelection({
         holdTokenCheckedRef.current = true
         setHoldToken(issued.holdToken)
         setHoldTokenExpiresAtUtc(issued.expiresAtUtc)
-        storeHoldToken(issued.holdToken, issued.expiresAtUtc)
+        storeHoldToken(eventUniqueId, issued.holdToken, issued.expiresAtUtc)
 
         return issued.holdToken
       } catch (error) {
@@ -338,6 +392,80 @@ export function useSeatSelection({
     },
     [eventUniqueId, reportRefusal],
   )
+
+  /**
+   * Pushes the current token's expiry out, keeping the very same token and every seat it holds.
+   *
+   * Seats.io does not renew a manual-session token as the buyer works, so one issued when the chart opened lapses on
+   * its own clock and frees the seats the buyer is still looking at. Extending it - never releasing and re-taking -
+   * keeps those seats theirs without racing another buyer for them.
+   */
+  const renewHoldToken = useCallback(async () => {
+    const token = holdTokenRef.current
+    if (!token) {
+      return
+    }
+
+    try {
+      const extended = await extendHoldToken(eventUniqueId, token)
+      holdTokenRef.current = extended.holdToken
+      holdTokenCheckedRef.current = true
+      setHoldToken(extended.holdToken)
+      setHoldTokenExpiresAtUtc(extended.expiresAtUtc)
+      storeHoldToken(eventUniqueId, extended.holdToken, extended.expiresAtUtc)
+    } catch {
+      // The token could not be extended: it has already lapsed and its seats are back on sale. Nothing is forced
+      // over a token that is gone - reissueHoldToken mints a fresh one when the chart reports the expiry.
+    }
+  }, [eventUniqueId])
+
+  /**
+   * Mints a fresh token after the old one lapsed, so the chart can hold again instead of refusing every pick.
+   *
+   * The chart reports its token expiring, at which point its seats are already back on sale. A fresh token holds
+   * nothing, but it is what lets the buyer pick again in place, rather than being sent to reload the whole page.
+   */
+  const reissueHoldToken = useCallback(
+    async (sessionUniqueId: string): Promise<string | null> => {
+      try {
+        const issued = await issueSessionHoldToken(eventUniqueId, sessionUniqueId, null)
+
+        holdTokenRef.current = issued.holdToken
+        holdTokenCheckedRef.current = true
+        setHoldToken(issued.holdToken)
+        setHoldTokenExpiresAtUtc(issued.expiresAtUtc)
+        storeHoldToken(eventUniqueId, issued.holdToken, issued.expiresAtUtc)
+
+        return issued.holdToken
+      } catch (error) {
+        reportRefusal(sessionUniqueId, extractApiError(error))
+        return null
+      }
+    },
+    [eventUniqueId, reportRefusal],
+  )
+
+  // The token is kept alive only while there is no cart. Once a cart exists it holds the token to the buyer's own
+  // payment deadline, and the visible purchase countdown is the cap; renewing past it would hold seats the buyer no
+  // longer has time to pay for. Before then the token lapses on its own fifteen-minute clock with no countdown to
+  // warn a lingering buyer, so it is extended a step ahead of that here.
+  useEffect(() => {
+    if (cartUniqueId || !holdToken || !holdTokenExpiresAtUtc) {
+      return
+    }
+
+    const expiresAt = parseUtcDateTime(holdTokenExpiresAtUtc)?.getTime()
+    if (expiresAt == null) {
+      return
+    }
+
+    const delay = Math.max(expiresAt - Date.now() - HOLD_TOKEN_RENEW_LEAD_MS, 0)
+    const timer = window.setTimeout(() => {
+      void renewHoldToken()
+    }, delay)
+
+    return () => window.clearTimeout(timer)
+  }, [cartUniqueId, holdToken, holdTokenExpiresAtUtc, renewHoldToken])
 
   /**
    * Takes over every seat the cart came back holding, after a refresh emptied this browser's memory of them.
@@ -419,6 +547,8 @@ export function useSeatSelection({
     presentedHoldToken: holdToken,
     holdTokenExpiresAtUtc,
     ensureHoldToken,
+    reissueHoldToken,
+    reportRefusal,
     seatsBySession,
     seatQuantitiesByTicketType,
     seatsByTicketType,

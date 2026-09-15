@@ -77,6 +77,22 @@ export async function issueSessionHoldToken(
 }
 
 /**
+ * Pushes the buyer's hold token expiry out while they are still choosing, so seats stay held.
+ *
+ * The token minted when the chart opened lasts a fixed span and Seats.io does not renew it as the buyer works. A
+ * buyer who lingers past it would find their seats freed and the chart refusing every pick, so the browser calls
+ * this before the token lapses. Extending keeps the very same token, and every seat already held under it.
+ */
+export async function extendHoldToken(
+  eventUniqueId: string,
+  holdToken: string,
+): Promise<EventSeatHoldToken> {
+  const res = await client.post<unknown>(API_ROUTES.eventRegistrationHoldTokenExtend(eventUniqueId), { holdToken })
+
+  return normalizeEventSeatHoldToken(readResponseData(res.data))
+}
+
+/**
  * Puts seats back on sale that the buyer picked before a cart existed.
  *
  * The chart holds every seat picked on it under the token it was given, and draws those seats as chosen again the

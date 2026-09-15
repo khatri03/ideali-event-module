@@ -8,12 +8,14 @@ const holdEventSeat = vi.fn()
 const releaseEventSeat = vi.fn()
 const issueSessionHoldToken = vi.fn()
 const releaseSessionSeats = vi.fn()
+const extendHoldToken = vi.fn()
 
 vi.mock("@/api/eventSeating", () => ({
   holdEventSeat: (...args: unknown[]) => holdEventSeat(...args),
   releaseEventSeat: (...args: unknown[]) => releaseEventSeat(...args),
   issueSessionHoldToken: (...args: unknown[]) => issueSessionHoldToken(...args),
   releaseSessionSeats: (...args: unknown[]) => releaseSessionSeats(...args),
+  extendHoldToken: (...args: unknown[]) => extendHoldToken(...args),
 }))
 
 const readStoredHoldToken = vi.fn()
@@ -81,6 +83,7 @@ beforeEach(() => {
   releaseEventSeat.mockReset().mockResolvedValue(CART)
   issueSessionHoldToken.mockReset().mockResolvedValue({ holdToken: "browser-token", expiresAtUtc: null })
   releaseSessionSeats.mockReset().mockResolvedValue(undefined)
+  extendHoldToken.mockReset().mockResolvedValue({ holdToken: "browser-token", expiresAtUtc: null })
   readStoredHoldToken.mockReset().mockReturnValue(null)
   storeHoldToken.mockReset()
 })
@@ -484,7 +487,7 @@ describe("useSeatSelection", () => {
       await result.current.ensureHoldToken("session-1")
     })
 
-    expect(storeHoldToken).toHaveBeenCalledWith("browser-token", "2026-09-09T12:00:00")
+    expect(storeHoldToken).toHaveBeenCalledWith("event-1", "browser-token", "2026-09-09T12:00:00")
   })
 
   /**
@@ -519,5 +522,120 @@ describe("useSeatSelection", () => {
     })
 
     expect(result.current.holdTokenExpiresAtUtc).toBe("2026-09-09T12:10:00")
+  })
+
+  /**
+   * Seats.io does not renew a manual-session token as the buyer works, so one issued when the chart opened lapses on
+   * its own clock and frees the seats the buyer is still choosing. Before a cart exists there is no countdown to
+   * warn them, so the token is extended a step ahead of its expiry - keeping the same token and its seats.
+   */
+  it("extends the hold token before it lapses while there is no cart", async () => {
+    vi.useFakeTimers()
+
+    try {
+      const expiresAtUtc = new Date(Date.now() + 5 * 60_000).toISOString()
+      issueSessionHoldToken.mockResolvedValue({ holdToken: "browser-token", expiresAtUtc })
+      extendHoldToken.mockResolvedValue({
+        holdToken: "browser-token",
+        expiresAtUtc: new Date(Date.now() + 20 * 60_000).toISOString(),
+      })
+
+      const { result } = renderSeatSelection(null)
+
+      await act(async () => {
+        await result.current.ensureHoldToken("session-1")
+      })
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5 * 60_000)
+      })
+
+      expect(extendHoldToken).toHaveBeenCalledWith("event-1", "browser-token")
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  /**
+   * Once a cart exists it holds the token to the buyer's own payment deadline, and the visible purchase countdown is
+   * the cap. Renewing past it would keep seats held after the buyer has run out of time to pay, so the browser stops
+   * extending the moment a cart is in hand.
+   */
+  it("stops extending the token once a cart exists", async () => {
+    vi.useFakeTimers()
+
+    try {
+      const expiresAtUtc = new Date(Date.now() + 2 * 60_000).toISOString()
+      issueSessionHoldToken.mockResolvedValue({ holdToken: "browser-token", expiresAtUtc })
+
+      const { result } = renderSeatSelection("cart-1")
+
+      await act(async () => {
+        await result.current.ensureHoldToken("session-1")
+      })
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3 * 60_000)
+      })
+
+      expect(extendHoldToken).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  /**
+   * When the chart reports its token lapsed the seats under it are already back on sale. A fresh token holds nothing,
+   * but it is what lets the buyer pick again in place rather than being sent to reload the whole page - so a fresh
+   * one is minted against the session, presenting no old token because the old one is gone.
+   */
+  it("mints a fresh token when the chart reports the old one lapsed", async () => {
+    issueSessionHoldToken.mockResolvedValue({ holdToken: "fresh-token", expiresAtUtc: null })
+
+    const { result } = renderSeatSelection(null)
+
+    await act(async () => {
+      expect(await result.current.reissueHoldToken("session-1")).toBe("fresh-token")
+    })
+
+    expect(issueSessionHoldToken).toHaveBeenCalledWith("event-1", "session-1", null)
+    expect(result.current.holdToken).toBe("fresh-token")
+  })
+
+  /**
+   * Two sweeps can race for the same pending seats - React Strict Mode double-invokes the buyer-info effect, and the
+   * effect can fire again while an earlier sweep is still in flight. Each seat must leave exactly one hold request
+   * however many sweeps arrive, or the buyer is charged twice and Seats.io is given a second chance to race its own
+   * status on the same object.
+   */
+  it("sends one hold request per seat when two pending sweeps race", async () => {
+    const { result } = renderSeatSelection(null)
+
+    act(() => result.current.pickSeat(seatPick("A-14")))
+    act(() => result.current.pickSeat(seatPick("A-15")))
+
+    await act(async () => {
+      await Promise.all([result.current.claimPendingSeats(), result.current.claimPendingSeats()])
+    })
+
+    expect(holdEventSeat).toHaveBeenCalledTimes(2)
+    expect(holdEventSeat).toHaveBeenCalledWith("cart-1", { sessionUniqueId: "session-1", objectLabel: "A-14" })
+    expect(holdEventSeat).toHaveBeenCalledWith("cart-1", { sessionUniqueId: "session-1", objectLabel: "A-15" })
+  })
+
+  /**
+   * The buyer-info effect re-runs every time a name field changes. A sweep that re-claimed seats an earlier sweep had
+   * already held would insert a duplicate cart row for each one, so a seat already held is passed over on the next
+   * sweep rather than sent again.
+   */
+  it("does not re-claim a seat an earlier sweep has already held", async () => {
+    const { result } = renderSeatSelection(null)
+
+    act(() => result.current.pickSeat(seatPick("A-14")))
+
+    await act(() => result.current.claimPendingSeats())
+    await act(() => result.current.claimPendingSeats())
+
+    expect(holdEventSeat).toHaveBeenCalledTimes(1)
   })
 })

@@ -94,9 +94,14 @@ export function useTicketSelectionSummary(
     [sessions, selectedTicketQuantities],
   )
 
+  // Only sessions the organizer marked attendee-info-required get slots. A session with the setting off
+  // is never asked for attendee details, and its lines carry no attendee payload at submit. Every ticket
+  // in a session shares the session's flag, so the gate is per session.
   const attendeeSessionGroups = useMemo<AttendeeSessionGroup[]>(
     () =>
-      selectedSessionSummaries.map((sessionSummary) => ({
+      selectedSessionSummaries
+        .filter((sessionSummary) => sessionSummary.requiresAttendeeInfo)
+        .map((sessionSummary) => ({
         key: sessionSummary.session.uniqueId,
         sessionId: sessionSummary.session.uniqueId,
         sessionName: sessionSummary.session.name,

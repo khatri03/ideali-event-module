@@ -164,6 +164,8 @@ export const API_ROUTES = {
     `/api/events/${eventUniqueId}/register/sessions/${sessionUniqueId}/seating`,
   eventRegistrationSessionHoldToken: (eventUniqueId: string, sessionUniqueId: string) =>
     `/api/events/${eventUniqueId}/register/sessions/${sessionUniqueId}/hold-token`,
+  eventRegistrationHoldTokenExtend: (eventUniqueId: string) =>
+    `/api/events/${eventUniqueId}/register/hold-token/extend`,
   eventRegistrationSessionSeatRelease: (eventUniqueId: string, sessionUniqueId: string) =>
     `/api/events/${eventUniqueId}/register/sessions/${sessionUniqueId}/seats/release`,
   eventCartSeating: (cartUniqueId: string, sessionUniqueId: string) =>
