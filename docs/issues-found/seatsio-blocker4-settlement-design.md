@@ -359,12 +359,12 @@ Implemented in `EventCheckoutSeatBooking.BookClaimedSeatsAsync`, called from bot
 - [ ] Reconcile job drives stranded `PendingSettlement` off Stripe status — `Reconcile_StrandedPending_SettlesFromStripe`
 - [ ] Reconcile catches vendor-booked-but-row-unstamped crash orphan (QA Q9) — `Reconcile_ClaimedButVendorBooked_Stamps`
 - [ ] Dropped-webhook seat is recovered by reconcile — `Reconcile_DroppedWebhook_RecoversSeat`
-- [ ] No oversell: booked seat off sale, second buyer refused — real-SQL `Oversell_BookedSeat_SecondBuyerRefused`
+- [x] No oversell: booked seat off sale, second buyer refused — real-SQL ✅ green, covered by `SeatClaim_SeatAlreadyBooked_CannotBeHeldByAnyoneElse` (`SeatClaimUniquenessSqlServerTests`): a `Booked` row and a second buyer's `Held` compete on `UX_TicketReservationSeat_SessionId_ObjectLabel`, the write is refused, and the index name is asserted in the error. Same rule as `Oversell_BookedSeat_SecondBuyerRefused` — not duplicated.
 - [ ] Release targets the reservation's seat row, spares a re-sold seat (QA Q10) — `Release_ResoldSeat_SparesNewReservation`
 - [ ] Release idempotent, keyed reservation+seat — `Release_DoubleTrigger_FreesOnce`
 
 ### Suite gate
-- [ ] Full backend suite green with `IDEALI_TEST_SQLSERVER` set — record passed/failed/skipped totals here
+- [x] Full backend suite green with `IDEALI_TEST_SQLSERVER` set — ✅ **Passed: 1590, Failed: 0, Skipped: 1, Total: 1591** (18m43s, 2026-09-16, `Ideas.API.Tests`)
 
 ---
 
@@ -439,14 +439,16 @@ Verified by reference search — no membership or donation code references these
 
 ### 12.3 Guardrail tests (regression fence, run before any event settlement change is reported done)
 
-- [ ] `EnumInvoiceStatus` value set is unchanged — `InvoiceStatus_ValueSet_IsUnchanged` (asserts the exact
-  eight names/numbers, fails if anyone adds or renames one).
-- [ ] Membership invoice settlement path is unaffected — existing membership settlement suite stays green.
-- [ ] Donation settlement path is unaffected — existing donation suite stays green.
+- [x] `EnumInvoiceStatus` value set is unchanged — `InvoiceStatus_ValueSet_IsUnchanged` ✅ green
+  (`EnumInvoiceStatusGuardrailTests`): asserts the exact eight names/numbers, fails if anyone adds or renames one.
+- [x] Membership invoice settlement path is unaffected — existing membership settlement suite stays green (full suite 1590 passed).
+- [x] Donation settlement path is unaffected — existing donation suite stays green (full suite 1590 passed).
 - [x] The migration's `Up`/`Down` touch only `CHK_EventTicket_Status` — reviewed: `20260915203807_AddEventTicketPendingSettlementStatus`
   drops+adds that one constraint on `EventTicket` only, no other table in the generated migration.
-- [ ] Webhook dispatch for a membership/donation payment intent still routes to its own handler with an
-  event settlement service registered — `Webhook_MembershipIntent_RoutesToMembershipHandler`.
+- [x] Webhook dispatch for a membership/donation payment intent still routes to its own handler with an
+  event settlement service registered — ✅ green, covered by `Webhook_MembershipSucceeded_DoesNotReachEventSettlement`
+  (`StripeWebhookEventRoutingTests`): a signed membership intent reaches `IMembershipPaymentStatusService` once while
+  `IEventPaymentSettlementService` (registered in the harness) is never called. Same rule as `Webhook_MembershipIntent_RoutesToMembershipHandler` — not duplicated.
 
 Rule: an event settlement change is **not** done until §12.3 is green **and** §9 is green. A green event
 suite over a broken membership/donation path is a failed change, not a passed one.
