@@ -1,6 +1,6 @@
 import { memo } from "react"
 import { Box, Button, HStack, Menu, Portal, Skeleton, Stack, Table, Text } from "@chakra-ui/react"
-import { CheckCircle2, CircleAlert, Edit3, MoreHorizontal } from "lucide-react"
+import { CalendarRange, CheckCircle2, CircleAlert, Edit3, MoreHorizontal } from "lucide-react"
 import { type SeatsIoSeatingLayout } from "@/api/seatsio"
 import { extractApiError } from "@/utils/errors"
 import { useSeatsIoChartValidation } from "../hooks/useSeatsIoChartValidation"
@@ -9,6 +9,7 @@ import { SeatingLayoutPreviewLink } from "./SeatingLayoutPreviewLink"
 interface SeatingLayoutsTableRowProps {
   layout: SeatsIoSeatingLayout
   onEdit: (layout: SeatsIoSeatingLayout) => void
+  onViewEvents: (layout: SeatsIoSeatingLayout) => void
 }
 
 function SeatingLayoutsValidationCell({ layout }: { layout: SeatsIoSeatingLayout }) {
@@ -93,7 +94,7 @@ function SeatingLayoutsValidationCell({ layout }: { layout: SeatsIoSeatingLayout
   )
 }
 
-function SeatingLayoutsTableRowComponent({ layout, onEdit }: SeatingLayoutsTableRowProps) {
+function SeatingLayoutsTableRowComponent({ layout, onEdit, onViewEvents }: SeatingLayoutsTableRowProps) {
   return (
     <Table.Row key={layout.uniqueId} _hover={{ bg: "app.bg" }} transition="background 0.15s">
       <Table.Cell borderColor="border.subtle" borderRightWidth="1px" px={4} py={4} textAlign="center" verticalAlign="top">
@@ -145,6 +146,24 @@ function SeatingLayoutsTableRowComponent({ layout, onEdit }: SeatingLayoutsTable
                   <Edit3 size={14} />
                   <Text as="span" flex="1" textAlign="left">
                     Edit
+                  </Text>
+                </Menu.Item>
+                <Menu.Item
+                  value="view-events"
+                  borderRadius="10px"
+                  fontSize="sm"
+                  fontWeight="600"
+                  color="gray.700"
+                  _dark={{ color: "gray.200" }}
+                  _hover={{ bg: "gray.50", _dark: { bg: "whiteAlpha.100" } }}
+                  px={3}
+                  py={2}
+                  gap={2.5}
+                  onClick={() => onViewEvents(layout)}
+                >
+                  <CalendarRange size={14} />
+                  <Text as="span" flex="1" textAlign="left">
+                    Events
                   </Text>
                 </Menu.Item>
               </Menu.Content>

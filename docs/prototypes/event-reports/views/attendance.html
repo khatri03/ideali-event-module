@@ -1,0 +1,36 @@
+<div class="mb-3 d-flex align-items-center gap-2 flex-wrap" data-context></div>
+
+<div class="card-x run-primed" data-primed hidden>
+  <div class="ic"><i class="bi bi-play-circle"></i></div>
+  <h3>Attendance ready</h3>
+  <p>Pick an event above to auto-run it, or run across all events now.</p>
+  <button class="btn-brand" data-run><i class="bi bi-play-fill"></i> Run report</button>
+</div>
+
+<div data-results>
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3"><div class="card-x kpi"><div class="label">Checked in</div><div class="value" id="attCheckedIn">—</div><div class="delta up" id="attCheckedInPct">—</div></div></div>
+    <div class="col-6 col-lg-3"><div class="card-x kpi"><div class="label">Not arrived</div><div class="value" id="attNotArrived">—</div><div class="delta muted">expected</div></div></div>
+    <div class="col-6 col-lg-3"><div class="card-x kpi"><div class="label">No-show rate</div><div class="value">7.3%</div><div class="delta muted">past events avg</div></div></div>
+    <div class="col-6 col-lg-3"><div class="card-x kpi"><div class="label">Peak check-in</div><div class="value">08:40</div><div class="delta muted">412 in 15 min</div></div></div>
+  </div>
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-xl-8"><div class="card-x panel">
+      <div class="panel-head"><div><h2>Check-in flow</h2><div class="sub">Arrivals per 15-minute window</div></div></div>
+      <div class="chart-wrap" style="height:280px;"><canvas id="chartCheckin"></canvas></div>
+    </div></div>
+    <div class="col-12 col-xl-4"><div class="card-x panel">
+      <div class="panel-head"><div><h2>By session</h2><div class="sub">Live rate</div></div></div>
+      <div id="sessionRates"></div>
+    </div></div>
+  </div>
+  <div class="card-x panel">
+    <div class="panel-head">
+      <div><h2>Session breakdown</h2><div class="sub">Checked in vs expected per session</div></div>
+      <button class="btn-brand right" id="liveCheckinBtn"><i class="bi bi-upc-scan"></i> Open live check-in</button>
+    </div>
+    <div class="table-responsive"><table class="table-x"><thead><tr>
+      <th>Session</th><th>Starts</th><th class="th-num">Expected</th><th class="th-num">Checked in</th><th style="width:220px;">Rate</th>
+    </tr></thead><tbody id="attendanceBody"></tbody></table></div>
+  </div>
+</div>

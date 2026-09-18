@@ -56,6 +56,10 @@ export function SeatingLayoutsPage() {
     navigate(APP_ROUTES.seatingLayouts.edit(layout.uniqueId))
   }
 
+  function handleViewEvents(layout: SeatsIoSeatingLayout) {
+    navigate(APP_ROUTES.seatingLayouts.events(layout.uniqueId))
+  }
+
   if (query.isLoading && !query.data) {
     return <SeatingLayoutsSkeleton />
   }
@@ -167,6 +171,7 @@ export function SeatingLayoutsPage() {
                     key={layout.uniqueId}
                     layout={layout}
                     onEdit={handleEditLayout}
+                    onViewEvents={handleViewEvents}
                   />
                 ))
               )}

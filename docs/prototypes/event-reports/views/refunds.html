@@ -1,0 +1,34 @@
+<div class="mb-3 d-flex align-items-center gap-2 flex-wrap" data-context></div>
+
+<div class="card-x run-primed" data-primed hidden>
+  <div class="ic"><i class="bi bi-play-circle"></i></div>
+  <h3>Refunds report ready</h3>
+  <p>Pick an event above to auto-run it, or run across all events now.</p>
+  <button class="btn-brand" data-run><i class="bi bi-play-fill"></i> Run report</button>
+</div>
+
+<div data-results>
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3"><div class="card-x kpi"><div class="label">Refunded</div><div class="value" id="rfTotal">—</div><div class="delta muted" id="rfCount">—</div></div></div>
+    <div class="col-6 col-lg-3"><div class="card-x kpi"><div class="label">Refund rate</div><div class="value">2.6%</div><div class="delta down"><i class="bi bi-arrow-down-right"></i> of gross</div></div></div>
+    <div class="col-6 col-lg-3"><div class="card-x kpi"><div class="label">Cancellations</div><div class="value" id="rfCancellations">—</div><div class="delta muted">seats released</div></div></div>
+    <div class="col-6 col-lg-3"><div class="card-x kpi"><div class="label">Avg refund</div><div class="value" id="rfAvg">—</div><div class="delta muted">per order</div></div></div>
+  </div>
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-xl-7"><div class="card-x panel">
+      <div class="panel-head"><div><h2>Refund trend</h2><div class="sub">Weekly refund value</div></div></div>
+      <div class="chart-wrap" style="height:260px;"><canvas id="chartRefundTrend"></canvas></div>
+    </div></div>
+    <div class="col-12 col-xl-5"><div class="card-x panel">
+      <div class="panel-head"><div><h2>Reasons</h2><div class="sub">Why buyers refund</div></div></div>
+      <div class="chart-wrap" style="height:200px;"><canvas id="chartReasons"></canvas></div>
+      <div class="legend mt-3" id="reasonLegend"></div>
+    </div></div>
+  </div>
+  <div class="card-x panel">
+    <div class="panel-head"><div><h2>Refund &amp; cancellation log</h2><div class="sub">Recent activity</div></div></div>
+    <div class="table-responsive"><table class="table-x"><thead><tr>
+      <th>Invoice</th><th>Buyer</th><th>Reason</th><th>Type</th><th>Date</th><th class="th-num">Amount</th>
+    </tr></thead><tbody id="refundsBody"></tbody></table></div>
+  </div>
+</div>

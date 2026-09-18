@@ -1,0 +1,33 @@
+<div class="mb-3 d-flex align-items-center gap-2 flex-wrap" data-context></div>
+
+<div class="card-x run-primed" data-primed hidden>
+  <div class="ic"><i class="bi bi-play-circle"></i></div>
+  <h3>Sales report ready</h3>
+  <p>Pick an event above to auto-run it, or run across all events now.</p>
+  <button class="btn-brand" data-run><i class="bi bi-play-fill"></i> Run report</button>
+</div>
+
+<div data-results>
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3"><div class="card-x kpi"><div class="label">Gross</div><div class="value" id="kpiGross">—</div><div class="delta up"><i class="bi bi-arrow-up-right"></i> 12.4%</div></div></div>
+    <div class="col-6 col-lg-3"><div class="card-x kpi"><div class="label">Platform take (5%)</div><div class="value" id="kpiTake">—</div><div class="delta muted">deducted at settle</div></div></div>
+    <div class="col-6 col-lg-3"><div class="card-x kpi"><div class="label">Processing fees</div><div class="value" id="kpiFees">—</div><div class="delta muted">Stripe</div></div></div>
+    <div class="col-6 col-lg-3"><div class="card-x kpi"><div class="label">Net payout</div><div class="value" id="kpiNet">—</div><div class="delta up"><i class="bi bi-arrow-up-right"></i> 11.1%</div></div></div>
+  </div>
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-xl-7"><div class="card-x panel">
+      <div class="panel-head"><div><h2>Sales trend</h2><div class="sub">Daily gross revenue</div></div></div>
+      <div class="chart-wrap" style="height:290px;"><canvas id="chartSalesTrend"></canvas></div>
+    </div></div>
+    <div class="col-12 col-xl-5"><div class="card-x panel">
+      <div class="panel-head"><div><h2>Revenue by channel</h2><div class="sub">Where sales originate</div></div></div>
+      <div class="chart-wrap" style="height:290px;"><canvas id="chartChannel"></canvas></div>
+    </div></div>
+  </div>
+  <div class="card-x panel">
+    <div class="panel-head"><div><h2>Revenue by ticket type</h2><div class="sub">Gross, refunds and net per type</div></div></div>
+    <div class="table-responsive"><table class="table-x"><thead><tr>
+      <th>Ticket type</th><th class="th-num">Sold</th><th class="th-num">Gross</th><th class="th-num">Refunds</th><th class="th-num">Net</th>
+    </tr></thead><tbody id="salesByType"></tbody></table></div>
+  </div>
+</div>

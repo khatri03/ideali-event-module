@@ -21,6 +21,12 @@ export const APP_ROUTES = {
     list: "/organizer/seatsio/seating-layouts",
     create: "/organizer/seatsio/seating-layouts/new",
     edit: (chartUniqueId: string) => `/organizer/seatsio/seating-layouts/${chartUniqueId}`,
+    eventsRoute: "/organizer/seatsio/seating-layouts/:chartUniqueId/events",
+    events: (chartUniqueId: string) => `/organizer/seatsio/seating-layouts/${chartUniqueId}/events`,
+  },
+  seatsIoEvents: {
+    reportRoute: "/organizer/seatsio/events/:eventUniqueId",
+    report: (eventUniqueId: string) => `/organizer/seatsio/events/${eventUniqueId}`,
   },
   auth: {
     login: "/auth/login",
@@ -244,6 +250,28 @@ export const API_ROUTES = {
   seatsIoChartCategoryCapacity: (chartUniqueId: string) =>
     `/api/organizer/seatsio/seating-layouts/${chartUniqueId}/categories/capacity`,
   seatsIoChartEvents: (chartUniqueId: string) => `/api/organizer/seatsio/seating-layouts/${chartUniqueId}/events`,
+  seatsIoEventReportSummary: (eventUniqueId: string) =>
+    `/api/organizer/seatsio/events/${eventUniqueId}/reports/summary`,
+  seatsIoEventReportStatuses: (eventUniqueId: string) =>
+    `/api/organizer/seatsio/events/${eventUniqueId}/reports/statuses`,
+  seatsIoEventReportForSale: (eventUniqueId: string) =>
+    `/api/organizer/seatsio/events/${eventUniqueId}/reports/for-sale`,
+  seatsIoEventReportTables: (eventUniqueId: string) =>
+    `/api/organizer/seatsio/events/${eventUniqueId}/reports/tables`,
+  seatsIoEventReportChannels: (eventUniqueId: string) =>
+    `/api/organizer/seatsio/events/${eventUniqueId}/reports/channels`,
+  seatsIoEventReportCategories: (eventUniqueId: string) =>
+    `/api/organizer/seatsio/events/${eventUniqueId}/reports/categories`,
+  seatsIoEventReportStatusChanges: (eventUniqueId: string) =>
+    `/api/organizer/seatsio/events/${eventUniqueId}/reports/status-changes`,
+  seatsIoEventRenderContext: (eventUniqueId: string) =>
+    `/api/organizer/seatsio/events/${eventUniqueId}/render-context`,
+  seatsIoEventMarkForSale: (eventUniqueId: string) =>
+    `/api/organizer/seatsio/events/${eventUniqueId}/for-sale/mark-as-for-sale`,
+  seatsIoEventMarkNotForSale: (eventUniqueId: string) =>
+    `/api/organizer/seatsio/events/${eventUniqueId}/for-sale/mark-as-not-for-sale`,
+  seatsIoEventMarkEverythingForSale: (eventUniqueId: string) =>
+    `/api/organizer/seatsio/events/${eventUniqueId}/for-sale/mark-everything-for-sale`,
   seatsIoChartCategory: (chartUniqueId: string, categoryUniqueId: string) =>
     `/api/organizer/seatsio/seating-layouts/${chartUniqueId}/categories/${categoryUniqueId}`,
   sessionWizardName: (id: string) => `/api/organizer/sessions/${id}/name`,

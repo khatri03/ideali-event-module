@@ -1,0 +1,29 @@
+<div class="mb-3 d-flex align-items-center gap-2 flex-wrap" data-context></div>
+
+<div class="card-x run-primed" data-primed hidden>
+  <div class="ic"><i class="bi bi-play-circle"></i></div>
+  <h3>Invoices ready</h3>
+  <p>Pick an event above to auto-run it, or run across all events now.</p>
+  <button class="btn-brand" data-run><i class="bi bi-play-fill"></i> Run report</button>
+</div>
+
+<div data-results>
+  <div class="card-x panel">
+    <div class="panel-head flex-wrap gap-2">
+      <div><h2>All invoices</h2><div class="sub">Every transaction across the selected scope</div></div>
+      <div class="right d-flex gap-2 flex-wrap">
+        <div class="seg" id="orderFilter">
+          <button class="active" data-status="all">All</button>
+          <button data-status="Paid">Paid</button>
+          <button data-status="Pending">Pending</button>
+          <button data-status="Refunded">Refunded</button>
+        </div>
+        <input class="input-x" id="orderSearch" placeholder="Search buyer or invoice #" style="min-width:210px;" />
+      </div>
+    </div>
+    <div class="table-responsive"><table class="table-x"><thead><tr>
+      <th>Invoice</th><th>Buyer</th><th>Event</th><th>Method</th><th>Date</th><th>Status</th><th class="th-num">Amount</th>
+    </tr></thead><tbody id="ordersBody"></tbody></table></div>
+    <div class="empty-state" id="ordersEmpty" hidden><i class="bi bi-inbox"></i><p class="mt-2 mb-0">No invoices match your filter.</p></div>
+  </div>
+</div>

@@ -1,0 +1,75 @@
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3">
+    <div class="card-x kpi">
+      <div class="label"><span class="icon tint-brand"><i class="bi bi-cash-coin"></i></span> Gross revenue</div>
+      <div class="value">$248,930</div>
+      <div class="delta up"><i class="bi bi-arrow-up-right"></i> 12.4% <span class="muted">vs prev 30d</span></div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="card-x kpi">
+      <div class="label"><span class="icon tint-ok"><i class="bi bi-wallet2"></i></span> Net to organizer</div>
+      <div class="value">$233,180</div>
+      <div class="delta up"><i class="bi bi-arrow-up-right"></i> 11.1% <span class="muted">after 5% platform + fees</span></div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="card-x kpi">
+      <div class="label"><span class="icon tint-info"><i class="bi bi-ticket-detailed"></i></span> Tickets sold</div>
+      <div class="value">4,182</div>
+      <div class="delta up"><i class="bi bi-arrow-up-right"></i> 8.6% <span class="muted">312 today</span></div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="card-x kpi">
+      <div class="label"><span class="icon tint-danger"><i class="bi bi-arrow-counterclockwise"></i></span> Refunds</div>
+      <div class="value">$6,410</div>
+      <div class="delta down"><i class="bi bi-arrow-down-right"></i> 2.1% <span class="muted">37 orders</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-12 col-xl-8">
+    <div class="card-x panel">
+      <div class="panel-head">
+        <div><h2>Revenue over time</h2><div class="sub">Gross vs net, daily</div></div>
+        <div class="right seg" id="revSeg">
+          <button class="active" data-metric="both">Gross + Net</button>
+          <button data-metric="gross">Gross</button>
+          <button data-metric="net">Net</button>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:300px;"><canvas id="chartRevenue"></canvas></div>
+    </div>
+  </div>
+  <div class="col-12 col-xl-4">
+    <div class="card-x panel">
+      <div class="panel-head"><div><h2>Ticket type mix</h2><div class="sub">Share of tickets sold</div></div></div>
+      <div class="chart-wrap" style="height:220px;"><canvas id="chartMix"></canvas></div>
+      <div class="legend mt-3" id="mixLegend"></div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-xl-7">
+    <div class="card-x panel">
+      <div class="panel-head">
+        <div><h2>Recent orders</h2><div class="sub">Latest paid &amp; pending</div></div>
+        <a class="btn-ghost right" href="#/reports/orders">View all <i class="bi bi-arrow-right"></i></a>
+      </div>
+      <div class="table-responsive">
+        <table class="table-x"><thead><tr>
+          <th>Buyer</th><th>Event</th><th>Status</th><th class="th-num">Amount</th>
+        </tr></thead><tbody id="recentOrders"></tbody></table>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-xl-5">
+    <div class="card-x panel">
+      <div class="panel-head"><div><h2>Sell-through by event</h2><div class="sub">Capacity filled</div></div></div>
+      <div id="sellSnapshot"></div>
+    </div>
+  </div>
+</div>

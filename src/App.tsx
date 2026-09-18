@@ -31,6 +31,7 @@ import {
   MemberNotificationDetailPage,
 } from "./features/member-alerts"
 import { SeatingLayoutDesignerPage, SeatingLayoutsPage } from "./features/seating-layouts"
+import { ChartEventsPage, EventReportPage } from "./features/seatsio-events"
 import {
   EventBannerStepPage,
   EventCheckInPage,
@@ -179,7 +180,9 @@ export default function App() {
           <Route path={APP_ROUTES.help} element={<Settings />} />
           <Route path={APP_ROUTES.seatingLayouts.list} element={<SeatingLayoutsPage />} />
           <Route path={APP_ROUTES.seatingLayouts.create} element={<SeatingLayoutDesignerPage />} />
+          <Route path={APP_ROUTES.seatingLayouts.eventsRoute} element={<ChartEventsPage />} />
           <Route path={APP_ROUTES.seatingLayouts.edit(":chartUniqueId")} element={<SeatingLayoutDesignerPage />} />
+          <Route path={APP_ROUTES.seatsIoEvents.reportRoute} element={<EventReportPage />} />
         </Route>
 
         {/* Redirect root */}

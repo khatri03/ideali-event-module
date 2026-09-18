@@ -1,0 +1,13 @@
+<div class="card-x panel">
+  <div class="panel-head flex-wrap gap-2">
+    <div><h2>Attendees</h2><div class="sub">People holding tickets across the selected scope</div></div>
+    <div class="right d-flex gap-2 flex-wrap">
+      <input class="input-x" id="attendeeSearch" placeholder="Search name or email" style="min-width:220px;" />
+      <button class="btn-ghost" id="attendeeExport"><i class="bi bi-download"></i> Export CSV</button>
+    </div>
+  </div>
+  <div class="table-responsive"><table class="table-x"><thead><tr>
+    <th>Attendee</th><th>Ticket type</th><th>Seat</th><th>Invoice</th><th>Check-in</th>
+  </tr></thead><tbody id="attendeesBody"></tbody></table></div>
+  <div class="empty-state" id="attendeesEmpty" hidden><i class="bi bi-search"></i><p class="mt-2 mb-0">No attendees match your search.</p></div>
+</div>

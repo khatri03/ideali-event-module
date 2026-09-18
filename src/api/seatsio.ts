@@ -495,3 +495,401 @@ export async function createSessionSeatsIoEvent(
   const responseData = parseServiceResponseData(res.data)
   return normalizeChartEvent(seatsIoEventSchema.parse(responseData))
 }
+
+const reportGroupSchema = z.object({
+  Key: z.string().nullable().optional(),
+  key: z.string().nullable().optional(),
+  Label: z.string().nullable().optional(),
+  label: z.string().nullable().optional(),
+  Count: z.number().int().nullable().optional(),
+  count: z.number().int().nullable().optional(),
+})
+
+const eventSummaryReportSchema = z.object({
+  TotalObjects: z.number().int().nullable().optional(),
+  totalObjects: z.number().int().nullable().optional(),
+  UnavailableObjects: z.number().int().nullable().optional(),
+  unavailableObjects: z.number().int().nullable().optional(),
+  ByStatus: z.array(reportGroupSchema).nullable().optional(),
+  byStatus: z.array(reportGroupSchema).nullable().optional(),
+  ByCategory: z.array(reportGroupSchema).nullable().optional(),
+  byCategory: z.array(reportGroupSchema).nullable().optional(),
+})
+
+const eventTableBookingSchema = z.object({
+  Label: z.string().nullable().optional(),
+  label: z.string().nullable().optional(),
+  BookingType: z.string().nullable().optional(),
+  bookingType: z.string().nullable().optional(),
+})
+
+const eventTableBookingReportSchema = z.object({
+  Mode: z.string().nullable().optional(),
+  mode: z.string().nullable().optional(),
+  ModeLabel: z.string().nullable().optional(),
+  modeLabel: z.string().nullable().optional(),
+  InheritsChartSettings: z.boolean().nullable().optional(),
+  inheritsChartSettings: z.boolean().nullable().optional(),
+  Tables: z.array(eventTableBookingSchema).nullable().optional(),
+  tables: z.array(eventTableBookingSchema).nullable().optional(),
+})
+
+const eventChannelSchema = z.object({
+  Key: z.string().nullable().optional(),
+  key: z.string().nullable().optional(),
+  Name: z.string().nullable().optional(),
+  name: z.string().nullable().optional(),
+  Color: z.string().nullable().optional(),
+  color: z.string().nullable().optional(),
+  ObjectCount: z.number().int().nullable().optional(),
+  objectCount: z.number().int().nullable().optional(),
+})
+
+const eventCategorySchema = z.object({
+  Key: z.string().nullable().optional(),
+  key: z.string().nullable().optional(),
+  Label: z.string().nullable().optional(),
+  label: z.string().nullable().optional(),
+  Color: z.string().nullable().optional(),
+  color: z.string().nullable().optional(),
+  Count: z.number().int().nullable().optional(),
+  count: z.number().int().nullable().optional(),
+})
+
+const eventObjectStatusSchema = z.object({
+  Label: z.string().nullable().optional(),
+  label: z.string().nullable().optional(),
+  Status: z.string().nullable().optional(),
+  status: z.string().nullable().optional(),
+  CategoryLabel: z.string().nullable().optional(),
+  categoryLabel: z.string().nullable().optional(),
+  ObjectType: z.string().nullable().optional(),
+  objectType: z.string().nullable().optional(),
+  Section: z.string().nullable().optional(),
+  section: z.string().nullable().optional(),
+})
+
+const eventForSaleReportSchema = z.object({
+  EverythingForSale: z.boolean().nullable().optional(),
+  everythingForSale: z.boolean().nullable().optional(),
+  ForSale: z.boolean().nullable().optional(),
+  forSale: z.boolean().nullable().optional(),
+  Objects: z.array(z.string()).nullable().optional(),
+  objects: z.array(z.string()).nullable().optional(),
+  Categories: z.array(z.string()).nullable().optional(),
+  categories: z.array(z.string()).nullable().optional(),
+  AreaPlaces: z.array(reportGroupSchema).nullable().optional(),
+  areaPlaces: z.array(reportGroupSchema).nullable().optional(),
+})
+
+const eventStatusChangeSchema = z.object({
+  ObjectLabel: z.string().nullable().optional(),
+  objectLabel: z.string().nullable().optional(),
+  Status: z.string().nullable().optional(),
+  status: z.string().nullable().optional(),
+  Quantity: z.number().int().nullable().optional(),
+  quantity: z.number().int().nullable().optional(),
+  HoldToken: z.string().nullable().optional(),
+  holdToken: z.string().nullable().optional(),
+  OrderId: z.string().nullable().optional(),
+  orderId: z.string().nullable().optional(),
+  Origin: z.string().nullable().optional(),
+  origin: z.string().nullable().optional(),
+  DateUtc: z.string().nullable().optional(),
+  dateUtc: z.string().nullable().optional(),
+})
+
+const eventStatusChangePageSchema = z.object({
+  Items: z.array(eventStatusChangeSchema).nullable().optional(),
+  items: z.array(eventStatusChangeSchema).nullable().optional(),
+  NextPageStartsAfter: z.number().int().nullable().optional(),
+  nextPageStartsAfter: z.number().int().nullable().optional(),
+})
+
+const eventRenderContextSchema = z.object({
+  EventKey: z.string().nullable().optional(),
+  eventKey: z.string().nullable().optional(),
+  PublicKey: z.string().nullable().optional(),
+  publicKey: z.string().nullable().optional(),
+  Region: z.string().nullable().optional(),
+  region: z.string().nullable().optional(),
+})
+
+export interface SeatsIoReportGroup {
+  key: string
+  label: string
+  count: number
+}
+
+export interface SeatsIoEventSummaryReport {
+  totalObjects: number
+  unavailableObjects: number
+  byStatus: SeatsIoReportGroup[]
+  byCategory: SeatsIoReportGroup[]
+}
+
+export interface SeatsIoEventTableBooking {
+  label: string
+  bookingType: string
+}
+
+export interface SeatsIoEventTableBookingReport {
+  mode: string
+  modeLabel: string
+  inheritsChartSettings: boolean
+  tables: SeatsIoEventTableBooking[]
+}
+
+export interface SeatsIoEventChannel {
+  key: string
+  name: string
+  color: string
+  objectCount: number
+}
+
+export interface SeatsIoEventCategory {
+  key: string
+  label: string
+  color: string
+  count: number
+}
+
+export interface SeatsIoEventObjectStatus {
+  label: string
+  status: string
+  categoryLabel: string
+  objectType: string
+  section: string
+}
+
+export interface SeatsIoEventForSaleReport {
+  everythingForSale: boolean
+  forSale: boolean
+  objects: string[]
+  categories: string[]
+  areaPlaces: SeatsIoReportGroup[]
+}
+
+export interface SeatsIoEventStatusChange {
+  objectLabel: string
+  status: string
+  quantity: number
+  holdToken: string
+  orderId: string
+  origin: string
+  dateUtc: string | null
+}
+
+export interface SeatsIoEventStatusChangePage {
+  items: SeatsIoEventStatusChange[]
+  nextPageStartsAfter: number | null
+}
+
+export interface SeatsIoEventRenderContext {
+  eventKey: string
+  publicKey: string
+  region: string
+}
+
+function normalizeReportGroup(item: z.infer<typeof reportGroupSchema>): SeatsIoReportGroup {
+  return {
+    key: item.Key ?? item.key ?? "",
+    label: item.Label ?? item.label ?? "",
+    count: item.Count ?? item.count ?? 0,
+  }
+}
+
+function normalizeReportGroupList(list: z.infer<typeof reportGroupSchema>[] | null | undefined): SeatsIoReportGroup[] {
+  return (list ?? []).map(normalizeReportGroup)
+}
+
+function normalizeEventSummary(item: z.infer<typeof eventSummaryReportSchema>): SeatsIoEventSummaryReport {
+  return {
+    totalObjects: item.TotalObjects ?? item.totalObjects ?? 0,
+    unavailableObjects: item.UnavailableObjects ?? item.unavailableObjects ?? 0,
+    byStatus: normalizeReportGroupList(item.ByStatus ?? item.byStatus),
+    byCategory: normalizeReportGroupList(item.ByCategory ?? item.byCategory),
+  }
+}
+
+function normalizeTableBookingReport(
+  item: z.infer<typeof eventTableBookingReportSchema>,
+): SeatsIoEventTableBookingReport {
+  const tables = (item.Tables ?? item.tables ?? []).map((table) => ({
+    label: table.Label ?? table.label ?? "",
+    bookingType: table.BookingType ?? table.bookingType ?? "",
+  }))
+
+  return {
+    mode: item.Mode ?? item.mode ?? "",
+    modeLabel: item.ModeLabel ?? item.modeLabel ?? "",
+    inheritsChartSettings: item.InheritsChartSettings ?? item.inheritsChartSettings ?? false,
+    tables,
+  }
+}
+
+function normalizeChannel(item: z.infer<typeof eventChannelSchema>): SeatsIoEventChannel {
+  return {
+    key: item.Key ?? item.key ?? "",
+    name: item.Name ?? item.name ?? "",
+    color: item.Color ?? item.color ?? "",
+    objectCount: item.ObjectCount ?? item.objectCount ?? 0,
+  }
+}
+
+function normalizeEventCategory(item: z.infer<typeof eventCategorySchema>): SeatsIoEventCategory {
+  return {
+    key: item.Key ?? item.key ?? "",
+    label: item.Label ?? item.label ?? "",
+    color: item.Color ?? item.color ?? "",
+    count: item.Count ?? item.count ?? 0,
+  }
+}
+
+function normalizeObjectStatus(item: z.infer<typeof eventObjectStatusSchema>): SeatsIoEventObjectStatus {
+  return {
+    label: item.Label ?? item.label ?? "",
+    status: item.Status ?? item.status ?? "",
+    categoryLabel: item.CategoryLabel ?? item.categoryLabel ?? "",
+    objectType: item.ObjectType ?? item.objectType ?? "",
+    section: item.Section ?? item.section ?? "",
+  }
+}
+
+function normalizeForSale(item: z.infer<typeof eventForSaleReportSchema>): SeatsIoEventForSaleReport {
+  return {
+    everythingForSale: item.EverythingForSale ?? item.everythingForSale ?? false,
+    forSale: item.ForSale ?? item.forSale ?? false,
+    objects: item.Objects ?? item.objects ?? [],
+    categories: item.Categories ?? item.categories ?? [],
+    areaPlaces: normalizeReportGroupList(item.AreaPlaces ?? item.areaPlaces),
+  }
+}
+
+function normalizeStatusChange(item: z.infer<typeof eventStatusChangeSchema>): SeatsIoEventStatusChange {
+  return {
+    objectLabel: item.ObjectLabel ?? item.objectLabel ?? "",
+    status: item.Status ?? item.status ?? "",
+    quantity: item.Quantity ?? item.quantity ?? 0,
+    holdToken: item.HoldToken ?? item.holdToken ?? "",
+    orderId: item.OrderId ?? item.orderId ?? "",
+    origin: item.Origin ?? item.origin ?? "",
+    dateUtc: item.DateUtc ?? item.dateUtc ?? null,
+  }
+}
+
+function normalizeRenderContext(item: z.infer<typeof eventRenderContextSchema>): SeatsIoEventRenderContext {
+  return {
+    eventKey: item.EventKey ?? item.eventKey ?? "",
+    publicKey: item.PublicKey ?? item.publicKey ?? "",
+    region: item.Region ?? item.region ?? "",
+  }
+}
+
+export async function fetchSeatsIoEventSummary(eventUniqueId: string): Promise<SeatsIoEventSummaryReport> {
+  const res = await client.get<unknown>(API_ROUTES.seatsIoEventReportSummary(eventUniqueId))
+  const responseData = parseServiceResponseData(res.data)
+  return normalizeEventSummary(eventSummaryReportSchema.parse(responseData ?? {}))
+}
+
+export async function fetchSeatsIoEventRenderContext(eventUniqueId: string): Promise<SeatsIoEventRenderContext> {
+  const res = await client.get<unknown>(API_ROUTES.seatsIoEventRenderContext(eventUniqueId))
+  const responseData = parseServiceResponseData(res.data)
+  return normalizeRenderContext(eventRenderContextSchema.parse(responseData ?? {}))
+}
+
+export async function fetchSeatsIoEventStatuses(eventUniqueId: string): Promise<SeatsIoEventObjectStatus[]> {
+  const res = await client.get<unknown>(API_ROUTES.seatsIoEventReportStatuses(eventUniqueId))
+  const responseData = parseServiceResponseData(res.data)
+
+  if (!Array.isArray(responseData)) {
+    return []
+  }
+
+  return responseData.map((item) => normalizeObjectStatus(eventObjectStatusSchema.parse(item)))
+}
+
+export async function fetchSeatsIoEventForSale(eventUniqueId: string): Promise<SeatsIoEventForSaleReport> {
+  const res = await client.get<unknown>(API_ROUTES.seatsIoEventReportForSale(eventUniqueId))
+  const responseData = parseServiceResponseData(res.data)
+  return normalizeForSale(eventForSaleReportSchema.parse(responseData ?? {}))
+}
+
+export async function fetchSeatsIoEventTables(eventUniqueId: string): Promise<SeatsIoEventTableBookingReport> {
+  const res = await client.get<unknown>(API_ROUTES.seatsIoEventReportTables(eventUniqueId))
+  const responseData = parseServiceResponseData(res.data)
+  return normalizeTableBookingReport(eventTableBookingReportSchema.parse(responseData ?? {}))
+}
+
+export async function fetchSeatsIoEventChannels(eventUniqueId: string): Promise<SeatsIoEventChannel[]> {
+  const res = await client.get<unknown>(API_ROUTES.seatsIoEventReportChannels(eventUniqueId))
+  const responseData = parseServiceResponseData(res.data)
+
+  if (!Array.isArray(responseData)) {
+    return []
+  }
+
+  return responseData.map((item) => normalizeChannel(eventChannelSchema.parse(item)))
+}
+
+export async function fetchSeatsIoEventCategories(eventUniqueId: string): Promise<SeatsIoEventCategory[]> {
+  const res = await client.get<unknown>(API_ROUTES.seatsIoEventReportCategories(eventUniqueId))
+  const responseData = parseServiceResponseData(res.data)
+
+  if (!Array.isArray(responseData)) {
+    return []
+  }
+
+  return responseData.map((item) => normalizeEventCategory(eventCategorySchema.parse(item)))
+}
+
+export async function fetchSeatsIoEventStatusChanges(
+  eventUniqueId: string,
+  startAfterId?: number | null,
+): Promise<SeatsIoEventStatusChangePage> {
+  const res = await client.get<unknown>(API_ROUTES.seatsIoEventReportStatusChanges(eventUniqueId), {
+    params: startAfterId ? { startAfterId } : undefined,
+  })
+  const responseData = parseServiceResponseData(res.data)
+  const parsed = eventStatusChangePageSchema.parse(responseData ?? {})
+
+  return {
+    items: (parsed.Items ?? parsed.items ?? []).map(normalizeStatusChange),
+    nextPageStartsAfter: parsed.NextPageStartsAfter ?? parsed.nextPageStartsAfter ?? null,
+  }
+}
+
+export interface SeatsIoForSaleSelection {
+  objects: string[]
+  categories: string[]
+}
+
+export async function markSeatsIoEventForSale(
+  eventUniqueId: string,
+  selection: SeatsIoForSaleSelection,
+): Promise<void> {
+  const res = await client.post<unknown>(API_ROUTES.seatsIoEventMarkForSale(eventUniqueId), selection)
+
+  if (res.data && typeof res.data === "object") {
+    assertSuccess(res.data, "Failed to mark the selection as for sale.")
+  }
+}
+
+export async function markSeatsIoEventNotForSale(
+  eventUniqueId: string,
+  selection: SeatsIoForSaleSelection,
+): Promise<void> {
+  const res = await client.post<unknown>(API_ROUTES.seatsIoEventMarkNotForSale(eventUniqueId), selection)
+
+  if (res.data && typeof res.data === "object") {
+    assertSuccess(res.data, "Failed to mark the selection as not for sale.")
+  }
+}
+
+export async function markSeatsIoEventEverythingForSale(eventUniqueId: string): Promise<void> {
+  const res = await client.post<unknown>(API_ROUTES.seatsIoEventMarkEverythingForSale(eventUniqueId))
+
+  if (res.data && typeof res.data === "object") {
+    assertSuccess(res.data, "Failed to put everything back on sale.")
+  }
+}

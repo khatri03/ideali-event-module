@@ -1,0 +1,153 @@
+{
+  "_meta": {
+    "note": "Prototype-only fixture. Not a real database, not seeded from ideali.api. Mirrors EventInvoice / Session / EventTicket shapes closely enough to demo report deep-linking. Money is plain numbers (USD) for the mock; real app treats currency as strings.",
+    "generatedFor": "event-reports prototype",
+    "asOf": "2026-09-16"
+  },
+
+  "reports": [
+    { "key": "sales",       "label": "Sales & Revenue",        "scope": "event",   "sub": "Gross, fees, refunds and net payout" },
+    { "key": "orders",      "label": "All Invoices",           "scope": "event",   "sub": "Every transaction, searchable" },
+    { "key": "unpaid",      "label": "Unpaid Invoices",        "scope": "event",   "sub": "Outstanding balances by age" },
+    { "key": "attendance",  "label": "Attendance & Check-in",  "scope": "session", "sub": "Arrivals and no-shows per session" },
+    { "key": "sellthrough", "label": "Sell-through",           "scope": "session", "sub": "Capacity filled against holds and sales" },
+    { "key": "refunds",     "label": "Refunds & Cancellations","scope": "event",   "sub": "Refund value, reasons and log" },
+    { "key": "coupons",     "label": "Coupon Usage",           "scope": "event",   "sub": "Discount codes and attributed revenue" }
+  ],
+
+  "events": [
+    {
+      "id": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90",
+      "slug": "tech-summit-2026",
+      "name": "Tech Summit 2026",
+      "status": "ongoing",
+      "startsAt": "2026-09-16T08:30:00Z",
+      "endsAt": "2026-09-16T17:00:00Z",
+      "venue": "Metro Convention Center, Hall A",
+      "capacity": 5650,
+      "sold": 4182
+    },
+    {
+      "id": "3c9a2e77-1b44-49ce-b8f0-6a2d4c5e9f13",
+      "slug": "founders-gala",
+      "name": "Founders Gala",
+      "status": "published",
+      "startsAt": "2026-10-04T18:00:00Z",
+      "endsAt": "2026-10-04T23:00:00Z",
+      "venue": "The Grand Ballroom",
+      "capacity": 520,
+      "sold": 386
+    },
+    {
+      "id": "f1d8b6a4-5c22-4e39-9a71-2b3c8d0e4f67",
+      "slug": "react-workshop",
+      "name": "React Workshop",
+      "status": "published",
+      "startsAt": "2026-09-28T09:00:00Z",
+      "endsAt": "2026-09-28T13:00:00Z",
+      "venue": "Innovation Lab, Room 3",
+      "capacity": 200,
+      "sold": 148
+    }
+  ],
+
+  "sessions": [
+    { "id": "a1111111-0000-4000-8000-000000000001", "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "name": "Opening Keynote",     "startsAt": "2026-09-16T08:30:00Z", "capacity": 1980, "checkedIn": 1740 },
+    { "id": "a1111111-0000-4000-8000-000000000002", "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "name": "AI & Product Track",  "startsAt": "2026-09-16T10:00:00Z", "capacity": 1240, "checkedIn": 812 },
+    { "id": "a1111111-0000-4000-8000-000000000003", "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "name": "Workshop: Scaling",   "startsAt": "2026-09-16T11:30:00Z", "capacity": 320,  "checkedIn": 214 },
+    { "id": "a1111111-0000-4000-8000-000000000004", "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "name": "Investor Lunch",      "startsAt": "2026-09-16T13:00:00Z", "capacity": 480,  "checkedIn": 96 },
+    { "id": "a1111111-0000-4000-8000-000000000005", "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "name": "Closing Panel",       "startsAt": "2026-09-16T16:00:00Z", "capacity": 1620, "checkedIn": 52 },
+    { "id": "b2222222-0000-4000-8000-000000000001", "eventId": "3c9a2e77-1b44-49ce-b8f0-6a2d4c5e9f13", "name": "Reception & Awards",  "startsAt": "2026-10-04T18:00:00Z", "capacity": 520,  "checkedIn": 0 },
+    { "id": "c3333333-0000-4000-8000-000000000001", "eventId": "f1d8b6a4-5c22-4e39-9a71-2b3c8d0e4f67", "name": "Hooks Deep Dive",     "startsAt": "2026-09-28T09:00:00Z", "capacity": 120,  "checkedIn": 0 },
+    { "id": "c3333333-0000-4000-8000-000000000002", "eventId": "f1d8b6a4-5c22-4e39-9a71-2b3c8d0e4f67", "name": "Build a Component Lib","startsAt": "2026-09-28T11:00:00Z", "capacity": 80,   "checkedIn": 0 }
+  ],
+
+  "ticketTypes": [
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "name": "General Admission", "price": 36,  "capacity": 3000 },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "name": "VIP",               "price": 150, "capacity": 640 },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "name": "Early Bird",        "price": 50,  "capacity": 812 },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "name": "Student",           "price": 20,  "capacity": 400 },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "name": "Group (10+)",       "price": 300, "capacity": 300 },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "name": "Livestream",        "price": 106, "capacity": 500 }
+  ],
+
+  "invoices": [
+    { "number": "#IDE-4821", "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "buyer": "Amelia Turner", "method": "Card",   "placedAt": "2026-09-16", "status": "Paid",     "amount": 640 },
+    { "number": "#IDE-4820", "eventId": "3c9a2e77-1b44-49ce-b8f0-6a2d4c5e9f13", "buyer": "Marcus Bell",   "method": "Card",   "placedAt": "2026-09-16", "status": "Paid",     "amount": 1200 },
+    { "number": "#IDE-4819", "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "buyer": "Priya Nair",    "method": "ACH",    "placedAt": "2026-09-15", "status": "Pending",  "amount": 480 },
+    { "number": "#IDE-4818", "eventId": "f1d8b6a4-5c22-4e39-9a71-2b3c8d0e4f67", "buyer": "Diego Ramos",   "method": "Card",   "placedAt": "2026-09-15", "status": "Paid",     "amount": 220 },
+    { "number": "#IDE-4817", "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "buyer": "Sofia Klein",   "method": "Card",   "placedAt": "2026-09-15", "status": "Refunded", "amount": 320 },
+    { "number": "#IDE-4816", "eventId": "3c9a2e77-1b44-49ce-b8f0-6a2d4c5e9f13", "buyer": "Liam Osei",     "method": "Card",   "placedAt": "2026-09-14", "status": "Paid",     "amount": 2400 },
+    { "number": "#IDE-4815", "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "buyer": "Hana Sato",     "method": "Card",   "placedAt": "2026-09-14", "status": "Paid",     "amount": 960 },
+    { "number": "#IDE-4814", "eventId": "f1d8b6a4-5c22-4e39-9a71-2b3c8d0e4f67", "buyer": "Noah Fischer",  "method": "PayPal", "placedAt": "2026-09-14", "status": "Pending",  "amount": 220 },
+    { "number": "#IDE-4813", "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "buyer": "Elena Costa",   "method": "Card",   "placedAt": "2026-09-13", "status": "Paid",     "amount": 640 },
+    { "number": "#IDE-4812", "eventId": "3c9a2e77-1b44-49ce-b8f0-6a2d4c5e9f13", "buyer": "Omar Haddad",   "method": "ACH",    "placedAt": "2026-09-13", "status": "Paid",     "amount": 1200 },
+    { "number": "#IDE-4811", "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "buyer": "Grace Lin",     "method": "Card",   "placedAt": "2026-09-12", "status": "Refunded", "amount": 160 },
+    { "number": "#IDE-4810", "eventId": "f1d8b6a4-5c22-4e39-9a71-2b3c8d0e4f67", "buyer": "Tomas Novak",   "method": "Card",   "placedAt": "2026-09-12", "status": "Paid",     "amount": 440 }
+  ],
+
+  "unpaidInvoices": [
+    { "number": "#INV-2291", "eventId": "3c9a2e77-1b44-49ce-b8f0-6a2d4c5e9f13", "buyer": "Global Corp", "placedAt": "2026-08-14", "ageDays": 33, "amount": 2190, "ageBand": "over" },
+    { "number": "#INV-2288", "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "buyer": "Delta Labs",  "placedAt": "2026-08-26", "ageDays": 21, "amount": 1460, "ageBand": "warn" },
+    { "number": "#INV-2286", "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "buyer": "Nova Group",  "placedAt": "2026-08-30", "ageDays": 17, "amount": 2190, "ageBand": "warn" },
+    { "number": "#INV-2284", "eventId": "3c9a2e77-1b44-49ce-b8f0-6a2d4c5e9f13", "buyer": "Pearl Inc",   "placedAt": "2026-09-04", "ageDays": 12, "amount": 4920, "ageBand": "soon" },
+    { "number": "#INV-2281", "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "buyer": "Vertex Co",   "placedAt": "2026-09-09", "ageDays": 7,  "amount": 3480, "ageBand": "ok" },
+    { "number": "#INV-2279", "eventId": "f1d8b6a4-5c22-4e39-9a71-2b3c8d0e4f67", "buyer": "Acme Ltd",    "placedAt": "2026-09-11", "ageDays": 5,  "amount": 2000, "ageBand": "ok" },
+    { "number": "#INV-2277", "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "buyer": "Orbit Media", "placedAt": "2026-09-12", "ageDays": 4,  "amount": 2000, "ageBand": "ok" }
+  ],
+
+  "salesByType": [
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "type": "General Admission", "sold": 2480, "gross": 89280, "refunds": 1920, "net": 87360 },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "type": "VIP",               "sold": 640,  "gross": 96000, "refunds": 2400, "net": 93600 },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "type": "Early Bird",        "sold": 812,  "gross": 40600, "refunds": 640,  "net": 39960 },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "type": "Student",           "sold": 180,  "gross": 3600,  "refunds": 0,    "net": 3600 },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "type": "Group (10+)",       "sold": 62,   "gross": 18600, "refunds": 1450, "net": 17150 },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "type": "Livestream",        "sold": 8,    "gross": 850,   "refunds": 0,    "net": 850 }
+  ],
+
+  "sellthrough": [
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "sessionId": null, "type": "General Admission", "sold": 2480, "held": 40, "capacity": 3000 },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "sessionId": null, "type": "VIP",               "sold": 640,  "held": 12, "capacity": 640 },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "sessionId": null, "type": "Early Bird",        "sold": 812,  "held": 0,  "capacity": 812 },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "sessionId": null, "type": "Student",           "sold": 180,  "held": 20, "capacity": 400 },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "sessionId": null, "type": "Group (10+)",       "sold": 62,   "held": 54, "capacity": 300 },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "sessionId": null, "type": "Livestream",        "sold": 8,    "held": 0,  "capacity": 500 }
+  ],
+
+  "refunds": [
+    { "invoice": "#IDE-4817", "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "buyer": "Sofia Klein", "reason": "Could not attend",   "kind": "Refund",       "at": "2026-09-15", "amount": 320 },
+    { "invoice": "#IDE-4811", "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "buyer": "Grace Lin",   "reason": "Duplicate order",    "kind": "Refund",       "at": "2026-09-12", "amount": 160 },
+    { "invoice": "#IDE-4802", "eventId": "3c9a2e77-1b44-49ce-b8f0-6a2d4c5e9f13", "buyer": "Ravi Menon",  "reason": "Event time changed", "kind": "Cancellation", "at": "2026-09-11", "amount": 640 },
+    { "invoice": "#IDE-4795", "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "buyer": "Ines Duarte", "reason": "Bought wrong tier",  "kind": "Refund",       "at": "2026-09-10", "amount": 240 },
+    { "invoice": "#IDE-4788", "eventId": "3c9a2e77-1b44-49ce-b8f0-6a2d4c5e9f13", "buyer": "Karl Weber",  "reason": "Could not attend",   "kind": "Cancellation", "at": "2026-09-09", "amount": 1200 },
+    { "invoice": "#IDE-4781", "eventId": "f1d8b6a4-5c22-4e39-9a71-2b3c8d0e4f67", "buyer": "Mei Chen",    "reason": "Requested by buyer", "kind": "Refund",       "at": "2026-09-08", "amount": 320 }
+  ],
+
+  "coupons": [
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "code": "EARLY25",    "kind": "Percentage", "redemptions": 214, "revenue": 8560, "discountRate": "38%", "state": "ok" },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "code": "SUMMIT50",   "kind": "Fixed",      "redemptions": 168, "revenue": 8400, "discountRate": "31%", "state": "ok" },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "code": "STUDENT",    "kind": "Percentage", "redemptions": 92,  "revenue": 2760, "discountRate": "52%", "state": "ok" },
+    { "eventId": "3c9a2e77-1b44-49ce-b8f0-6a2d4c5e9f13", "code": "PARTNER10",  "kind": "Percentage", "redemptions": 84,  "revenue": 1680, "discountRate": "24%", "state": "ok" },
+    { "eventId": "f1d8b6a4-5c22-4e39-9a71-2b3c8d0e4f67", "code": "FLASH",      "kind": "Fixed",      "redemptions": 56,  "revenue": 480,  "discountRate": "19%", "state": "soon" },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "code": "VIPUPGRADE", "kind": "Fixed",      "redemptions": 0,   "revenue": 0,    "discountRate": "—",   "state": "off" }
+  ],
+
+  "attendees": [
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "sessionId": "a1111111-0000-4000-8000-000000000001", "name": "Amelia Turner", "email": "amelia.t@example.com", "type": "VIP",               "seat": "A-12", "invoice": "#IDE-4821", "checkedIn": true },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "sessionId": "a1111111-0000-4000-8000-000000000001", "name": "Marcus Bell",   "email": "marcus@example.com",   "type": "General Admission", "seat": "GA",   "invoice": "#IDE-4820", "checkedIn": true },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "sessionId": "a1111111-0000-4000-8000-000000000002", "name": "Priya Nair",    "email": "priya.n@example.com",  "type": "General Admission", "seat": "GA",   "invoice": "#IDE-4819", "checkedIn": false },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "sessionId": "a1111111-0000-4000-8000-000000000002", "name": "Diego Ramos",   "email": "diego@example.com",    "type": "Early Bird",        "seat": "GA",   "invoice": "#IDE-4818", "checkedIn": true },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "sessionId": "a1111111-0000-4000-8000-000000000003", "name": "Hana Sato",     "email": "hana.sato@example.com","type": "VIP",               "seat": "B-04", "invoice": "#IDE-4815", "checkedIn": false },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "sessionId": "a1111111-0000-4000-8000-000000000003", "name": "Elena Costa",   "email": "elena.c@example.com",  "type": "General Admission", "seat": "GA",   "invoice": "#IDE-4813", "checkedIn": true },
+    { "eventId": "b7e4c1a2-9f3d-4a56-8c21-0d5e7f8a1b90", "sessionId": "a1111111-0000-4000-8000-000000000004", "name": "Omar Haddad",   "email": "omar.h@example.com",   "type": "Group (10+)",       "seat": "GA",   "invoice": "#IDE-4812", "checkedIn": false },
+    { "eventId": "f1d8b6a4-5c22-4e39-9a71-2b3c8d0e4f67", "sessionId": "c3333333-0000-4000-8000-000000000001", "name": "Tomas Novak",   "email": "tomas@example.com",    "type": "Early Bird",        "seat": "GA",   "invoice": "#IDE-4810", "checkedIn": true }
+  ],
+
+  "payouts": [
+    { "number": "#PO-9042", "period": "Sep 8 – Sep 14",  "method": "Bank transfer", "at": "2026-09-16", "status": "In transit", "amount": 38420 },
+    { "number": "#PO-9038", "period": "Sep 1 – Sep 7",   "method": "Bank transfer", "at": "2026-09-09", "status": "Paid",       "amount": 41260 },
+    { "number": "#PO-9031", "period": "Aug 25 – Aug 31", "method": "Bank transfer", "at": "2026-09-02", "status": "Paid",       "amount": 36980 },
+    { "number": "#PO-9024", "period": "Aug 18 – Aug 24", "method": "Bank transfer", "at": "2026-08-26", "status": "Paid",       "amount": 29740 },
+    { "number": "#PO-9017", "period": "Aug 11 – Aug 17", "method": "Bank transfer", "at": "2026-08-19", "status": "Paid",       "amount": 26620 }
+  ]
+}

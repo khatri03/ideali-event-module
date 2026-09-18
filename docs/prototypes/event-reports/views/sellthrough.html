@@ -1,0 +1,25 @@
+<div class="mb-3 d-flex align-items-center gap-2 flex-wrap" data-context></div>
+
+<div class="card-x run-primed" data-primed hidden>
+  <div class="ic"><i class="bi bi-play-circle"></i></div>
+  <h3>Sell-through ready</h3>
+  <p>Pick an event above to auto-run it, or run across all events now.</p>
+  <button class="btn-brand" data-run><i class="bi bi-play-fill"></i> Run report</button>
+</div>
+
+<div data-results>
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3"><div class="card-x kpi"><div class="label">Overall sell-through</div><div class="value" id="stOverall">—</div><div class="delta up"><i class="bi bi-arrow-up-right"></i> <span id="stOverallSub">—</span></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card-x kpi"><div class="label">Seats held (live)</div><div class="value" id="stHeld">—</div><div class="delta muted">Seats.io holds</div></div></div>
+    <div class="col-6 col-lg-3"><div class="card-x kpi"><div class="label">Sold out types</div><div class="value" id="stSoldOut">—</div><div class="delta muted" id="stSoldOutSub">—</div></div></div>
+    <div class="col-6 col-lg-3"><div class="card-x kpi"><div class="label">Days to event</div><div class="value">23</div><div class="delta muted">projected 91% fill</div></div></div>
+  </div>
+  <div class="card-x panel mb-3">
+    <div class="panel-head"><div><h2>Capacity by ticket type</h2><div class="sub">Sold / held / available against capacity</div></div></div>
+    <div id="sellthroughBody"></div>
+  </div>
+  <div class="card-x panel">
+    <div class="panel-head"><div><h2>Booking pace</h2><div class="sub">Cumulative tickets vs capacity line</div></div></div>
+    <div class="chart-wrap" style="height:280px;"><canvas id="chartPace"></canvas></div>
+  </div>
+</div>

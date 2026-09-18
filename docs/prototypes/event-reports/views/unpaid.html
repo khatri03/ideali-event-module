@@ -1,0 +1,22 @@
+<div class="mb-3 d-flex align-items-center gap-2 flex-wrap" data-context></div>
+
+<div class="card-x run-primed" data-primed hidden>
+  <div class="ic"><i class="bi bi-play-circle"></i></div>
+  <h3>Unpaid invoices ready</h3>
+  <p>Pick an event above to auto-run it, or run across all events now.</p>
+  <button class="btn-brand" data-run><i class="bi bi-play-fill"></i> Run report</button>
+</div>
+
+<div data-results>
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-lg-6"><div class="card-x kpi"><div class="label">Outstanding total</div><div class="value" id="unpaidTotal">—</div><div class="delta muted">awaiting payment</div></div></div>
+    <div class="col-6 col-lg-3"><div class="card-x kpi"><div class="label">Invoices</div><div class="value" id="unpaidCount">—</div><div class="delta muted">open</div></div></div>
+    <div class="col-6 col-lg-3"><div class="card-x kpi"><div class="label">At risk (30+ d)</div><div class="value" id="unpaidRisk">—</div><div class="delta down"><i class="bi bi-exclamation-triangle"></i> <span id="unpaidRiskCount">—</span></div></div></div>
+  </div>
+  <div class="card-x panel">
+    <div class="panel-head"><div><h2>Unpaid invoices</h2><div class="sub">Oldest first</div></div></div>
+    <div class="table-responsive"><table class="table-x"><thead><tr>
+      <th>Invoice</th><th>Buyer</th><th>Event</th><th>Issued</th><th class="th-num">Age</th><th class="th-num">Amount</th><th></th>
+    </tr></thead><tbody id="unpaidBody"></tbody></table></div>
+  </div>
+</div>
