@@ -4,15 +4,14 @@ import { ReportEmpty, ReportError, ReportPanelShell, ReportSkeleton } from "../R
 
 interface SummaryPanelProps {
   eventUniqueId: string
-  formatCount: (value: number) => string
 }
 
-/** The count of booked objects, read from the status breakdown, shown as the badge on top of the live map. */
+/** The count of booked objects, read from the status breakdown, that fills the progress bar on top of the live map. */
 function bookedCount(groups: { key: string; label: string; count: number }[]): number {
   return groups.find((group) => group.key.toLowerCase() === "booked")?.count ?? 0
 }
 
-export function SummaryPanel({ eventUniqueId, formatCount }: SummaryPanelProps) {
+export function SummaryPanel({ eventUniqueId }: SummaryPanelProps) {
   const query = useEventSummary(eventUniqueId, true)
 
   if (query.isError) {
@@ -45,7 +44,7 @@ export function SummaryPanel({ eventUniqueId, formatCount }: SummaryPanelProps) 
     <ReportPanelShell>
       <EventChartPreview
         eventUniqueId={eventUniqueId}
-        bookedLabel={`${formatCount(bookedCount(summary.byStatus))} booked`}
+        progress={{ booked: bookedCount(summary.byStatus), total: summary.totalObjects }}
       />
     </ReportPanelShell>
   )

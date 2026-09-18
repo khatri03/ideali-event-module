@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Badge, Box, Skeleton, Stack, Text } from "@chakra-ui/react"
+import { Box, Flex, Skeleton, Stack, Text } from "@chakra-ui/react"
 import { SeatsioSeatingChart } from "@seatsio/seatsio-react"
 import { useEventRenderContext } from "../hooks/useEventReports"
 
@@ -36,9 +36,47 @@ function ChartPreviewUnavailable({ message }: { message: string }) {
   )
 }
 
+interface BookedProgress {
+  booked: number
+  total: number
+}
+
+/**
+ * The compact booked-vs-available meter shown above the live map, top-right. The solid segment is the booked share,
+ * the lighter track behind it is what is still available, so the fill reads as "how full is this event" at a glance.
+ * It is a labelled progressbar for anyone not reading the colour.
+ */
+function ChartBookedProgress({ booked, total }: BookedProgress) {
+  const safeTotal = Math.max(total, 0)
+  const safeBooked = Math.min(Math.max(booked, 0), safeTotal)
+  const available = safeTotal - safeBooked
+  const percent = safeTotal > 0 ? Math.round((safeBooked / safeTotal) * 100) : 0
+
+  return (
+    <Box w={{ base: "300px", md: "360px" }} maxW="full">
+      <Box
+        role="progressbar"
+        aria-valuenow={safeBooked}
+        aria-valuemin={0}
+        aria-valuemax={safeTotal}
+        aria-valuetext={`${safeBooked} booked, ${available} available`}
+        h="12px"
+        borderRadius="full"
+        bg="brand.100"
+        overflow="hidden"
+      >
+        <Box h="full" w={`${percent}%`} bg="brand.500" borderRadius="full" transition="width 0.3s ease" />
+      </Box>
+      <Text mt={1} fontSize="xs" fontWeight="700" color="gray.600" textAlign="right">
+        {safeBooked} booked · {available} available
+      </Text>
+    </Box>
+  )
+}
+
 interface EventChartPreviewProps {
   eventUniqueId: string
-  bookedLabel?: string
+  progress?: BookedProgress
 }
 
 /**
@@ -47,7 +85,7 @@ interface EventChartPreviewProps {
  * an editor — the organizer changes seats from the For sale tab, not here. Only the public workspace key reaches the
  * browser; the secret key stays on the server.
  */
-export function EventChartPreview({ eventUniqueId, bookedLabel }: EventChartPreviewProps) {
+export function EventChartPreview({ eventUniqueId, progress }: EventChartPreviewProps) {
   const query = useEventRenderContext(eventUniqueId, true)
   const [hasRenderFailed, setHasRenderFailed] = useState(false)
 
@@ -67,40 +105,29 @@ export function EventChartPreview({ eventUniqueId, bookedLabel }: EventChartPrev
   }
 
   return (
-    <Box
-      position="relative"
-      w="full"
-      h={{ base: "260px", md: "340px", lg: "380px" }}
-      borderRadius="16px"
-      border="1px solid"
-      borderColor="border.subtle"
-      overflow="hidden"
-      bg="white"
-    >
-      {bookedLabel ? (
-        <Badge
-          position="absolute"
-          top={3}
-          right={3}
-          zIndex={1}
-          colorPalette="brand"
-          variant="solid"
-          borderRadius="full"
-          px={3}
-          py={1}
-          fontWeight="700"
-          boxShadow="sm"
-        >
-          {bookedLabel}
-        </Badge>
+    <Stack gap={2}>
+      {progress ? (
+        <Flex justify="flex-end">
+          <ChartBookedProgress booked={progress.booked} total={progress.total} />
+        </Flex>
       ) : null}
-      <SeatsioSeatingChart
-        workspaceKey={context!.publicKey}
-        event={context!.eventKey}
-        region={resolveRegion(context!.region)}
-        mode="static"
-        onChartRenderingFailed={() => setHasRenderFailed(true)}
-      />
-    </Box>
+      <Box
+        w="full"
+        h={{ base: "260px", md: "340px", lg: "380px" }}
+        borderRadius="16px"
+        border="1px solid"
+        borderColor="border.subtle"
+        overflow="hidden"
+        bg="white"
+      >
+        <SeatsioSeatingChart
+          workspaceKey={context!.publicKey}
+          event={context!.eventKey}
+          region={resolveRegion(context!.region)}
+          mode="static"
+          onChartRenderingFailed={() => setHasRenderFailed(true)}
+        />
+      </Box>
+    </Stack>
   )
 }

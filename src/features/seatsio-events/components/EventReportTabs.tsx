@@ -67,7 +67,7 @@ export function EventReportTabs({ eventUniqueId }: { eventUniqueId: string }) {
 
       <Box pt={5}>
         <Tabs.Content value="summary">
-          <SummaryPanel eventUniqueId={eventUniqueId} formatCount={formatCount} />
+          <SummaryPanel eventUniqueId={eventUniqueId} />
         </Tabs.Content>
         <Tabs.Content value="statuses">
           <StatusesPanel eventUniqueId={eventUniqueId} />
