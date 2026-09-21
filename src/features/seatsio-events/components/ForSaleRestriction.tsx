@@ -1,9 +1,9 @@
-import { useState } from "react"
+import type { ReactNode } from "react"
 import { Badge, Box, Button, Flex, HStack, Stack, Text, Wrap } from "@chakra-ui/react"
 import { CheckCircle2, RotateCcw } from "lucide-react"
 import type { SeatsIoEventForSaleReport } from "@/api/seatsio"
-import { ConfirmDialog } from "@/components/common"
 import { ReportGroupList } from "./ReportGroupList"
+import { StagedApplyBar } from "./StagedApplyBar"
 
 interface ForSaleRestrictionProps {
   report: SeatsIoEventForSaleReport
@@ -12,15 +12,16 @@ interface ForSaleRestrictionProps {
   stagedObjects: string[]
   /** Held-back categories the organizer has selected to put back on sale. */
   stagedCategories: string[]
-  /** How many held-back items are currently selected. */
-  stagedCount: number
   onToggleObject: (label: string) => void
   onToggleCategory: (category: string) => void
   /** Selects every held-back object, or clears the selection when all are already selected. */
   onToggleAllObjects: () => void
-  /** Puts the selected held-back items back on sale. Resolves once the change commits, rejects if it fails. */
-  onPutSelectedBackOnSale: () => Promise<void>
-  isPutBackPending: boolean
+  /** Commits the staged put-back set; resolves true on success so its confirm dialog can close. */
+  onApply: () => Promise<boolean>
+  /** Drops the staged put-back set without sending anything. */
+  onClear: () => void
+  /** A commit is in flight, so the pills lock to keep the staged set stable while it applies. */
+  isApplying: boolean
 }
 
 function StageChip({
@@ -71,43 +72,51 @@ function SectionLabel({ children }: { children: string }) {
   )
 }
 
+function HeldBackCard({ children }: { children: ReactNode }) {
+  return (
+    <Box borderRadius="16px" border="1px solid" borderColor="border.subtle" overflow="hidden" bg="card.bg" boxShadow="card">
+      {children}
+    </Box>
+  )
+}
+
 function EverythingForSaleBanner() {
   return (
-    <Flex align="center" gap={3} bg="status.success.bg" px={{ base: 4, md: 5 }} py={{ base: 3, md: 4 }}>
-      <Box color="status.success.fg" flexShrink={0}>
-        <CheckCircle2 size={22} />
-      </Box>
-      <Box>
-        <Text fontSize="sm" fontWeight="800" color="status.success.fg">
-          Everything is on sale
-        </Text>
-        <Text fontSize="sm" color="text.secondary">
-          No for-sale restriction is set, so every object on this event can be sold.
-        </Text>
-      </Box>
-    </Flex>
+    <HeldBackCard>
+      <Flex align="center" gap={3} bg="status.success.bg" px={{ base: 4, md: 5 }} py={{ base: 3, md: 4 }}>
+        <Box color="status.success.fg" flexShrink={0}>
+          <CheckCircle2 size={22} />
+        </Box>
+        <Box>
+          <Text fontSize="sm" fontWeight="800" color="status.success.fg">
+            Everything is on sale
+          </Text>
+          <Text fontSize="sm" color="text.secondary">
+            No for-sale restriction is set, so every object on this event can be sold.
+          </Text>
+        </Box>
+      </Flex>
+    </HeldBackCard>
   )
 }
 
 /**
  * The put-back-on-sale section that sits under the live map. Each held-back object or category is a pill the organizer
- * selects, then commits with the button grouped directly beneath them; this direction is not rate-limited, so it acts
- * on its own rather than through the map's take-off-sale apply. An "All" pill selects every held-back object at once.
+ * selects to stage it; the staged set is committed from the shared pending-changes bar above the card, alongside any
+ * take-off-sale picks, so both directions apply through one action. An "All" pill selects every held-back object at once.
  */
 export function ForSaleRestriction({
   report,
   formatCount,
   stagedObjects,
   stagedCategories,
-  stagedCount,
   onToggleObject,
   onToggleCategory,
   onToggleAllObjects,
-  onPutSelectedBackOnSale,
-  isPutBackPending,
+  onApply,
+  onClear,
+  isApplying,
 }: ForSaleRestrictionProps) {
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false)
-
   if (report.everythingForSale) {
     return <EverythingForSaleBanner />
   }
@@ -117,25 +126,17 @@ export function ForSaleRestriction({
   const showPutBack = heldBackIsListed && hasListedItems
   const allObjectsSelected = report.objects.length > 0 && report.objects.every((label) => stagedObjects.includes(label))
   const stagedLabels = [...stagedObjects, ...stagedCategories]
-
-  async function confirmPutBack() {
-    try {
-      await onPutSelectedBackOnSale()
-      setIsConfirmOpen(false)
-    } catch {
-      // The mutation surfaces its own error toast; keep the dialog open so the selection survives a retry.
-    }
-  }
+  const stagedCount = stagedLabels.length
 
   return (
-    <Box>
+    <HeldBackCard>
       <Flex
-        direction={{ base: "column", md: "row" }}
-        align={{ base: "stretch", md: "center" }}
-        justify="space-between"
+        align="center"
         gap={3}
         px={{ base: 4, md: 5 }}
         py={{ base: 3, md: 4 }}
+        borderBottom="1px solid"
+        borderColor="border.subtle"
       >
         <HStack gap={3} minW={0}>
           <Box color="status.success.fg">
@@ -154,40 +155,33 @@ export function ForSaleRestriction({
             </HStack>
             <Text fontSize="xs" color="text.secondary">
               {showPutBack
-                ? "Select the objects to put back, then apply."
+                ? "Tap objects to stage them, then apply from the bar below."
                 : report.forSale
                   ? "Only the objects below are on sale."
                   : "No held-back objects are listed for this event."}
             </Text>
           </Box>
         </HStack>
-        {showPutBack ? (
-          <Button
-            colorPalette="green"
-            onClick={() => setIsConfirmOpen(true)}
-            disabled={stagedCount === 0 || isPutBackPending}
-            loading={isPutBackPending}
-            loadingText="Putting back..."
-            w={{ base: "full", md: "auto" }}
-            minH="11"
-            px={6}
-            flexShrink={0}
-          >
-            {stagedCount > 0 ? `Put ${stagedCount} back on sale` : "Back To Sale"}
-          </Button>
-        ) : null}
       </Flex>
 
       <Stack gap={5} px={{ base: 4, md: 5 }} py={{ base: 4, md: 5 }}>
         {showPutBack ? (
-          <Stack gap={4}>
+          <Stack
+            gap={4}
+            borderRadius="12px"
+            border="1px solid"
+            borderColor="border.subtle"
+            bg="status.success.bg"
+            px={{ base: 3, md: 4 }}
+            py={{ base: 3, md: 4 }}
+          >
             {report.objects.length > 0 ? (
               <Wrap gap={2}>
                 <StageChip
                   label="All"
                   isStaged={allObjectsSelected}
                   onToggle={onToggleAllObjects}
-                  isDisabled={isPutBackPending}
+                  isDisabled={isApplying}
                 />
                 {report.objects.map((label) => (
                   <StageChip
@@ -195,7 +189,7 @@ export function ForSaleRestriction({
                     label={label}
                     isStaged={stagedObjects.includes(label)}
                     onToggle={() => onToggleObject(label)}
-                    isDisabled={isPutBackPending}
+                    isDisabled={isApplying}
                   />
                 ))}
               </Wrap>
@@ -210,7 +204,7 @@ export function ForSaleRestriction({
                       label={category}
                       isStaged={stagedCategories.includes(category)}
                       onToggle={() => onToggleCategory(category)}
-                      isDisabled={isPutBackPending}
+                      isDisabled={isApplying}
                     />
                   ))}
                 </Wrap>
@@ -252,32 +246,29 @@ export function ForSaleRestriction({
         ) : null}
       </Stack>
 
-      {isConfirmOpen ? (
-        <ConfirmDialog
-          title="Put objects back on sale"
-          tone="primary"
-          description={
-            <Stack gap={3}>
-              <Text>
-                {stagedCount === 1 ? "This object goes" : `These ${stagedCount} objects go`} back on sale — buyers can
-                purchase {stagedCount === 1 ? "it" : "them"} right away:
-              </Text>
-              <Wrap gap={2}>
-                {stagedLabels.map((label) => (
-                  <Badge key={label} variant="subtle" colorPalette="green" borderRadius="999px" px={3} py={1.5} fontSize="sm">
-                    {label}
-                  </Badge>
-                ))}
-              </Wrap>
-            </Stack>
-          }
-          confirmLabel="Put back on sale"
-          loadingLabel="Putting back..."
-          isPending={isPutBackPending}
-          onConfirm={confirmPutBack}
-          onClose={() => setIsConfirmOpen(false)}
-        />
+      {showPutBack ? (
+        stagedCount > 0 ? (
+          <StagedApplyBar
+            tone="success"
+            summary={`${stagedCount} staged to put back on sale`}
+            labels={stagedLabels}
+            showFooterLabels={false}
+            applyLabel={`Put ${stagedCount} back on sale`}
+            confirmTitle={`Put ${stagedCount} ${stagedCount === 1 ? "object" : "objects"} back on sale`}
+            confirmTone="primary"
+            outcomeText="Buyers will be able to buy these objects again."
+            onApply={onApply}
+            onClear={onClear}
+            isApplying={isApplying}
+          />
+        ) : (
+          <Flex align="center" px={{ base: 4, md: 5 }} py={{ base: 3, md: 4 }} borderTop="1px solid" borderColor="border.subtle">
+            <Text fontSize="sm" fontWeight="700" color="text.secondary">
+              Nothing staged yet — tap objects above to put them back on sale.
+            </Text>
+          </Flex>
+        )
       ) : null}
-    </Box>
+    </HeldBackCard>
   )
 }

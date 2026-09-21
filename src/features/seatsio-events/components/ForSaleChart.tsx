@@ -1,10 +1,11 @@
-import { useState, type ReactNode } from "react"
-import { Badge, Box, Flex, HStack, Skeleton, Stack, Text, Wrap } from "@chakra-ui/react"
+import { useState } from "react"
+import { Box, Flex, HStack, Skeleton, Stack, Text } from "@chakra-ui/react"
 import { MinusCircle, MousePointerClick } from "lucide-react"
 import { SeatsioSeatingChart } from "@seatsio/seatsio-react"
 import type { SeatingChart, SelectableObject } from "@seatsio/seatsio-react"
 import { useEventRenderContext } from "../hooks/useEventReports"
 import { resolveSeatsIoRegion } from "../utils/resolveSeatsIoRegion"
+import { StagedApplyBar } from "./StagedApplyBar"
 
 interface ForSaleChartProps {
   eventUniqueId: string
@@ -16,8 +17,12 @@ interface ForSaleChartProps {
   onObjectUnstaged: (label: string) => void
   /** Hands the live chart up so the panel can clear the map selection once a change is applied. */
   onChartReady: (chart: SeatingChart | null) => void
-  /** The put-back-on-sale section, rendered inside the same card because it acts on the same objects. */
-  children?: ReactNode
+  /** Commits the staged take-off-sale set; resolves true on success so its confirm dialog can close. */
+  onApply: () => Promise<boolean>
+  /** Drops the staged take-off-sale set and the map selection without sending anything. */
+  onClear: () => void
+  /** The take-off-sale commit is in flight. */
+  isApplying: boolean
 }
 
 /** A section has no per-object for-sale flag; only bookable objects (seats, tables, areas) carry one. */
@@ -50,9 +55,18 @@ function ChartUnavailable({ message }: { message: string }) {
  * The live, selectable seat map the organizer uses to stage objects for going off sale. It renders with the public
  * workspace key only, so the secret key never reaches the browser; because a public-key renderer can select only
  * objects that are currently on sale, this map stages the "not for sale" direction alone. Putting objects back on sale
- * is staged from the held-back list beside it. Nothing is sent until the organizer applies the pending changes.
+ * is staged from the held-back card below it. Nothing is sent until the organizer applies the pending changes.
  */
-export function ForSaleChart({ eventUniqueId, stagedLabels, onObjectStaged, onObjectUnstaged, onChartReady, children }: ForSaleChartProps) {
+export function ForSaleChart({
+  eventUniqueId,
+  stagedLabels,
+  onObjectStaged,
+  onObjectUnstaged,
+  onChartReady,
+  onApply,
+  onClear,
+  isApplying,
+}: ForSaleChartProps) {
   const query = useEventRenderContext(eventUniqueId, true)
   const [hasRenderFailed, setHasRenderFailed] = useState(false)
 
@@ -69,15 +83,12 @@ export function ForSaleChart({ eventUniqueId, stagedLabels, onObjectStaged, onOb
       bg="card.bg"
       boxShadow="card"
     >
-      {children}
-
       <Flex
         align="center"
         justify="space-between"
         gap={3}
         px={{ base: 4, md: 5 }}
         py={{ base: 3, md: 4 }}
-        borderTop="1px solid"
         borderBottom="1px solid"
         borderColor="border.subtle"
       >
@@ -94,11 +105,6 @@ export function ForSaleChart({ eventUniqueId, stagedLabels, onObjectStaged, onOb
             </Text>
           </Box>
         </HStack>
-        {stagedCount > 0 ? (
-          <Badge variant="subtle" colorPalette="orange" borderRadius="999px" px={3} py={1} flexShrink={0}>
-            {stagedCount} staged
-          </Badge>
-        ) : null}
       </Flex>
 
       <Box h={{ base: "260px", md: "340px", lg: "380px" }}>
@@ -127,33 +133,26 @@ export function ForSaleChart({ eventUniqueId, stagedLabels, onObjectStaged, onOb
         )}
       </Box>
 
-      <Stack
-        gap={2}
-        px={{ base: 4, md: 5 }}
-        py={{ base: 3, md: 4 }}
-        borderTop="1px solid"
-        borderColor="border.subtle"
-        bg={stagedCount > 0 ? "status.warning.bg" : "transparent"}
-      >
-        <Text
-          fontSize="sm"
-          fontWeight="700"
-          color={stagedCount > 0 ? "status.warning.fg" : "text.secondary"}
-        >
-          {stagedCount > 0
-            ? `${stagedCount} on-sale ${stagedCount === 1 ? "object" : "objects"} staged to go off sale`
-            : "Off-sale objects show as ✕ on the map and can't be picked here."}
-        </Text>
-        {stagedCount > 0 ? (
-          <Wrap gap={2}>
-            {stagedLabels.map((label) => (
-              <Badge key={label} variant="solid" colorPalette="orange" borderRadius="999px" px={3} py={1}>
-                {label}
-              </Badge>
-            ))}
-          </Wrap>
-        ) : null}
-      </Stack>
+      {stagedCount > 0 ? (
+        <StagedApplyBar
+          tone="warning"
+          summary={`${stagedCount} on-sale ${stagedCount === 1 ? "object" : "objects"} staged to go off sale`}
+          labels={stagedLabels}
+          applyLabel={`Take ${stagedCount} off sale`}
+          confirmTitle={`Take ${stagedCount} ${stagedCount === 1 ? "object" : "objects"} off sale`}
+          confirmTone="destructive"
+          outcomeText="Buyers will no longer be able to buy these objects."
+          onApply={onApply}
+          onClear={onClear}
+          isApplying={isApplying}
+        />
+      ) : (
+        <Box px={{ base: 4, md: 5 }} py={{ base: 3, md: 4 }} borderTop="1px solid" borderColor="border.subtle">
+          <Text fontSize="sm" fontWeight="700" color="text.secondary">
+            Off-sale objects show as ✕ on the map and can't be picked here.
+          </Text>
+        </Box>
+      )}
     </Box>
   )
 }

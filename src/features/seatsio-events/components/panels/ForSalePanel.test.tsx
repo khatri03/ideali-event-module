@@ -80,19 +80,20 @@ describe("ForSalePanel", () => {
   })
 
   /**
-   * The take-off-sale direction is rate-limited, so nothing is sent while objects are picked: the staged objects are
-   * committed as a single batched call, and the map selection is cleared once it succeeds.
+   * The take-off-sale card commits its own direction and only after its confirm dialog is accepted: staging a map
+   * pick sends nothing until "Apply changes", because taking objects off sale is rate-limited and irreversible to a buyer.
    */
-  it("stages picked on-sale objects and takes them off sale in one apply", async () => {
+  it("takes staged map picks off sale from its own card after confirming", async () => {
     renderPanel()
 
     await screen.findByText("mount-chart")
     await userEvent.click(screen.getByText("mount-chart"))
     await userEvent.click(screen.getByText("pick-on-sale"))
 
+    await userEvent.click(await screen.findByRole("button", { name: "Take 1 off sale" }))
     expect(markNotForSaleMock).not.toHaveBeenCalled()
 
-    await userEvent.click(await screen.findByRole("button", { name: "Take off sale" }))
+    await userEvent.click(await screen.findByRole("button", { name: "Apply changes" }))
 
     await waitFor(() =>
       expect(markNotForSaleMock).toHaveBeenCalledWith(EVENT_UNIQUE_ID, { objects: ["A-1"], categories: [] }),
@@ -100,42 +101,48 @@ describe("ForSalePanel", () => {
     expect(clearSelectionMock).toHaveBeenCalled()
   })
 
-  /**
-   * The public renderer can only select on-sale objects, so a not-for-sale pick must never stage a redundant
-   * off-sale change — the guard that stops a meaningless call reaching the backend.
-   */
-  it("does not stage an object that is already not for sale", async () => {
-    renderPanel()
-
-    await screen.findByText("mount-chart")
-    await userEvent.click(screen.getByText("pick-not-for-sale"))
-
-    expect(screen.queryByRole("button", { name: "Take off sale" })).not.toBeInTheDocument()
-    expect(markNotForSaleMock).not.toHaveBeenCalled()
-  })
-
-  /**
-   * Put-back-on-sale commits from its own button, but only after the confirm dialog is accepted: an accidental CTA
-   * click must not reach the backend, because reversing a put-back costs a rate-limited take-off-sale.
-   */
-  it("puts a selected held-back object back on sale after confirming", async () => {
+  /** The held-back card stages the put-back direction and commits it on its own confirm, separate from take-off-sale. */
+  it("puts a staged held-back object back on sale from its own card after confirming", async () => {
     forSaleMock.mockResolvedValue(forSaleReport({ forSale: false, objects: ["Z-9"] }))
     renderPanel()
 
     await userEvent.click(await screen.findByRole("button", { name: /Z-9/ }))
     await userEvent.click(await screen.findByRole("button", { name: "Put 1 back on sale" }))
-
     expect(markForSaleMock).not.toHaveBeenCalled()
 
-    await userEvent.click(await screen.findByRole("button", { name: "Put back on sale" }))
+    await userEvent.click(await screen.findByRole("button", { name: "Apply changes" }))
 
     await waitFor(() =>
       expect(markForSaleMock).toHaveBeenCalledWith(EVENT_UNIQUE_ID, { objects: ["Z-9"], categories: [] }),
     )
   })
 
-  /** Cancelling the confirm dialog must leave the put-back uncommitted, so a mis-click never reaches the backend. */
-  it("does not put back on sale when the confirm dialog is cancelled", async () => {
+  /** Each direction commits independently from its own card: applying one never sends the other's staged set. */
+  it("applies each direction independently from its own card", async () => {
+    forSaleMock.mockResolvedValue(forSaleReport({ forSale: false, objects: ["Z-9"] }))
+    renderPanel()
+
+    await screen.findByText("mount-chart")
+    await userEvent.click(screen.getByText("mount-chart"))
+    await userEvent.click(screen.getByText("pick-on-sale"))
+    await userEvent.click(await screen.findByRole("button", { name: /Z-9/ }))
+
+    await userEvent.click(await screen.findByRole("button", { name: "Take 1 off sale" }))
+    await userEvent.click(await screen.findByRole("button", { name: "Apply changes" }))
+    await waitFor(() =>
+      expect(markNotForSaleMock).toHaveBeenCalledWith(EVENT_UNIQUE_ID, { objects: ["A-1"], categories: [] }),
+    )
+    expect(markForSaleMock).not.toHaveBeenCalled()
+
+    await userEvent.click(await screen.findByRole("button", { name: "Put 1 back on sale" }))
+    await userEvent.click(await screen.findByRole("button", { name: "Apply changes" }))
+    await waitFor(() =>
+      expect(markForSaleMock).toHaveBeenCalledWith(EVENT_UNIQUE_ID, { objects: ["Z-9"], categories: [] }),
+    )
+  })
+
+  /** Cancelling a card's confirm dialog leaves its set staged and sends nothing, so a mis-click is safe. */
+  it("does not apply when the confirm dialog is cancelled", async () => {
     forSaleMock.mockResolvedValue(forSaleReport({ forSale: false, objects: ["Z-9"] }))
     renderPanel()
 
@@ -144,24 +151,49 @@ describe("ForSalePanel", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Cancel" }))
 
     expect(markForSaleMock).not.toHaveBeenCalled()
+    expect(screen.getByRole("button", { name: "Put 1 back on sale" })).toBeInTheDocument()
   })
 
-  /** With no restriction set, the report shows the on-sale banner and offers no take-off-sale action. */
-  it("shows the everything-on-sale banner and no take-off-sale action when nothing is held back", async () => {
+  /** Clearing a card drops its staged set locally and hides its apply button without sending anything to the backend. */
+  it("clears a staged direction without committing", async () => {
+    forSaleMock.mockResolvedValue(forSaleReport({ forSale: false, objects: ["Z-9"] }))
+    renderPanel()
+
+    await userEvent.click(await screen.findByRole("button", { name: /Z-9/ }))
+    await userEvent.click(await screen.findByRole("button", { name: "Clear" }))
+
+    expect(markForSaleMock).not.toHaveBeenCalled()
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Put 1 back on sale" })).not.toBeInTheDocument())
+  })
+
+  /** The public renderer can only select on-sale objects, so a not-for-sale pick stages nothing and no apply button appears. */
+  it("does not stage an object that is already not for sale", async () => {
+    renderPanel()
+
+    await screen.findByText("mount-chart")
+    await userEvent.click(screen.getByText("pick-not-for-sale"))
+
+    expect(screen.queryByRole("button", { name: /off sale/ })).not.toBeInTheDocument()
+    expect(markNotForSaleMock).not.toHaveBeenCalled()
+  })
+
+  /** With no restriction set, the report shows the on-sale banner and neither card exposes an apply button. */
+  it("shows the everything-on-sale banner and no apply buttons when nothing is staged", async () => {
     renderPanel()
 
     expect(await screen.findByText("Everything is on sale")).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Take off sale" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /off sale/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /back on sale/ })).not.toBeInTheDocument()
   })
 
-  /** The "All" pill selects every held-back object at once, so one tap stages the whole set for putting back on sale. */
+  /** The "All" pill stages every held-back object at once, so one tap queues the whole set for putting back on sale. */
   it("selects every held-back object with the All pill and puts them back on sale", async () => {
     forSaleMock.mockResolvedValue(forSaleReport({ forSale: false, objects: ["Z-9", "Z-10"] }))
     renderPanel()
 
     await userEvent.click(await screen.findByRole("button", { name: "All" }))
     await userEvent.click(await screen.findByRole("button", { name: "Put 2 back on sale" }))
-    await userEvent.click(await screen.findByRole("button", { name: "Put back on sale" }))
+    await userEvent.click(await screen.findByRole("button", { name: "Apply changes" }))
 
     await waitFor(() =>
       expect(markForSaleMock).toHaveBeenCalledWith(EVENT_UNIQUE_ID, { objects: ["Z-9", "Z-10"], categories: [] }),
