@@ -25,6 +25,12 @@ interface ForSaleChartProps {
   isApplying: boolean
 }
 
+/**
+ * Maroon the map paints held-back objects in. The objectColor callback below runs inside the Seats.io iframe and
+ * can't read this constant, so the same hex is hard-coded there — keep the two in sync.
+ */
+const NOT_FOR_SALE_COLOR = "#A63A3A"
+
 /** A section has no per-object for-sale flag; only bookable objects (seats, tables, areas) carry one. */
 function isForSale(object: SelectableObject): boolean {
   return "forSale" in object ? object.forSale : true
@@ -105,6 +111,14 @@ export function ForSaleChart({
             </Text>
           </Box>
         </HStack>
+        {isAddressable && !hasRenderFailed ? (
+          <HStack gap={2} flexShrink={0}>
+            <Box w="10px" h="10px" borderRadius="full" bg={NOT_FOR_SALE_COLOR} />
+            <Text fontSize="xs" fontWeight="600" color="text.secondary" whiteSpace="nowrap">
+              Not for sale
+            </Text>
+          </HStack>
+        ) : null}
       </Flex>
 
       <Box h={{ base: "260px", md: "340px", lg: "380px" }}>
@@ -121,6 +135,12 @@ export function ForSaleChart({
             region={resolveSeatsIoRegion(context!.region)}
             mode="normal"
             objectPopover={{ showAvailability: true, showLabel: true, showCategory: true }}
+            objectColor={(object: SelectableObject, defaultColor: string) =>
+              "forSale" in object && !object.forSale ? "#A63A3A" : defaultColor
+            }
+            popoverInfo={(object: SelectableObject) =>
+              "forSale" in object && !object.forSale ? "Not for sale" : ""
+            }
             onRenderStarted={(chart) => onChartReady(chart as SeatingChart)}
             onObjectSelected={(object) => {
               if (isForSale(object)) {
