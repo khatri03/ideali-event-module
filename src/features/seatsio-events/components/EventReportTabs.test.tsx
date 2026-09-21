@@ -9,7 +9,6 @@ import { EventReportTabs } from "./EventReportTabs"
 
 const {
   summaryMock,
-  statusesMock,
   forSaleMock,
   tablesMock,
   channelsMock,
@@ -18,7 +17,6 @@ const {
   renderContextMock,
 } = vi.hoisted(() => ({
   summaryMock: vi.fn(),
-  statusesMock: vi.fn(),
   forSaleMock: vi.fn(),
   tablesMock: vi.fn(),
   channelsMock: vi.fn(),
@@ -29,7 +27,6 @@ const {
 
 vi.mock("@/api/seatsio", () => ({
   fetchSeatsIoEventSummary: summaryMock,
-  fetchSeatsIoEventStatuses: statusesMock,
   fetchSeatsIoEventForSale: forSaleMock,
   fetchSeatsIoEventTables: tablesMock,
   fetchSeatsIoEventChannels: channelsMock,
@@ -57,7 +54,6 @@ describe("EventReportTabs", () => {
   beforeEach(() => {
     summaryMock.mockReset().mockResolvedValue({ totalObjects: 1, unavailableObjects: 1, byStatus: [{ key: "booked", label: "Booked", count: 1 }], byCategory: [] })
     channelsMock.mockReset().mockResolvedValue([{ key: "vip", name: "Vip", color: "#7551FF", objectCount: 2 }])
-    statusesMock.mockReset().mockResolvedValue([])
     forSaleMock.mockReset().mockResolvedValue({ everythingForSale: true, forSale: false, objects: [], categories: [], areaPlaces: [] })
     tablesMock.mockReset().mockResolvedValue({ mode: "INHERIT", modeLabel: "Inherited from chart", inheritsChartSettings: true, tables: [] })
     categoriesMock.mockReset().mockResolvedValue([])

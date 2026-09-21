@@ -2,15 +2,7 @@ import { useState } from "react"
 import { Box, Flex, Skeleton, Stack, Text } from "@chakra-ui/react"
 import { SeatsioSeatingChart } from "@seatsio/seatsio-react"
 import { useEventRenderContext } from "../hooks/useEventReports"
-
-const SEATS_IO_REGIONS = ["eu", "na", "sa", "oc"] as const
-
-type SeatsIoRegion = (typeof SEATS_IO_REGIONS)[number]
-
-/** Narrows the region the API sent to one the renderer accepts, falling back to Europe when it is unrecognised. */
-function resolveRegion(region: string): SeatsIoRegion {
-  return SEATS_IO_REGIONS.includes(region as SeatsIoRegion) ? (region as SeatsIoRegion) : "eu"
-}
+import { resolveSeatsIoRegion } from "../utils/resolveSeatsIoRegion"
 
 /**
  * What stands in for the chart when it cannot be drawn. Both the missing-setup and failed-render cases end the same
@@ -123,7 +115,7 @@ export function EventChartPreview({ eventUniqueId, progress }: EventChartPreview
         <SeatsioSeatingChart
           workspaceKey={context!.publicKey}
           event={context!.eventKey}
-          region={resolveRegion(context!.region)}
+          region={resolveSeatsIoRegion(context!.region)}
           mode="static"
           onChartRenderingFailed={() => setHasRenderFailed(true)}
         />

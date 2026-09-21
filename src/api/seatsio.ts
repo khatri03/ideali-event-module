@@ -556,19 +556,6 @@ const eventCategorySchema = z.object({
   count: z.number().int().nullable().optional(),
 })
 
-const eventObjectStatusSchema = z.object({
-  Label: z.string().nullable().optional(),
-  label: z.string().nullable().optional(),
-  Status: z.string().nullable().optional(),
-  status: z.string().nullable().optional(),
-  CategoryLabel: z.string().nullable().optional(),
-  categoryLabel: z.string().nullable().optional(),
-  ObjectType: z.string().nullable().optional(),
-  objectType: z.string().nullable().optional(),
-  Section: z.string().nullable().optional(),
-  section: z.string().nullable().optional(),
-})
-
 const eventForSaleReportSchema = z.object({
   EverythingForSale: z.boolean().nullable().optional(),
   everythingForSale: z.boolean().nullable().optional(),
@@ -613,6 +600,10 @@ const eventRenderContextSchema = z.object({
   publicKey: z.string().nullable().optional(),
   Region: z.string().nullable().optional(),
   region: z.string().nullable().optional(),
+  EventLabel: z.string().nullable().optional(),
+  eventLabel: z.string().nullable().optional(),
+  ChartName: z.string().nullable().optional(),
+  chartName: z.string().nullable().optional(),
 })
 
 export interface SeatsIoReportGroup {
@@ -654,14 +645,6 @@ export interface SeatsIoEventCategory {
   count: number
 }
 
-export interface SeatsIoEventObjectStatus {
-  label: string
-  status: string
-  categoryLabel: string
-  objectType: string
-  section: string
-}
-
 export interface SeatsIoEventForSaleReport {
   everythingForSale: boolean
   forSale: boolean
@@ -689,6 +672,8 @@ export interface SeatsIoEventRenderContext {
   eventKey: string
   publicKey: string
   region: string
+  eventLabel: string
+  chartName: string
 }
 
 function normalizeReportGroup(item: z.infer<typeof reportGroupSchema>): SeatsIoReportGroup {
@@ -746,16 +731,6 @@ function normalizeEventCategory(item: z.infer<typeof eventCategorySchema>): Seat
   }
 }
 
-function normalizeObjectStatus(item: z.infer<typeof eventObjectStatusSchema>): SeatsIoEventObjectStatus {
-  return {
-    label: item.Label ?? item.label ?? "",
-    status: item.Status ?? item.status ?? "",
-    categoryLabel: item.CategoryLabel ?? item.categoryLabel ?? "",
-    objectType: item.ObjectType ?? item.objectType ?? "",
-    section: item.Section ?? item.section ?? "",
-  }
-}
-
 function normalizeForSale(item: z.infer<typeof eventForSaleReportSchema>): SeatsIoEventForSaleReport {
   return {
     everythingForSale: item.EverythingForSale ?? item.everythingForSale ?? false,
@@ -783,6 +758,8 @@ function normalizeRenderContext(item: z.infer<typeof eventRenderContextSchema>):
     eventKey: item.EventKey ?? item.eventKey ?? "",
     publicKey: item.PublicKey ?? item.publicKey ?? "",
     region: item.Region ?? item.region ?? "",
+    eventLabel: item.EventLabel ?? item.eventLabel ?? "",
+    chartName: item.ChartName ?? item.chartName ?? "",
   }
 }
 
@@ -796,17 +773,6 @@ export async function fetchSeatsIoEventRenderContext(eventUniqueId: string): Pro
   const res = await client.get<unknown>(API_ROUTES.seatsIoEventRenderContext(eventUniqueId))
   const responseData = parseServiceResponseData(res.data)
   return normalizeRenderContext(eventRenderContextSchema.parse(responseData ?? {}))
-}
-
-export async function fetchSeatsIoEventStatuses(eventUniqueId: string): Promise<SeatsIoEventObjectStatus[]> {
-  const res = await client.get<unknown>(API_ROUTES.seatsIoEventReportStatuses(eventUniqueId))
-  const responseData = parseServiceResponseData(res.data)
-
-  if (!Array.isArray(responseData)) {
-    return []
-  }
-
-  return responseData.map((item) => normalizeObjectStatus(eventObjectStatusSchema.parse(item)))
 }
 
 export async function fetchSeatsIoEventForSale(eventUniqueId: string): Promise<SeatsIoEventForSaleReport> {

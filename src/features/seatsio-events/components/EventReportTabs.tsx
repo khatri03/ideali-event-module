@@ -2,14 +2,12 @@ import { useMemo } from "react"
 import { useSearchParams } from "react-router-dom"
 import { Box, Tabs } from "@chakra-ui/react"
 import { SummaryPanel } from "./panels/SummaryPanel"
-import { StatusesPanel } from "./panels/StatusesPanel"
 import { ForSalePanel } from "./panels/ForSalePanel"
 import { StatusChangesPanel } from "./panels/StatusChangesPanel"
 import { CategoriesPanel, ChannelsPanel, TablesPanel } from "./panels/GroupTabPanels"
 
 const TABS = [
   { value: "summary", label: "Summary" },
-  { value: "statuses", label: "Statuses" },
   { value: "for-sale", label: "For sale" },
   { value: "tables", label: "Tables" },
   { value: "channels", label: "Channels" },
@@ -68,9 +66,6 @@ export function EventReportTabs({ eventUniqueId }: { eventUniqueId: string }) {
       <Box pt={5}>
         <Tabs.Content value="summary">
           <SummaryPanel eventUniqueId={eventUniqueId} />
-        </Tabs.Content>
-        <Tabs.Content value="statuses">
-          <StatusesPanel eventUniqueId={eventUniqueId} />
         </Tabs.Content>
         <Tabs.Content value="for-sale">
           <ForSalePanel eventUniqueId={eventUniqueId} formatCount={formatCount} />

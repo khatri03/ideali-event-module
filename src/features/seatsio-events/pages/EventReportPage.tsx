@@ -1,8 +1,9 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom"
-import { Box, Button, Heading, HStack, Stack, Text } from "@chakra-ui/react"
-import { ArrowLeft, BarChart3 } from "lucide-react"
+import { Box, Button, Heading, HStack, Skeleton, Stack, Text } from "@chakra-ui/react"
+import { ArrowLeft, BarChart3, LayoutGrid } from "lucide-react"
 import { APP_ROUTES } from "@/utils/routes"
 import { EventReportTabs } from "../components/EventReportTabs"
+import { useEventRenderContext } from "../hooks/useEventReports"
 
 interface EventReportLocationState {
   eventLabel?: string
@@ -18,6 +19,11 @@ export function EventReportPage() {
   const backTarget = state?.chartUniqueId
     ? APP_ROUTES.seatingLayouts.events(state.chartUniqueId)
     : APP_ROUTES.seatingLayouts.list
+
+  const renderContext = useEventRenderContext(eventUniqueId, Boolean(eventUniqueId))
+  const eventLabel = renderContext.data?.eventLabel || state?.eventLabel || ""
+  const chartName = renderContext.data?.chartName || ""
+  const isHeaderLoading = !eventLabel && renderContext.isLoading
 
   return (
     <Box w="full">
@@ -35,9 +41,21 @@ export function EventReportPage() {
             Seats.io · Event report
           </Text>
         </HStack>
-        <Heading fontSize={{ base: "2xl", md: "3xl" }} fontWeight="800" letterSpacing="-0.03em" color="gray.900">
-          {state?.eventLabel || "Event report"}
-        </Heading>
+        {isHeaderLoading ? (
+          <Skeleton height="9" width={{ base: "70%", md: "320px" }} borderRadius="10px" />
+        ) : (
+          <Heading fontSize={{ base: "2xl", md: "3xl" }} fontWeight="800" letterSpacing="-0.03em" color="gray.900">
+            {eventLabel || "Event report"}
+          </Heading>
+        )}
+        {chartName ? (
+          <HStack gap={2} color="gray.600">
+            <LayoutGrid size={15} />
+            <Text fontSize={{ base: "sm", md: "md" }} fontWeight="600">
+              Layout: {chartName}
+            </Text>
+          </HStack>
+        ) : null}
         <Text fontSize={{ base: "sm", md: "md" }} color="gray.600" maxW="2xl">
           Live seat, sales and status insights for this event. Each tab loads its report when you open it.
         </Text>

@@ -252,8 +252,6 @@ export const API_ROUTES = {
   seatsIoChartEvents: (chartUniqueId: string) => `/api/organizer/seatsio/seating-layouts/${chartUniqueId}/events`,
   seatsIoEventReportSummary: (eventUniqueId: string) =>
     `/api/organizer/seatsio/events/${eventUniqueId}/reports/summary`,
-  seatsIoEventReportStatuses: (eventUniqueId: string) =>
-    `/api/organizer/seatsio/events/${eventUniqueId}/reports/statuses`,
   seatsIoEventReportForSale: (eventUniqueId: string) =>
     `/api/organizer/seatsio/events/${eventUniqueId}/reports/for-sale`,
   seatsIoEventReportTables: (eventUniqueId: string) =>

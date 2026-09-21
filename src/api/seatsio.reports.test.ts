@@ -53,24 +53,38 @@ describe("fetchSeatsIoEventSummary", () => {
 })
 
 describe("fetchSeatsIoEventRenderContext", () => {
-  /** The render context reads the event key, public key and region from the envelope, camelCase or Pascal. */
-  it("maps the event key, public key and region from the response envelope", async () => {
+  /** The render context reads the keys, region and display names from the envelope, camelCase or Pascal. */
+  it("maps the keys, region and display names from the response envelope", async () => {
     getMock.mockResolvedValue({
-      data: { Data: { EventKey: "event-1", PublicKey: "pk-workspace", Region: "na" } },
+      data: {
+        Data: {
+          EventKey: "event-1",
+          PublicKey: "pk-workspace",
+          Region: "na",
+          EventLabel: "CME 2026",
+          ChartName: "Court Room",
+        },
+      },
     })
 
     const context = await fetchSeatsIoEventRenderContext(EVENT_UNIQUE_ID)
 
-    expect(context).toEqual({ eventKey: "event-1", publicKey: "pk-workspace", region: "na" })
+    expect(context).toEqual({
+      eventKey: "event-1",
+      publicKey: "pk-workspace",
+      region: "na",
+      eventLabel: "CME 2026",
+      chartName: "Court Room",
+    })
   })
 
-  /** A missing payload degrades to empty keys, which the preview reads as "no map" rather than throwing. */
-  it("returns empty keys when the envelope carries no data", async () => {
+  /** A missing payload degrades to empty fields, which the preview reads as "no map" rather than throwing. */
+  it("returns empty fields when the envelope carries no data", async () => {
     getMock.mockResolvedValue({ data: { Data: null } })
 
     const context = await fetchSeatsIoEventRenderContext(EVENT_UNIQUE_ID)
 
-    expect(context).toEqual({ eventKey: "", publicKey: "", region: "" })
+    expect(context).toEqual({ eventKey: "", publicKey: "", region: "", eventLabel: "", chartName: "" })
   })
 })
 
