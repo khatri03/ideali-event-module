@@ -1,5 +1,5 @@
-import type { ReactNode } from "react"
-import { Badge, Box, Button, Flex, HStack, Stack, Text, Wrap } from "@chakra-ui/react"
+import { useState, type ReactNode } from "react"
+import { Badge, Box, Button, Flex, HStack, Stack, Switch, Text, Wrap } from "@chakra-ui/react"
 import { CheckCircle2, RotateCcw } from "lucide-react"
 import type { SeatsIoEventForSaleReport } from "@/api/seatsio"
 import { ReportGroupList } from "./ReportGroupList"
@@ -16,6 +16,8 @@ interface ForSaleRestrictionProps {
   onToggleCategory: (category: string) => void
   /** Selects every held-back object, or clears the selection when all are already selected. */
   onToggleAllObjects: () => void
+  /** Zooms the live map to the given held-back objects so tapping a pill reveals where it sits. */
+  onFocusObjects: (labels: string[]) => void
   /** Commits the staged put-back set; resolves true on success so its confirm dialog can close. */
   onApply: () => Promise<boolean>
   /** Drops the staged put-back set without sending anything. */
@@ -113,10 +115,13 @@ export function ForSaleRestriction({
   onToggleObject,
   onToggleCategory,
   onToggleAllObjects,
+  onFocusObjects,
   onApply,
   onClear,
   isApplying,
 }: ForSaleRestrictionProps) {
+  const [zoomOnSelect, setZoomOnSelect] = useState(true)
+
   if (report.everythingForSale) {
     return <EverythingForSaleBanner />
   }
@@ -132,6 +137,7 @@ export function ForSaleRestriction({
     <HeldBackCard>
       <Flex
         align="center"
+        justify="space-between"
         gap={3}
         px={{ base: 4, md: 5 }}
         py={{ base: 3, md: 4 }}
@@ -162,6 +168,20 @@ export function ForSaleRestriction({
             </Text>
           </Box>
         </HStack>
+        {showPutBack ? (
+          <Switch.Root
+            checked={zoomOnSelect}
+            onCheckedChange={(details) => setZoomOnSelect(details.checked === true)}
+            colorPalette="green"
+            flexShrink={0}
+          >
+            <Switch.HiddenInput />
+            <Switch.Control cursor="pointer" />
+            <Switch.Label fontSize="xs" fontWeight="700" color="text.secondary" whiteSpace="nowrap">
+              Zoom to selection
+            </Switch.Label>
+          </Switch.Root>
+        ) : null}
       </Flex>
 
       <Stack gap={5} px={{ base: 4, md: 5 }} py={{ base: 4, md: 5 }}>
@@ -180,7 +200,12 @@ export function ForSaleRestriction({
                 <StageChip
                   label="All"
                   isStaged={allObjectsSelected}
-                  onToggle={onToggleAllObjects}
+                  onToggle={() => {
+                    onToggleAllObjects()
+                    if (zoomOnSelect && !allObjectsSelected) {
+                      onFocusObjects(report.objects)
+                    }
+                  }}
                   isDisabled={isApplying}
                 />
                 {report.objects.map((label) => (
@@ -188,7 +213,13 @@ export function ForSaleRestriction({
                     key={label}
                     label={label}
                     isStaged={stagedObjects.includes(label)}
-                    onToggle={() => onToggleObject(label)}
+                    onToggle={() => {
+                      const isStaging = !stagedObjects.includes(label)
+                      onToggleObject(label)
+                      if (zoomOnSelect && isStaging) {
+                        onFocusObjects([label])
+                      }
+                    }}
                     isDisabled={isApplying}
                   />
                 ))}

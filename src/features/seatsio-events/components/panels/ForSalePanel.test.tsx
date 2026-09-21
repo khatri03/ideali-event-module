@@ -7,13 +7,15 @@ import { system } from "@/theme"
 import { ForSalePanel } from "./ForSalePanel"
 import type { SeatsIoEventForSaleReport } from "@/api/seatsio"
 
-const { renderContextMock, forSaleMock, markForSaleMock, markNotForSaleMock, clearSelectionMock } = vi.hoisted(() => ({
-  renderContextMock: vi.fn(),
-  forSaleMock: vi.fn(),
-  markForSaleMock: vi.fn(),
-  markNotForSaleMock: vi.fn(),
-  clearSelectionMock: vi.fn(),
-}))
+const { renderContextMock, forSaleMock, markForSaleMock, markNotForSaleMock, clearSelectionMock, zoomToObjectsMock } =
+  vi.hoisted(() => ({
+    renderContextMock: vi.fn(),
+    forSaleMock: vi.fn(),
+    markForSaleMock: vi.fn(),
+    markNotForSaleMock: vi.fn(),
+    clearSelectionMock: vi.fn(),
+    zoomToObjectsMock: vi.fn(),
+  }))
 
 vi.mock("@/api/seatsio", () => ({
   fetchSeatsIoEventRenderContext: renderContextMock,
@@ -25,7 +27,7 @@ vi.mock("@/api/seatsio", () => ({
 vi.mock("@/lib/toaster", () => ({ toaster: { create: vi.fn() } }))
 
 interface ChartProps {
-  onRenderStarted?: (chart: { clearSelection: () => void }) => void
+  onRenderStarted?: (chart: { clearSelection: () => void; zoomToObjects: (labels: string[]) => Promise<void> }) => void
   onObjectSelected?: (object: { label: string; forSale: boolean }) => void
   onObjectDeselected?: (object: { label: string; forSale: boolean }) => void
 }
@@ -33,7 +35,15 @@ interface ChartProps {
 vi.mock("@seatsio/seatsio-react", () => ({
   SeatsioSeatingChart: (props: ChartProps) => (
     <div>
-      <button type="button" onClick={() => props.onRenderStarted?.({ clearSelection: clearSelectionMock })}>
+      <button
+        type="button"
+        onClick={() =>
+          props.onRenderStarted?.({
+            clearSelection: clearSelectionMock,
+            zoomToObjects: zoomToObjectsMock.mockResolvedValue(undefined),
+          })
+        }
+      >
         mount-chart
       </button>
       <button type="button" onClick={() => props.onObjectSelected?.({ label: "A-1", forSale: true })}>
@@ -77,6 +87,7 @@ describe("ForSalePanel", () => {
     markForSaleMock.mockReset().mockResolvedValue(undefined)
     markNotForSaleMock.mockReset().mockResolvedValue(undefined)
     clearSelectionMock.mockReset()
+    zoomToObjectsMock.mockReset()
   })
 
   /**
@@ -198,6 +209,46 @@ describe("ForSalePanel", () => {
     await waitFor(() =>
       expect(markForSaleMock).toHaveBeenCalledWith(EVENT_UNIQUE_ID, { objects: ["Z-9", "Z-10"], categories: [] }),
     )
+  })
+
+  /** Tapping a held-back pill to stage it zooms the live map to that object, so the organizer sees where it sits. */
+  it("zooms the map to a held-back object when its pill is tapped", async () => {
+    forSaleMock.mockResolvedValue(forSaleReport({ forSale: false, objects: ["Z-9"] }))
+    renderPanel()
+
+    await screen.findByText("mount-chart")
+    await userEvent.click(screen.getByText("mount-chart"))
+    await userEvent.click(await screen.findByRole("button", { name: /Z-9/ }))
+
+    expect(zoomToObjectsMock).toHaveBeenCalledWith(["Z-9"])
+  })
+
+  /** The zoom-to-selection toggle defaults on; switching it off stops staging a pill from zooming the map. */
+  it("does not zoom when the zoom-to-selection toggle is off", async () => {
+    forSaleMock.mockResolvedValue(forSaleReport({ forSale: false, objects: ["Z-9"] }))
+    renderPanel()
+
+    await screen.findByText("mount-chart")
+    await userEvent.click(screen.getByText("mount-chart"))
+    await userEvent.click(await screen.findByText("Zoom to selection"))
+    await userEvent.click(await screen.findByRole("button", { name: /Z-9/ }))
+
+    expect(zoomToObjectsMock).not.toHaveBeenCalled()
+  })
+
+  /** Unstaging a pill must not zoom: only selecting an object reveals it, so deselecting leaves the map put. */
+  it("does not zoom when a staged pill is tapped again to unselect it", async () => {
+    forSaleMock.mockResolvedValue(forSaleReport({ forSale: false, objects: ["Z-9"] }))
+    renderPanel()
+
+    await screen.findByText("mount-chart")
+    await userEvent.click(screen.getByText("mount-chart"))
+    await userEvent.click(await screen.findByRole("button", { name: /Z-9/ }))
+    zoomToObjectsMock.mockClear()
+
+    await userEvent.click(await screen.findByRole("button", { name: /Z-9/ }))
+
+    expect(zoomToObjectsMock).not.toHaveBeenCalled()
   })
 
   /** The "All" pill appears only when the report enumerates held-back objects, never for a whitelist or clean event. */

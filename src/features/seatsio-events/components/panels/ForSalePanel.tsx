@@ -61,6 +61,13 @@ export function ForSalePanel({ eventUniqueId, formatCount }: ForSalePanelProps) 
   const [backOnObjects, setBackOnObjects] = useState<Set<string>>(new Set())
   const [backOnCategories, setBackOnCategories] = useState<Set<string>>(new Set())
 
+  function focusObjects(labels: string[]) {
+    if (labels.length === 0) {
+      return
+    }
+    void chartRef.current?.zoomToObjects(labels)
+  }
+
   function discardOffSale() {
     setOffSale(new Set())
     chartRef.current?.clearSelection()
@@ -156,6 +163,7 @@ export function ForSalePanel({ eventUniqueId, formatCount }: ForSalePanelProps) 
           }
           onApply={applyBackOn}
           onClear={discardBackOn}
+          onFocusObjects={focusObjects}
           isApplying={markForSale.isPending}
         />
       </Stack>
