@@ -5,6 +5,7 @@ import { SeatsioSeatingChart } from "@seatsio/seatsio-react"
 import type { SeatingChart, SelectableObject } from "@seatsio/seatsio-react"
 import { useEventRenderContext } from "../hooks/useEventReports"
 import { resolveSeatsIoRegion } from "../utils/resolveSeatsIoRegion"
+import { popoverInfoFor } from "../utils/popoverInfoFor"
 import { StagedApplyBar } from "./StagedApplyBar"
 
 interface ForSaleChartProps {
@@ -138,9 +139,7 @@ export function ForSaleChart({
             objectColor={(object: SelectableObject, defaultColor: string) =>
               "forSale" in object && !object.forSale ? "#A63A3A" : defaultColor
             }
-            popoverInfo={(object: SelectableObject) =>
-              "forSale" in object && !object.forSale ? "Not for sale" : ""
-            }
+            popoverInfo={popoverInfoFor}
             onRenderStarted={(chart) => onChartReady(chart as SeatingChart)}
             onObjectSelected={(object) => {
               if (isForSale(object)) {
