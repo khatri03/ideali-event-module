@@ -5,6 +5,7 @@ import type { SeatingChart } from "@seatsio/seatsio-react"
 import { useEventForSale, useMarkForSale, useMarkNotForSale } from "../../hooks/useEventReports"
 import { ReportError, ReportPanelShell, ReportSkeleton } from "../ReportStates"
 import { ForSaleChart } from "../ForSaleChart"
+import { ForSaleGuide } from "../ForSaleGuide"
 import { ForSaleRestriction } from "../ForSaleRestriction"
 
 interface ForSalePanelProps {
@@ -128,6 +129,7 @@ export function ForSalePanel({ eventUniqueId, formatCount }: ForSalePanelProps) 
     <ReportPanelShell>
       <Stack gap={5}>
         <ForSaleIntro />
+        <ForSaleGuide />
         <ForSaleChart
           eventUniqueId={eventUniqueId}
           stagedLabels={[...offSale]}
