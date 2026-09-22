@@ -1,12 +1,13 @@
 import type { ComponentType } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
-import { Badge, Box, Button, Heading, HStack, Skeleton, Stack, Text, Wrap } from "@chakra-ui/react"
+import { Badge, Box, Button, Flex, Heading, HStack, Skeleton, Stack, Text, Wrap } from "@chakra-ui/react"
 import { ArrowLeft, BarChart3, CalendarClock, LayoutGrid, MapPin } from "lucide-react"
 import type { LucideProps } from "lucide-react"
 import { format, parseISO } from "date-fns"
 import { APP_ROUTES } from "@/utils/routes"
+import { EventBookedProgress } from "../components/EventBookedProgress"
 import { EventReportTabs } from "../components/EventReportTabs"
-import { useEventRenderContext } from "../hooks/useEventReports"
+import { useEventRenderContext, useEventSummary } from "../hooks/useEventReports"
 
 interface EventReportLocationState {
   eventLabel?: string
@@ -22,6 +23,11 @@ const SESSION_STATUS: Record<string, { label: string; palette: StatusPalette }> 
   started: { label: "Live", palette: "purple" },
   ended: { label: "Ended", palette: "gray" },
   cancelled: { label: "Cancelled", palette: "red" },
+}
+
+/** The count of booked objects, read from the status breakdown, that fills the header progress meter. */
+function bookedCount(groups: { key: string; count: number }[]): number {
+  return groups.find((group) => group.key.toLowerCase() === "booked")?.count ?? 0
 }
 
 /** Formats the session start for the header, or returns an empty string when it is missing or unparseable. */
@@ -72,6 +78,10 @@ export function EventReportPage() {
   const sessionValue = sessionName && sessionStart ? `${sessionName} · ${sessionStart}` : sessionName
   const isHeaderLoading = !eventLabel && renderContext.isLoading
 
+  const summaryQuery = useEventSummary(eventUniqueId, Boolean(eventUniqueId))
+  const summary = summaryQuery.data
+  const showProgress = Boolean(summary && summary.totalObjects > 0)
+
   return (
     <Box w="full">
       <Button variant="ghost" size="sm" mb={4} px={2} color="gray.600" onClick={() => navigate(backTarget)}>
@@ -79,37 +89,64 @@ export function EventReportPage() {
         Back to events
       </Button>
 
-      <Stack gap={2} mb={6}>
-        <HStack gap={2}>
-          <Box color="brand.500">
-            <BarChart3 size={18} />
-          </Box>
-          <Text fontSize="xs" fontWeight="800" textTransform="uppercase" letterSpacing="0.12em" color="gray.500">
-            Seats.io event report
-          </Text>
-        </HStack>
-        {isHeaderLoading ? (
-          <Skeleton height="9" width={{ base: "70%", md: "320px" }} borderRadius="10px" />
-        ) : (
-          <HStack gap={3} flexWrap="wrap">
-            <Heading fontSize={{ base: "2xl", md: "3xl" }} fontWeight="800" letterSpacing="-0.03em" color="gray.900">
-              {eventLabel || "Event report"}
-            </Heading>
-            {status ? (
-              <Badge variant="subtle" colorPalette={status.palette} borderRadius="999px" px={3} py={1} fontWeight="700">
-                {status.label}
-              </Badge>
+      <Box
+        mb={6}
+        borderRadius="20px"
+        border="1px solid"
+        borderColor="border.subtle"
+        bg="linear-gradient(135deg, rgba(117,81,255,0.08) 0%, rgba(66,42,251,0.04) 100%)"
+        px={{ base: 4, md: 6 }}
+        py={{ base: 4, md: 5 }}
+      >
+        <Flex
+          direction={{ base: "column", lg: "row" }}
+          justify="space-between"
+          align={{ lg: "center" }}
+          gap={{ base: 5, lg: 8 }}
+        >
+          <Stack gap={2} minW={0}>
+            <HStack gap={2}>
+              <Box color="brand.500">
+                <BarChart3 size={18} />
+              </Box>
+              <Text fontSize="xs" fontWeight="800" textTransform="uppercase" letterSpacing="0.12em" color="gray.500">
+                Seats.io event report
+              </Text>
+            </HStack>
+            {isHeaderLoading ? (
+              <Skeleton height="9" width={{ base: "70%", md: "320px" }} borderRadius="10px" />
+            ) : (
+              <HStack gap={3} flexWrap="wrap">
+                <Heading fontSize={{ base: "2xl", md: "3xl" }} fontWeight="800" letterSpacing="-0.03em" color="gray.900">
+                  {eventLabel || "Event report"}
+                </Heading>
+                {status ? (
+                  <Badge variant="subtle" colorPalette={status.palette} borderRadius="999px" px={3} py={1} fontWeight="700">
+                    {status.label}
+                  </Badge>
+                ) : null}
+              </HStack>
+            )}
+            {sessionValue || venueName || chartName ? (
+              <Wrap gapX={5} gapY={1.5}>
+                {sessionValue ? <HeaderFact icon={CalendarClock} label="Session" value={sessionValue} /> : null}
+                {venueName ? <HeaderFact icon={MapPin} label="Venue" value={venueName} /> : null}
+                {chartName ? <HeaderFact icon={LayoutGrid} label="Chart" value={chartName} /> : null}
+              </Wrap>
             ) : null}
-          </HStack>
-        )}
-        {sessionValue || venueName || chartName ? (
-          <Wrap gapX={5} gapY={1.5}>
-            {sessionValue ? <HeaderFact icon={CalendarClock} label="Session" value={sessionValue} /> : null}
-            {venueName ? <HeaderFact icon={MapPin} label="Venue" value={venueName} /> : null}
-            {chartName ? <HeaderFact icon={LayoutGrid} label="Chart" value={chartName} /> : null}
-          </Wrap>
-        ) : null}
-      </Stack>
+          </Stack>
+          {showProgress ? (
+            <Box flexShrink={0} w={{ base: "full", lg: "auto" }}>
+              <EventBookedProgress
+                booked={bookedCount(summary!.byStatus)}
+                total={summary!.totalObjects}
+                available={summary!.availableObjects}
+                isUpdating={summaryQuery.isFetching}
+              />
+            </Box>
+          ) : null}
+        </Flex>
+      </Box>
 
       <Box borderRadius="20px" border="1px solid" borderColor="border.subtle" bg="card.bg" boxShadow="card" p={{ base: 3, md: 5 }}>
         <EventReportTabs eventUniqueId={eventUniqueId} />

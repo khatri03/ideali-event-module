@@ -510,6 +510,8 @@ const eventSummaryReportSchema = z.object({
   totalObjects: z.number().int().nullable().optional(),
   UnavailableObjects: z.number().int().nullable().optional(),
   unavailableObjects: z.number().int().nullable().optional(),
+  AvailableObjects: z.number().int().nullable().optional(),
+  availableObjects: z.number().int().nullable().optional(),
   ByStatus: z.array(reportGroupSchema).nullable().optional(),
   byStatus: z.array(reportGroupSchema).nullable().optional(),
   ByCategory: z.array(reportGroupSchema).nullable().optional(),
@@ -623,6 +625,7 @@ export interface SeatsIoReportGroup {
 export interface SeatsIoEventSummaryReport {
   totalObjects: number
   unavailableObjects: number
+  availableObjects: number
   byStatus: SeatsIoReportGroup[]
   byCategory: SeatsIoReportGroup[]
 }
@@ -706,6 +709,7 @@ function normalizeEventSummary(item: z.infer<typeof eventSummaryReportSchema>): 
   return {
     totalObjects: item.TotalObjects ?? item.totalObjects ?? 0,
     unavailableObjects: item.UnavailableObjects ?? item.unavailableObjects ?? 0,
+    availableObjects: item.AvailableObjects ?? item.availableObjects ?? 0,
     byStatus: normalizeReportGroupList(item.ByStatus ?? item.byStatus),
     byCategory: normalizeReportGroupList(item.ByCategory ?? item.byCategory),
   }

@@ -25,6 +25,7 @@ describe("fetchSeatsIoEventSummary", () => {
       data: {
         Data: {
           totalObjects: 3,
+          availableObjects: 1,
           byStatus: [
             { key: "booked", label: "Booked", count: 2 },
             { key: "free", label: "Free", count: 1 },
@@ -37,6 +38,7 @@ describe("fetchSeatsIoEventSummary", () => {
     const summary = await fetchSeatsIoEventSummary(EVENT_UNIQUE_ID)
 
     expect(summary.totalObjects).toBe(3)
+    expect(summary.availableObjects).toBe(1)
     expect(summary.byStatus.map((group) => group.label)).toEqual(["Booked", "Free"])
     expect(summary.byCategory[0]).toEqual({ key: "Stalls", label: "Stalls", count: 2 })
   })

@@ -6,9 +6,15 @@ import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { system } from "@/theme"
 import { EventReportPage } from "./EventReportPage"
 
-const { renderContextMock } = vi.hoisted(() => ({ renderContextMock: vi.fn() }))
+const { renderContextMock, summaryMock } = vi.hoisted(() => ({
+  renderContextMock: vi.fn(),
+  summaryMock: vi.fn(),
+}))
 
-vi.mock("@/api/seatsio", () => ({ fetchSeatsIoEventRenderContext: renderContextMock }))
+vi.mock("@/api/seatsio", () => ({
+  fetchSeatsIoEventRenderContext: renderContextMock,
+  fetchSeatsIoEventSummary: summaryMock,
+}))
 
 vi.mock("../components/EventReportTabs", () => ({
   EventReportTabs: () => <div>report tabs</div>,
@@ -34,6 +40,7 @@ function renderPage(state?: { eventLabel?: string; chartUniqueId?: string }) {
 describe("EventReportPage header", () => {
   beforeEach(() => {
     renderContextMock.mockReset()
+    summaryMock.mockReset().mockResolvedValue({ totalObjects: 0, unavailableObjects: 0, availableObjects: 0, byStatus: [], byCategory: [] })
   })
 
   /**
@@ -159,5 +166,51 @@ describe("EventReportPage header", () => {
     renderPage({ eventLabel: "Saturday Gala 2026" })
 
     expect(await screen.findByText("Saturday Gala 2026")).toBeInTheDocument()
+  })
+
+  /**
+   * The booked-vs-available meter rides in the header hero, not inside a tab, so the "how full is this event" figure is
+   * the first thing an organizer sees. Available is Seats.io's own figure, not total minus booked.
+   */
+  it("shows the booked progress meter in the header with Seats.io's available figure", async () => {
+    renderContextMock.mockResolvedValue({
+      eventKey: "ek",
+      publicKey: "pk",
+      region: "eu",
+      eventLabel: "Friday Dinner & Entertainment 2026",
+      chartName: "Court Room",
+      sessionName: "",
+    })
+    summaryMock.mockResolvedValue({
+      totalObjects: 40,
+      unavailableObjects: 12,
+      availableObjects: 25,
+      byStatus: [{ key: "booked", label: "Booked", count: 12 }],
+      byCategory: [],
+    })
+
+    renderPage()
+
+    const bar = await screen.findByRole("progressbar")
+    expect(bar).toHaveAttribute("aria-valuenow", "12")
+    expect(bar).toHaveAttribute("aria-valuemax", "40")
+    expect(screen.getByText("12 booked · 25 available")).toBeInTheDocument()
+  })
+
+  /** With no objects on the event there is nothing to be booked, so the header omits the meter rather than showing 0 of 0. */
+  it("omits the progress meter when the event has no objects", async () => {
+    renderContextMock.mockResolvedValue({
+      eventKey: "ek",
+      publicKey: "pk",
+      region: "eu",
+      eventLabel: "Friday Dinner & Entertainment 2026",
+      chartName: "Court Room",
+      sessionName: "",
+    })
+
+    renderPage()
+
+    expect(await screen.findByText("Friday Dinner & Entertainment 2026")).toBeInTheDocument()
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
   })
 })
