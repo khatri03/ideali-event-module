@@ -85,4 +85,35 @@ describe("EventReportTabs", () => {
 
     expect(await screen.findByText("Vip")).toBeInTheDocument()
   })
+
+  /**
+   * The booked-vs-available bar sits above the tab strip, not inside one panel, so the "how full is this event" figure
+   * stays in view on every tab. Switching away from Summary must not remove it.
+   */
+  it("keeps the booked progress bar above the tabs on every tab", async () => {
+    summaryMock.mockResolvedValue({
+      totalObjects: 40,
+      unavailableObjects: 12,
+      byStatus: [{ key: "booked", label: "Booked", count: 12 }],
+      byCategory: [],
+    })
+    renderTabs()
+
+    const bar = await screen.findByRole("progressbar")
+    expect(bar).toHaveAttribute("aria-valuenow", "12")
+    expect(bar).toHaveAttribute("aria-valuemax", "40")
+
+    await userEvent.click(screen.getByRole("tab", { name: "Channels" }))
+
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "12")
+  })
+
+  /** With no objects on the event there is nothing to be booked, so the bar stays hidden rather than showing 0 of 0. */
+  it("hides the progress bar when the event has no objects", async () => {
+    summaryMock.mockResolvedValue({ totalObjects: 0, unavailableObjects: 0, byStatus: [], byCategory: [] })
+    renderTabs()
+
+    await screen.findByRole("tab", { name: "Summary" })
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
+  })
 })

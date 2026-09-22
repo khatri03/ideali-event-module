@@ -23,12 +23,12 @@ vi.mock("@seatsio/seatsio-react", () => ({
 
 const EVENT_UNIQUE_ID = "7a6c857d-ca04-4abe-a812-895496c8bea9"
 
-function renderPreview(progress?: { booked: number; total: number }) {
+function renderPreview() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <ChakraProvider value={system}>
       <QueryClientProvider client={queryClient}>
-        <EventChartPreview eventUniqueId={EVENT_UNIQUE_ID} progress={progress} />
+        <EventChartPreview eventUniqueId={EVENT_UNIQUE_ID} />
       </QueryClientProvider>
     </ChakraProvider>,
   )
@@ -56,23 +56,6 @@ describe("EventChartPreview", () => {
     expect(props.event).toBe("event-1")
     expect(props.mode).toBe("static")
     expect(JSON.stringify(props)).not.toContain("sk-")
-  })
-
-  /**
-   * The booked-vs-available split rides as a two-tone progress bar on top of the live map, so the organizer reads how
-   * full the event is against the seat map itself. The bar is a real progressbar carrying the booked value out of the
-   * total, and it shows only once the chart is drawable.
-   */
-  it("shows the booked-vs-available progress bar over the chart when a progress value is passed", async () => {
-    renderContextMock.mockResolvedValue({ eventKey: "event-1", publicKey: "pk-workspace", region: "na" })
-
-    renderPreview({ booked: 12, total: 40 })
-
-    await waitFor(() => expect(screen.getByTestId("seatsio-chart")).toBeInTheDocument())
-    const bar = screen.getByRole("progressbar")
-    expect(bar).toHaveAttribute("aria-valuenow", "12")
-    expect(bar).toHaveAttribute("aria-valuemax", "40")
-    expect(screen.getByText("12 booked · 28 available")).toBeInTheDocument()
   })
 
   /**

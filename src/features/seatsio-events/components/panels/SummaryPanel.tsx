@@ -6,11 +6,6 @@ interface SummaryPanelProps {
   eventUniqueId: string
 }
 
-/** The count of booked objects, read from the status breakdown, that fills the progress bar on top of the live map. */
-function bookedCount(groups: { key: string; label: string; count: number }[]): number {
-  return groups.find((group) => group.key.toLowerCase() === "booked")?.count ?? 0
-}
-
 export function SummaryPanel({ eventUniqueId }: SummaryPanelProps) {
   const query = useEventSummary(eventUniqueId, true)
 
@@ -42,10 +37,7 @@ export function SummaryPanel({ eventUniqueId }: SummaryPanelProps) {
 
   return (
     <ReportPanelShell>
-      <EventChartPreview
-        eventUniqueId={eventUniqueId}
-        progress={{ booked: bookedCount(summary.byStatus), total: summary.totalObjects }}
-      />
+      <EventChartPreview eventUniqueId={eventUniqueId} />
     </ReportPanelShell>
   )
 }
