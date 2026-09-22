@@ -606,10 +606,16 @@ const eventRenderContextSchema = z.object({
   eventLabel: z.string().nullable().optional(),
   ChartName: z.string().nullable().optional(),
   chartName: z.string().nullable().optional(),
+  ChartUniqueId: z.string().nullable().optional(),
+  chartUniqueId: z.string().nullable().optional(),
   VenueName: z.string().nullable().optional(),
   venueName: z.string().nullable().optional(),
+  VenueMapUrl: z.string().nullable().optional(),
+  venueMapUrl: z.string().nullable().optional(),
   SessionName: z.string().nullable().optional(),
   sessionName: z.string().nullable().optional(),
+  SessionUniqueId: z.string().nullable().optional(),
+  sessionUniqueId: z.string().nullable().optional(),
   SessionStartUtc: z.string().nullable().optional(),
   sessionStartUtc: z.string().nullable().optional(),
   SessionStatus: z.string().nullable().optional(),
@@ -685,8 +691,14 @@ export interface SeatsIoEventRenderContext {
   region: string
   eventLabel: string
   chartName: string
+  /** Identifier of the chart, used to link its name to the seating layout; empty when unseated. */
+  chartUniqueId: string
   venueName: string
+  /** External map URL of the venue, opened in a new tab; empty when none is set. */
+  venueMapUrl: string
   sessionName: string
+  /** Identifier of the bound session, used to link its name to the session wizard; empty when unbound. */
+  sessionUniqueId: string
   /** ISO-8601 UTC start of the bound session, or empty when none is bound or none is set. */
   sessionStartUtc: string
   /** Lowercase lifecycle token of the bound session (e.g. "published"), or empty when none is bound. */
@@ -778,8 +790,11 @@ function normalizeRenderContext(item: z.infer<typeof eventRenderContextSchema>):
     region: item.Region ?? item.region ?? "",
     eventLabel: item.EventLabel ?? item.eventLabel ?? "",
     chartName: item.ChartName ?? item.chartName ?? "",
+    chartUniqueId: item.ChartUniqueId ?? item.chartUniqueId ?? "",
     venueName: item.VenueName ?? item.venueName ?? "",
+    venueMapUrl: item.VenueMapUrl ?? item.venueMapUrl ?? "",
     sessionName: item.SessionName ?? item.sessionName ?? "",
+    sessionUniqueId: item.SessionUniqueId ?? item.sessionUniqueId ?? "",
     sessionStartUtc: item.SessionStartUtc ?? item.sessionStartUtc ?? "",
     sessionStatus: item.SessionStatus ?? item.sessionStatus ?? "",
   }

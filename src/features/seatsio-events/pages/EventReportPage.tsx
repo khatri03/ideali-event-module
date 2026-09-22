@@ -1,6 +1,6 @@
 import type { ComponentType } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
-import { Badge, Box, Button, Flex, Heading, HStack, Skeleton, Stack, Text, Wrap } from "@chakra-ui/react"
+import { Badge, Box, Button, Flex, Heading, HStack, Link, Skeleton, Stack, Text, Wrap } from "@chakra-ui/react"
 import { ArrowLeft, BarChart3, CalendarClock, LayoutGrid, MapPin } from "lucide-react"
 import type { LucideProps } from "lucide-react"
 import { format, parseISO } from "date-fns"
@@ -39,8 +39,26 @@ function formatSessionStart(isoUtc: string): string {
   return Number.isNaN(parsed.getTime()) ? "" : format(parsed, "EEE d MMM yyyy, h:mm a")
 }
 
-/** One labelled fact in the report header — session, venue or chart — so each name is spelled out, not guessed. */
-function HeaderFact({ icon: Icon, label, value }: { icon: ComponentType<LucideProps>; label: string; value: string }) {
+/** Keeps only an http(s) link, so a stored map URL can never smuggle a javascript: or data: scheme into an href. */
+function safeExternalUrl(url: string): string | undefined {
+  return /^https?:\/\//i.test(url) ? url : undefined
+}
+
+/**
+ * One labelled fact in the report header — session, venue or chart — so each name is spelled out, not guessed. When a
+ * href is given the value becomes a link that opens in a new tab, so following it never loses the open report.
+ */
+function HeaderFact({
+  icon: Icon,
+  label,
+  value,
+  href,
+}: {
+  icon: ComponentType<LucideProps>
+  label: string
+  value: string
+  href?: string
+}) {
   return (
     <HStack gap={2} color="gray.600" minW={0}>
       <Box color="gray.400" flexShrink={0}>
@@ -50,9 +68,25 @@ function HeaderFact({ icon: Icon, label, value }: { icon: ComponentType<LucidePr
         <Text as="span" fontWeight="700" color="gray.500">
           {label}:{" "}
         </Text>
-        <Text as="span" fontWeight="600">
-          {value}
-        </Text>
+        {href ? (
+          <Link
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`${value} (opens in new tab)`}
+            fontWeight="600"
+            color="brand.600"
+            textDecoration="underline"
+            textUnderlineOffset="2px"
+            _hover={{ color: "brand.700" }}
+          >
+            {value}
+          </Link>
+        ) : (
+          <Text as="span" fontWeight="600">
+            {value}
+          </Text>
+        )}
       </Text>
     </HStack>
   )
@@ -71,8 +105,11 @@ export function EventReportPage() {
   const renderContext = useEventRenderContext(eventUniqueId, Boolean(eventUniqueId))
   const eventLabel = renderContext.data?.eventLabel || state?.eventLabel || ""
   const chartName = renderContext.data?.chartName || ""
+  const chartUniqueId = renderContext.data?.chartUniqueId || state?.chartUniqueId || ""
   const venueName = renderContext.data?.venueName || ""
+  const venueMapUrl = renderContext.data?.venueMapUrl || ""
   const sessionName = renderContext.data?.sessionName || ""
+  const sessionUniqueId = renderContext.data?.sessionUniqueId || ""
   const sessionStart = formatSessionStart(renderContext.data?.sessionStartUtc || "")
   const status = SESSION_STATUS[renderContext.data?.sessionStatus ?? ""]
   const sessionValue = sessionName && sessionStart ? `${sessionName} · ${sessionStart}` : sessionName
@@ -81,6 +118,10 @@ export function EventReportPage() {
   const summaryQuery = useEventSummary(eventUniqueId, Boolean(eventUniqueId))
   const summary = summaryQuery.data
   const showProgress = Boolean(summary && summary.totalObjects > 0)
+
+  const chartHref = chartUniqueId ? APP_ROUTES.seatingLayouts.edit(chartUniqueId) : undefined
+  const sessionHref = sessionUniqueId ? APP_ROUTES.sessionWizard.edit(sessionUniqueId) : undefined
+  const venueHref = safeExternalUrl(venueMapUrl)
 
   return (
     <Box w="full">
@@ -129,9 +170,11 @@ export function EventReportPage() {
             )}
             {sessionValue || venueName || chartName ? (
               <Wrap gapX={5} gapY={1.5}>
-                {sessionValue ? <HeaderFact icon={CalendarClock} label="Session" value={sessionValue} /> : null}
-                {venueName ? <HeaderFact icon={MapPin} label="Venue" value={venueName} /> : null}
-                {chartName ? <HeaderFact icon={LayoutGrid} label="Chart" value={chartName} /> : null}
+                {sessionValue ? (
+                  <HeaderFact icon={CalendarClock} label="Session" value={sessionValue} href={sessionHref} />
+                ) : null}
+                {venueName ? <HeaderFact icon={MapPin} label="Venue" value={venueName} href={venueHref} /> : null}
+                {chartName ? <HeaderFact icon={LayoutGrid} label="Chart" value={chartName} href={chartHref} /> : null}
               </Wrap>
             ) : null}
           </Stack>

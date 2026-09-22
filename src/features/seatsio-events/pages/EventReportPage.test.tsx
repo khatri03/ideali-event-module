@@ -4,6 +4,7 @@ import { ChakraProvider } from "@chakra-ui/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { system } from "@/theme"
+import { APP_ROUTES } from "@/utils/routes"
 import { EventReportPage } from "./EventReportPage"
 
 const { renderContextMock, summaryMock } = vi.hoisted(() => ({
@@ -166,6 +167,62 @@ describe("EventReportPage header", () => {
     renderPage({ eventLabel: "Saturday Gala 2026" })
 
     expect(await screen.findByText("Saturday Gala 2026")).toBeInTheDocument()
+  })
+
+  /**
+   * The venue, session and chart facts link out so the organizer jumps straight to the map, the session wizard or the
+   * layout — each in a new tab, so following one never loses the open report.
+   */
+  it("links the venue, session and chart facts, each opening in a new tab", async () => {
+    const sessionUniqueId = "11111111-1111-1111-1111-111111111111"
+    const chartUniqueId = "22222222-2222-2222-2222-222222222222"
+    renderContextMock.mockResolvedValue({
+      eventKey: "ek",
+      publicKey: "pk",
+      region: "eu",
+      eventLabel: "CME 2026",
+      chartName: "Court Room",
+      chartUniqueId,
+      venueName: "PC Hotel",
+      venueMapUrl: "https://maps.example/pc-hotel",
+      sessionName: "Saturday Matinee",
+      sessionUniqueId,
+      sessionStatus: "published",
+    })
+
+    renderPage()
+
+    const venue = await screen.findByRole("link", { name: "PC Hotel (opens in new tab)" })
+    expect(venue).toHaveAttribute("href", "https://maps.example/pc-hotel")
+    expect(venue).toHaveAttribute("target", "_blank")
+    expect(venue).toHaveAttribute("rel", "noopener noreferrer")
+
+    const session = screen.getByRole("link", { name: /Saturday Matinee/ })
+    expect(session).toHaveAttribute("href", APP_ROUTES.sessionWizard.edit(sessionUniqueId))
+    expect(session).toHaveAttribute("target", "_blank")
+
+    const chart = screen.getByRole("link", { name: "Court Room (opens in new tab)" })
+    expect(chart).toHaveAttribute("href", APP_ROUTES.seatingLayouts.edit(chartUniqueId))
+    expect(chart).toHaveAttribute("target", "_blank")
+  })
+
+  /** A venue map URL that is not http(s) is never turned into a link, so a stored javascript: scheme cannot run. */
+  it("does not link a venue whose map URL is not an http(s) address", async () => {
+    renderContextMock.mockResolvedValue({
+      eventKey: "ek",
+      publicKey: "pk",
+      region: "eu",
+      eventLabel: "CME 2026",
+      chartName: "Court Room",
+      venueName: "PC Hotel",
+      venueMapUrl: "javascript:alert(1)",
+      sessionName: "",
+    })
+
+    renderPage()
+
+    expect(await screen.findByText("PC Hotel")).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: /PC Hotel/ })).not.toBeInTheDocument()
   })
 
   /**
