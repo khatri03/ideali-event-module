@@ -17,6 +17,8 @@ interface StagedApplyBarProps {
   labels: string[]
   /** The footer echoes the labels as pills; a card that already lists them above sets this false. */
   showFooterLabels?: boolean
+  /** When set, each footer pill becomes a button that locates its object on the map; absent leaves the pills static. */
+  onLocateLabel?: (label: string) => void
   /** Button text stating the outcome, e.g. "Take 2 off sale". */
   applyLabel: string
   confirmTitle: string
@@ -41,6 +43,7 @@ export function StagedApplyBar({
   summary,
   labels,
   showFooterLabels = true,
+  onLocateLabel,
   applyLabel,
   confirmTitle,
   confirmTone,
@@ -78,11 +81,29 @@ export function StagedApplyBar({
           </Text>
           {showFooterLabels ? (
             <Wrap gap={2}>
-              {labels.map((label) => (
-                <Badge key={label} variant="solid" colorPalette={palette} borderRadius="999px" px={3} py={1}>
-                  {label}
-                </Badge>
-              ))}
+              {labels.map((label) =>
+                onLocateLabel ? (
+                  <Badge
+                    key={label}
+                    as="button"
+                    onClick={() => onLocateLabel(label)}
+                    cursor="pointer"
+                    aria-label={`Locate ${label} on the map`}
+                    variant="solid"
+                    colorPalette={palette}
+                    borderRadius="999px"
+                    px={3}
+                    py={1}
+                    _hover={{ opacity: 0.85 }}
+                  >
+                    {label}
+                  </Badge>
+                ) : (
+                  <Badge key={label} variant="solid" colorPalette={palette} borderRadius="999px" px={3} py={1}>
+                    {label}
+                  </Badge>
+                ),
+              )}
             </Wrap>
           ) : null}
         </Flex>

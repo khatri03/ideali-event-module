@@ -184,7 +184,7 @@ describe("ForSalePanel", () => {
     await screen.findByText("mount-chart")
     await userEvent.click(screen.getByText("pick-not-for-sale"))
 
-    expect(screen.queryByRole("button", { name: /off sale/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /^take \d+ off sale$/i })).not.toBeInTheDocument()
     expect(markNotForSaleMock).not.toHaveBeenCalled()
   })
 
@@ -193,8 +193,8 @@ describe("ForSalePanel", () => {
     renderPanel()
 
     expect(await screen.findByText("Everything is on sale")).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: /off sale/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: /back on sale/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /^take \d+ off sale$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /^put \d+ back on sale$/i })).not.toBeInTheDocument()
   })
 
   /** The "All" pill stages every held-back object at once, so one tap queues the whole set for putting back on sale. */
@@ -248,6 +248,35 @@ describe("ForSalePanel", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: /Z-9/ }))
 
+    expect(zoomToObjectsMock).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The same zoom toggle governs both directions: tapping a staged off-sale pill in the footer locates it on the map,
+   * so an organizer can confirm where a map pick sits without a second toggle for the take-off-sale card.
+   */
+  it("zooms the map to a staged off-sale pick when its footer pill is tapped", async () => {
+    renderPanel()
+
+    await screen.findByText("mount-chart")
+    await userEvent.click(screen.getByText("mount-chart"))
+    await userEvent.click(screen.getByText("pick-on-sale"))
+
+    await userEvent.click(await screen.findByRole("button", { name: "Locate A-1 on the map" }))
+
+    expect(zoomToObjectsMock).toHaveBeenCalledWith(["A-1"])
+  })
+
+  /** With the shared toggle off, a staged off-sale pill is inert: it neither locates nor zooms, matching the held-back side. */
+  it("does not make a staged off-sale pill locatable when the zoom toggle is off", async () => {
+    renderPanel()
+
+    await screen.findByText("mount-chart")
+    await userEvent.click(screen.getByText("mount-chart"))
+    await userEvent.click(await screen.findByText("Zoom to selection"))
+    await userEvent.click(screen.getByText("pick-on-sale"))
+
+    expect(screen.queryByRole("button", { name: "Locate A-1 on the map" })).not.toBeInTheDocument()
     expect(zoomToObjectsMock).not.toHaveBeenCalled()
   })
 

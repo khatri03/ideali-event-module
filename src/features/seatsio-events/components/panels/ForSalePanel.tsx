@@ -58,6 +58,7 @@ export function ForSalePanel({ eventUniqueId, formatCount }: ForSalePanelProps) 
   const markForSale = useMarkForSale(eventUniqueId)
 
   const chartRef = useRef<SeatingChart | null>(null)
+  const [zoomOnSelect, setZoomOnSelect] = useState(true)
   const [offSale, setOffSale] = useState<Set<string>>(new Set())
   const [backOnObjects, setBackOnObjects] = useState<Set<string>>(new Set())
   const [backOnCategories, setBackOnCategories] = useState<Set<string>>(new Set())
@@ -147,6 +148,9 @@ export function ForSalePanel({ eventUniqueId, formatCount }: ForSalePanelProps) 
           onApply={applyOffSale}
           onClear={discardOffSale}
           isApplying={markNotForSale.isPending}
+          zoomOnSelect={zoomOnSelect}
+          onZoomOnSelectChange={setZoomOnSelect}
+          onLocateStaged={(label) => focusObjects([label])}
         />
         <ForSaleRestriction
           report={query.data}
@@ -166,6 +170,7 @@ export function ForSalePanel({ eventUniqueId, formatCount }: ForSalePanelProps) 
           onApply={applyBackOn}
           onClear={discardBackOn}
           onFocusObjects={focusObjects}
+          zoomOnSelect={zoomOnSelect}
           isApplying={markForSale.isPending}
         />
       </Stack>

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Box, Flex, HStack, Skeleton, Stack, Text } from "@chakra-ui/react"
+import { Box, Flex, HStack, Skeleton, Stack, Switch, Text, Wrap } from "@chakra-ui/react"
 import { MinusCircle, MousePointerClick } from "lucide-react"
 import { SeatsioSeatingChart } from "@seatsio/seatsio-react"
 import type { SeatingChart, SelectableObject } from "@seatsio/seatsio-react"
@@ -24,6 +24,12 @@ interface ForSaleChartProps {
   onClear: () => void
   /** The take-off-sale commit is in flight. */
   isApplying: boolean
+  /** Whether tapping a staged label zooms the map to it; the one toggle governs both for-sale directions. */
+  zoomOnSelect: boolean
+  /** Flips the shared zoom-to-selection preference. */
+  onZoomOnSelectChange: (value: boolean) => void
+  /** Zooms the live map to a single staged label so the organizer sees where an off-sale pick sits. */
+  onLocateStaged: (label: string) => void
 }
 
 /**
@@ -73,6 +79,9 @@ export function ForSaleChart({
   onApply,
   onClear,
   isApplying,
+  zoomOnSelect,
+  onZoomOnSelectChange,
+  onLocateStaged,
 }: ForSaleChartProps) {
   const query = useEventRenderContext(eventUniqueId, true)
   const [hasRenderFailed, setHasRenderFailed] = useState(false)
@@ -113,12 +122,25 @@ export function ForSaleChart({
           </Box>
         </HStack>
         {isAddressable && !hasRenderFailed ? (
-          <HStack gap={2} flexShrink={0}>
-            <Box w="10px" h="10px" borderRadius="full" bg={NOT_FOR_SALE_COLOR} />
-            <Text fontSize="xs" fontWeight="600" color="text.secondary" whiteSpace="nowrap">
-              Not for sale
-            </Text>
-          </HStack>
+          <Wrap gap={{ base: 2, md: 4 }} align="center" justify="flex-end" flexShrink={0}>
+            <HStack gap={2}>
+              <Box w="10px" h="10px" borderRadius="full" bg={NOT_FOR_SALE_COLOR} />
+              <Text fontSize="xs" fontWeight="600" color="text.secondary" whiteSpace="nowrap">
+                Not for sale
+              </Text>
+            </HStack>
+            <Switch.Root
+              checked={zoomOnSelect}
+              onCheckedChange={(details) => onZoomOnSelectChange(details.checked === true)}
+              colorPalette="brand"
+            >
+              <Switch.HiddenInput />
+              <Switch.Control cursor="pointer" />
+              <Switch.Label fontSize="xs" fontWeight="700" color="text.secondary" whiteSpace="nowrap">
+                Zoom to selection
+              </Switch.Label>
+            </Switch.Root>
+          </Wrap>
         ) : null}
       </Flex>
 
@@ -157,6 +179,7 @@ export function ForSaleChart({
           tone="warning"
           summary={`${stagedCount} on-sale ${stagedCount === 1 ? "object" : "objects"} staged to go off sale`}
           labels={stagedLabels}
+          onLocateLabel={zoomOnSelect ? onLocateStaged : undefined}
           applyLabel={`Take ${stagedCount} off sale`}
           confirmTitle={`Take ${stagedCount} ${stagedCount === 1 ? "object" : "objects"} off sale`}
           confirmTone="destructive"
