@@ -604,6 +604,14 @@ const eventRenderContextSchema = z.object({
   eventLabel: z.string().nullable().optional(),
   ChartName: z.string().nullable().optional(),
   chartName: z.string().nullable().optional(),
+  VenueName: z.string().nullable().optional(),
+  venueName: z.string().nullable().optional(),
+  SessionName: z.string().nullable().optional(),
+  sessionName: z.string().nullable().optional(),
+  SessionStartUtc: z.string().nullable().optional(),
+  sessionStartUtc: z.string().nullable().optional(),
+  SessionStatus: z.string().nullable().optional(),
+  sessionStatus: z.string().nullable().optional(),
 })
 
 export interface SeatsIoReportGroup {
@@ -674,6 +682,12 @@ export interface SeatsIoEventRenderContext {
   region: string
   eventLabel: string
   chartName: string
+  venueName: string
+  sessionName: string
+  /** ISO-8601 UTC start of the bound session, or empty when none is bound or none is set. */
+  sessionStartUtc: string
+  /** Lowercase lifecycle token of the bound session (e.g. "published"), or empty when none is bound. */
+  sessionStatus: string
 }
 
 function normalizeReportGroup(item: z.infer<typeof reportGroupSchema>): SeatsIoReportGroup {
@@ -760,6 +774,10 @@ function normalizeRenderContext(item: z.infer<typeof eventRenderContextSchema>):
     region: item.Region ?? item.region ?? "",
     eventLabel: item.EventLabel ?? item.eventLabel ?? "",
     chartName: item.ChartName ?? item.chartName ?? "",
+    venueName: item.VenueName ?? item.venueName ?? "",
+    sessionName: item.SessionName ?? item.sessionName ?? "",
+    sessionStartUtc: item.SessionStartUtc ?? item.sessionStartUtc ?? "",
+    sessionStatus: item.SessionStatus ?? item.sessionStatus ?? "",
   }
 }
 

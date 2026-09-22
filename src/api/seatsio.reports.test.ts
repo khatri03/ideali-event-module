@@ -63,6 +63,10 @@ describe("fetchSeatsIoEventRenderContext", () => {
           Region: "na",
           EventLabel: "CME 2026",
           ChartName: "Court Room",
+          VenueName: "PC Hotel",
+          SessionName: "Saturday Matinee",
+          SessionStartUtc: "2026-03-21T19:00:00Z",
+          SessionStatus: "published",
         },
       },
     })
@@ -75,6 +79,10 @@ describe("fetchSeatsIoEventRenderContext", () => {
       region: "na",
       eventLabel: "CME 2026",
       chartName: "Court Room",
+      venueName: "PC Hotel",
+      sessionName: "Saturday Matinee",
+      sessionStartUtc: "2026-03-21T19:00:00Z",
+      sessionStatus: "published",
     })
   })
 
@@ -84,7 +92,17 @@ describe("fetchSeatsIoEventRenderContext", () => {
 
     const context = await fetchSeatsIoEventRenderContext(EVENT_UNIQUE_ID)
 
-    expect(context).toEqual({ eventKey: "", publicKey: "", region: "", eventLabel: "", chartName: "" })
+    expect(context).toEqual({
+      eventKey: "",
+      publicKey: "",
+      region: "",
+      eventLabel: "",
+      chartName: "",
+      venueName: "",
+      sessionName: "",
+      sessionStartUtc: "",
+      sessionStatus: "",
+    })
   })
 })
 

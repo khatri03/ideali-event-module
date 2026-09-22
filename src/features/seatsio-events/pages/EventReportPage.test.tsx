@@ -47,12 +47,109 @@ describe("EventReportPage header", () => {
       region: "eu",
       eventLabel: "Friday Dinner & Entertainment 2026",
       chartName: "Main Banquet Hall",
+      sessionName: "",
     })
 
     renderPage()
 
     expect(await screen.findByText("Friday Dinner & Entertainment 2026")).toBeInTheDocument()
     expect(await screen.findByText(/Main Banquet Hall/)).toBeInTheDocument()
+  })
+
+  /**
+   * Two events can share one chart, so the header names the bound Ideali session — with its start date — to tell them
+   * apart. A same-named session on a different date is a different event, so the date must ride with the name.
+   */
+  it("names the bound session with its start date from the render context", async () => {
+    renderContextMock.mockResolvedValue({
+      eventKey: "ek",
+      publicKey: "pk",
+      region: "eu",
+      eventLabel: "Friday Dinner & Entertainment 2026",
+      chartName: "Main Banquet Hall",
+      venueName: "PC Hotel",
+      sessionName: "Saturday Matinee",
+      sessionStartUtc: "2026-03-21T12:00:00Z",
+      sessionStatus: "published",
+    })
+
+    renderPage()
+
+    expect(await screen.findByText("Session:")).toBeInTheDocument()
+    expect(await screen.findByText(/Saturday Matinee · Sat 21 Mar 2026/)).toBeInTheDocument()
+  })
+
+  /** The venue the chart belongs to is named as its own labelled fact, separate from the chart, so neither is guessed. */
+  it("names the venue and chart as separate facts", async () => {
+    renderContextMock.mockResolvedValue({
+      eventKey: "ek",
+      publicKey: "pk",
+      region: "eu",
+      eventLabel: "Friday Dinner & Entertainment 2026",
+      chartName: "Court Room",
+      venueName: "PC Hotel",
+      sessionName: "",
+    })
+
+    renderPage()
+
+    expect(await screen.findByText("Venue:")).toBeInTheDocument()
+    expect(await screen.findByText("PC Hotel")).toBeInTheDocument()
+    expect(await screen.findByText("Chart:")).toBeInTheDocument()
+    expect(await screen.findByText("Court Room")).toBeInTheDocument()
+  })
+
+  /** The session lifecycle status shows as a badge beside the title, so the organizer sees the event's state at a glance. */
+  it("shows the session status as a badge", async () => {
+    renderContextMock.mockResolvedValue({
+      eventKey: "ek",
+      publicKey: "pk",
+      region: "eu",
+      eventLabel: "Friday Dinner & Entertainment 2026",
+      chartName: "Court Room",
+      sessionName: "Saturday Matinee",
+      sessionStatus: "published",
+    })
+
+    renderPage()
+
+    expect(await screen.findByText("Published")).toBeInTheDocument()
+  })
+
+  /** An unknown or empty status must not render a badge, so a session with no mapped state shows no stray chip. */
+  it("shows no status badge for an unmapped status", async () => {
+    renderContextMock.mockResolvedValue({
+      eventKey: "ek",
+      publicKey: "pk",
+      region: "eu",
+      eventLabel: "Friday Dinner & Entertainment 2026",
+      chartName: "Court Room",
+      sessionName: "Saturday Matinee",
+      sessionStatus: "unknown",
+    })
+
+    renderPage()
+
+    expect(await screen.findByText("Saturday Matinee")).toBeInTheDocument()
+    expect(screen.queryByText("Published")).not.toBeInTheDocument()
+    expect(screen.queryByText("Unknown")).not.toBeInTheDocument()
+  })
+
+  /** With no session bound the header simply omits the session line rather than printing an empty "Session:" label. */
+  it("omits the session line when no session is bound", async () => {
+    renderContextMock.mockResolvedValue({
+      eventKey: "ek",
+      publicKey: "pk",
+      region: "eu",
+      eventLabel: "Friday Dinner & Entertainment 2026",
+      chartName: "Main Banquet Hall",
+      sessionName: "",
+    })
+
+    renderPage()
+
+    expect(await screen.findByText(/Main Banquet Hall/)).toBeInTheDocument()
+    expect(screen.queryByText("Session:")).not.toBeInTheDocument()
   })
 
   /** The label passed via navigation shows immediately, so the header is never blank while the render context loads. */
