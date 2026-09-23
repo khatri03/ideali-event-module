@@ -36,6 +36,9 @@ dist-ssr
 *.local
 graphify-out/
 
+# GSD planning workspace
+.planning/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
