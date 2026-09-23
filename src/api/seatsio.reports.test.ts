@@ -6,6 +6,8 @@ import {
   fetchSeatsIoEventStatusChanges,
   fetchSeatsIoEventSummary,
   fetchSeatsIoEventTables,
+  STATUS_CHANGE_SORT,
+  type StatusChangeFilters,
 } from "./seatsio"
 
 const { getMock } = vi.hoisted(() => ({ getMock: vi.fn() }))
@@ -192,6 +194,8 @@ describe("fetchSeatsIoEventTables", () => {
 })
 
 describe("fetchSeatsIoEventStatusChanges", () => {
+  const DEFAULT_FILTERS: StatusChangeFilters = { search: "", exactMatch: false, sort: STATUS_CHANGE_SORT.dateDesc }
+
   /** The cursor a caller passes travels as the startAfterId query param, and the next cursor comes back mapped. */
   it("sends the cursor and returns the next one", async () => {
     getMock.mockResolvedValue({
@@ -200,12 +204,12 @@ describe("fetchSeatsIoEventStatusChanges", () => {
           items: [
             {
               objectLabel: "A-1",
-              status: "Booked",
+              status: "reservedByToken",
               quantity: 1,
               holdToken: "tok-1",
               orderId: "ord-9",
               origin: "API call - 100.51.215.8",
-              dateUtc: "2026-09-10T10:00:00Z",
+              dateUtc: "2026-09-10T10:00:00.592Z",
             },
           ],
           nextPageStartsAfter: 999,
@@ -213,28 +217,60 @@ describe("fetchSeatsIoEventStatusChanges", () => {
       },
     })
 
-    const page = await fetchSeatsIoEventStatusChanges(EVENT_UNIQUE_ID, 12)
+    const page = await fetchSeatsIoEventStatusChanges(EVENT_UNIQUE_ID, DEFAULT_FILTERS, 12)
 
     expect(getMock).toHaveBeenCalledWith(
       expect.stringContaining(EVENT_UNIQUE_ID) as unknown as string,
       { params: { startAfterId: 12 } },
     )
     expect(page.items[0].objectLabel).toBe("A-1")
+    expect(page.items[0].status).toBe("reservedByToken")
     expect(page.items[0].holdToken).toBe("tok-1")
     expect(page.items[0].origin).toBe("API call - 100.51.215.8")
     expect(page.nextPageStartsAfter).toBe(999)
   })
 
-  /** With no cursor the first page is requested without a param, and a last page reports no next cursor. */
-  it("omits the param on the first page and maps a null cursor", async () => {
+  /** A first page with default filters sends no params, so the server reads the whole log newest first. */
+  it("sends no params for the first page with default filters and maps a null cursor", async () => {
     getMock.mockResolvedValue({ data: { Data: { items: [], nextPageStartsAfter: null } } })
 
-    const page = await fetchSeatsIoEventStatusChanges(EVENT_UNIQUE_ID)
+    const page = await fetchSeatsIoEventStatusChanges(EVENT_UNIQUE_ID, DEFAULT_FILTERS)
 
-    expect(getMock).toHaveBeenCalledWith(
-      expect.stringContaining(EVENT_UNIQUE_ID) as unknown as string,
-      { params: undefined },
-    )
+    expect(getMock).toHaveBeenCalledWith(expect.stringContaining(EVENT_UNIQUE_ID) as unknown as string, { params: {} })
     expect(page.nextPageStartsAfter).toBeNull()
+  })
+
+  /**
+   * Search, match mode and sort travel to our backend with the cursor, so paging stays consistent with the order and
+   * filter the server applied instead of re-sorting only the rows already loaded.
+   */
+  it("sends a trimmed search, the match mode and a non-default sort", async () => {
+    getMock.mockResolvedValue({ data: { Data: { items: [], nextPageStartsAfter: null } } })
+
+    await fetchSeatsIoEventStatusChanges(
+      EVENT_UNIQUE_ID,
+      { search: "  18-1 ", exactMatch: true, sort: STATUS_CHANGE_SORT.statusDesc },
+      40,
+    )
+
+    expect(getMock).toHaveBeenCalledWith(expect.stringContaining(EVENT_UNIQUE_ID) as unknown as string, {
+      params: { startAfterId: 40, search: "18-1", exactMatch: true, sort: "StatusDesc" },
+    })
+  })
+
+  /** A blank search sends neither search nor match mode, so a stray exact-match flag cannot narrow the log to nothing. */
+  it("drops the match mode when the search is blank", async () => {
+    getMock.mockResolvedValue({ data: { Data: { items: [], nextPageStartsAfter: null } } })
+
+    await fetchSeatsIoEventStatusChanges(EVENT_UNIQUE_ID, { ...DEFAULT_FILTERS, search: "   ", exactMatch: true })
+
+    expect(getMock).toHaveBeenCalledWith(expect.stringContaining(EVENT_UNIQUE_ID) as unknown as string, { params: {} })
+  })
+
+  /** A payload that does not match the contract is rejected at the boundary rather than rendered as an empty log. */
+  it("rejects a malformed page", async () => {
+    getMock.mockResolvedValue({ data: { Data: { items: "not-a-list" } } })
+
+    await expect(fetchSeatsIoEventStatusChanges(EVENT_UNIQUE_ID, DEFAULT_FILTERS)).rejects.toThrow()
   })
 })

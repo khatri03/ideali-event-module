@@ -1,4 +1,5 @@
 import { Box, Table } from "@chakra-ui/react"
+import { SortableColumnHeader } from "@/components/common"
 import { EMPTY_VALUE } from "@/utils/format"
 import {
   REPORT_CELL_MAX_WIDTH,
@@ -7,7 +8,6 @@ import {
   reportRecordDetails,
 } from "../constants"
 import { systemFieldTarget, type ReportSort } from "../schemas/customFormReport.schemas"
-import { SortableColumnHeader } from "./SortableColumnHeader"
 import type { ReportField, ReportRow } from "@/api/customFormReports"
 
 interface ReportResultsTableProps {
@@ -61,6 +61,7 @@ export function ReportResultsTable({ columns, rows, entityLabel, sort, onSort }:
                 key={detail.systemField}
                 label={detail.label}
                 direction={directionOf(systemFieldTarget(detail.systemField))}
+                px={REPORT_CELL_PADDING_X}
                 onSort={() => onSort(systemFieldTarget(detail.systemField))}
               />
             ))}
@@ -69,6 +70,7 @@ export function ReportResultsTable({ columns, rows, entityLabel, sort, onSort }:
                 key={column.uniqueId}
                 label={column.columnLabel ?? column.label}
                 direction={directionOf(column.uniqueId)}
+                px={REPORT_CELL_PADDING_X}
                 onSort={() => onSort(column.uniqueId)}
               />
             ))}

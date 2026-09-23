@@ -1,4 +1,4 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   fetchSeatsIoEventCategories,
   fetchSeatsIoEventChannels,
@@ -10,6 +10,7 @@ import {
   markSeatsIoEventForSale,
   markSeatsIoEventNotForSale,
   type SeatsIoForSaleSelection,
+  type StatusChangeFilters,
 } from "@/api/seatsio"
 import { extractApiError } from "@/utils/errors"
 import { toaster } from "@/lib/toaster"
@@ -74,10 +75,12 @@ export function useEventRenderContext(eventUniqueId: string, enabled: boolean) {
   })
 }
 
-export function useEventStatusChanges(eventUniqueId: string, startAfterId: number | null, enabled: boolean) {
-  return useQuery({
-    queryKey: ["seatsio", "event-report", "status-changes", eventUniqueId, startAfterId],
-    queryFn: () => fetchSeatsIoEventStatusChanges(eventUniqueId, startAfterId),
+export function useEventStatusChanges(eventUniqueId: string, filters: StatusChangeFilters, enabled: boolean) {
+  return useInfiniteQuery({
+    queryKey: ["seatsio", "event-report", "status-changes", eventUniqueId, filters],
+    queryFn: ({ pageParam }) => fetchSeatsIoEventStatusChanges(eventUniqueId, filters, pageParam),
+    initialPageParam: null as number | null,
+    getNextPageParam: (lastPage) => lastPage.nextPageStartsAfter ?? undefined,
     enabled: enabled && Boolean(eventUniqueId),
     placeholderData: keepPreviousData,
     ...REPORT_QUERY_OPTIONS,

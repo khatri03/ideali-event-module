@@ -25,7 +25,8 @@ const {
   renderContextMock: vi.fn(),
 }))
 
-vi.mock("@/api/seatsio", () => ({
+vi.mock("@/api/seatsio", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/api/seatsio")>()),
   fetchSeatsIoEventSummary: summaryMock,
   fetchSeatsIoEventForSale: forSaleMock,
   fetchSeatsIoEventTables: tablesMock,

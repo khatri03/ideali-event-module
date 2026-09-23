@@ -65,15 +65,15 @@ const statusChangesResponse = envelope({
   items: [
     {
       objectLabel: "A-1",
-      status: "Booked",
+      status: "reservedByToken",
       quantity: 1,
-      holdToken: "tok-1",
+      holdToken: "6193077f-2931-4435-b8ba-42a67a2d88e7",
       orderId: "ord-9",
       origin: "API call - 100.51.215.8",
-      dateUtc: "2026-09-10T10:00:00Z",
+      dateUtc: "2026-09-10T10:00:00.592Z",
     },
   ],
-  nextPageStartsAfter: null,
+  nextPageStartsAfter: 500,
 })
 
 async function routeCommon(page: Page) {

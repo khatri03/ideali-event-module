@@ -33,6 +33,29 @@ for (const viewport of VIEWPORTS) {
     await openEventReport(page, viewport.width, viewport.height)
     expect(await hasHorizontalOverflow(page), "the report screen scrolls sideways").toBe(false)
   })
+
+  /**
+   * The status history carries a seven-column table, a search row and a Load more button. The table scrolls inside
+   * its own box; the page itself must not, and every control an organizer taps has to be a full touch target.
+   */
+  test(`the status history fits and its controls are touch targets at ${viewport.width}px (${viewport.name})`, async ({
+    page,
+  }) => {
+    await openEventReport(page, viewport.width, viewport.height)
+    await page.getByRole("tab", { name: "Status changes" }).click()
+    await expect(page.getByText("reservedByToken")).toBeVisible()
+
+    expect(await hasHorizontalOverflow(page), "the status history scrolls sideways").toBe(false)
+    const controls = [
+      page.getByLabel("Search by object label"),
+      page.getByLabel("How the label search matches"),
+      page.getByRole("button", { name: "Load more" }),
+    ]
+    for (const control of controls) {
+      const box = await control.boundingBox()
+      expect(box?.height ?? 0, "a status history control is too short to tap").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX)
+    }
+  })
 }
 
 /** The summary tab loads on arrival, so the organizer lands on the live seat map without opening anything. */

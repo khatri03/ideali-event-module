@@ -1,163 +1,109 @@
-import { useState } from "react"
-import { Badge, Box, Button, Flex, Table, Text } from "@chakra-ui/react"
-import { ArrowLeft, ArrowRight } from "lucide-react"
-import { format } from "date-fns"
+import { useMemo, useState } from "react"
+import { Button, Stack } from "@chakra-ui/react"
+import { ErrorState } from "@/components/common"
+import { STATUS_CHANGE_SORT, type StatusChangeFilters, type StatusChangeSort } from "@/api/seatsio"
+import { useDebounce } from "@/hooks/useDebounce"
+import { extractApiError } from "@/utils/errors"
 import { useEventStatusChanges } from "../../hooks/useEventReports"
-import { ReportEmpty, ReportError, ReportPanelShell, ReportSkeleton } from "../ReportStates"
+import { nextStatusChangeSort, type StatusChangeSortColumn } from "../../utils/statusChangeDisplay"
+import { ReportEmpty, ReportPanelShell, ReportSkeleton } from "../ReportStates"
+import { StatusChangesFooter } from "../status-changes/StatusChangesFooter"
+import { StatusChangesTable } from "../status-changes/StatusChangesTable"
+import { StatusChangesToolbar } from "../status-changes/StatusChangesToolbar"
 
 interface StatusChangesPanelProps {
   eventUniqueId: string
 }
 
-function statusPalette(status: string): string {
-  const normalized = status.toLowerCase()
-  if (normalized === "booked") return "green"
-  if (normalized === "free") return "gray"
-  if (normalized === "held") return "orange"
-  return "purple"
-}
-
-function formatWhen(dateUtc: string | null): string {
-  if (!dateUtc) {
-    return "—"
-  }
-
-  const parsed = new Date(dateUtc)
-  return Number.isNaN(parsed.getTime()) ? "—" : format(parsed, "d MMM yyyy, HH:mm")
+function NoMatch({ search, onClear }: { search: string; onClear: () => void }) {
+  return (
+    <Stack align="center" gap={3}>
+      <ReportEmpty
+        title={`No changes match “${search}”`}
+        description="Check the object label, or switch between contains and exact match."
+      />
+      <Button minH="11" px={4} variant="outline" cursor="pointer" onClick={onClear}>
+        Clear search
+      </Button>
+    </Stack>
+  )
 }
 
 export function StatusChangesPanel({ eventUniqueId }: StatusChangesPanelProps) {
-  const [cursor, setCursor] = useState<number | null>(null)
-  const [history, setHistory] = useState<(number | null)[]>([])
-  const query = useEventStatusChanges(eventUniqueId, cursor, true)
+  const [search, setSearch] = useState("")
+  const [isExactMatch, setIsExactMatch] = useState(false)
+  const [sort, setSort] = useState<StatusChangeSort>(STATUS_CHANGE_SORT.dateDesc)
+  const debouncedSearch = useDebounce(search)
 
-  if (query.isError) {
-    return (
-      <ReportPanelShell>
-        <ReportError error={query.error} />
-      </ReportPanelShell>
-    )
+  const filters = useMemo<StatusChangeFilters>(() => {
+    const trimmed = debouncedSearch.trim()
+    return { search: trimmed, exactMatch: isExactMatch && trimmed !== "", sort }
+  }, [debouncedSearch, isExactMatch, sort])
+  const query = useEventStatusChanges(eventUniqueId, filters, true)
+  const changes = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data])
+
+  function handleObjectSelect(objectLabel: string) {
+    setSearch(objectLabel)
+    setIsExactMatch(true)
   }
 
-  if (query.isLoading || !query.data) {
-    return (
-      <ReportPanelShell>
-        <ReportSkeleton />
-      </ReportPanelShell>
-    )
+  function handleSort(column: StatusChangeSortColumn) {
+    setSort((current) => nextStatusChangeSort(current, column))
   }
 
-  if (query.data.items.length === 0 && history.length === 0) {
-    return (
-      <ReportEmpty
-        title="No status changes yet"
-        description="When seats are held, booked or released for this event, the history shows up here."
-      />
-    )
-  }
-
-  const nextCursor = query.data.nextPageStartsAfter
-  const canGoBack = history.length > 0
-
-  function goNext() {
-    if (nextCursor === null) {
-      return
+  function renderBody() {
+    if (query.isError && !query.data) {
+      return (
+        <ErrorState
+          title="We couldn't load the status history"
+          message={extractApiError(query.error)}
+          onRetry={() => void query.refetch()}
+          isRetrying={query.isRefetching}
+        />
+      )
     }
-    setHistory((previous) => [...previous, cursor])
-    setCursor(nextCursor)
-  }
-
-  function goBack() {
-    setHistory((previous) => {
-      const copy = [...previous]
-      const last = copy.pop() ?? null
-      setCursor(last)
-      return copy
-    })
+    if (query.isPending) {
+      return <ReportSkeleton rows={8} />
+    }
+    if (changes.length === 0) {
+      return filters.search ? (
+        <NoMatch search={filters.search} onClear={() => setSearch("")} />
+      ) : (
+        <ReportEmpty
+          title="No status changes yet"
+          description="When seats are held, booked or released for this event, every change shows up here."
+        />
+      )
+    }
+    return (
+      <>
+        <StatusChangesTable
+          changes={changes}
+          sort={sort}
+          canSort={!filters.exactMatch}
+          onSort={handleSort}
+          onObjectSelect={handleObjectSelect}
+        />
+        <StatusChangesFooter
+          loadedCount={changes.length}
+          hasMore={query.hasNextPage}
+          isLoadingMore={query.isFetchingNextPage}
+          hasLoadMoreFailed={query.isFetchNextPageError}
+          onLoadMore={() => void query.fetchNextPage()}
+        />
+      </>
+    )
   }
 
   return (
     <ReportPanelShell>
-      <Box overflowX="auto" borderRadius="14px" border="1px solid" borderColor="border.subtle">
-        <Table.Root variant="line" size="sm" minW={{ base: "860px", lg: "auto" }}>
-          <Table.Header>
-            <Table.Row bg="app.bg">
-              <Table.ColumnHeader px={4} py={3}>Object</Table.ColumnHeader>
-              <Table.ColumnHeader px={4} py={3}>Status</Table.ColumnHeader>
-              <Table.ColumnHeader px={4} py={3} textAlign="end">Quantity</Table.ColumnHeader>
-              <Table.ColumnHeader px={4} py={3}>Hold token</Table.ColumnHeader>
-              <Table.ColumnHeader px={4} py={3}>Order</Table.ColumnHeader>
-              <Table.ColumnHeader px={4} py={3}>Origin</Table.ColumnHeader>
-              <Table.ColumnHeader px={4} py={3}>When</Table.ColumnHeader>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {query.data.items.map((change, index) => (
-              <Table.Row key={`${change.objectLabel}-${index}`}>
-                <Table.Cell px={4} py={3}>
-                  <Text fontSize="sm" fontWeight="700" color="text.primary">
-                    {change.objectLabel || "—"}
-                  </Text>
-                </Table.Cell>
-                <Table.Cell px={4} py={3}>
-                  <Badge variant="subtle" colorPalette={statusPalette(change.status)} borderRadius="999px" px={3} py={1}>
-                    {change.status || "Unknown"}
-                  </Badge>
-                </Table.Cell>
-                <Table.Cell px={4} py={3} textAlign="end">
-                  <Text fontSize="sm" color="text.primary" fontVariantNumeric="tabular-nums">
-                    {change.quantity}
-                  </Text>
-                </Table.Cell>
-                <Table.Cell px={4} py={3}>
-                  <Text fontSize="sm" color="text.secondary" fontFamily="mono" wordBreak="break-all">
-                    {change.holdToken || "—"}
-                  </Text>
-                </Table.Cell>
-                <Table.Cell px={4} py={3}>
-                  <Text fontSize="sm" color="text.secondary" wordBreak="break-all">
-                    {change.orderId || "—"}
-                  </Text>
-                </Table.Cell>
-                <Table.Cell px={4} py={3}>
-                  <Text fontSize="sm" color="text.secondary">
-                    {change.origin || "—"}
-                  </Text>
-                </Table.Cell>
-                <Table.Cell px={4} py={3}>
-                  <Text fontSize="sm" color="text.secondary" whiteSpace="nowrap">
-                    {formatWhen(change.dateUtc)}
-                  </Text>
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table.Root>
-      </Box>
-
-      <Flex justify="flex-end" gap={2} mt={4}>
-        <Button
-          minH="11"
-          px={4}
-          variant="outline"
-          disabled={!canGoBack || query.isFetching}
-          onClick={goBack}
-        >
-          <ArrowLeft size={16} />
-          Previous
-        </Button>
-        <Button
-          minH="11"
-          px={4}
-          variant="outline"
-          disabled={nextCursor === null || query.isFetching}
-          loading={query.isFetching}
-          onClick={goNext}
-        >
-          Next
-          <ArrowRight size={16} />
-        </Button>
-      </Flex>
+      <StatusChangesToolbar
+        search={search}
+        isExactMatch={isExactMatch}
+        onSearchChange={setSearch}
+        onExactMatchChange={setIsExactMatch}
+      />
+      {renderBody()}
     </ReportPanelShell>
   )
 }

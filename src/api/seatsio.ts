@@ -685,6 +685,23 @@ export interface SeatsIoEventStatusChangePage {
   nextPageStartsAfter: number | null
 }
 
+export const STATUS_CHANGE_SORT = {
+  dateDesc: "DateDesc",
+  dateAsc: "DateAsc",
+  objectLabelAsc: "ObjectLabelAsc",
+  objectLabelDesc: "ObjectLabelDesc",
+  statusAsc: "StatusAsc",
+  statusDesc: "StatusDesc",
+} as const
+
+export type StatusChangeSort = (typeof STATUS_CHANGE_SORT)[keyof typeof STATUS_CHANGE_SORT]
+
+export interface StatusChangeFilters {
+  search: string
+  exactMatch: boolean
+  sort: StatusChangeSort
+}
+
 export interface SeatsIoEventRenderContext {
   eventKey: string
   publicKey: string
@@ -846,12 +863,22 @@ export async function fetchSeatsIoEventCategories(eventUniqueId: string): Promis
   return responseData.map((item) => normalizeEventCategory(eventCategorySchema.parse(item)))
 }
 
+function statusChangeParams(filters: StatusChangeFilters, startAfterId: number | null) {
+  const search = filters.search.trim()
+  return {
+    ...(startAfterId ? { startAfterId } : {}),
+    ...(search ? { search, exactMatch: filters.exactMatch } : {}),
+    ...(filters.sort === STATUS_CHANGE_SORT.dateDesc ? {} : { sort: filters.sort }),
+  }
+}
+
 export async function fetchSeatsIoEventStatusChanges(
   eventUniqueId: string,
-  startAfterId?: number | null,
+  filters: StatusChangeFilters,
+  startAfterId: number | null = null,
 ): Promise<SeatsIoEventStatusChangePage> {
   const res = await client.get<unknown>(API_ROUTES.seatsIoEventReportStatusChanges(eventUniqueId), {
-    params: startAfterId ? { startAfterId } : undefined,
+    params: statusChangeParams(filters, startAfterId),
   })
   const responseData = parseServiceResponseData(res.data)
   const parsed = eventStatusChangePageSchema.parse(responseData ?? {})
