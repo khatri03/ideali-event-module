@@ -2,7 +2,8 @@ import { Badge, Box, Button, Table, Text } from "@chakra-ui/react"
 import { SortableColumnHeader } from "@/components/common"
 import type { SeatsIoEventStatusChange, StatusChangeSort } from "@/api/seatsio"
 import {
-  formatStatusChangeTime,
+  formatStatusChangeDate,
+  formatStatusChangeTimeParts,
   sortDirectionFor,
   statusChangePalette,
   type StatusChangeSortColumn,
@@ -41,11 +42,27 @@ function StatusChangeRow({
   change: SeatsIoEventStatusChange
   onObjectSelect: (objectLabel: string) => void
 }) {
+  const time = formatStatusChangeTimeParts(change.dateUtc)
+
   return (
     <Table.Row>
       <Table.Cell px={4} py={3}>
+        <Text fontSize="sm" color="text.primary" whiteSpace="nowrap">
+          {formatStatusChangeDate(change.dateUtc)}
+        </Text>
+      </Table.Cell>
+      <Table.Cell px={4} py={3}>
         <Text fontSize="sm" color="text.primary" whiteSpace="nowrap" fontVariantNumeric="tabular-nums">
-          {formatStatusChangeTime(change.dateUtc)}
+          {time ? (
+            <>
+              {time.clock}
+              <Text as="span" color="text.secondary">
+                {time.fraction}
+              </Text>
+            </>
+          ) : (
+            "—"
+          )}
         </Text>
       </Table.Cell>
       <Table.Cell px={2} py={1}>
@@ -96,7 +113,7 @@ function StatusChangeRow({
 export function StatusChangesTable({ changes, sort, canSort, onSort, onObjectSelect }: StatusChangesTableProps) {
   return (
     <Box overflowX="auto" borderRadius="14px" border="1px solid" borderColor="border.subtle">
-      <Table.Root variant="line" size="sm" minW={{ base: "960px", xl: "auto" }}>
+      <Table.Root variant="line" size="sm" minW={{ base: "1040px", xl: "auto" }}>
         <Table.Header>
           <Table.Row bg="app.bg">
             <SortableColumnHeader
@@ -105,6 +122,7 @@ export function StatusChangesTable({ changes, sort, canSort, onSort, onObjectSel
               isDisabled={!canSort}
               onSort={() => onSort("date")}
             />
+            <PlainHeader label="Time" />
             <SortableColumnHeader
               label="Object"
               direction={sortDirectionFor(sort, "objectLabel")}

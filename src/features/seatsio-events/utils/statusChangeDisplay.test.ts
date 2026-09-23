@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { STATUS_CHANGE_SORT } from "@/api/seatsio"
 import {
-  formatStatusChangeTime,
+  formatStatusChangeDate,
+  formatStatusChangeTimeParts,
   nextStatusChangeSort,
   sortDirectionFor,
   statusChangePalette,
@@ -33,21 +34,36 @@ describe("sortDirectionFor", () => {
   })
 })
 
-describe("formatStatusChangeTime", () => {
-  /**
-   * Milliseconds are shown because several changes to one seat land inside the same second; without them the order of
-   * a hold and its release cannot be read, which is the gap against the Seats.io portal this fixes.
-   */
-  it("shows seconds and milliseconds", () => {
+describe("formatStatusChangeDate", () => {
+  /** Date reads in its own column, apart from the time, the way the Seats.io portal lays the log out. */
+  it("shows the day without the time", () => {
     const local = new Date(2026, 8, 16, 16, 23, 7, 592)
 
-    expect(formatStatusChangeTime(local.toISOString())).toBe("16 Sep 2026 16:23:07.592")
+    expect(formatStatusChangeDate(local.toISOString())).toBe("16 Sep 2026")
   })
 
   /** A missing or unreadable timestamp shows a dash instead of "Invalid Date". */
   it("shows a dash for a missing or invalid timestamp", () => {
-    expect(formatStatusChangeTime(null)).toBe("—")
-    expect(formatStatusChangeTime("not-a-date")).toBe("—")
+    expect(formatStatusChangeDate(null)).toBe("—")
+    expect(formatStatusChangeDate("not-a-date")).toBe("—")
+  })
+})
+
+describe("formatStatusChangeTimeParts", () => {
+  /**
+   * Milliseconds are split from the second so the UI can mute them, because several changes to one seat land inside the
+   * same second; without them the order of a hold and its release cannot be read, which is the gap this closes.
+   */
+  it("splits the second from the millisecond fraction", () => {
+    const local = new Date(2026, 8, 16, 16, 23, 7, 592)
+
+    expect(formatStatusChangeTimeParts(local.toISOString())).toEqual({ clock: "16:23:07", fraction: ".592" })
+  })
+
+  /** A missing or unreadable timestamp yields null so the cell can fall back to a dash. */
+  it("returns null for a missing or invalid timestamp", () => {
+    expect(formatStatusChangeTimeParts(null)).toBeNull()
+    expect(formatStatusChangeTimeParts("not-a-date")).toBeNull()
   })
 })
 

@@ -25,13 +25,35 @@ export function sortDirectionFor(
   return current.endsWith("Asc") ? "ascending" : "descending"
 }
 
-export function formatStatusChangeTime(dateUtc: string | null): string {
+function toValidDate(dateUtc: string | null): Date | null {
   if (!dateUtc) {
-    return "—"
+    return null
   }
 
   const parsed = new Date(dateUtc)
-  return Number.isNaN(parsed.getTime()) ? "—" : format(parsed, "d MMM yyyy HH:mm:ss.SSS")
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+/** The day a change happened, shown in its own column so date and time read apart, as the Seats.io portal shows them. */
+export function formatStatusChangeDate(dateUtc: string | null): string {
+  const parsed = toValidDate(dateUtc)
+  return parsed ? format(parsed, "d MMM yyyy") : "—"
+}
+
+export interface StatusChangeTimeParts {
+  /** Wall-clock time to the second, e.g. "16:23:07". */
+  clock: string
+  /** The fractional second with its dot, e.g. ".592", muted in the UI to echo the Seats.io portal. */
+  fraction: string
+}
+
+/**
+ * The time of a change split into its second and millisecond parts. Milliseconds matter because several changes to one
+ * seat land inside the same second; splitting them lets the UI mute the fraction. Null for a missing or unreadable time.
+ */
+export function formatStatusChangeTimeParts(dateUtc: string | null): StatusChangeTimeParts | null {
+  const parsed = toValidDate(dateUtc)
+  return parsed ? { clock: format(parsed, "HH:mm:ss"), fraction: format(parsed, ".SSS") } : null
 }
 
 export function statusChangePalette(status: string): string {

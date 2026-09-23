@@ -66,7 +66,8 @@ describe("StatusChangesPanel", () => {
     renderPanel()
 
     expect(await screen.findByText("reservedByToken")).toBeInTheDocument()
-    expect(screen.getByText(/\d{2}:\d{2}:\d{2}\.613$/)).toBeInTheDocument()
+    const fraction = screen.getByText(".613")
+    expect(fraction.parentElement?.textContent).toMatch(/^\d{2}:\d{2}:\d{2}\.613$/)
   })
 
   /**
