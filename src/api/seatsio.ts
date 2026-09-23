@@ -696,10 +696,19 @@ export const STATUS_CHANGE_SORT = {
 
 export type StatusChangeSort = (typeof STATUS_CHANGE_SORT)[keyof typeof STATUS_CHANGE_SORT]
 
+/** Page sizes the status-change log offers, matching the backend's allowed set. */
+export const STATUS_CHANGE_PAGE_SIZES = [10, 25, 50] as const
+
+export type StatusChangePageSize = (typeof STATUS_CHANGE_PAGE_SIZES)[number]
+
+/** Default page size; the backend applies the same when none is sent. */
+export const DEFAULT_STATUS_CHANGE_PAGE_SIZE: StatusChangePageSize = 50
+
 export interface StatusChangeFilters {
   search: string
   exactMatch: boolean
   sort: StatusChangeSort
+  pageSize: StatusChangePageSize
 }
 
 export interface SeatsIoEventRenderContext {
@@ -869,6 +878,7 @@ function statusChangeParams(filters: StatusChangeFilters, startAfterId: number |
     ...(startAfterId ? { startAfterId } : {}),
     ...(search ? { search, exactMatch: filters.exactMatch } : {}),
     ...(filters.sort === STATUS_CHANGE_SORT.dateDesc ? {} : { sort: filters.sort }),
+    ...(filters.pageSize === DEFAULT_STATUS_CHANGE_PAGE_SIZE ? {} : { pageSize: filters.pageSize }),
   }
 }
 

@@ -194,7 +194,12 @@ describe("fetchSeatsIoEventTables", () => {
 })
 
 describe("fetchSeatsIoEventStatusChanges", () => {
-  const DEFAULT_FILTERS: StatusChangeFilters = { search: "", exactMatch: false, sort: STATUS_CHANGE_SORT.dateDesc }
+  const DEFAULT_FILTERS: StatusChangeFilters = {
+    search: "",
+    exactMatch: false,
+    sort: STATUS_CHANGE_SORT.dateDesc,
+    pageSize: 50,
+  }
 
   /** The cursor a caller passes travels as the startAfterId query param, and the next cursor comes back mapped. */
   it("sends the cursor and returns the next one", async () => {
@@ -249,12 +254,27 @@ describe("fetchSeatsIoEventStatusChanges", () => {
 
     await fetchSeatsIoEventStatusChanges(
       EVENT_UNIQUE_ID,
-      { search: "  18-1 ", exactMatch: true, sort: STATUS_CHANGE_SORT.statusDesc },
+      { search: "  18-1 ", exactMatch: true, sort: STATUS_CHANGE_SORT.statusDesc, pageSize: 50 },
       40,
     )
 
     expect(getMock).toHaveBeenCalledWith(expect.stringContaining(EVENT_UNIQUE_ID) as unknown as string, {
       params: { startAfterId: 40, search: "18-1", exactMatch: true, sort: "StatusDesc" },
+    })
+  })
+
+  /** A non-default page size travels as the pageSize param so the server reads that many changes; 50 stays implicit. */
+  it("sends a non-default page size and omits the default", async () => {
+    getMock.mockResolvedValue({ data: { Data: { items: [], nextPageStartsAfter: null } } })
+
+    await fetchSeatsIoEventStatusChanges(EVENT_UNIQUE_ID, { ...DEFAULT_FILTERS, pageSize: 25 })
+    expect(getMock).toHaveBeenLastCalledWith(expect.stringContaining(EVENT_UNIQUE_ID) as unknown as string, {
+      params: { pageSize: 25 },
+    })
+
+    await fetchSeatsIoEventStatusChanges(EVENT_UNIQUE_ID, DEFAULT_FILTERS)
+    expect(getMock).toHaveBeenLastCalledWith(expect.stringContaining(EVENT_UNIQUE_ID) as unknown as string, {
+      params: {},
     })
   })
 

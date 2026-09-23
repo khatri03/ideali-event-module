@@ -1,7 +1,13 @@
 import { useMemo, useState } from "react"
 import { Button, Stack } from "@chakra-ui/react"
 import { ErrorState } from "@/components/common"
-import { STATUS_CHANGE_SORT, type StatusChangeFilters, type StatusChangeSort } from "@/api/seatsio"
+import {
+  DEFAULT_STATUS_CHANGE_PAGE_SIZE,
+  STATUS_CHANGE_SORT,
+  type StatusChangeFilters,
+  type StatusChangePageSize,
+  type StatusChangeSort,
+} from "@/api/seatsio"
 import { useDebounce } from "@/hooks/useDebounce"
 import { extractApiError } from "@/utils/errors"
 import { useEventStatusChanges } from "../../hooks/useEventReports"
@@ -33,12 +39,13 @@ export function StatusChangesPanel({ eventUniqueId }: StatusChangesPanelProps) {
   const [search, setSearch] = useState("")
   const [isExactMatch, setIsExactMatch] = useState(false)
   const [sort, setSort] = useState<StatusChangeSort>(STATUS_CHANGE_SORT.dateDesc)
+  const [pageSize, setPageSize] = useState<StatusChangePageSize>(DEFAULT_STATUS_CHANGE_PAGE_SIZE)
   const debouncedSearch = useDebounce(search)
 
   const filters = useMemo<StatusChangeFilters>(() => {
     const trimmed = debouncedSearch.trim()
-    return { search: trimmed, exactMatch: isExactMatch && trimmed !== "", sort }
-  }, [debouncedSearch, isExactMatch, sort])
+    return { search: trimmed, exactMatch: isExactMatch && trimmed !== "", sort, pageSize }
+  }, [debouncedSearch, isExactMatch, sort, pageSize])
   const query = useEventStatusChanges(eventUniqueId, filters, true)
   const changes = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data])
 
@@ -90,6 +97,8 @@ export function StatusChangesPanel({ eventUniqueId }: StatusChangesPanelProps) {
           isLoadingMore={query.isFetchingNextPage}
           hasLoadMoreFailed={query.isFetchNextPageError}
           onLoadMore={() => void query.fetchNextPage()}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
         />
       </>
     )

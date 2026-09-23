@@ -51,7 +51,12 @@ function renderPanel() {
 
 /** The filters the panel sent on its most recent read. */
 function lastFilters() {
-  return statusChangesMock.mock.calls.at(-1)?.[1] as { search: string; exactMatch: boolean; sort: string }
+  return statusChangesMock.mock.calls.at(-1)?.[1] as {
+    search: string
+    exactMatch: boolean
+    sort: string
+    pageSize: number
+  }
 }
 
 beforeEach(() => {
@@ -140,6 +145,17 @@ describe("StatusChangesPanel", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /^Status/ }))
     await waitFor(() => expect(lastFilters().sort).toBe("StatusDesc"))
+  })
+
+  /** Choosing a page size re-reads the log at that size, so the organizer's 10/25/50 pick drives how much loads. */
+  it("re-reads the log at the chosen page size", async () => {
+    statusChangesMock.mockResolvedValue(page([change()], null))
+
+    renderPanel()
+    await screen.findByText("reservedByToken")
+    await userEvent.selectOptions(screen.getByLabelText("Changes to load per page"), "25")
+
+    await waitFor(() => expect(lastFilters().pageSize).toBe(25))
   })
 
   /** A search that matches nothing names the search and offers a way back to the full log. */
