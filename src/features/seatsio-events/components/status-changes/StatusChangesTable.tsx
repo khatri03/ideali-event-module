@@ -25,10 +25,15 @@ function PlainHeader({ label, isNumeric = false }: { label: string; isNumeric?: 
   )
 }
 
-function MutedCell({ value, isMono = false }: { value: string; isMono?: boolean }) {
+function DataCell({ value, isMono = false }: { value: string; isMono?: boolean }) {
   return (
     <Table.Cell px={4} py={3}>
-      <Text fontSize="sm" color="text.secondary" fontFamily={isMono ? "mono" : undefined} wordBreak="break-all">
+      <Text
+        fontSize="sm"
+        color={value ? "text.primary" : "text.secondary"}
+        fontFamily={isMono ? "mono" : undefined}
+        wordBreak="break-all"
+      >
         {value || "—"}
       </Text>
     </Table.Cell>
@@ -103,9 +108,9 @@ function StatusChangeRow({
           {change.quantity}
         </Text>
       </Table.Cell>
-      <MutedCell value={change.holdToken} isMono />
-      <MutedCell value={change.orderId} />
-      <MutedCell value={change.origin} />
+      <DataCell value={change.holdToken} isMono />
+      <DataCell value={change.orderId} />
+      <DataCell value={change.origin} />
     </Table.Row>
   )
 }
