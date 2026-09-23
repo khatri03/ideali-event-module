@@ -254,12 +254,6 @@ export const API_ROUTES = {
     `/api/organizer/seatsio/events/${eventUniqueId}/reports/summary`,
   seatsIoEventReportForSale: (eventUniqueId: string) =>
     `/api/organizer/seatsio/events/${eventUniqueId}/reports/for-sale`,
-  seatsIoEventReportTables: (eventUniqueId: string) =>
-    `/api/organizer/seatsio/events/${eventUniqueId}/reports/tables`,
-  seatsIoEventReportChannels: (eventUniqueId: string) =>
-    `/api/organizer/seatsio/events/${eventUniqueId}/reports/channels`,
-  seatsIoEventReportCategories: (eventUniqueId: string) =>
-    `/api/organizer/seatsio/events/${eventUniqueId}/reports/categories`,
   seatsIoEventReportStatusChanges: (eventUniqueId: string) =>
     `/api/organizer/seatsio/events/${eventUniqueId}/reports/status-changes`,
   seatsIoEventRenderContext: (eventUniqueId: string) =>

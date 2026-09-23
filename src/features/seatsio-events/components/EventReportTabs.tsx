@@ -4,14 +4,10 @@ import { Box, Tabs } from "@chakra-ui/react"
 import { SummaryPanel } from "./panels/SummaryPanel"
 import { ForSalePanel } from "./panels/ForSalePanel"
 import { StatusChangesPanel } from "./panels/StatusChangesPanel"
-import { CategoriesPanel, ChannelsPanel, TablesPanel } from "./panels/GroupTabPanels"
 
 const TABS = [
   { value: "summary", label: "Summary" },
   { value: "for-sale", label: "For sale" },
-  { value: "tables", label: "Tables" },
-  { value: "channels", label: "Channels" },
-  { value: "categories", label: "Categories" },
   { value: "status-changes", label: "Status changes" },
 ] as const
 
@@ -69,15 +65,6 @@ export function EventReportTabs({ eventUniqueId }: { eventUniqueId: string }) {
         </Tabs.Content>
         <Tabs.Content value="for-sale">
           <ForSalePanel eventUniqueId={eventUniqueId} formatCount={formatCount} />
-        </Tabs.Content>
-        <Tabs.Content value="tables">
-          <TablesPanel eventUniqueId={eventUniqueId} formatCount={formatCount} />
-        </Tabs.Content>
-        <Tabs.Content value="channels">
-          <ChannelsPanel eventUniqueId={eventUniqueId} formatCount={formatCount} />
-        </Tabs.Content>
-        <Tabs.Content value="categories">
-          <CategoriesPanel eventUniqueId={eventUniqueId} formatCount={formatCount} />
         </Tabs.Content>
         <Tabs.Content value="status-changes">
           <StatusChangesPanel eventUniqueId={eventUniqueId} />

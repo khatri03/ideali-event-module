@@ -1,12 +1,9 @@
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
-  fetchSeatsIoEventCategories,
-  fetchSeatsIoEventChannels,
   fetchSeatsIoEventForSale,
   fetchSeatsIoEventRenderContext,
   fetchSeatsIoEventStatusChanges,
   fetchSeatsIoEventSummary,
-  fetchSeatsIoEventTables,
   markSeatsIoEventForSale,
   markSeatsIoEventNotForSale,
   type SeatsIoForSaleSelection,
@@ -33,33 +30,6 @@ export function useEventForSale(eventUniqueId: string, enabled: boolean) {
   return useQuery({
     queryKey: ["seatsio", "event-report", "for-sale", eventUniqueId],
     queryFn: () => fetchSeatsIoEventForSale(eventUniqueId),
-    enabled: enabled && Boolean(eventUniqueId),
-    ...REPORT_QUERY_OPTIONS,
-  })
-}
-
-export function useEventTables(eventUniqueId: string, enabled: boolean) {
-  return useQuery({
-    queryKey: ["seatsio", "event-report", "tables", eventUniqueId],
-    queryFn: () => fetchSeatsIoEventTables(eventUniqueId),
-    enabled: enabled && Boolean(eventUniqueId),
-    ...REPORT_QUERY_OPTIONS,
-  })
-}
-
-export function useEventChannels(eventUniqueId: string, enabled: boolean) {
-  return useQuery({
-    queryKey: ["seatsio", "event-report", "channels", eventUniqueId],
-    queryFn: () => fetchSeatsIoEventChannels(eventUniqueId),
-    enabled: enabled && Boolean(eventUniqueId),
-    ...REPORT_QUERY_OPTIONS,
-  })
-}
-
-export function useEventCategories(eventUniqueId: string, enabled: boolean) {
-  return useQuery({
-    queryKey: ["seatsio", "event-report", "categories", eventUniqueId],
-    queryFn: () => fetchSeatsIoEventCategories(eventUniqueId),
     enabled: enabled && Boolean(eventUniqueId),
     ...REPORT_QUERY_OPTIONS,
   })

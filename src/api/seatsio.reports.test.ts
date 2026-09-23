@@ -1,11 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
-  fetchSeatsIoEventChannels,
   fetchSeatsIoEventForSale,
   fetchSeatsIoEventRenderContext,
   fetchSeatsIoEventStatusChanges,
   fetchSeatsIoEventSummary,
-  fetchSeatsIoEventTables,
   STATUS_CHANGE_SORT,
   type StatusChangeFilters,
 } from "./seatsio"
@@ -128,68 +126,6 @@ describe("fetchSeatsIoEventForSale", () => {
 
     expect(report.everythingForSale).toBe(true)
     expect(report.objects).toEqual([])
-  })
-})
-
-describe("fetchSeatsIoEventChannels", () => {
-  /** Channels come from the event, not a report: each row carries its name, colour and object count. */
-  it("maps each channel with its colour and object count", async () => {
-    getMock.mockResolvedValue({
-      data: {
-        Data: [
-          { key: "vip", name: "VIP", color: "#aaaaaa", objectCount: 2 },
-          { key: "press", name: "Press", color: "#bbbbbb", objectCount: 1 },
-        ],
-      },
-    })
-
-    const channels = await fetchSeatsIoEventChannels(EVENT_UNIQUE_ID)
-
-    expect(channels).toHaveLength(2)
-    expect(channels[0]).toEqual({ key: "vip", name: "VIP", color: "#aaaaaa", objectCount: 2 })
-  })
-
-  /** An event with no channels yields an empty list, which the channels tab reads as "none created yet". */
-  it("returns an empty list when the event defines no channels", async () => {
-    getMock.mockResolvedValue({ data: { Data: [] } })
-
-    const channels = await fetchSeatsIoEventChannels(EVENT_UNIQUE_ID)
-
-    expect(channels).toEqual([])
-  })
-})
-
-describe("fetchSeatsIoEventTables", () => {
-  /** Table booking is read as a mode plus per-table types, not as an object-type count. */
-  it("maps the booking mode and each table's booking type", async () => {
-    getMock.mockResolvedValue({
-      data: {
-        Data: {
-          mode: "CUSTOM",
-          modeLabel: "Custom per table",
-          inheritsChartSettings: false,
-          tables: [{ label: "T1", bookingType: "Booked as a whole" }],
-        },
-      },
-    })
-
-    const report = await fetchSeatsIoEventTables(EVENT_UNIQUE_ID)
-
-    expect(report.mode).toBe("CUSTOM")
-    expect(report.inheritsChartSettings).toBe(false)
-    expect(report.tables[0]).toEqual({ label: "T1", bookingType: "Booked as a whole" })
-  })
-
-  /** An event with no override reads as inheriting the chart's settings, with no per-table rows. */
-  it("reports inherited settings with an empty table list", async () => {
-    getMock.mockResolvedValue({
-      data: { Data: { mode: "INHERIT", modeLabel: "Inherited from chart", inheritsChartSettings: true, tables: [] } },
-    })
-
-    const report = await fetchSeatsIoEventTables(EVENT_UNIQUE_ID)
-
-    expect(report.inheritsChartSettings).toBe(true)
-    expect(report.tables).toEqual([])
   })
 })
 

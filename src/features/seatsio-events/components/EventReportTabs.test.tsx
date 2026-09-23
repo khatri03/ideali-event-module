@@ -7,20 +7,9 @@ import { MemoryRouter } from "react-router-dom"
 import { system } from "@/theme"
 import { EventReportTabs } from "./EventReportTabs"
 
-const {
-  summaryMock,
-  forSaleMock,
-  tablesMock,
-  channelsMock,
-  categoriesMock,
-  statusChangesMock,
-  renderContextMock,
-} = vi.hoisted(() => ({
+const { summaryMock, forSaleMock, statusChangesMock, renderContextMock } = vi.hoisted(() => ({
   summaryMock: vi.fn(),
   forSaleMock: vi.fn(),
-  tablesMock: vi.fn(),
-  channelsMock: vi.fn(),
-  categoriesMock: vi.fn(),
   statusChangesMock: vi.fn(),
   renderContextMock: vi.fn(),
 }))
@@ -29,9 +18,6 @@ vi.mock("@/api/seatsio", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/api/seatsio")>()),
   fetchSeatsIoEventSummary: summaryMock,
   fetchSeatsIoEventForSale: forSaleMock,
-  fetchSeatsIoEventTables: tablesMock,
-  fetchSeatsIoEventChannels: channelsMock,
-  fetchSeatsIoEventCategories: categoriesMock,
   fetchSeatsIoEventStatusChanges: statusChangesMock,
   fetchSeatsIoEventRenderContext: renderContextMock,
 }))
@@ -54,36 +40,48 @@ function renderTabs() {
 describe("EventReportTabs", () => {
   beforeEach(() => {
     summaryMock.mockReset().mockResolvedValue({ totalObjects: 1, unavailableObjects: 1, availableObjects: 0, byStatus: [{ key: "booked", label: "Booked", count: 1 }], byCategory: [] })
-    channelsMock.mockReset().mockResolvedValue([{ key: "vip", name: "Vip", color: "#7551FF", objectCount: 2 }])
     forSaleMock.mockReset().mockResolvedValue({ everythingForSale: true, forSale: false, objects: [], categories: [], areaPlaces: [] })
-    tablesMock.mockReset().mockResolvedValue({ mode: "INHERIT", modeLabel: "Inherited from chart", inheritsChartSettings: true, tables: [] })
-    categoriesMock.mockReset().mockResolvedValue([])
     statusChangesMock.mockReset().mockResolvedValue({ items: [], nextPageStartsAfter: null })
     renderContextMock.mockReset().mockResolvedValue({ eventKey: "", publicKey: "", region: "" })
   })
 
   /**
-   * Only the open tab talks to the backend. The summary loads on mount; the channels report must stay unfetched
+   * Only the open tab talks to the backend. The summary loads on mount; the status-change log must stay unfetched
    * until its tab is opened, which is the whole point of per-tab endpoints — one tab must not pay for the others.
    */
   it("fetches only the active tab's report, and the next tab's only when opened", async () => {
     renderTabs()
 
     await waitFor(() => expect(summaryMock).toHaveBeenCalledTimes(1))
-    expect(channelsMock).not.toHaveBeenCalled()
+    expect(statusChangesMock).not.toHaveBeenCalled()
 
-    await userEvent.click(screen.getByRole("tab", { name: "Channels" }))
+    await userEvent.click(screen.getByRole("tab", { name: "Status changes" }))
 
-    await waitFor(() => expect(channelsMock).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(statusChangesMock).toHaveBeenCalledTimes(1))
     expect(summaryMock).toHaveBeenCalledTimes(1)
   })
 
-  /** The opened report renders its data — the channel group the backend returned reaches the screen. */
+  /** The opened report renders its data — the change the backend returned reaches the screen. */
   it("shows the report data for the opened tab", async () => {
+    statusChangesMock.mockResolvedValue({
+      items: [
+        {
+          objectLabel: "A-7",
+          status: "booked",
+          quantity: 1,
+          holdToken: "",
+          orderId: "",
+          origin: "",
+          dateUtc: "2026-09-16T11:23:31.613Z",
+        },
+      ],
+      nextPageStartsAfter: null,
+    })
+
     renderTabs()
 
-    await userEvent.click(screen.getByRole("tab", { name: "Channels" }))
+    await userEvent.click(screen.getByRole("tab", { name: "Status changes" }))
 
-    expect(await screen.findByText("Vip")).toBeInTheDocument()
+    expect(await screen.findByText("A-7")).toBeInTheDocument()
   })
 })

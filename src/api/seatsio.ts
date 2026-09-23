@@ -518,46 +518,6 @@ const eventSummaryReportSchema = z.object({
   byCategory: z.array(reportGroupSchema).nullable().optional(),
 })
 
-const eventTableBookingSchema = z.object({
-  Label: z.string().nullable().optional(),
-  label: z.string().nullable().optional(),
-  BookingType: z.string().nullable().optional(),
-  bookingType: z.string().nullable().optional(),
-})
-
-const eventTableBookingReportSchema = z.object({
-  Mode: z.string().nullable().optional(),
-  mode: z.string().nullable().optional(),
-  ModeLabel: z.string().nullable().optional(),
-  modeLabel: z.string().nullable().optional(),
-  InheritsChartSettings: z.boolean().nullable().optional(),
-  inheritsChartSettings: z.boolean().nullable().optional(),
-  Tables: z.array(eventTableBookingSchema).nullable().optional(),
-  tables: z.array(eventTableBookingSchema).nullable().optional(),
-})
-
-const eventChannelSchema = z.object({
-  Key: z.string().nullable().optional(),
-  key: z.string().nullable().optional(),
-  Name: z.string().nullable().optional(),
-  name: z.string().nullable().optional(),
-  Color: z.string().nullable().optional(),
-  color: z.string().nullable().optional(),
-  ObjectCount: z.number().int().nullable().optional(),
-  objectCount: z.number().int().nullable().optional(),
-})
-
-const eventCategorySchema = z.object({
-  Key: z.string().nullable().optional(),
-  key: z.string().nullable().optional(),
-  Label: z.string().nullable().optional(),
-  label: z.string().nullable().optional(),
-  Color: z.string().nullable().optional(),
-  color: z.string().nullable().optional(),
-  Count: z.number().int().nullable().optional(),
-  count: z.number().int().nullable().optional(),
-})
-
 const eventForSaleReportSchema = z.object({
   EverythingForSale: z.boolean().nullable().optional(),
   everythingForSale: z.boolean().nullable().optional(),
@@ -634,32 +594,6 @@ export interface SeatsIoEventSummaryReport {
   availableObjects: number
   byStatus: SeatsIoReportGroup[]
   byCategory: SeatsIoReportGroup[]
-}
-
-export interface SeatsIoEventTableBooking {
-  label: string
-  bookingType: string
-}
-
-export interface SeatsIoEventTableBookingReport {
-  mode: string
-  modeLabel: string
-  inheritsChartSettings: boolean
-  tables: SeatsIoEventTableBooking[]
-}
-
-export interface SeatsIoEventChannel {
-  key: string
-  name: string
-  color: string
-  objectCount: number
-}
-
-export interface SeatsIoEventCategory {
-  key: string
-  label: string
-  color: string
-  count: number
 }
 
 export interface SeatsIoEventForSaleReport {
@@ -753,40 +687,6 @@ function normalizeEventSummary(item: z.infer<typeof eventSummaryReportSchema>): 
   }
 }
 
-function normalizeTableBookingReport(
-  item: z.infer<typeof eventTableBookingReportSchema>,
-): SeatsIoEventTableBookingReport {
-  const tables = (item.Tables ?? item.tables ?? []).map((table) => ({
-    label: table.Label ?? table.label ?? "",
-    bookingType: table.BookingType ?? table.bookingType ?? "",
-  }))
-
-  return {
-    mode: item.Mode ?? item.mode ?? "",
-    modeLabel: item.ModeLabel ?? item.modeLabel ?? "",
-    inheritsChartSettings: item.InheritsChartSettings ?? item.inheritsChartSettings ?? false,
-    tables,
-  }
-}
-
-function normalizeChannel(item: z.infer<typeof eventChannelSchema>): SeatsIoEventChannel {
-  return {
-    key: item.Key ?? item.key ?? "",
-    name: item.Name ?? item.name ?? "",
-    color: item.Color ?? item.color ?? "",
-    objectCount: item.ObjectCount ?? item.objectCount ?? 0,
-  }
-}
-
-function normalizeEventCategory(item: z.infer<typeof eventCategorySchema>): SeatsIoEventCategory {
-  return {
-    key: item.Key ?? item.key ?? "",
-    label: item.Label ?? item.label ?? "",
-    color: item.Color ?? item.color ?? "",
-    count: item.Count ?? item.count ?? 0,
-  }
-}
-
 function normalizeForSale(item: z.infer<typeof eventForSaleReportSchema>): SeatsIoEventForSaleReport {
   return {
     everythingForSale: item.EverythingForSale ?? item.everythingForSale ?? false,
@@ -842,34 +742,6 @@ export async function fetchSeatsIoEventForSale(eventUniqueId: string): Promise<S
   const res = await client.get<unknown>(API_ROUTES.seatsIoEventReportForSale(eventUniqueId))
   const responseData = parseServiceResponseData(res.data)
   return normalizeForSale(eventForSaleReportSchema.parse(responseData ?? {}))
-}
-
-export async function fetchSeatsIoEventTables(eventUniqueId: string): Promise<SeatsIoEventTableBookingReport> {
-  const res = await client.get<unknown>(API_ROUTES.seatsIoEventReportTables(eventUniqueId))
-  const responseData = parseServiceResponseData(res.data)
-  return normalizeTableBookingReport(eventTableBookingReportSchema.parse(responseData ?? {}))
-}
-
-export async function fetchSeatsIoEventChannels(eventUniqueId: string): Promise<SeatsIoEventChannel[]> {
-  const res = await client.get<unknown>(API_ROUTES.seatsIoEventReportChannels(eventUniqueId))
-  const responseData = parseServiceResponseData(res.data)
-
-  if (!Array.isArray(responseData)) {
-    return []
-  }
-
-  return responseData.map((item) => normalizeChannel(eventChannelSchema.parse(item)))
-}
-
-export async function fetchSeatsIoEventCategories(eventUniqueId: string): Promise<SeatsIoEventCategory[]> {
-  const res = await client.get<unknown>(API_ROUTES.seatsIoEventReportCategories(eventUniqueId))
-  const responseData = parseServiceResponseData(res.data)
-
-  if (!Array.isArray(responseData)) {
-    return []
-  }
-
-  return responseData.map((item) => normalizeEventCategory(eventCategorySchema.parse(item)))
 }
 
 function statusChangeParams(filters: StatusChangeFilters, startAfterId: number | null) {
