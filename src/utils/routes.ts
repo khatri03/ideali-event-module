@@ -142,6 +142,9 @@ export const APP_ROUTES = {
     detailRoute: "/organizer/events/invoices/:invoiceUniqueId",
     detail: (invoiceUniqueId: string) => `/organizer/events/invoices/${invoiceUniqueId}`,
   },
+  eventInvoiceCategories: {
+    list: "/organizer/events/invoices/categories",
+  },
   customFormReports: {
     base: "/organizer/custom-form-report",
     builder: "/organizer/custom-form-report",
@@ -380,6 +383,9 @@ export const API_ROUTES = {
     `/api/organizer/events/invoices/${invoiceUniqueId}/tickets/${ticketUniqueId}/resend`,
   eventInvoiceLineItemAttendee: (invoiceUniqueId: string, lineItemUniqueId: string, slotIndex: number) =>
     `/api/organizer/events/invoices/${invoiceUniqueId}/line-items/${lineItemUniqueId}/attendees/${slotIndex}`,
+  eventInvoiceCategories: "/api/organizer/events/invoices/categories/list",
+  eventInvoiceCategoryCreate: "/api/organizer/events/invoices/categories",
+  eventInvoiceCategoryDetail: (uniqueId: string) => `/api/organizer/events/invoices/categories/${uniqueId}`,
   stripePublicCredentials: (paymentAccountUniqueId: string) =>
     `/api/public/stripe/${paymentAccountUniqueId}/credentials`,
   sessionAttendees: (eventUniqueId: string, sessionUniqueId: string) =>
