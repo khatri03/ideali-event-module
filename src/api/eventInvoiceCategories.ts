@@ -89,6 +89,13 @@ function parseServicePayload(payload: unknown): unknown {
   return readResponseData(response)
 }
 
+function assertSuccess(payload: unknown, fallbackMessage: string): void {
+  const response = serviceResponseSchema.parse(payload)
+  if (response.success === false) {
+    throw new Error(response.message ?? fallbackMessage)
+  }
+}
+
 function normalizeEventInvoiceCategory(
   raw: z.infer<typeof eventInvoiceCategorySchema>,
 ): EventInvoiceCategoryListItem {
@@ -136,4 +143,26 @@ export async function fetchEventInvoiceCategories(
   const response = await client.get<unknown>(API_ROUTES.eventInvoiceCategories, { params })
   const parsed = pageSchema(eventInvoiceCategorySchema).parse(parseServicePayload(response.data))
   return toPage(parsed, pageNo, pageSize)
+}
+
+export async function createEventInvoiceCategory(
+  payload: SaveEventInvoiceCategoryPayload,
+): Promise<string> {
+  const response = await client.post<unknown>(API_ROUTES.eventInvoiceCategoryCreate, payload)
+  assertSuccess(response.data, "Failed to create category.")
+  const data = parseServicePayload(response.data)
+  return typeof data === "string" ? data : ""
+}
+
+export async function updateEventInvoiceCategory(
+  uniqueId: string,
+  payload: SaveEventInvoiceCategoryPayload,
+): Promise<void> {
+  const response = await client.put<unknown>(API_ROUTES.eventInvoiceCategoryDetail(uniqueId), payload)
+  assertSuccess(response.data, "Failed to update category.")
+}
+
+export async function deleteEventInvoiceCategory(uniqueId: string): Promise<void> {
+  const response = await client.delete<unknown>(API_ROUTES.eventInvoiceCategoryDetail(uniqueId))
+  assertSuccess(response.data, "Failed to delete category.")
 }
