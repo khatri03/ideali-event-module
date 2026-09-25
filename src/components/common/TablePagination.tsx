@@ -9,6 +9,8 @@ interface TablePaginationProps {
   total: number
   /** Singular noun for the record type, e.g. "list" or "member". */
   itemLabel: string
+  /** Plural noun, for record types whose plural is not the singular plus "s" (e.g. "categories"). */
+  itemLabelPlural?: string
   size?: "sm" | "md"
   onPageChange: (page: number) => void
   onPageSizeChange: (pageSize: number) => void
@@ -20,10 +22,12 @@ export function TablePagination({
   totalPages,
   total,
   itemLabel,
+  itemLabelPlural,
   size = "md",
   onPageChange,
   onPageSizeChange,
 }: TablePaginationProps) {
+  const pluralLabel = itemLabelPlural ?? `${itemLabel}s`
   const resolvedTotalPages = Math.max(totalPages, 1)
   const pageNumbers = useMemo(
     () => Array.from({ length: resolvedTotalPages }, (_, index) => index + 1),
@@ -34,7 +38,9 @@ export function TablePagination({
   const isLastPage = page >= resolvedTotalPages
   const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
   const rangeEnd = Math.min(page * pageSize, total)
-  const controlHeight = size === "sm" ? "32px" : "36px"
+  // Compact on desktop where a mouse drives it; a full 44px touch target on mobile.
+  const controlHeight = { base: "44px", md: size === "sm" ? "32px" : "36px" }
+  const controlMinW = { base: "44px", md: "auto" }
   const fontSize = size === "sm" ? "xs" : "sm"
 
   return (
@@ -51,7 +57,7 @@ export function TablePagination({
     >
       <Flex align="center" gap={2} flexWrap="wrap">
         <Text fontSize={fontSize} color="text.secondary" whiteSpace="nowrap">
-          {total === 0 ? `No ${itemLabel}s` : `${rangeStart}–${rangeEnd} of ${total}`}
+          {total === 0 ? `No ${pluralLabel}` : `${rangeStart}–${rangeEnd} of ${total}`}
         </Text>
 
         <Flex align="center" gap={2}>
@@ -62,7 +68,7 @@ export function TablePagination({
             <NativeSelect.Field
               value={String(pageSize)}
               onChange={(event) => onPageSizeChange(Number(event.currentTarget.value))}
-              aria-label={`${itemLabel}s per page`}
+              aria-label={`${pluralLabel} per page`}
               h={controlHeight}
               minW="86px"
               borderRadius="10px"
@@ -122,6 +128,7 @@ export function TablePagination({
             variant="outline"
             size="sm"
             h={controlHeight}
+            minW={controlMinW}
             borderRadius="10px"
             cursor={isFirstPage ? "not-allowed" : "pointer"}
             disabled={isFirstPage}
@@ -133,6 +140,7 @@ export function TablePagination({
             variant="outline"
             size="sm"
             h={controlHeight}
+            minW={controlMinW}
             borderRadius="10px"
             cursor={isLastPage ? "not-allowed" : "pointer"}
             disabled={isLastPage}

@@ -157,6 +157,7 @@ export function EventInvoiceCategoriesManager() {
               totalPages={categoryPage?.totalPages ?? 0}
               total={categoryPage?.total ?? 0}
               itemLabel="category"
+              itemLabelPlural="categories"
               onPageChange={setPage}
               onPageSizeChange={handlePageSizeChange}
             />

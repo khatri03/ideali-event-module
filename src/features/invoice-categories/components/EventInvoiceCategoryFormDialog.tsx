@@ -1,3 +1,4 @@
+import { useRef } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Box, Button, CloseButton, Dialog, Field, Flex, Input, Stack, Switch, Text } from "@chakra-ui/react"
@@ -32,11 +33,21 @@ export function EventInvoiceCategoryFormDialog({
   category,
   onClose,
 }: EventInvoiceCategoryFormDialogProps) {
+  // The form remounts (via key) on each open, so the trap's default initial-focus target can resolve to a
+  // detached node mid-transition. Anchoring focus to the always-mounted content keeps that node valid.
+  const contentRef = useRef<HTMLDivElement>(null)
   return (
-    <Dialog.Root open={open} onOpenChange={(details) => (details.open ? null : onClose())} size={{ base: "full", md: "lg" }}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(details) => (details.open ? null : onClose())}
+      size={{ base: "full", md: "lg" }}
+      initialFocusEl={() => contentRef.current}
+    >
       <Dialog.Backdrop backdropFilter="blur(8px)" bg="blackAlpha.500" />
       <Dialog.Positioner p={{ base: 0, md: 4 }}>
         <Dialog.Content
+          ref={contentRef}
+          tabIndex={-1}
           bg="card.bg"
           borderRadius={{ base: 0, md: "24px" }}
           w="full"

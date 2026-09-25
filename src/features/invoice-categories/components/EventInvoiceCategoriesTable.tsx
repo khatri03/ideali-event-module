@@ -47,9 +47,9 @@ function RowActionsMenu({
         <Button
           variant="outline"
           borderRadius="full"
-          h="34px"
-          w="34px"
-          minW="34px"
+          h={{ base: "44px", md: "34px" }}
+          w={{ base: "44px", md: "34px" }}
+          minW={{ base: "44px", md: "34px" }}
           p={0}
           cursor="pointer"
           aria-label={`Actions for ${category.name}`}
