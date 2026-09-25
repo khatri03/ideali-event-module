@@ -169,6 +169,7 @@ export default function App() {
           <Route path={APP_ROUTES.eventInvoiceCategories.list} element={<EventInvoiceCategoriesPage />} />
           <Route path={APP_ROUTES.eventInvoices.list} element={<EventInvoicesPage />} />
           <Route path={APP_ROUTES.eventInvoices.customNew} element={<EventCustomInvoiceFormPage />} />
+          <Route path={APP_ROUTES.eventInvoices.customEditRoute} element={<EventCustomInvoiceFormPage />} />
           <Route path={APP_ROUTES.eventInvoices.detailRoute} element={<EventInvoiceDetailPage />} />
           <Route path={APP_ROUTES.memberDocuments.list} element={<MemberDocumentsPage />} />
           <Route path={APP_ROUTES.memberDocuments.detailRoute} element={<MemberDocumentCategoryPage />} />

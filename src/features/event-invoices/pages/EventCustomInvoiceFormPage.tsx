@@ -1,27 +1,38 @@
+import { useState } from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { Box, Flex, Grid, Input, Stack, Text, Textarea, chakra } from "@chakra-ui/react"
 import { Field } from "@chakra-ui/react"
-import { FileText } from "lucide-react"
-import { StyledSelect } from "@/components/common"
+import { format } from "date-fns"
+import { FileText, Lock } from "lucide-react"
+import { ConfirmDialog, ErrorState, StyledSelect } from "@/components/common"
 import { RequiredFieldLabel } from "@/features/custom-lists"
 import { extractApiError } from "@/utils/errors"
-import { formatCurrency } from "@/utils/format"
 import { APP_ROUTES } from "@/utils/routes"
+import { parseUtcDateTime } from "@/utils/utcDates"
+import type { EventCustomInvoiceForEdit } from "@/api/eventInvoices"
 import { useEventInvoiceFilterOptions } from "../hooks/useEventInvoices"
 import {
   useActiveEventInvoiceCategoryOptions,
   useCreateEventCustomInvoice,
+  useUpdateEventCustomInvoice,
 } from "../hooks/useEventCustomInvoiceMutations"
+import { useEventCustomInvoiceForEdit } from "../hooks/useEventCustomInvoiceForEdit"
 import { customInvoiceSchema, type CustomInvoiceFormValues } from "../schemas/customInvoice.schemas"
 import { BackToInvoicesButton } from "../components/BackToInvoicesButton"
+import { CustomInvoiceBuyerSection } from "../components/CustomInvoiceBuyerSection"
+import { CustomInvoiceLineItems } from "../components/CustomInvoiceLineItems"
+import { EventCustomInvoiceFormPageSkeleton } from "./EventCustomInvoiceFormPage.skeleton"
 
-const AMOUNT_PATTERN = /^\d+(\.\d{1,2})?$/
+const NOTES_MAX = 2000
 
-const DEFAULT_VALUES: CustomInvoiceFormValues = {
+const FIELD_LABEL_PROPS = { fontSize: "sm", fontWeight: "700", color: "text.primary" } as const
+
+const EMPTY_VALUES: CustomInvoiceFormValues = {
   eventUniqueId: "",
   categoryUniqueId: "",
+  memberUniqueId: "",
   dueDate: "",
   companyName: "",
   firstName: "",
@@ -33,65 +44,109 @@ const DEFAULT_VALUES: CustomInvoiceFormValues = {
   lineItems: [{ description: "", amount: "" }],
 }
 
-const FIELD_LABEL_PROPS = { fontSize: "sm", fontWeight: "700", color: "text.primary" } as const
+function toDateInputValue(dueDateUtc: string): string {
+  const parsed = parseUtcDateTime(dueDateUtc)
+  return parsed ? format(parsed, "yyyy-MM-dd") : ""
+}
+
+function toFormValues(initial: EventCustomInvoiceForEdit): CustomInvoiceFormValues {
+  return {
+    eventUniqueId: initial.eventUniqueId,
+    categoryUniqueId: initial.categoryUniqueId,
+    memberUniqueId: "",
+    dueDate: toDateInputValue(initial.dueDateUtc),
+    companyName: initial.companyName,
+    firstName: initial.firstName,
+    middleName: initial.middleName,
+    lastName: initial.lastName,
+    cellPhone: initial.cellPhone,
+    email: initial.email,
+    specialNotes: initial.specialNotes,
+    lineItems:
+      initial.lineItems.length > 0
+        ? initial.lineItems.map((line) => ({ description: line.description, amount: line.amount }))
+        : [{ description: "", amount: "" }],
+  }
+}
+
+interface CustomInvoiceFormProps {
+  invoiceUniqueId?: string
+  initial?: EventCustomInvoiceForEdit
+}
 
 /**
- * The routed page for authoring a custom event invoice. This tracer slice bills a single line against one
- * event and active sponsorship type, with the required buyer fields and a due date, and saves through the
- * real endpoint. The member picker, multi-line editor, notes and edit mode are added by later plans.
+ * The custom-invoice authoring form, in create and edit modes. When editing a Paid or PartiallyPaid invoice
+ * the server's `canEdit` is false, and every control is rendered read-only behind a locked banner with no
+ * Save - the values still read, but nothing can be submitted (CINV-06); the server enforces the same lock.
  */
-export function EventCustomInvoiceFormPage() {
+function CustomInvoiceForm({ invoiceUniqueId, initial }: CustomInvoiceFormProps) {
   const navigate = useNavigate()
+  const isEditMode = Boolean(invoiceUniqueId)
+  const isReadOnly = Boolean(initial) && initial?.canEdit === false
+
   const eventsQuery = useEventInvoiceFilterOptions()
   const categoriesQuery = useActiveEventInvoiceCategoryOptions()
   const createMutation = useCreateEventCustomInvoice()
+  const updateMutation = useUpdateEventCustomInvoice()
+  const activeMutation = isEditMode ? updateMutation : createMutation
+
+  const [isDiscardOpen, setIsDiscardOpen] = useState(false)
 
   const {
     register,
     handleSubmit,
     control,
-    formState: { errors },
+    setValue,
+    formState: { errors, isDirty },
   } = useForm<CustomInvoiceFormValues>({
     resolver: zodResolver(customInvoiceSchema),
-    defaultValues: DEFAULT_VALUES,
+    defaultValues: initial ? toFormValues(initial) : EMPTY_VALUES,
   })
 
-  const eventOptions = (eventsQuery.data?.events ?? []).map((event) => ({
-    label: event.name,
-    value: event.uniqueId,
-  }))
-  const categoryOptions = (categoriesQuery.data ?? []).map((category) => ({
-    label: category.name,
-    value: category.uniqueId,
-  }))
+  const eventOptions = (eventsQuery.data?.events ?? []).map((event) => ({ label: event.name, value: event.uniqueId }))
+  const categoryOptions = (categoriesQuery.data ?? []).map((category) => ({ label: category.name, value: category.uniqueId }))
   const hasNoActiveCategories = categoriesQuery.isSuccess && categoryOptions.length === 0
 
-  const amount = useWatch({ control, name: "lineItems.0.amount" })
-  const grandTotal = formatCurrency(AMOUNT_PATTERN.test((amount ?? "").trim()) ? amount : "0", "$")
+  const notes = useWatch({ control, name: "specialNotes" }) ?? ""
 
-  const goBack = () => navigate(APP_ROUTES.eventInvoices.list)
+  function leave() {
+    navigate(isEditMode && invoiceUniqueId ? APP_ROUTES.eventInvoices.detail(invoiceUniqueId) : APP_ROUTES.eventInvoices.list)
+  }
+
+  function handleCancel() {
+    if (!isReadOnly && isDirty) {
+      setIsDiscardOpen(true)
+      return
+    }
+    leave()
+  }
 
   async function onSubmit(values: CustomInvoiceFormValues) {
+    const payload = {
+      eventUniqueId: values.eventUniqueId,
+      categoryUniqueId: values.categoryUniqueId,
+      memberUniqueId: values.memberUniqueId ? values.memberUniqueId : null,
+      dueDateUtc: new Date(`${values.dueDate}T00:00:00`).toISOString(),
+      companyName: values.companyName,
+      firstName: values.firstName,
+      middleName: values.middleName,
+      lastName: values.lastName,
+      cellPhone: values.cellPhone,
+      email: values.email,
+      specialNotes: values.specialNotes,
+      lineItems: values.lineItems.map((line) => ({ description: line.description, amount: line.amount })),
+    }
+
     try {
-      await createMutation.mutateAsync({
-        eventUniqueId: values.eventUniqueId,
-        categoryUniqueId: values.categoryUniqueId,
-        dueDateUtc: new Date(`${values.dueDate}T00:00:00`).toISOString(),
-        companyName: values.companyName,
-        firstName: values.firstName,
-        middleName: values.middleName,
-        lastName: values.lastName,
-        cellPhone: values.cellPhone,
-        email: values.email,
-        specialNotes: values.specialNotes,
-        lineItems: values.lineItems.map((line) => ({
-          description: line.description,
-          amount: line.amount,
-        })),
-      })
-      navigate(APP_ROUTES.eventInvoices.list)
+      if (isEditMode && invoiceUniqueId) {
+        await updateMutation.mutateAsync({ invoiceUniqueId, payload })
+        navigate(APP_ROUTES.eventInvoices.detail(invoiceUniqueId))
+      } else {
+        await createMutation.mutateAsync(payload)
+        navigate(APP_ROUTES.eventInvoices.list)
+      }
     } catch {
-      // Kept on the page so the banner below stays visible with the entered values still in view.
+      // Kept on the page so the banner stays visible with the entered values still in view.
     }
   }
 
@@ -99,23 +154,14 @@ export function EventCustomInvoiceFormPage() {
     <Stack gap={5} maxW="4xl" mx="auto" as="form" onSubmit={handleSubmit(onSubmit)}>
       <Box borderRadius="20px" bg="brand.700" color="white" boxShadow="card" overflow="hidden">
         <Stack gap={{ base: 4, md: 5 }} px={{ base: 4, md: 7 }} py={{ base: 5, md: 6 }}>
-          <BackToInvoicesButton onBack={goBack} tone="onBrand" />
+          <BackToInvoicesButton onBack={handleCancel} tone="onBrand" />
           <Flex gap={4} align="center">
-            <Flex
-              w="12"
-              h="12"
-              flexShrink={0}
-              align="center"
-              justify="center"
-              borderRadius="16px"
-              bg="whiteAlpha.200"
-              aria-hidden="true"
-            >
+            <Flex w="12" h="12" flexShrink={0} align="center" justify="center" borderRadius="16px" bg="whiteAlpha.200" aria-hidden="true">
               <FileText size={22} />
             </Flex>
             <Stack gap={1} minW={0}>
               <Text fontSize={{ base: "xl", md: "2xl" }} fontWeight="900" lineHeight="1.1">
-                New custom invoice
+                {isEditMode ? "Edit custom invoice" : "New custom invoice"}
               </Text>
               <Text fontSize={{ base: "sm", md: "md" }} color="whiteAlpha.800">
                 Bill a sponsor or partner against one of your events.
@@ -125,10 +171,21 @@ export function EventCustomInvoiceFormPage() {
         </Stack>
       </Box>
 
-      {createMutation.isError ? (
+      {isReadOnly ? (
+        <Flex role="alert" gap={3} align="flex-start" p={4} borderRadius="16px" bg="status.warning.bg">
+          <Box color="status.warning.fg" flexShrink={0} mt={0.5}>
+            <Lock size={18} />
+          </Box>
+          <Text fontSize="sm" fontWeight="700" color="status.warning.fg">
+            This invoice has been paid, so it can no longer be edited.
+          </Text>
+        </Flex>
+      ) : null}
+
+      {activeMutation.isError ? (
         <Box role="alert" p={4} borderRadius="16px" bg="status.error.bg">
           <Text fontSize="sm" fontWeight="700" color="status.error.fg">
-            {extractApiError(createMutation.error)}
+            {extractApiError(activeMutation.error)}
           </Text>
         </Box>
       ) : null}
@@ -150,7 +207,7 @@ export function EventCustomInvoiceFormPage() {
                     options={eventOptions}
                     value={field.value}
                     onChange={field.onChange}
-                    disabled={eventsQuery.isLoading}
+                    disabled={isReadOnly || eventsQuery.isLoading}
                     placeholder={eventsQuery.isLoading ? "Loading events..." : "Select an event"}
                     ariaLabel="Event"
                   />
@@ -169,23 +226,21 @@ export function EventCustomInvoiceFormPage() {
                     options={categoryOptions}
                     value={field.value}
                     onChange={field.onChange}
-                    disabled={categoriesQuery.isLoading || hasNoActiveCategories}
+                    disabled={isReadOnly || categoriesQuery.isLoading || hasNoActiveCategories}
                     placeholder={categoriesQuery.isLoading ? "Loading types..." : "Select a sponsorship type"}
                     ariaLabel="Sponsorship type"
                   />
                 )}
               />
               {hasNoActiveCategories ? (
-                <Field.HelperText>
-                  No active sponsorship types yet. Add one under Invoice Categories first.
-                </Field.HelperText>
+                <Field.HelperText>No active sponsorship types yet. Add one under Invoice Categories first.</Field.HelperText>
               ) : null}
               <Field.ErrorText>{errors.categoryUniqueId?.message}</Field.ErrorText>
             </Field.Root>
 
             <Field.Root invalid={Boolean(errors.dueDate)}>
               <RequiredFieldLabel>Payment due date</RequiredFieldLabel>
-              <Input type="date" minH="11" borderRadius="12px" {...register("dueDate")} />
+              <Input type="date" minH="11" borderRadius="12px" disabled={isReadOnly} {...register("dueDate")} />
               <Field.ErrorText>{errors.dueDate?.message}</Field.ErrorText>
             </Field.Root>
           </Grid>
@@ -197,101 +252,40 @@ export function EventCustomInvoiceFormPage() {
           <Text fontSize="md" fontWeight="800" color="text.primary">
             Buyer
           </Text>
-
-          <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={4}>
-            <Field.Root invalid={Boolean(errors.companyName)}>
-              <RequiredFieldLabel>Company name</RequiredFieldLabel>
-              <Input minH="11" borderRadius="12px" autoComplete="off" {...register("companyName")} />
-              <Field.ErrorText>{errors.companyName?.message}</Field.ErrorText>
-            </Field.Root>
-
-            <Field.Root invalid={Boolean(errors.email)}>
-              <RequiredFieldLabel>Email address</RequiredFieldLabel>
-              <Input minH="11" borderRadius="12px" inputMode="email" autoComplete="off" {...register("email")} />
-              <Field.ErrorText>{errors.email?.message}</Field.ErrorText>
-            </Field.Root>
-
-            <Field.Root invalid={Boolean(errors.firstName)}>
-              <Field.Label {...FIELD_LABEL_PROPS}>First name</Field.Label>
-              <Input minH="11" borderRadius="12px" autoComplete="off" {...register("firstName")} />
-              <Field.ErrorText>{errors.firstName?.message}</Field.ErrorText>
-            </Field.Root>
-
-            <Field.Root invalid={Boolean(errors.middleName)}>
-              <Field.Label {...FIELD_LABEL_PROPS}>Middle name</Field.Label>
-              <Input minH="11" borderRadius="12px" autoComplete="off" {...register("middleName")} />
-              <Field.ErrorText>{errors.middleName?.message}</Field.ErrorText>
-            </Field.Root>
-
-            <Field.Root invalid={Boolean(errors.lastName)}>
-              <RequiredFieldLabel>Last name</RequiredFieldLabel>
-              <Input minH="11" borderRadius="12px" autoComplete="off" {...register("lastName")} />
-              <Field.ErrorText>{errors.lastName?.message}</Field.ErrorText>
-            </Field.Root>
-
-            <Field.Root invalid={Boolean(errors.cellPhone)}>
-              <Field.Label {...FIELD_LABEL_PROPS}>Cell phone</Field.Label>
-              <Input minH="11" borderRadius="12px" autoComplete="off" {...register("cellPhone")} />
-              <Field.ErrorText>{errors.cellPhone?.message}</Field.ErrorText>
-            </Field.Root>
-          </Grid>
+          <CustomInvoiceBuyerSection register={register} errors={errors} setValue={setValue} disabled={isReadOnly} />
         </Stack>
       </Box>
 
       <Box borderRadius="20px" bg="card.bg" boxShadow="card" p={{ base: 4, md: 6 }}>
         <Stack gap={5}>
           <Text fontSize="md" fontWeight="800" color="text.primary">
-            Line item
+            Line items
           </Text>
-
-          <Grid templateColumns={{ base: "1fr", md: "2fr 1fr" }} gap={4}>
-            <Field.Root invalid={Boolean(errors.lineItems?.[0]?.description)}>
-              <RequiredFieldLabel>Description</RequiredFieldLabel>
-              <Input
-                minH="11"
-                borderRadius="12px"
-                autoComplete="off"
-                placeholder="e.g. Gold sponsorship"
-                {...register("lineItems.0.description")}
-              />
-              <Field.ErrorText>{errors.lineItems?.[0]?.description?.message}</Field.ErrorText>
-            </Field.Root>
-
-            <Field.Root invalid={Boolean(errors.lineItems?.[0]?.amount)}>
-              <RequiredFieldLabel>Amount</RequiredFieldLabel>
-              <Input
-                minH="11"
-                borderRadius="12px"
-                inputMode="decimal"
-                placeholder="0.00"
-                {...register("lineItems.0.amount")}
-              />
-              <Field.ErrorText>{errors.lineItems?.[0]?.amount?.message}</Field.ErrorText>
-            </Field.Root>
-          </Grid>
-
-          <Flex justify="space-between" align="center" pt={1}>
-            <Text fontSize="sm" fontWeight="700" color="text.secondary">
-              Grand total
-            </Text>
-            <Text fontSize="lg" fontWeight="900" color="text.primary">
-              {grandTotal}
-            </Text>
-          </Flex>
-
-          <Field.Root invalid={Boolean(errors.specialNotes)}>
-            <Field.Label {...FIELD_LABEL_PROPS}>Special notes</Field.Label>
-            <Textarea borderRadius="12px" rows={3} autoComplete="off" {...register("specialNotes")} />
-            <Field.HelperText>Optional. Shown on the invoice, up to 2000 characters.</Field.HelperText>
-            <Field.ErrorText>{errors.specialNotes?.message}</Field.ErrorText>
-          </Field.Root>
+          <CustomInvoiceLineItems control={control} register={register} errors={errors} disabled={isReadOnly} />
         </Stack>
+      </Box>
+
+      <Box borderRadius="20px" bg="card.bg" boxShadow="card" p={{ base: 4, md: 6 }}>
+        <Field.Root invalid={Boolean(errors.specialNotes)}>
+          <Field.Label {...FIELD_LABEL_PROPS}>Special notes</Field.Label>
+          <Textarea
+            borderRadius="12px"
+            rows={4}
+            resize="vertical"
+            maxLength={NOTES_MAX}
+            autoComplete="off"
+            disabled={isReadOnly}
+            {...register("specialNotes")}
+          />
+          <Field.HelperText>{`${notes.length}/${NOTES_MAX} characters`}</Field.HelperText>
+          <Field.ErrorText>{errors.specialNotes?.message}</Field.ErrorText>
+        </Field.Root>
       </Box>
 
       <Flex gap={3} justify="flex-end" direction={{ base: "column-reverse", md: "row" }}>
         <chakra.button
           type="button"
-          onClick={goBack}
+          onClick={handleCancel}
           minH="11"
           px={6}
           borderRadius="14px"
@@ -304,24 +298,71 @@ export function EventCustomInvoiceFormPage() {
           w={{ base: "full", md: "auto" }}
           _hover={{ bg: "app.bg" }}
         >
-          Cancel
+          {isReadOnly ? "Back to invoices" : "Cancel"}
         </chakra.button>
-        <chakra.button
-          type="submit"
-          minH="11"
-          px={8}
-          borderRadius="14px"
-          bg="brand.gradient"
-          color="white"
-          fontWeight="800"
-          w={{ base: "full", md: "auto" }}
-          cursor={createMutation.isPending ? "not-allowed" : "pointer"}
-          opacity={createMutation.isPending ? 0.7 : 1}
-          disabled={createMutation.isPending}
-        >
-          {createMutation.isPending ? "Saving..." : "Save invoice"}
-        </chakra.button>
+        {isReadOnly ? null : (
+          <chakra.button
+            type="submit"
+            minH="11"
+            px={8}
+            borderRadius="14px"
+            bg="brand.gradient"
+            color="white"
+            fontWeight="800"
+            w={{ base: "full", md: "auto" }}
+            cursor={activeMutation.isPending ? "not-allowed" : "pointer"}
+            opacity={activeMutation.isPending ? 0.7 : 1}
+            disabled={activeMutation.isPending}
+          >
+            {activeMutation.isPending ? "Saving..." : "Save invoice"}
+          </chakra.button>
+        )}
       </Flex>
+
+      {isDiscardOpen ? (
+        <ConfirmDialog
+          title="Discard unsaved changes?"
+          description={<Text>Your edits to this invoice have not been saved. Leaving now discards them.</Text>}
+          confirmLabel="Discard changes"
+          tone="destructive"
+          isPending={false}
+          onConfirm={leave}
+          onClose={() => setIsDiscardOpen(false)}
+        />
+      ) : null}
     </Stack>
   )
+}
+
+/**
+ * The routed entry point. In edit mode it loads the invoice first - showing the page skeleton while it
+ * arrives and a retryable error state if it fails - then hands the resolved values to the form; in create
+ * mode it renders the empty form straight away.
+ */
+export function EventCustomInvoiceFormPage() {
+  const navigate = useNavigate()
+  const { invoiceUniqueId } = useParams<{ invoiceUniqueId: string }>()
+  const editQuery = useEventCustomInvoiceForEdit(invoiceUniqueId)
+
+  if (invoiceUniqueId) {
+    if (editQuery.isLoading) {
+      return <EventCustomInvoiceFormPageSkeleton />
+    }
+    if (editQuery.isError || !editQuery.data) {
+      return (
+        <Stack gap={5} maxW="4xl" mx="auto">
+          <BackToInvoicesButton onBack={() => navigate(APP_ROUTES.eventInvoices.list)} />
+          <ErrorState
+            title="This invoice could not be loaded"
+            message="Something went wrong loading the invoice for editing. Try again in a moment."
+            onRetry={() => editQuery.refetch()}
+            isRetrying={editQuery.isFetching}
+          />
+        </Stack>
+      )
+    }
+    return <CustomInvoiceForm invoiceUniqueId={invoiceUniqueId} initial={editQuery.data} />
+  }
+
+  return <CustomInvoiceForm />
 }
