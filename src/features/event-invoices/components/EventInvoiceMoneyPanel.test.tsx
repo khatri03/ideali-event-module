@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { render, screen } from "@testing-library/react"
 import { ChakraProvider } from "@chakra-ui/react"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type { EventInvoiceDetail } from "@/api/eventInvoices"
 import { system } from "@/theme"
 import { EventInvoiceMoneyPanel } from "./EventInvoiceMoneyPanel"
@@ -89,9 +90,12 @@ function makeInvoice(overrides: Partial<EventInvoiceDetail> = {}): EventInvoiceD
 }
 
 function renderPanel(overrides: Partial<EventInvoiceDetail> = {}) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   const view = render(
     <ChakraProvider value={system}>
-      <EventInvoiceMoneyPanel invoice={makeInvoice(overrides)} />
+      <QueryClientProvider client={queryClient}>
+        <EventInvoiceMoneyPanel invoice={makeInvoice(overrides)} />
+      </QueryClientProvider>
     </ChakraProvider>,
   )
   return {

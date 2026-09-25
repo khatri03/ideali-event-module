@@ -4,6 +4,7 @@ import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
 import { ChakraProvider } from "@chakra-ui/react"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type { EventInvoiceDetail } from "@/api/eventInvoices"
 import { system } from "@/theme"
 import { APP_ROUTES } from "@/utils/routes"
@@ -14,14 +15,21 @@ const { useEventInvoiceDetailMock, idleMutation } = vi.hoisted(() => ({
   idleMutation: () => ({ mutateAsync: vi.fn(), reset: vi.fn(), isPending: false, error: null }),
 }))
 
-vi.mock("../hooks/useEventInvoices", () => ({
-  useEventInvoiceDetail: useEventInvoiceDetailMock,
-  useResendEventInvoice: idleMutation,
-  useResendEventInvoiceTicket: idleMutation,
-  useMarkEventInvoiceAsPaid: idleMutation,
-  useCancelEventInvoice: idleMutation,
-  useAddEventInvoiceNote: idleMutation,
-}))
+vi.mock("../hooks/useEventInvoices", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../hooks/useEventInvoices")>()
+  return {
+    ...actual,
+    useEventInvoiceDetail: useEventInvoiceDetailMock,
+    useResendEventInvoice: idleMutation,
+    useResendEventInvoiceTicket: idleMutation,
+    useResendEventInvoiceLineItem: idleMutation,
+    useMarkEventInvoiceAsPaid: idleMutation,
+    useCancelEventInvoice: idleMutation,
+    useAddEventInvoiceNote: idleMutation,
+    useUpdateEventInvoiceBuyer: idleMutation,
+    useUpdateEventInvoiceAttendee: idleMutation,
+  }
+})
 
 const INVOICE: EventInvoiceDetail = {
   invoiceUniqueId: "invoice-1",
@@ -73,19 +81,23 @@ function CurrentPath() {
 function renderPage({ returnTo }: { returnTo?: unknown } = {}) {
   const detailPath = APP_ROUTES.eventInvoices.detail(INVOICE.invoiceUniqueId)
 
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+
   return render(
     <ChakraProvider value={system}>
-      <MemoryRouter
-        initialEntries={[
-          { pathname: detailPath, state: returnTo === undefined ? undefined : { returnTo } },
-        ]}
-      >
-        <CurrentPath />
-        <Routes>
-          <Route path={APP_ROUTES.eventInvoices.list} element={<div>Invoice list</div>} />
-          <Route path="/organizer/events/invoices/:invoiceUniqueId" element={<EventInvoiceDetailPage />} />
-        </Routes>
-      </MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter
+          initialEntries={[
+            { pathname: detailPath, state: returnTo === undefined ? undefined : { returnTo } },
+          ]}
+        >
+          <CurrentPath />
+          <Routes>
+            <Route path={APP_ROUTES.eventInvoices.list} element={<div>Invoice list</div>} />
+            <Route path="/organizer/events/invoices/:invoiceUniqueId" element={<EventInvoiceDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
     </ChakraProvider>,
   )
 }
