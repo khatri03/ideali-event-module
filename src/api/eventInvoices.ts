@@ -764,6 +764,105 @@ export async function createEventCustomInvoice(payload: CreateEventCustomInvoice
   return parsed.InvoiceUniqueId ?? parsed.invoiceUniqueId ?? ""
 }
 
+/** An update carries the same shape as a create; the invoice it targets is named in the URL. */
+export type UpdateEventCustomInvoicePayload = CreateEventCustomInvoicePayload
+
+export async function updateEventCustomInvoice(
+  invoiceUniqueId: string,
+  payload: UpdateEventCustomInvoicePayload,
+): Promise<void> {
+  await client.put(API_ROUTES.eventInvoiceCustomUpdate(invoiceUniqueId), payload)
+}
+
+export interface EventCustomInvoiceLineForEdit {
+  description: string
+  /** Decimal text as the server stored it - never a float. */
+  amount: string
+}
+
+export interface EventCustomInvoiceForEdit {
+  invoiceUniqueId: string
+  eventUniqueId: string
+  categoryUniqueId: string
+  dueDateUtc: string
+  companyName: string
+  firstName: string
+  middleName: string
+  lastName: string
+  cellPhone: string
+  email: string
+  specialNotes: string
+  invoiceStatus: string
+  /** The server's own verdict on whether this invoice may still be edited - a Paid or PartiallyPaid one may not. */
+  canEdit: boolean
+  lineItems: EventCustomInvoiceLineForEdit[]
+}
+
+const forEditLineSchema = z.object({
+  Description: dual(z.string()),
+  description: dual(z.string()),
+  Amount: dual(money()),
+  amount: dual(money()),
+})
+
+const forEditSchema = z.object({
+  InvoiceUniqueId: dual(z.string()),
+  invoiceUniqueId: dual(z.string()),
+  EventUniqueId: dual(z.string()),
+  eventUniqueId: dual(z.string()),
+  CategoryUniqueId: dual(z.string()),
+  categoryUniqueId: dual(z.string()),
+  DueDateUtc: dual(z.string()),
+  dueDateUtc: dual(z.string()),
+  CompanyName: dual(z.string().nullable()),
+  companyName: dual(z.string().nullable()),
+  FirstName: dual(z.string().nullable()),
+  firstName: dual(z.string().nullable()),
+  MiddleName: dual(z.string().nullable()),
+  middleName: dual(z.string().nullable()),
+  LastName: dual(z.string().nullable()),
+  lastName: dual(z.string().nullable()),
+  CellPhone: dual(z.string().nullable()),
+  cellPhone: dual(z.string().nullable()),
+  Email: dual(z.string().nullable()),
+  email: dual(z.string().nullable()),
+  SpecialNotes: dual(z.string().nullable()),
+  specialNotes: dual(z.string().nullable()),
+  InvoiceStatus: dual(z.string()),
+  invoiceStatus: dual(z.string()),
+  CanEdit: dual(z.boolean()),
+  canEdit: dual(z.boolean()),
+  LineItems: z.array(forEditLineSchema).nullable().optional(),
+  lineItems: z.array(forEditLineSchema).nullable().optional(),
+})
+
+export async function fetchEventCustomInvoiceForEdit(invoiceUniqueId: string): Promise<EventCustomInvoiceForEdit> {
+  const response = await client.get<unknown>(API_ROUTES.eventInvoiceCustomForEdit(invoiceUniqueId))
+  const raw = forEditSchema.parse(parseServicePayload(response.data))
+  const invoiceStatus = raw.InvoiceStatus ?? raw.invoiceStatus ?? ""
+
+  return {
+    invoiceUniqueId: raw.InvoiceUniqueId ?? raw.invoiceUniqueId ?? "",
+    eventUniqueId: raw.EventUniqueId ?? raw.eventUniqueId ?? "",
+    categoryUniqueId: raw.CategoryUniqueId ?? raw.categoryUniqueId ?? "",
+    dueDateUtc: raw.DueDateUtc ?? raw.dueDateUtc ?? "",
+    companyName: raw.CompanyName ?? raw.companyName ?? "",
+    firstName: raw.FirstName ?? raw.firstName ?? "",
+    middleName: raw.MiddleName ?? raw.middleName ?? "",
+    lastName: raw.LastName ?? raw.lastName ?? "",
+    cellPhone: raw.CellPhone ?? raw.cellPhone ?? "",
+    email: raw.Email ?? raw.email ?? "",
+    specialNotes: raw.SpecialNotes ?? raw.specialNotes ?? "",
+    invoiceStatus,
+    // A response predating the flag still has to render a usable page; only PendingPayment admits an edit.
+    canEdit: (raw.CanEdit ?? raw.canEdit) ?? invoiceStatus === "PendingPayment",
+    lineItems: (raw.LineItems ?? raw.lineItems ?? []).map((line) => ({
+      description: line.Description ?? line.description ?? "",
+      amount: line.Amount ?? line.amount ?? "0",
+    })),
+  }
+}
+
 export interface EventInvoiceCategoryOption {
   uniqueId: string
   name: string

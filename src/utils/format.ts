@@ -107,3 +107,20 @@ function fromCents(cents: bigint): string {
 export function subtractMoney(minuend: string, subtrahend: string): string {
   return fromCents(toCents(minuend) - toCents(subtrahend))
 }
+
+/**
+ * Decimal-text addition, the counterpart to {@link subtractMoney} - cents are added as integers so a
+ * running total never picks up float drift no matter how many digits either amount carries.
+ */
+export function addMoney(augend: string, addend: string): string {
+  return fromCents(toCents(augend) + toCents(addend))
+}
+
+/**
+ * Sums a set of decimal amounts exactly, seeded at zero so an empty set reads as `"0.00"` rather than
+ * an absent total. Used for the live line-item subtotal, which must match what the server will store to
+ * the cent.
+ */
+export function sumMoney(amounts: readonly string[]): string {
+  return amounts.reduce(addMoney, "0.00")
+}

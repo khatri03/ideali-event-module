@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest"
 import {
+  addMoney,
   EMPTY_VALUE,
   formatCurrency,
   formatCurrencyCode,
   formatCurrencyMagnitude,
   formatList,
   moneySign,
+  sumMoney,
 } from "./format"
 
 describe("formatList", () => {
@@ -84,6 +86,38 @@ describe("formatCurrencyMagnitude", () => {
   it("SignedAmount_DropsTheSignForCallersThatStateDirectionInWords", () => {
     expect(formatCurrencyMagnitude("-45", "$")).toBe("$45.00")
     expect(formatCurrencyMagnitude("45", "$")).toBe("$45.00")
+  })
+})
+
+describe("addMoney", () => {
+  it("TwoCentAmounts_AddExactlyWithoutFloatDrift", () => {
+    expect(addMoney("10.01", "20.02")).toBe("30.03")
+  })
+
+  it("CarriesIntoTheNextDollarOnTheCent", () => {
+    expect(addMoney("0.99", "0.01")).toBe("1.00")
+  })
+
+  it("AmountBeyondFloatPrecision_KeepsEveryCent", () => {
+    expect(addMoney("99999999.99", "0.02")).toBe("100000000.01")
+  })
+})
+
+describe("sumMoney", () => {
+  it("SeveralAmounts_AddToTheExactCentTotal", () => {
+    expect(sumMoney(["0.10", "0.20", "0.03"])).toBe("0.33")
+  })
+
+  it("EmptySet_ReadsAsZeroRatherThanAbsent", () => {
+    expect(sumMoney([])).toBe("0.00")
+  })
+
+  it("SingleAmount_IsNormalisedToTwoDecimals", () => {
+    expect(sumMoney(["1500"])).toBe("1500.00")
+  })
+
+  it("ManyLargeAmounts_StayExactBecauseTheyAreNeverParsedAsFloats", () => {
+    expect(sumMoney(["99999999.99", "99999999.99"])).toBe("199999999.98")
   })
 })
 

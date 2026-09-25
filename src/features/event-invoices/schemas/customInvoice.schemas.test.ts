@@ -65,6 +65,18 @@ describe("customInvoiceSchema", () => {
       "Keep notes under 2000 characters.",
     )
   })
+
+  /** A non-positive amount on a line is refused through the whole-form parse, not only the line schema. */
+  it("NonPositiveLineAmount_RejectedThroughFullForm", () => {
+    expect(firstError({ ...VALID, lineItems: [{ description: "Booth", amount: "0" }] })).toBe(
+      "Enter an amount greater than zero.",
+    )
+  })
+
+  /** A member-picked buyer carries its member id through the form without disturbing validation. */
+  it("MemberUniqueId_IsAcceptedAlongsideAValidBuyer", () => {
+    expect(customInvoiceSchema.safeParse({ ...VALID, memberUniqueId: "mem-1" }).success).toBe(true)
+  })
 })
 
 describe("customInvoiceLineSchema", () => {

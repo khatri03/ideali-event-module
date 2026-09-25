@@ -20,6 +20,11 @@ export const customInvoiceLineSchema = z.object({
 export const customInvoiceSchema = z.object({
   eventUniqueId: z.string().min(1, "Select an event."),
   categoryUniqueId: z.string().min(1, "Select a sponsorship type."),
+  /**
+   * Set when the buyer was chosen from the member picker, cleared for a free-typed buyer. It rides along
+   * so the server can link the invoice to the member (LD-6); the structured fields stay editable either way.
+   */
+  memberUniqueId: z.string().optional(),
   dueDate: z.string().min(1, "Payment due date is required."),
   companyName: z.string().trim().min(1, "Company name is required.").max(255),
   firstName: z.string().trim().max(255).optional(),
