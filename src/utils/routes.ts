@@ -139,6 +139,10 @@ export const APP_ROUTES = {
     list: "/organizer/events/invoices",
     listForEvent: (eventUniqueId: string) =>
       `/organizer/events/invoices?eventUniqueId=${encodeURIComponent(eventUniqueId)}`,
+    customNew: "/organizer/events/invoices/custom/new",
+    customEditRoute: "/organizer/events/invoices/custom/:invoiceUniqueId/edit",
+    customEdit: (invoiceUniqueId: string) =>
+      `/organizer/events/invoices/custom/${invoiceUniqueId}/edit`,
     detailRoute: "/organizer/events/invoices/:invoiceUniqueId",
     detail: (invoiceUniqueId: string) => `/organizer/events/invoices/${invoiceUniqueId}`,
   },
@@ -386,6 +390,11 @@ export const API_ROUTES = {
   eventInvoiceCategories: "/api/organizer/events/invoices/categories/list",
   eventInvoiceCategoryCreate: "/api/organizer/events/invoices/categories",
   eventInvoiceCategoryDetail: (uniqueId: string) => `/api/organizer/events/invoices/categories/${uniqueId}`,
+  eventInvoiceCustomCreate: "/api/organizer/events/invoices/custom",
+  eventInvoiceCustomUpdate: (invoiceUniqueId: string) =>
+    `/api/organizer/events/invoices/custom/${invoiceUniqueId}`,
+  eventInvoiceCustomForEdit: (invoiceUniqueId: string) =>
+    `/api/organizer/events/invoices/custom/${invoiceUniqueId}/edit`,
   stripePublicCredentials: (paymentAccountUniqueId: string) =>
     `/api/public/stripe/${paymentAccountUniqueId}/credentials`,
   sessionAttendees: (eventUniqueId: string, sessionUniqueId: string) =>

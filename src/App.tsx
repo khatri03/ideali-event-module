@@ -55,7 +55,7 @@ import {
   EventWizardLayout,
 } from "./features/events"
 import { SessionListPage, SessionWizardLayout, SessionWizardStepPage } from "./features/sessions"
-import { EventInvoiceDetailPage, EventInvoicesPage } from "./features/event-invoices"
+import { EventCustomInvoiceFormPage, EventInvoiceDetailPage, EventInvoicesPage } from "./features/event-invoices"
 import { EventInvoiceCategoriesPage } from "./features/invoice-categories"
 import { APP_ROUTES } from "@/utils/routes"
 
@@ -168,6 +168,7 @@ export default function App() {
           <Route path={APP_ROUTES.eventCheckInRoute} element={<EventCheckInPage />} />
           <Route path={APP_ROUTES.eventInvoiceCategories.list} element={<EventInvoiceCategoriesPage />} />
           <Route path={APP_ROUTES.eventInvoices.list} element={<EventInvoicesPage />} />
+          <Route path={APP_ROUTES.eventInvoices.customNew} element={<EventCustomInvoiceFormPage />} />
           <Route path={APP_ROUTES.eventInvoices.detailRoute} element={<EventInvoiceDetailPage />} />
           <Route path={APP_ROUTES.memberDocuments.list} element={<MemberDocumentsPage />} />
           <Route path={APP_ROUTES.memberDocuments.detailRoute} element={<MemberDocumentCategoryPage />} />

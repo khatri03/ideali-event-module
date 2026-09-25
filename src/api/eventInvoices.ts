@@ -730,3 +730,69 @@ export async function updateEventInvoiceAttendee(
 ): Promise<void> {
   await client.put(API_ROUTES.eventInvoiceLineItemAttendee(invoiceUniqueId, lineItemUniqueId, slotIndex), data)
 }
+
+export interface CreateEventCustomInvoicePayload {
+  eventUniqueId: string
+  categoryUniqueId: string
+  dueDateUtc: string
+  memberUniqueId?: string | null
+  contactUniqueId?: string | null
+  companyName: string
+  firstName?: string
+  middleName?: string
+  lastName: string
+  cellPhone?: string
+  email: string
+  specialNotes?: string
+  /** Amounts stay decimal strings the whole way to the server - never float. */
+  lineItems: { description: string; amount: string }[]
+}
+
+const createResultSchema = z.object({
+  InvoiceUniqueId: dual(z.string()),
+  invoiceUniqueId: dual(z.string()),
+})
+
+export async function createEventCustomInvoice(payload: CreateEventCustomInvoicePayload): Promise<string> {
+  const response = await client.post<unknown>(API_ROUTES.eventInvoiceCustomCreate, payload)
+  const data = parseServicePayload(response.data)
+  // A bare Guid string, or an object carrying it in either casing, depending on how the endpoint wraps it.
+  if (typeof data === "string") {
+    return data
+  }
+  const parsed = createResultSchema.parse(data ?? {})
+  return parsed.InvoiceUniqueId ?? parsed.invoiceUniqueId ?? ""
+}
+
+export interface EventInvoiceCategoryOption {
+  uniqueId: string
+  name: string
+}
+
+const categoryOptionSchema = z.object({
+  UniqueId: dual(z.string()),
+  uniqueId: dual(z.string()),
+  Name: dual(z.string()),
+  name: dual(z.string()),
+  IsActive: dual(z.boolean()),
+  isActive: dual(z.boolean()),
+})
+
+/**
+ * The sponsorship types a new custom invoice may be billed under: the organizer's categories, narrowed to
+ * the active ones. Reuses the Phase 1 categories list endpoint rather than a dedicated options route.
+ */
+export async function fetchActiveEventInvoiceCategoryOptions(): Promise<EventInvoiceCategoryOption[]> {
+  const params = new URLSearchParams({ pageNo: "1", pageSize: "200", sortBy: "displayOrder", sortOrder: "asc" })
+  const response = await client.get<unknown>(API_ROUTES.eventInvoiceCategories, { params })
+  const parsed = pageSchema(categoryOptionSchema).parse(parseServicePayload(response.data))
+
+  return (parsed.PageData ?? parsed.pageData ?? [])
+    .map((raw) => ({
+      uniqueId: raw.UniqueId ?? raw.uniqueId ?? "",
+      name: raw.Name ?? raw.name ?? "",
+      isActive: raw.IsActive ?? raw.isActive ?? true,
+    }))
+    .filter((option) => option.isActive && option.uniqueId)
+    .map(({ uniqueId, name }) => ({ uniqueId, name }))
+}
