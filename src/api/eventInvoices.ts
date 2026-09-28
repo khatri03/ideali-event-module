@@ -30,7 +30,7 @@ const money = () => z.coerce.string()
 /** A charge rule's own input: a percentage or a multiplier, not an amount of currency. */
 const rate = () => z.coerce.number()
 
-export type EventInvoiceSortBy = "invoiceNo" | "eventName" | "buyerName" | "invoiceStatus" | "invoiceDateUtc" | "totalAmount" | "balanceAmount"
+export type EventInvoiceSortBy = "invoiceNo" | "eventName" | "buyerName" | "invoiceStatus" | "invoiceDateUtc" | "dueDateUtc" | "totalAmount" | "balanceAmount"
 export type EventInvoiceSortOrder = "asc" | "desc"
 
 export const EVENT_INVOICE_STATUS_OPTIONS = [
@@ -96,6 +96,16 @@ const listItemSchema = z.object({
   invoiceStatus: dual(z.string()),
   InvoiceStatusLabel: dual(z.string()),
   invoiceStatusLabel: dual(z.string()),
+  InvoiceType: dual(z.string()),
+  invoiceType: dual(z.string()),
+  InvoiceTypeLabel: dual(z.string()),
+  invoiceTypeLabel: dual(z.string()),
+  DueDateUtc: dual(z.string().nullable()),
+  dueDateUtc: dual(z.string().nullable()),
+  CompanyName: dual(z.string().nullable()),
+  companyName: dual(z.string().nullable()),
+  IsOverdue: dual(z.boolean()),
+  isOverdue: dual(z.boolean()),
   InvoiceDateUtc: dual(z.string()),
   invoiceDateUtc: dual(z.string()),
   TotalAmount: dual(money()),
@@ -293,6 +303,14 @@ export interface EventInvoiceListItem {
   invoiceStatus: string
   /** Human-readable form of invoiceStatus - the raw value stays the key for colours and filters. */
   invoiceStatusLabel: string
+  /** "Custom" or "Regular" - the raw enum name, so the list can mark custom rows apart from ticket rows. */
+  invoiceType: string
+  /** When a custom invoice's payment is due, or null on a ticket invoice that carries no due date. */
+  dueDateUtc: string | null
+  /** The billed company on a custom invoice, or null when the invoice names only a person. */
+  companyName: string | null
+  /** The server's verdict that this invoice is unpaid and past due - rendered as-is, never re-derived here. */
+  isOverdue: boolean
   invoiceDateUtc: string
   /** Decimal text as the server wrote it - format with `formatCurrency`, never with float arithmetic. */
   totalAmount: string
@@ -477,6 +495,10 @@ function normalizeListItem(raw: z.infer<typeof listItemSchema>): EventInvoiceLis
     buyerEmail: raw.BuyerEmail ?? raw.buyerEmail ?? null,
     invoiceStatus,
     invoiceStatusLabel: statusLabelOr(raw.InvoiceStatusLabel ?? raw.invoiceStatusLabel, invoiceStatus),
+    invoiceType: raw.InvoiceType ?? raw.invoiceType ?? "Regular",
+    dueDateUtc: raw.DueDateUtc ?? raw.dueDateUtc ?? null,
+    companyName: raw.CompanyName ?? raw.companyName ?? null,
+    isOverdue: raw.IsOverdue ?? raw.isOverdue ?? false,
     invoiceDateUtc: raw.InvoiceDateUtc ?? raw.invoiceDateUtc ?? "",
     totalAmount: raw.TotalAmount ?? raw.totalAmount ?? "0",
     balanceAmount: raw.BalanceAmount ?? raw.balanceAmount ?? null,

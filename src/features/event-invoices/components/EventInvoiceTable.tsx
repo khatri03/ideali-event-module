@@ -1,7 +1,9 @@
-import { Box, Link, Table, Text } from "@chakra-ui/react"
+import { Box, Flex, Link, Table, Text } from "@chakra-ui/react"
 import { format } from "date-fns"
+import { AlertTriangle } from "lucide-react"
 import { Link as RouterLink } from "react-router-dom"
 import type { EventInvoiceListItem, EventInvoiceSortBy, EventInvoiceSortOrder } from "@/api/eventInvoices"
+import { TextPill } from "@/components/common"
 import { APP_ROUTES } from "@/utils/routes"
 import { EMPTY_VALUE, formatCurrency } from "@/utils/format"
 import { parseUtcDateTime } from "@/utils/utcDates"
@@ -28,7 +30,46 @@ function formatDate(value: string) {
   return parsed ? format(parsed, "MMM d, yyyy") : EMPTY_VALUE
 }
 
-const COLUMN_COUNT = 7
+const COLUMN_COUNT = 8
+
+function DueDateCell({ invoice }: { invoice: EventInvoiceListItem }) {
+  if (!invoice.dueDateUtc) {
+    return (
+      <Text fontSize="sm" color="text.secondary">
+        {EMPTY_VALUE}
+      </Text>
+    )
+  }
+
+  const dueDate = formatDate(invoice.dueDateUtc)
+
+  if (!invoice.isOverdue) {
+    return (
+      <Text fontSize="sm" color="text.secondary">
+        {dueDate}
+      </Text>
+    )
+  }
+
+  return (
+    <Flex
+      display="inline-flex"
+      align="center"
+      gap={1}
+      px={2.5}
+      py={1}
+      borderRadius="999px"
+      bg="status.warning.bg"
+      color="status.warning.fg"
+      aria-label={`Overdue — due ${dueDate}`}
+    >
+      <AlertTriangle size={14} aria-hidden />
+      <Text as="span" fontSize="sm" fontWeight="700">
+        {dueDate}
+      </Text>
+    </Flex>
+  )
+}
 
 export function EventInvoiceTable({
   invoices,
@@ -75,6 +116,9 @@ export function EventInvoiceTable({
             </Table.ColumnHeader>
             <Table.ColumnHeader px={4} py={3} textAlign="center">
               <SortableColumnHeader label="Date" column="invoiceDateUtc" activeSortBy={sortBy} activeSortOrder={sortOrder} onSortChange={onSortChange} justify="center" />
+            </Table.ColumnHeader>
+            <Table.ColumnHeader px={4} py={3} textAlign="center">
+              <SortableColumnHeader label="Due date" column="dueDateUtc" activeSortBy={sortBy} activeSortOrder={sortOrder} onSortChange={onSortChange} justify="center" />
             </Table.ColumnHeader>
             <Table.ColumnHeader px={4} py={3} textAlign="right">
               <SortableColumnHeader label="Total" column="totalAmount" activeSortBy={sortBy} activeSortOrder={sortOrder} onSortChange={onSortChange} justify="flex-end" />
@@ -124,6 +168,11 @@ export function EventInvoiceTable({
                         {invoice.invoiceNo}
                       </RouterLink>
                     </Link>
+                    {invoice.invoiceType === "Custom" ? (
+                      <Box mt={1}>
+                        <TextPill colorPalette="brand">Custom</TextPill>
+                      </Box>
+                    ) : null}
                     <PaymentPills paymentMethod={invoice.paymentMethod} paymentSource={invoice.paymentSource} />
                   </Table.Cell>
                   <Table.Cell px={4} py={4}>
@@ -152,6 +201,9 @@ export function EventInvoiceTable({
                     <Text fontSize="sm" color="text.secondary">
                       {formatDate(invoice.invoiceDateUtc)}
                     </Text>
+                  </Table.Cell>
+                  <Table.Cell px={4} py={4} textAlign="center">
+                    <DueDateCell invoice={invoice} />
                   </Table.Cell>
                   <Table.Cell px={4} py={4} textAlign="right">
                     <Text fontSize="sm" fontWeight="700" color="text.primary">

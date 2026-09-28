@@ -11,6 +11,10 @@ const INVOICE: EventInvoiceListItem = {
   invoiceNo: "INV-1001",
   invoiceStatus: "Paid",
   invoiceStatusLabel: "Paid",
+  invoiceType: "Regular",
+  dueDateUtc: null,
+  companyName: null,
+  isOverdue: false,
   invoiceDateUtc: "2026-08-01T10:00:00Z",
   totalAmount: "251.78",
   balanceAmount: "251.78",
@@ -22,6 +26,18 @@ const INVOICE: EventInvoiceListItem = {
   paymentMethod: "Stripe",
   paymentSource: "Visa ending 4242",
   ticketCount: 1,
+}
+
+const CUSTOM_OVERDUE_INVOICE: EventInvoiceListItem = {
+  ...INVOICE,
+  invoiceUniqueId: "invoice-2",
+  invoiceNo: "INV-2002",
+  invoiceStatus: "PendingPayment",
+  invoiceStatusLabel: "Pending Payment",
+  invoiceType: "Custom",
+  dueDateUtc: "2026-01-01T00:00:00Z",
+  companyName: "Northwind Traders",
+  isOverdue: true,
 }
 
 function renderTable(invoices: EventInvoiceListItem[] = [INVOICE]) {
@@ -49,5 +65,25 @@ describe("EventInvoiceTable", () => {
     const link = screen.getByRole("link", { name: "INV-1001" })
 
     expect(link).toHaveAttribute("href", "/organizer/events/invoices/invoice-1")
+  })
+
+  it("CustomInvoice_ShowsCustomMarker_TicketInvoiceDoesNot", () => {
+    renderTable([CUSTOM_OVERDUE_INVOICE, INVOICE])
+
+    const markers = screen.getAllByText("Custom")
+
+    expect(markers).toHaveLength(1)
+  })
+
+  it("OverdueCustomInvoice_ShowsOverduePillWithAriaLabel", () => {
+    renderTable([CUSTOM_OVERDUE_INVOICE])
+
+    expect(screen.getByLabelText("Overdue — due Jan 1, 2026")).toBeTruthy()
+  })
+
+  it("NonOverdueInvoice_HasNoOverduePill", () => {
+    renderTable([INVOICE])
+
+    expect(screen.queryByLabelText(/Overdue/)).toBeNull()
   })
 })
