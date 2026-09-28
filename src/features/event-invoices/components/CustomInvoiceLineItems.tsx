@@ -1,4 +1,4 @@
-import { Box, Field, Flex, IconButton, Input, Separator, Stack, Text } from "@chakra-ui/react"
+import { Box, Field, Flex, IconButton, Input, Separator, Stack, Text, chakra } from "@chakra-ui/react"
 import { Plus, Trash2 } from "lucide-react"
 import { useFieldArray, useWatch, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form"
 import { formatCurrency, sumMoney } from "@/utils/format"
@@ -130,11 +130,11 @@ export function CustomInvoiceLineItems({
       ) : null}
 
       {disabled ? null : (
-        <Flex
-          as="button"
+        <chakra.button
           type="button"
-          align="center"
-          justify="center"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
           gap={2}
           minH="11"
           w={{ base: "full", md: "auto" }}
@@ -153,7 +153,7 @@ export function CustomInvoiceLineItems({
         >
           <Plus size={16} />
           Add line item
-        </Flex>
+        </chakra.button>
       )}
 
       <Flex justify="flex-end">

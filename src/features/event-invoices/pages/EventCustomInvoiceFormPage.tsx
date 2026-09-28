@@ -10,7 +10,7 @@ import { ConfirmDialog, ErrorState, StyledSelect } from "@/components/common"
 import { RequiredFieldLabel } from "@/features/custom-lists"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
-import { parseUtcDateTime } from "@/utils/utcDates"
+import { parseUtcDateTime, startOfLocalDayAsUtcIso } from "@/utils/utcDates"
 import type { EventCustomInvoiceForEdit } from "@/api/eventInvoices"
 import { useEventInvoiceFilterOptions } from "../hooks/useEventInvoices"
 import {
@@ -75,9 +75,10 @@ interface CustomInvoiceFormProps {
 }
 
 /**
- * The custom-invoice authoring form, in create and edit modes. When editing a Paid or PartiallyPaid invoice
- * the server's `canEdit` is false, and every control is rendered read-only behind a locked banner with no
- * Save - the values still read, but nothing can be submitted (CINV-06); the server enforces the same lock.
+ * The custom-invoice authoring form, in create and edit modes. When the server reports the invoice is no
+ * longer editable (`canEdit` false - any status past PendingPayment) every control is rendered read-only
+ * behind a locked banner with no Save - the values still read, but nothing can be submitted (CINV-06); the
+ * server enforces the same lock.
  */
 function CustomInvoiceForm({ invoiceUniqueId, initial }: CustomInvoiceFormProps) {
   const navigate = useNavigate()
@@ -126,7 +127,7 @@ function CustomInvoiceForm({ invoiceUniqueId, initial }: CustomInvoiceFormProps)
       eventUniqueId: values.eventUniqueId,
       categoryUniqueId: values.categoryUniqueId,
       memberUniqueId: values.memberUniqueId ? values.memberUniqueId : null,
-      dueDateUtc: new Date(`${values.dueDate}T00:00:00`).toISOString(),
+      dueDateUtc: startOfLocalDayAsUtcIso(values.dueDate) ?? "",
       companyName: values.companyName,
       firstName: values.firstName,
       middleName: values.middleName,
@@ -142,8 +143,8 @@ function CustomInvoiceForm({ invoiceUniqueId, initial }: CustomInvoiceFormProps)
         await updateMutation.mutateAsync({ invoiceUniqueId, payload })
         navigate(APP_ROUTES.eventInvoices.detail(invoiceUniqueId))
       } else {
-        await createMutation.mutateAsync(payload)
-        navigate(APP_ROUTES.eventInvoices.list)
+        const newInvoiceId = await createMutation.mutateAsync(payload)
+        navigate(newInvoiceId ? APP_ROUTES.eventInvoices.detail(newInvoiceId) : APP_ROUTES.eventInvoices.list)
       }
     } catch {
       // Kept on the page so the banner stays visible with the entered values still in view.
@@ -177,7 +178,7 @@ function CustomInvoiceForm({ invoiceUniqueId, initial }: CustomInvoiceFormProps)
             <Lock size={18} />
           </Box>
           <Text fontSize="sm" fontWeight="700" color="status.warning.fg">
-            This invoice has been paid, so it can no longer be edited.
+            This invoice can no longer be edited.
           </Text>
         </Flex>
       ) : null}
@@ -207,7 +208,7 @@ function CustomInvoiceForm({ invoiceUniqueId, initial }: CustomInvoiceFormProps)
                     options={eventOptions}
                     value={field.value}
                     onChange={field.onChange}
-                    disabled={isReadOnly || eventsQuery.isLoading}
+                    disabled={isEditMode || isReadOnly || eventsQuery.isLoading}
                     placeholder={eventsQuery.isLoading ? "Loading events..." : "Select an event"}
                     ariaLabel="Event"
                   />

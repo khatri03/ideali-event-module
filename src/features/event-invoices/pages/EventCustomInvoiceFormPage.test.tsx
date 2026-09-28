@@ -164,7 +164,9 @@ describe("EventCustomInvoiceFormPage", () => {
       email: "buyer@acme.test",
       lineItems: [{ description: "Gold sponsorship", amount: "1500.00" }],
     })
-    await waitFor(() => expect(navigateMock).toHaveBeenCalled())
+    await waitFor(() =>
+      expect(navigateMock).toHaveBeenCalledWith(APP_ROUTES.eventInvoices.detail("new-invoice-id")),
+    )
   })
 
   /** Submitting an empty create form blocks with inline errors and never calls the endpoint. */
@@ -240,7 +242,7 @@ describe("EventCustomInvoiceFormPage", () => {
     })
     renderPage({ invoiceUniqueId: EDIT_ID })
 
-    expect(await screen.findByText("This invoice has been paid, so it can no longer be edited.")).toBeInTheDocument()
+    expect(await screen.findByText("This invoice can no longer be edited.")).toBeInTheDocument()
     expect(screen.getByLabelText(/Company name/i)).toBeDisabled()
     expect(screen.queryByRole("button", { name: "Save invoice" })).not.toBeInTheDocument()
   })
@@ -255,8 +257,19 @@ describe("EventCustomInvoiceFormPage", () => {
     })
     renderPage({ invoiceUniqueId: EDIT_ID })
 
-    expect(await screen.findByText("This invoice has been paid, so it can no longer be edited.")).toBeInTheDocument()
+    expect(await screen.findByText("This invoice can no longer be edited.")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Save invoice" })).not.toBeInTheDocument()
+  })
+
+  /**
+   * The event a custom invoice bills against is fixed once created, and the server ignores any change to it
+   * on update, so the Event selector is disabled in edit mode - never a live control that silently no-ops.
+   */
+  it("Edit_EventField_IsDisabled", async () => {
+    renderPage({ invoiceUniqueId: EDIT_ID })
+
+    await waitFor(() => expect(screen.getByLabelText(/Company name/i)).toHaveValue("Acme Corp"))
+    expect(screen.getByRole("combobox", { name: "Event" })).toBeDisabled()
   })
 
   /** A failed edit load offers a retryable error state rather than a blank or broken form. */

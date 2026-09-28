@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Box, Field, Flex, HStack, Input, SimpleGrid, SkeletonText, Stack, Text } from "@chakra-ui/react"
+import { Box, Field, Flex, HStack, Input, SimpleGrid, SkeletonText, Stack, Text, chakra } from "@chakra-ui/react"
 import { Search } from "lucide-react"
 import { type FieldErrors, type UseFormRegister, type UseFormSetValue } from "react-hook-form"
 import { RequiredFieldLabel } from "@/features/custom-lists"
@@ -40,15 +40,15 @@ function SourceButton({
   onClick: () => void
 }) {
   return (
-    <Flex
-      as="button"
+    <chakra.button
       type="button"
       role="tab"
       aria-selected={isActive}
       aria-pressed={isActive}
       disabled={disabled}
-      align="center"
-      justify="center"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
       flex={{ base: 1, md: "initial" }}
       minH="11"
       px={5}
@@ -64,7 +64,7 @@ function SourceButton({
       onClick={disabled ? undefined : onClick}
     >
       {label}
-    </Flex>
+    </chakra.button>
   )
 }
 
@@ -152,12 +152,12 @@ export function CustomInvoiceBuyerSection({
           ) : members.length > 0 ? (
             <Stack gap={2} maxH="240px" overflowY="auto" border="1px solid" borderColor="border.subtle" borderRadius="14px" p={2}>
               {members.map((member) => (
-                <Flex
+                <chakra.button
                   key={member.memberUniqueId}
-                  as="button"
                   type="button"
-                  direction="column"
-                  align="flex-start"
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="flex-start"
                   gap={0.5}
                   textAlign="left"
                   minH="11"
@@ -174,7 +174,7 @@ export function CustomInvoiceBuyerSection({
                   <Text fontSize="xs" color="text.secondary">
                     {member.email ?? "—"}
                   </Text>
-                </Flex>
+                </chakra.button>
               ))}
             </Stack>
           ) : null}
