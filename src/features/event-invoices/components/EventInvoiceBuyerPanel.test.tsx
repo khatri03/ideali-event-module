@@ -220,4 +220,31 @@ describe("EventInvoiceBuyerPanel", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument()
     expect(fields.getByLabelText(/email/i)).toHaveValue("new@example.com")
   })
+
+  describe("custom variant", () => {
+    /** A custom invoice shows its company and the buyer's structured name composed from its parts. */
+    it("CustomInvoice_ShowsCompanyAndComposedStructuredName", () => {
+      renderPanel({
+        buyerName: "ignored composite",
+        buyerEmail: "ada@northwind.test",
+        buyerPhone: "+1 555 0100",
+        custom: { companyName: "Northwind Traders", firstName: "Ada", middleName: "K", lastName: "Lovelace" },
+      })
+
+      expect(screen.getByText("Northwind Traders")).toBeInTheDocument()
+      expect(screen.getByText("Ada K Lovelace")).toBeInTheDocument()
+      expect(screen.getByText("ada@northwind.test")).toBeInTheDocument()
+      expect(screen.getByText("+1 555 0100")).toBeInTheDocument()
+    })
+
+    /** A custom invoice's buyer is edited through its own form, so the quick buyer dialog is never offered here. */
+    it("CustomInvoice_OffersNoQuickBuyerEdit", () => {
+      renderPanel({
+        canEditBuyer: true,
+        custom: { companyName: "Northwind Traders", firstName: "Ada", middleName: null, lastName: "Lovelace" },
+      })
+
+      expect(screen.queryByRole("button", { name: /edit/i })).not.toBeInTheDocument()
+    })
+  })
 })

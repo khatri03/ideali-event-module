@@ -15,6 +15,27 @@ interface EventInvoiceBuyerPanelProps {
   canEditBuyer: boolean
   hasIssuedTickets: boolean
   canResendTickets: boolean
+  /**
+   * A custom invoice names a company and a structured buyer. When set, the panel renders that read-only
+   * form and hides the quick buyer dialog - a custom invoice's buyer is edited through its own form.
+   */
+  custom?: EventInvoiceCustomBuyer
+}
+
+export interface EventInvoiceCustomBuyer {
+  companyName: string | null
+  firstName: string | null
+  middleName: string | null
+  lastName: string | null
+}
+
+/** The buyer's name as a custom invoice composes it, structured parts first, falling back to the stored name. */
+function composeCustomBuyerName(custom: EventInvoiceCustomBuyer, buyerName: string): string {
+  const composed = [custom.firstName, custom.middleName, custom.lastName]
+    .map((part) => part?.trim())
+    .filter((part): part is string => Boolean(part))
+    .join(" ")
+  return composed || buyerName
 }
 
 export function EventInvoiceBuyerPanel({
@@ -26,11 +47,33 @@ export function EventInvoiceBuyerPanel({
   canEditBuyer,
   hasIssuedTickets,
   canResendTickets,
+  custom,
 }: EventInvoiceBuyerPanelProps) {
   const [isEditing, setIsEditing] = useState(false)
   // 0 means editing has never started, so the dialog (and its mutation hooks) isn't mounted at all yet.
   // Bumped on every open so EventInvoiceBuyerDialog's form remounts with a clean slate each time.
   const [editSessionKey, setEditSessionKey] = useState(0)
+
+  if (custom) {
+    return (
+      <InvoiceDetailPanel title="Billed to">
+        {custom.companyName?.trim() ? (
+          <Text fontSize="md" fontWeight="800" color="text.primary">
+            {custom.companyName}
+          </Text>
+        ) : null}
+        <Text
+          fontSize={custom.companyName?.trim() ? "sm" : "md"}
+          fontWeight={custom.companyName?.trim() ? "600" : "800"}
+          color="text.primary"
+        >
+          {composeCustomBuyerName(custom, buyerName) || EMPTY_VALUE}
+        </Text>
+        <InvoiceMutedLine>{buyerEmail || EMPTY_VALUE}</InvoiceMutedLine>
+        <InvoiceMutedLine>{buyerPhone || EMPTY_VALUE}</InvoiceMutedLine>
+      </InvoiceDetailPanel>
+    )
+  }
 
   return (
     <>
