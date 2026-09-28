@@ -15,6 +15,10 @@ const INVOICE: EventInvoiceListItem = {
   dueDateUtc: null,
   companyName: null,
   isOverdue: false,
+  canMarkAsPaid: false,
+  canCancel: false,
+  canSend: true,
+  canEdit: false,
   invoiceDateUtc: "2026-08-01T10:00:00Z",
   totalAmount: "251.78",
   balanceAmount: "251.78",
@@ -51,7 +55,10 @@ function renderTable(invoices: EventInvoiceListItem[] = [INVOICE]) {
           isFetching={false}
           onSortChange={vi.fn()}
           onOpenDetail={vi.fn()}
-          onResendTickets={vi.fn()}
+          onEdit={vi.fn()}
+          onMarkPaid={vi.fn()}
+          onCancel={vi.fn()}
+          onSend={vi.fn()}
         />
       </MemoryRouter>
     </ChakraProvider>,

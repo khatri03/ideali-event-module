@@ -17,6 +17,8 @@ const NO_FILTERS: EventInvoiceFilters = {
   sessionUniqueIds: [],
   statuses: [],
   paymentMethods: [],
+  invoiceTypes: [],
+  overdueOnly: false,
   invoiceDateFrom: null,
   invoiceDateTo: null,
   searchTerm: "",

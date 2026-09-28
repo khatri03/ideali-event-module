@@ -1,9 +1,15 @@
 import { useMemo } from "react"
-import { Box, Button, Field, Flex, Input, SimpleGrid } from "@chakra-ui/react"
+import { Box, Button, Field, Flex, Input, SimpleGrid, Switch, Text } from "@chakra-ui/react"
 import { Filter, RotateCcw, Search } from "lucide-react"
 import { EVENT_INVOICE_PAYMENT_METHOD_OPTIONS, EVENT_INVOICE_STATUS_OPTIONS } from "@/api/eventInvoices"
 import { useEventInvoiceFilterOptions } from "../hooks/useEventInvoices"
 import { FilterMultiSelect, type FilterSelectOption } from "./FilterMultiSelect"
+
+/** "Ticket" is the reader-facing name for a Regular invoice; the raw enum name stays the filter value. */
+const INVOICE_TYPE_OPTIONS: readonly FilterSelectOption[] = [
+  { value: "Custom", label: "Custom" },
+  { value: "Regular", label: "Ticket" },
+]
 
 export interface EventInvoiceDraftFilters {
   searchTerm: string
@@ -11,6 +17,8 @@ export interface EventInvoiceDraftFilters {
   sessionUniqueIds: string[]
   statuses: string[]
   paymentMethods: string[]
+  invoiceTypes: string[]
+  overdueOnly: boolean
   invoiceDateFrom: string
   invoiceDateTo: string
 }
@@ -54,6 +62,8 @@ export function EventInvoiceFilterBar({
     draft.sessionUniqueIds.length > 0 ||
     draft.statuses.length > 0 ||
     draft.paymentMethods.length > 0 ||
+    draft.invoiceTypes.length > 0 ||
+    draft.overdueOnly ||
     Boolean(draft.invoiceDateFrom) ||
     Boolean(draft.invoiceDateTo)
 
@@ -116,6 +126,39 @@ export function EventInvoiceFilterBar({
               placeholder="All methods"
             />
           </Box>
+        </Field.Root>
+
+        <Field.Root>
+          <Field.Label fontSize="sm" fontWeight="700" color="text.primary">
+            Invoice type
+          </Field.Label>
+          <Box w="full">
+            <FilterMultiSelect
+              options={INVOICE_TYPE_OPTIONS}
+              selectedValues={draft.invoiceTypes}
+              onChange={(invoiceTypes) => onDraftChange((current) => ({ ...current, invoiceTypes }))}
+              placeholder="All types"
+            />
+          </Box>
+        </Field.Root>
+
+        <Field.Root>
+          <Field.Label fontSize="sm" fontWeight="700" color="text.primary">
+            Overdue
+          </Field.Label>
+          <Flex align="center" gap={3} minH="11">
+            <Switch.Root
+              colorPalette="brand"
+              checked={draft.overdueOnly}
+              onCheckedChange={(details) => onDraftChange((current) => ({ ...current, overdueOnly: details.checked }))}
+            >
+              <Switch.HiddenInput aria-label="Overdue only" />
+              <Switch.Control cursor="pointer" />
+            </Switch.Root>
+            <Text fontSize="sm" color="text.secondary">
+              Overdue only
+            </Text>
+          </Flex>
         </Field.Root>
 
         <Field.Root>

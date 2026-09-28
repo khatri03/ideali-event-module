@@ -1,12 +1,14 @@
 import { Button, Menu, Portal, Text } from "@chakra-ui/react"
-import { Eye, MoreHorizontal, Send } from "lucide-react"
+import { Ban, CheckCircle2, Eye, MoreHorizontal, Pencil, Send } from "lucide-react"
 import type { EventInvoiceListItem } from "@/api/eventInvoices"
-import { canResendInvoiceTickets } from "../utils/invoiceRowActions"
 
 interface EventInvoiceRowActionsMenuProps {
   invoice: EventInvoiceListItem
   onOpenDetail: (invoice: EventInvoiceListItem) => void
-  onResendTickets: (invoice: EventInvoiceListItem) => void
+  onEdit: (invoice: EventInvoiceListItem) => void
+  onMarkPaid: (invoice: EventInvoiceListItem) => void
+  onCancel: (invoice: EventInvoiceListItem) => void
+  onSend: (invoice: EventInvoiceListItem) => void
 }
 
 const ITEM_STYLE = {
@@ -20,7 +22,14 @@ const ITEM_STYLE = {
   cursor: "pointer",
 } as const
 
-export function EventInvoiceRowActionsMenu({ invoice, onOpenDetail, onResendTickets }: EventInvoiceRowActionsMenuProps) {
+export function EventInvoiceRowActionsMenu({
+  invoice,
+  onOpenDetail,
+  onEdit,
+  onMarkPaid,
+  onCancel,
+  onSend,
+}: EventInvoiceRowActionsMenuProps) {
   return (
     <Menu.Root positioning={{ placement: "bottom-start" }}>
       <Menu.Trigger asChild>
@@ -54,28 +63,51 @@ export function EventInvoiceRowActionsMenu({ invoice, onOpenDetail, onResendTick
             bg="card.bg"
             _dark={{ bg: "navy.800", borderColor: "whiteAlpha.200" }}
           >
-            <Menu.Item
-              value="view-invoice"
-              {...ITEM_STYLE}
-              _hover={{ bg: "app.bg" }}
-              onClick={() => onOpenDetail(invoice)}
-            >
+            <Menu.Item value="view-invoice" {...ITEM_STYLE} _hover={{ bg: "app.bg" }} onClick={() => onOpenDetail(invoice)}>
               <Eye size={14} />
               <Text as="span" flex="1" textAlign="left">
                 View
               </Text>
             </Menu.Item>
 
-            {canResendInvoiceTickets(invoice) ? (
-              <Menu.Item
-                value="resend-tickets"
-                {...ITEM_STYLE}
-                  _hover={{ bg: "app.bg" }}
-                onClick={() => onResendTickets(invoice)}
-              >
+            {invoice.canEdit ? (
+              <Menu.Item value="edit-invoice" {...ITEM_STYLE} _hover={{ bg: "app.bg" }} onClick={() => onEdit(invoice)}>
+                <Pencil size={14} />
+                <Text as="span" flex="1" textAlign="left">
+                  Edit
+                </Text>
+              </Menu.Item>
+            ) : null}
+
+            {invoice.canMarkAsPaid ? (
+              <Menu.Item value="mark-paid" {...ITEM_STYLE} _hover={{ bg: "app.bg" }} onClick={() => onMarkPaid(invoice)}>
+                <CheckCircle2 size={14} />
+                <Text as="span" flex="1" textAlign="left">
+                  Mark as paid
+                </Text>
+              </Menu.Item>
+            ) : null}
+
+            {invoice.canSend ? (
+              <Menu.Item value="send-invoice" {...ITEM_STYLE} _hover={{ bg: "app.bg" }} onClick={() => onSend(invoice)}>
                 <Send size={14} />
                 <Text as="span" flex="1" textAlign="left">
-                  Resend Tickets
+                  Send to buyer
+                </Text>
+              </Menu.Item>
+            ) : null}
+
+            {invoice.canCancel ? (
+              <Menu.Item
+                value="cancel-invoice"
+                {...ITEM_STYLE}
+                color="red.600"
+                _hover={{ bg: "red.50", color: "red.600" }}
+                onClick={() => onCancel(invoice)}
+              >
+                <Ban size={14} />
+                <Text as="span" flex="1" textAlign="left">
+                  Cancel invoice
                 </Text>
               </Menu.Item>
             ) : null}

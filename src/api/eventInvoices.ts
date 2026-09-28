@@ -106,6 +106,14 @@ const listItemSchema = z.object({
   companyName: dual(z.string().nullable()),
   IsOverdue: dual(z.boolean()),
   isOverdue: dual(z.boolean()),
+  CanMarkAsPaid: dual(z.boolean()),
+  canMarkAsPaid: dual(z.boolean()),
+  CanCancel: dual(z.boolean()),
+  canCancel: dual(z.boolean()),
+  CanSend: dual(z.boolean()),
+  canSend: dual(z.boolean()),
+  CanEdit: dual(z.boolean()),
+  canEdit: dual(z.boolean()),
   InvoiceDateUtc: dual(z.string()),
   invoiceDateUtc: dual(z.string()),
   TotalAmount: dual(money()),
@@ -311,6 +319,12 @@ export interface EventInvoiceListItem {
   companyName: string | null
   /** The server's verdict that this invoice is unpaid and past due - rendered as-is, never re-derived here. */
   isOverdue: boolean
+  /** Server-decided row-action gates; the menu renders these, never inferring an action from the role. */
+  canMarkAsPaid: boolean
+  canCancel: boolean
+  canSend: boolean
+  /** True only for a Custom invoice still awaiting its first payment; ticket invoices are never editable here. */
+  canEdit: boolean
   invoiceDateUtc: string
   /** Decimal text as the server wrote it - format with `formatCurrency`, never with float arithmetic. */
   totalAmount: string
@@ -437,6 +451,10 @@ export interface EventInvoiceFilters {
   sessionUniqueIds: string[]
   statuses: string[]
   paymentMethods: string[]
+  /** Raw invoice-type enum names ("Custom" / "Regular"); empty means every type. */
+  invoiceTypes: string[]
+  /** When true, the server returns only unpaid past-due rows. */
+  overdueOnly: boolean
   invoiceDateFrom: string | null
   invoiceDateTo: string | null
   searchTerm: string
@@ -485,6 +503,8 @@ function statusLabelOr(label: string | undefined, rawStatus: string) {
 
 function normalizeListItem(raw: z.infer<typeof listItemSchema>): EventInvoiceListItem {
   const invoiceStatus = raw.InvoiceStatus ?? raw.invoiceStatus ?? ""
+  const invoiceType = raw.InvoiceType ?? raw.invoiceType ?? "Regular"
+  const isAwaitingPayment = AWAITING_PAYMENT_STATUSES.includes(invoiceStatus)
 
   return {
     invoiceUniqueId: raw.InvoiceUniqueId ?? raw.invoiceUniqueId ?? "",
@@ -495,10 +515,14 @@ function normalizeListItem(raw: z.infer<typeof listItemSchema>): EventInvoiceLis
     buyerEmail: raw.BuyerEmail ?? raw.buyerEmail ?? null,
     invoiceStatus,
     invoiceStatusLabel: statusLabelOr(raw.InvoiceStatusLabel ?? raw.invoiceStatusLabel, invoiceStatus),
-    invoiceType: raw.InvoiceType ?? raw.invoiceType ?? "Regular",
+    invoiceType,
     dueDateUtc: raw.DueDateUtc ?? raw.dueDateUtc ?? null,
     companyName: raw.CompanyName ?? raw.companyName ?? null,
     isOverdue: raw.IsOverdue ?? raw.isOverdue ?? false,
+    canMarkAsPaid: actionAllowance(raw.CanMarkAsPaid ?? raw.canMarkAsPaid, isAwaitingPayment),
+    canCancel: actionAllowance(raw.CanCancel ?? raw.canCancel, isAwaitingPayment),
+    canSend: actionAllowance(raw.CanSend ?? raw.canSend, invoiceStatus !== "Cancelled"),
+    canEdit: actionAllowance(raw.CanEdit ?? raw.canEdit, invoiceType === "Custom" && invoiceStatus === "PendingPayment"),
     invoiceDateUtc: raw.InvoiceDateUtc ?? raw.invoiceDateUtc ?? "",
     totalAmount: raw.TotalAmount ?? raw.totalAmount ?? "0",
     balanceAmount: raw.BalanceAmount ?? raw.balanceAmount ?? null,
@@ -660,6 +684,11 @@ export async function fetchEventInvoices(
   appendArrayParams(params, "sessionUniqueIds", filters.sessionUniqueIds)
   appendArrayParams(params, "statuses", filters.statuses)
   appendArrayParams(params, "paymentMethods", filters.paymentMethods)
+  appendArrayParams(params, "invoiceTypes", filters.invoiceTypes)
+
+  if (filters.overdueOnly) {
+    params.set("overdueOnly", "true")
+  }
 
   // The picker gives a calendar date in the organizer's own zone; the API filters on UTC instants, so a
   // late-evening purchase would otherwise land on the next UTC day and fall outside the chosen range.

@@ -7,7 +7,7 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
   // Agent worktrees carry their own tsconfig, which leaves the parser unable to pick a project root.
-  globalIgnores(['dist', '.claude']),
+  globalIgnores(['dist', '.claude', '.kilo']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

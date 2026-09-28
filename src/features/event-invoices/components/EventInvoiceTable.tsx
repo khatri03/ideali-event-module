@@ -22,7 +22,10 @@ interface EventInvoiceTableProps {
   isFetching: boolean
   onSortChange: (sortBy: EventInvoiceSortBy) => void
   onOpenDetail: (invoice: EventInvoiceListItem) => void
-  onResendTickets: (invoice: EventInvoiceListItem) => void
+  onEdit: (invoice: EventInvoiceListItem) => void
+  onMarkPaid: (invoice: EventInvoiceListItem) => void
+  onCancel: (invoice: EventInvoiceListItem) => void
+  onSend: (invoice: EventInvoiceListItem) => void
 }
 
 function formatDate(value: string) {
@@ -78,7 +81,10 @@ export function EventInvoiceTable({
   isFetching,
   onSortChange,
   onOpenDetail,
-  onResendTickets,
+  onEdit,
+  onMarkPaid,
+  onCancel,
+  onSend,
 }: EventInvoiceTableProps) {
   const returnState = useInvoiceListReturnState()
 
@@ -149,7 +155,10 @@ export function EventInvoiceTable({
                     <EventInvoiceRowActionsMenu
                       invoice={invoice}
                       onOpenDetail={onOpenDetail}
-                      onResendTickets={onResendTickets}
+                      onEdit={onEdit}
+                      onMarkPaid={onMarkPaid}
+                      onCancel={onCancel}
+                      onSend={onSend}
                     />
                   </Table.Cell>
                   <Table.Cell px={4} py={4}>

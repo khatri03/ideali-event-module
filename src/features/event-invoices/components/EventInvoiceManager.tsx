@@ -5,7 +5,12 @@ import { ConfirmDialog, ErrorState, TablePagination } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 import type { EventInvoiceFilters, EventInvoiceListItem, EventInvoiceSortBy, EventInvoiceSortOrder } from "@/api/eventInvoices"
-import { useEventInvoices, useResendEventInvoice } from "../hooks/useEventInvoices"
+import {
+  useCancelEventInvoice,
+  useEventInvoices,
+  useMarkEventInvoiceAsPaid,
+  useResendEventInvoice,
+} from "../hooks/useEventInvoices"
 import { useInvoiceListReturnState } from "../hooks/useInvoiceListReturnState"
 import { DEFAULT_PAGE_SIZE } from "../constants"
 import { EventInvoiceFilterBar, type EventInvoiceDraftFilters } from "./EventInvoiceFilterBar"
@@ -17,6 +22,8 @@ const EMPTY_DRAFT: EventInvoiceDraftFilters = {
   sessionUniqueIds: [],
   statuses: [],
   paymentMethods: [],
+  invoiceTypes: [],
+  overdueOnly: false,
   invoiceDateFrom: "",
   invoiceDateTo: "",
 }
@@ -26,6 +33,8 @@ const DEFAULT_FILTERS: EventInvoiceFilters = {
   sessionUniqueIds: [],
   statuses: [],
   paymentMethods: [],
+  invoiceTypes: [],
+  overdueOnly: false,
   invoiceDateFrom: null,
   invoiceDateTo: null,
   searchTerm: "",
@@ -37,6 +46,8 @@ function toFilters(draft: EventInvoiceDraftFilters): EventInvoiceFilters {
     sessionUniqueIds: draft.sessionUniqueIds,
     statuses: draft.statuses,
     paymentMethods: draft.paymentMethods,
+    invoiceTypes: draft.invoiceTypes,
+    overdueOnly: draft.overdueOnly,
     invoiceDateFrom: draft.invoiceDateFrom || null,
     invoiceDateTo: draft.invoiceDateTo || null,
     searchTerm: draft.searchTerm,
@@ -74,7 +85,11 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
     toFilters(initialDraft(initialEventUniqueId)),
   )
   const [resendTarget, setResendTarget] = useState<EventInvoiceListItem | null>(null)
+  const [markPaidTarget, setMarkPaidTarget] = useState<EventInvoiceListItem | null>(null)
+  const [cancelTarget, setCancelTarget] = useState<EventInvoiceListItem | null>(null)
   const resendMutation = useResendEventInvoice(resendTarget?.invoiceUniqueId ?? "")
+  const markPaidMutation = useMarkEventInvoiceAsPaid(markPaidTarget?.invoiceUniqueId ?? "")
+  const cancelMutation = useCancelEventInvoice(cancelTarget?.invoiceUniqueId ?? "")
 
   const invoicesQuery = useEventInvoices(appliedFilters, page, pageSize, sortBy, sortOrder)
   const invoicesPage = invoicesQuery.data
@@ -88,6 +103,8 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
     appliedFilters.sessionUniqueIds.length > 0 ||
     appliedFilters.statuses.length > 0 ||
     appliedFilters.paymentMethods.length > 0 ||
+    appliedFilters.invoiceTypes.length > 0 ||
+    appliedFilters.overdueOnly ||
     Boolean(appliedFilters.invoiceDateFrom) ||
     Boolean(appliedFilters.invoiceDateTo)
 
@@ -117,15 +134,47 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
     navigate(APP_ROUTES.eventInvoices.detail(invoice.invoiceUniqueId), { state: returnState })
   }
 
+  function handleEdit(invoice: EventInvoiceListItem) {
+    navigate(APP_ROUTES.eventInvoices.customEdit(invoice.invoiceUniqueId), { state: returnState })
+  }
+
   function handleCloseResend() {
     setResendTarget(null)
     resendMutation.reset()
+  }
+
+  function handleCloseMarkPaid() {
+    setMarkPaidTarget(null)
+    markPaidMutation.reset()
+  }
+
+  function handleCloseCancel() {
+    setCancelTarget(null)
+    cancelMutation.reset()
   }
 
   async function handleConfirmResend() {
     try {
       await resendMutation.mutateAsync()
       handleCloseResend()
+    } catch {
+      // Left open on purpose so the dialog can show why it failed.
+    }
+  }
+
+  async function handleConfirmMarkPaid() {
+    try {
+      await markPaidMutation.mutateAsync()
+      handleCloseMarkPaid()
+    } catch {
+      // Left open on purpose so the dialog can show why it failed.
+    }
+  }
+
+  async function handleConfirmCancel() {
+    try {
+      await cancelMutation.mutateAsync()
+      handleCloseCancel()
     } catch {
       // Left open on purpose so the dialog can show why it failed.
     }
@@ -159,7 +208,10 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
           isFetching={invoicesQuery.isFetching}
           onSortChange={handleSortChange}
           onOpenDetail={handleOpenDetail}
-          onResendTickets={setResendTarget}
+          onEdit={handleEdit}
+          onMarkPaid={setMarkPaidTarget}
+          onCancel={setCancelTarget}
+          onSend={setResendTarget}
         />
 
         <TablePagination
@@ -175,20 +227,58 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
 
       {resendTarget ? (
         <ConfirmDialog
-          title="Resend tickets"
+          title="Send to buyer"
           description={
             <Text>
-              Re-email every ticket on invoice <strong>{resendTarget.invoiceNo}</strong> to{" "}
-              {resendTarget.buyerEmail || resendTarget.buyerName || "the buyer"} and any attendee with their own address?
+              Re-email invoice <strong>{resendTarget.invoiceNo}</strong> to{" "}
+              {resendTarget.buyerEmail || resendTarget.buyerName || "the buyer"}?
             </Text>
           }
-          confirmLabel="Resend tickets"
+          confirmLabel="Send to buyer"
           loadingLabel="Sending..."
           tone="primary"
           errorMessage={resendMutation.error ? extractApiError(resendMutation.error) : null}
           isPending={resendMutation.isPending}
           onConfirm={handleConfirmResend}
           onClose={handleCloseResend}
+        />
+      ) : null}
+
+      {markPaidTarget ? (
+        <ConfirmDialog
+          title="Mark this invoice as paid"
+          description={
+            <Text>
+              Invoice <strong>{markPaidTarget.invoiceNo}</strong> will be recorded as paid in full and the buyer
+              emailed. This cannot be undone.
+            </Text>
+          }
+          confirmLabel="Mark as paid"
+          loadingLabel="Saving..."
+          tone="primary"
+          errorMessage={markPaidMutation.error ? extractApiError(markPaidMutation.error) : null}
+          isPending={markPaidMutation.isPending}
+          onConfirm={handleConfirmMarkPaid}
+          onClose={handleCloseMarkPaid}
+        />
+      ) : null}
+
+      {cancelTarget ? (
+        <ConfirmDialog
+          title="Cancel this invoice"
+          description={
+            <Text>
+              Invoice <strong>{cancelTarget.invoiceNo}</strong> will be closed unpaid and the buyer emailed. This
+              cannot be undone.
+            </Text>
+          }
+          confirmLabel="Cancel invoice"
+          loadingLabel="Cancelling..."
+          tone="destructive"
+          errorMessage={cancelMutation.error ? extractApiError(cancelMutation.error) : null}
+          isPending={cancelMutation.isPending}
+          onConfirm={handleConfirmCancel}
+          onClose={handleCloseCancel}
         />
       ) : null}
     </Stack>
