@@ -31,6 +31,18 @@ function makeInvoice(overrides: Partial<EventInvoiceDetail> = {}): EventInvoiceD
     canCancel: false,
     canResendTickets: true,
     canEditBuyer: true,
+    canEdit: false,
+    invoiceType: "Regular",
+    invoiceTypeLabel: "Regular",
+    categoryName: null,
+    dueDateUtc: null,
+    isOverdue: false,
+    specialNotes: null,
+    companyName: null,
+    buyerFirstName: null,
+    buyerMiddleName: null,
+    buyerLastName: null,
+    customLineItems: [],
     lineItems: [
       {
         invoiceItemUniqueId: "line-1",

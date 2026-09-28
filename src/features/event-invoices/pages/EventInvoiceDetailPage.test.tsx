@@ -1,6 +1,6 @@
 import { AxiosError } from "axios"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
 import { ChakraProvider } from "@chakra-ui/react"
@@ -10,8 +10,9 @@ import { system } from "@/theme"
 import { APP_ROUTES } from "@/utils/routes"
 import EventInvoiceDetailPage from "./EventInvoiceDetailPage"
 
-const { useEventInvoiceDetailMock, idleMutation } = vi.hoisted(() => ({
+const { useEventInvoiceDetailMock, addNoteMock, idleMutation } = vi.hoisted(() => ({
   useEventInvoiceDetailMock: vi.fn(),
+  addNoteMock: vi.fn(),
   idleMutation: () => ({ mutateAsync: vi.fn(), reset: vi.fn(), isPending: false, error: null }),
 }))
 
@@ -25,7 +26,7 @@ vi.mock("../hooks/useEventInvoices", async (importOriginal) => {
     useResendEventInvoiceLineItem: idleMutation,
     useMarkEventInvoiceAsPaid: idleMutation,
     useCancelEventInvoice: idleMutation,
-    useAddEventInvoiceNote: idleMutation,
+    useAddEventInvoiceNote: () => ({ mutateAsync: addNoteMock, reset: vi.fn(), isPending: false, error: null }),
     useUpdateEventInvoiceBuyer: idleMutation,
     useUpdateEventInvoiceAttendee: idleMutation,
   }
@@ -65,12 +66,43 @@ const INVOICE: EventInvoiceDetail = {
       tickets: [],
     },
   ],
+  customLineItems: [],
   notes: [],
   payments: [],
+  invoiceType: "Regular",
+  invoiceTypeLabel: "Regular",
+  categoryName: null,
+  dueDateUtc: null,
+  isOverdue: false,
+  specialNotes: null,
+  companyName: null,
+  buyerFirstName: null,
+  buyerMiddleName: null,
+  buyerLastName: null,
   canMarkAsPaid: true,
   canCancel: true,
   canResendTickets: true,
   canEditBuyer: true,
+  canEdit: false,
+}
+
+const CUSTOM_INVOICE: Partial<EventInvoiceDetail> = {
+  invoiceType: "Custom",
+  invoiceTypeLabel: "Custom",
+  categoryName: "Gold Sponsor",
+  dueDateUtc: "2026-01-01T00:00:00Z",
+  isOverdue: true,
+  specialNotes: "Bill to head office.",
+  companyName: "Northwind Traders",
+  buyerFirstName: "Ada",
+  buyerMiddleName: "K",
+  buyerLastName: "Lovelace",
+  canEdit: true,
+  lineItems: [],
+  customLineItems: [
+    { invoiceItemUniqueId: "cline-1", description: "Headline sponsorship", amount: "1500.50" },
+    { invoiceItemUniqueId: "cline-2", description: "Booth space", amount: "300.25" },
+  ],
 }
 
 function CurrentPath() {
@@ -137,6 +169,8 @@ function failedWith(error: unknown, { refetch = vi.fn(), isFetching = false } = 
 describe("EventInvoiceDetailPage", () => {
   beforeEach(() => {
     useEventInvoiceDetailMock.mockReset()
+    addNoteMock.mockReset()
+    addNoteMock.mockResolvedValue(undefined)
   })
 
   it("InvoiceLoaded_PutsTheSettlementDecisionAboveTheMoneyItAppliesTo", () => {
@@ -265,6 +299,48 @@ describe("EventInvoiceDetailPage", () => {
     expect(screen.getByRole("button", { name: /^print$/i }).closest("[data-print-hide]")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /mark as paid/i }).closest("[data-print-hide]")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /add note/i })).toHaveAttribute("data-print-hide")
+  })
+
+  it("CustomInvoice_RendersTheCustomBodyWithLinesCategoryAndOverdueDueDate", () => {
+    loaded(CUSTOM_INVOICE)
+    renderPage()
+
+    expect(screen.getByText("Northwind Traders")).toBeInTheDocument()
+    expect(screen.getByText("Ada K Lovelace")).toBeInTheDocument()
+    expect(screen.getByText("Gold Sponsor")).toBeInTheDocument()
+    expect(screen.getByText("Headline sponsorship")).toBeInTheDocument()
+    expect(screen.getByText("Grand total")).toBeInTheDocument()
+    expect(screen.getByText(/Overdue/)).toBeInTheDocument()
+    // The ticket-centric body must not render for a custom invoice.
+    expect(screen.queryByRole("heading", { name: /ticket delivery/i })).not.toBeInTheDocument()
+  })
+
+  it("TicketInvoice_StillRendersTheTicketBodyNotTheCustomOne", () => {
+    loaded()
+    renderPage()
+
+    expect(screen.getByRole("heading", { name: /ticket delivery/i })).toBeInTheDocument()
+    expect(screen.queryByText("Grand total")).not.toBeInTheDocument()
+  })
+
+  it("CustomInvoicePaidOrCancelled_CollapsesThePayableLinkToItsStatusSentence", () => {
+    loaded({ ...CUSTOM_INVOICE, invoiceStatus: "Paid", invoiceStatusLabel: "Paid", isOverdue: false })
+    renderPage()
+
+    expect(screen.getByText(/no payable link is needed/i)).toBeInTheDocument()
+  })
+
+  it("AddNoteAfterCreation_SavesTheNoteAndKeepsTheShippedDialog", async () => {
+    loaded(CUSTOM_INVOICE)
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole("button", { name: /add note/i }))
+    const dialog = await screen.findByRole("dialog")
+    fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "Chased head office." } })
+    await user.click(within(dialog).getByRole("button", { name: /save note/i }))
+
+    expect(addNoteMock).toHaveBeenCalledWith("Chased head office.")
   })
 
   it("StillLoading_ShowsTheSkeletonRatherThanAnEmptyPage", () => {

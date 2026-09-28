@@ -7,6 +7,7 @@ import { useEventInvoiceDetail } from "../hooks/useEventInvoices"
 import { BackToInvoicesButton } from "../components/BackToInvoicesButton"
 import { EventInvoiceDetailHeader } from "../components/EventInvoiceDetailHeader"
 import { EventInvoiceMoneyPanel } from "../components/EventInvoiceMoneyPanel"
+import { EventInvoiceCustomDetailBody } from "../components/EventInvoiceCustomDetailBody"
 import { EventInvoiceNotesSection } from "../components/EventInvoiceNotesSection"
 import { EventInvoiceSettlementActions } from "../components/EventInvoiceSettlementActions"
 import { EventInvoiceLineItemsSection } from "../components/EventInvoiceLineItemsSection"
@@ -75,6 +76,7 @@ export default function EventInvoiceDetailPage() {
     )
   }
 
+  const isCustom = invoice.invoiceType === "Custom"
   const hasAnyIssuedTicket = invoice.lineItems.some((item) => item.tickets.length > 0)
   const canResendAllTickets = invoice.canResendTickets && hasAnyIssuedTicket
   const hasSettlementActions = invoice.canMarkAsPaid || invoice.canCancel || canResendAllTickets
@@ -105,13 +107,19 @@ export default function EventInvoiceDetailPage() {
         </Box>
       ) : null}
 
-      <EventInvoiceMoneyPanel invoice={invoice} />
+      {isCustom ? (
+        <EventInvoiceCustomDetailBody invoice={invoice} />
+      ) : (
+        <>
+          <EventInvoiceMoneyPanel invoice={invoice} />
 
-      <EventInvoiceLineItemsSection
-        invoiceUniqueId={invoice.invoiceUniqueId}
-        lineItems={invoice.lineItems}
-        canResendTickets={invoice.canResendTickets}
-      />
+          <EventInvoiceLineItemsSection
+            invoiceUniqueId={invoice.invoiceUniqueId}
+            lineItems={invoice.lineItems}
+            canResendTickets={invoice.canResendTickets}
+          />
+        </>
+      )}
 
       <EventInvoicePaymentHistorySection payments={invoice.payments} currencySymbol={invoice.currencySymbol} />
 
