@@ -91,15 +91,17 @@ describe("EventInvoiceSettlementActions", () => {
     expect(cancelEventInvoiceMock).not.toHaveBeenCalled()
   })
 
-  it("cancelling the order calls the cancel endpoint, not the settle one", async () => {
+  /** The reason typed in the cancel dialog is what the cancel endpoint receives; the settle endpoint is never hit. */
+  it("cancelling the order sends the entered notes to the cancel endpoint, not the settle one", async () => {
     const user = userEvent.setup()
     renderActions()
 
     await user.click(screen.getByRole("button", { name: /mark as cancelled/i }))
     const dialog = await screen.findByRole("alertdialog")
+    await user.type(within(dialog).getByLabelText(/reason for cancelling/i), "Sponsor withdrew.")
     await user.click(within(dialog).getByRole("button", { name: /^cancel order$/i }))
 
-    await waitFor(() => expect(cancelEventInvoiceMock).toHaveBeenCalledWith(INVOICE_UNIQUE_ID))
+    await waitFor(() => expect(cancelEventInvoiceMock).toHaveBeenCalledWith(INVOICE_UNIQUE_ID, "Sponsor withdrew."))
     expect(markEventInvoiceAsPaidMock).not.toHaveBeenCalled()
   })
 
@@ -122,6 +124,7 @@ describe("EventInvoiceSettlementActions", () => {
 
     await user.click(screen.getByRole("button", { name: /mark as cancelled/i }))
     const dialog = await screen.findByRole("alertdialog")
+    await user.type(within(dialog).getByLabelText(/reason for cancelling/i), "Sponsor withdrew.")
     await user.click(within(dialog).getByRole("button", { name: /^cancel order$/i }))
 
     expect(await screen.findByText(/an unexpected error occurred/i)).toBeInTheDocument()

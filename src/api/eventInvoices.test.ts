@@ -314,10 +314,11 @@ describe("event invoice settlement endpoints", () => {
     expect(postMock).toHaveBeenCalledWith("/api/organizer/events/invoices/invoice-1/mark-paid")
   })
 
-  it("Cancel_PostsToTheCancelEndpoint", async () => {
-    await cancelEventInvoice("invoice-1")
+  /** The server refuses a cancellation without a reason, so the organizer's notes travel in the body, trimmed. */
+  it("Cancel_PostsTheTrimmedNotesToTheCancelEndpoint", async () => {
+    await cancelEventInvoice("invoice-1", "  Sponsor withdrew.  ")
 
-    expect(postMock).toHaveBeenCalledWith("/api/organizer/events/invoices/invoice-1/cancel")
+    expect(postMock).toHaveBeenCalledWith("/api/organizer/events/invoices/invoice-1/cancel", { note: "Sponsor withdrew." })
   })
 })
 
