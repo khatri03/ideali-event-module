@@ -106,18 +106,34 @@ describe("EventInvoiceRowActionsMenu", () => {
     expect(screen.queryByText("Cancel invoice")).toBeNull()
   })
 
-  it("CanSend_ShowsSendToBuyer_AndFiresHandler", async () => {
-    const { onSend } = await openMenu({ canSend: true })
+  /**
+   * The resend action is offered for an order that has tickets and that the server allows to resend, and it
+   * hands the row to the handler that opens the confirmation.
+   */
+  it("CanSendWithTickets_ShowsResendTickets_AndFiresHandler", async () => {
+    const { onSend } = await openMenu({ canSend: true, ticketCount: 2 })
 
-    await userEvent.click(await screen.findByText("Send to buyer"))
+    await userEvent.click(await screen.findByText("Resend tickets"))
 
     expect(onSend).toHaveBeenCalledWith(expect.objectContaining({ invoiceUniqueId: "invoice-1" }))
   })
 
-  it("CannotSend_HidesSendToBuyer", async () => {
+  /** A row the server refuses to resend - a cancelled order - never offers the action. */
+  it("CannotSend_HidesResendTickets", async () => {
     await openMenu({ canSend: false })
 
     expect(await screen.findByText("View")).toBeTruthy()
-    expect(screen.queryByText("Send to buyer")).toBeNull()
+    expect(screen.queryByText("Resend tickets")).toBeNull()
+  })
+
+  /**
+   * An order with no tickets - every custom invoice - never offers the resend, because the delivery job would
+   * find nothing to mail while the organizer is told it was sent.
+   */
+  it("CanSendButNoTickets_HidesResendTickets", async () => {
+    await openMenu({ canSend: true, ticketCount: 0 })
+
+    expect(await screen.findByText("View")).toBeTruthy()
+    expect(screen.queryByText("Resend tickets")).toBeNull()
   })
 })

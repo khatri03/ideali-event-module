@@ -88,11 +88,11 @@ export function EventInvoiceRowActionsMenu({
               </Menu.Item>
             ) : null}
 
-            {invoice.canSend ? (
-              <Menu.Item value="send-invoice" {...ITEM_STYLE} _hover={{ bg: "app.bg" }} onClick={() => onSend(invoice)}>
+            {invoice.canSend && invoice.ticketCount > 0 ? (
+              <Menu.Item value="resend-tickets" {...ITEM_STYLE} _hover={{ bg: "app.bg" }} onClick={() => onSend(invoice)}>
                 <Send size={14} />
                 <Text as="span" flex="1" textAlign="left">
-                  Send to buyer
+                  Resend tickets
                 </Text>
               </Menu.Item>
             ) : null}

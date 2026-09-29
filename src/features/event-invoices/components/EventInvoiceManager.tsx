@@ -227,14 +227,14 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
 
       {resendTarget ? (
         <ConfirmDialog
-          title="Send to buyer"
+          title="Resend tickets"
           description={
             <Text>
-              Re-email invoice <strong>{resendTarget.invoiceNo}</strong> to{" "}
-              {resendTarget.buyerEmail || resendTarget.buyerName || "the buyer"}?
+              Re-email every ticket on invoice <strong>{resendTarget.invoiceNo}</strong> to{" "}
+              {resendTarget.buyerEmail || resendTarget.buyerName || "the buyer"} and any attendee with their own address?
             </Text>
           }
-          confirmLabel="Send to buyer"
+          confirmLabel="Resend tickets"
           loadingLabel="Sending..."
           tone="primary"
           errorMessage={resendMutation.error ? extractApiError(resendMutation.error) : null}
