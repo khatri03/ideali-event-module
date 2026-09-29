@@ -13,6 +13,7 @@ import {
 } from "../hooks/useEventInvoices"
 import { useInvoiceListReturnState } from "../hooks/useInvoiceListReturnState"
 import { DEFAULT_PAGE_SIZE } from "../constants"
+import { CancelInvoiceDialog } from "./CancelInvoiceDialog"
 import { EventInvoiceFilterBar, type EventInvoiceDraftFilters } from "./EventInvoiceFilterBar"
 import { EventInvoiceTable } from "./EventInvoiceTable"
 
@@ -171,9 +172,9 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
     }
   }
 
-  async function handleConfirmCancel() {
+  async function handleConfirmCancel(cancellationNotes: string) {
     try {
-      await cancelMutation.mutateAsync()
+      await cancelMutation.mutateAsync(cancellationNotes)
       handleCloseCancel()
     } catch {
       // Left open on purpose so the dialog can show why it failed.
@@ -264,19 +265,11 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
       ) : null}
 
       {cancelTarget ? (
-        <ConfirmDialog
-          title="Cancel this invoice"
-          description={
-            <Text>
-              Invoice <strong>{cancelTarget.invoiceNo}</strong> will be closed unpaid and the buyer emailed. This
-              cannot be undone.
-            </Text>
-          }
-          confirmLabel="Cancel invoice"
-          loadingLabel="Cancelling..."
-          tone="destructive"
-          errorMessage={cancelMutation.error ? extractApiError(cancelMutation.error) : null}
+        <CancelInvoiceDialog
+          open
+          invoiceNo={cancelTarget.invoiceNo}
           isPending={cancelMutation.isPending}
+          errorMessage={cancelMutation.error ? extractApiError(cancelMutation.error) : null}
           onConfirm={handleConfirmCancel}
           onClose={handleCloseCancel}
         />

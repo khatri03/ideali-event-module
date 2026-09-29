@@ -74,14 +74,14 @@ export function useResendEventInvoice(invoiceUniqueId: string) {
  * Both settlement actions change the invoice's status, its notes and its place in the list, so each
  * one refreshes the detail it was launched from and the list behind it.
  */
-function useInvoiceSettlementAction(
+function useInvoiceSettlementAction<TVariables = void>(
   invoiceUniqueId: string,
-  action: (invoiceUniqueId: string) => Promise<void>,
+  action: (variables: TVariables) => Promise<void>,
   successTitle: string,
 ) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () => action(invoiceUniqueId),
+    mutationFn: action,
     onSuccess: () => toaster.create({ type: "success", title: successTitle }),
     onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
     onSettled: () => {
@@ -92,11 +92,15 @@ function useInvoiceSettlementAction(
 }
 
 export function useMarkEventInvoiceAsPaid(invoiceUniqueId: string) {
-  return useInvoiceSettlementAction(invoiceUniqueId, markEventInvoiceAsPaid, "Invoice marked as paid.")
+  return useInvoiceSettlementAction(invoiceUniqueId, () => markEventInvoiceAsPaid(invoiceUniqueId), "Invoice marked as paid.")
 }
 
 export function useCancelEventInvoice(invoiceUniqueId: string) {
-  return useInvoiceSettlementAction(invoiceUniqueId, cancelEventInvoice, "Invoice cancelled.")
+  return useInvoiceSettlementAction(
+    invoiceUniqueId,
+    (cancellationNotes: string) => cancelEventInvoice(invoiceUniqueId, cancellationNotes),
+    "Invoice cancelled.",
+  )
 }
 
 /** Opening a payment records a pending payment on the invoice, so the detail refreshes either way. */

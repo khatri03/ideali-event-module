@@ -863,8 +863,7 @@ export async function markEventInvoiceAsPaid(invoiceUniqueId: string): Promise<v
 }
 
 export async function cancelEventInvoice(invoiceUniqueId: string, cancellationNotes: string): Promise<void> {
-  void cancellationNotes
-  await client.post(API_ROUTES.eventInvoiceCancel(invoiceUniqueId))
+  await client.post(API_ROUTES.eventInvoiceCancel(invoiceUniqueId), { note: cancellationNotes.trim() })
 }
 
 export interface EventInvoicePaymentLink {
