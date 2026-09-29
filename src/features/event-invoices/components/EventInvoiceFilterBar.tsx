@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { Box, Button, Field, Flex, Input, SimpleGrid, Switch, Text } from "@chakra-ui/react"
+import { Box, Button, Field, Flex, Input, SimpleGrid, Switch } from "@chakra-ui/react"
 import { Filter, RotateCcw, Search } from "lucide-react"
 import { EVENT_INVOICE_PAYMENT_METHOD_OPTIONS, EVENT_INVOICE_STATUS_OPTIONS } from "@/api/eventInvoices"
 import { useEventInvoiceFilterOptions } from "../hooks/useEventInvoices"
@@ -146,19 +146,21 @@ export function EventInvoiceFilterBar({
           <Field.Label fontSize="sm" fontWeight="700" color="text.primary">
             Overdue
           </Field.Label>
-          <Flex align="center" gap={3} minH="11">
-            <Switch.Root
-              colorPalette="brand"
-              checked={draft.overdueOnly}
-              onCheckedChange={(details) => onDraftChange((current) => ({ ...current, overdueOnly: details.checked }))}
-            >
-              <Switch.HiddenInput aria-label="Overdue only" />
-              <Switch.Control cursor="pointer" />
-            </Switch.Root>
-            <Text fontSize="sm" color="text.secondary">
+          <Switch.Root
+            colorPalette="brand"
+            minH="11"
+            alignItems="center"
+            gap={3}
+            cursor="pointer"
+            checked={draft.overdueOnly}
+            onCheckedChange={(details) => onDraftChange((current) => ({ ...current, overdueOnly: details.checked }))}
+          >
+            <Switch.HiddenInput />
+            <Switch.Control cursor="pointer" />
+            <Switch.Label fontSize="sm" fontWeight="400" color="text.secondary" cursor="pointer">
               Overdue only
-            </Text>
-          </Flex>
+            </Switch.Label>
+          </Switch.Root>
         </Field.Root>
 
         <Field.Root>
