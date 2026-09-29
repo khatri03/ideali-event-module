@@ -77,4 +77,56 @@ describe("CancelInvoiceDialog", () => {
 
     expect(onConfirm).toHaveBeenCalledExactlyOnceWith("Sponsor withdrew.")
   })
+
+  /** While the cancellation is in flight the confirm button cannot be pressed again, so it is never sent twice. */
+  it("Pending_DisablesTheConfirmButton", () => {
+    const { dialog } = renderDialog({ isPending: true })
+
+    expect(within(dialog).getByRole("button", { name: /cancelling/i })).toBeDisabled()
+  })
+
+  /** A refused cancellation is explained inside the dialog, next to the reason the organizer can still edit. */
+  it("SubmitError_IsShownInsideTheDialog", () => {
+    const { dialog } = renderDialog({ errorMessage: "Only an invoice that is still awaiting payment can be cancelled." })
+
+    expect(within(dialog).getByText("Only an invoice that is still awaiting payment can be cancelled.")).toBeInTheDocument()
+    expect(within(dialog).getByLabelText(/reason for cancelling/i)).toBeInTheDocument()
+  })
+
+  /** Backing out of the dialog cancels nothing. */
+  it("Dismiss_ClosesWithoutCancelling", async () => {
+    const user = userEvent.setup()
+    const { onConfirm, onClose, dialog } = renderDialog()
+
+    await user.type(within(dialog).getByLabelText(/reason for cancelling/i), "Sponsor withdrew.")
+    await user.click(within(dialog).getByRole("button", { name: /^cancel$/i }))
+
+    expect(onClose).toHaveBeenCalledOnce()
+    expect(onConfirm).not.toHaveBeenCalled()
+  })
+
+  /** A reason typed for an abandoned attempt must not be sent with a later, different cancellation. */
+  it("Reopen_StartsWithAnEmptyReason", async () => {
+    const user = userEvent.setup()
+    const props = { invoiceNo: "INV-2001", isPending: false, errorMessage: null, onConfirm: vi.fn(), onClose: vi.fn() }
+    const { rerender } = render(
+      <ChakraProvider value={system}>
+        <CancelInvoiceDialog open {...props} />
+      </ChakraProvider>,
+    )
+    await user.type(screen.getByLabelText(/reason for cancelling/i), "Sponsor withdrew.")
+
+    rerender(
+      <ChakraProvider value={system}>
+        <CancelInvoiceDialog open={false} {...props} />
+      </ChakraProvider>,
+    )
+    rerender(
+      <ChakraProvider value={system}>
+        <CancelInvoiceDialog open {...props} />
+      </ChakraProvider>,
+    )
+
+    expect(await screen.findByLabelText(/reason for cancelling/i)).toHaveValue("")
+  })
 })

@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page, type Request } from "@playwright/test"
 
 /**
- * Phase 03 UAT for custom event invoices, driven against mocked API responses because the check is about
+ * Phase 03 and 04 UAT for custom event invoices, driven against mocked API responses because the check is about
  * what the organizer sees and sends, not about the server. Every width in the project's responsive range is
  * walked, since the organizer works these screens from a phone as often as from a desk.
  */
@@ -637,4 +637,103 @@ test("UAT 8: tapping the Overdue only text toggles the filter and the list follo
 
   await expect(rowFor(page, "INV-C-101")).toHaveCount(0)
   await expect(rowFor(page, "INV-C-100").getByText("Overdue, due")).toBeAttached()
+})
+
+const PHASE_04_SCREENSHOT_DIR = "test-results/uat-04"
+const settlementApi = (invoiceUniqueId: string, action: "cancel" | "mark-paid") =>
+  `**/api/organizer/events/invoices/${invoiceUniqueId}/${action}`
+const CANCELLATION_REASON = "Sponsor withdrew from the event."
+
+for (const width of WIDTHS) {
+  /**
+   * Phase 04 UAT, cancel. Cancelling a custom invoice is irreversible, so the dialog must name what happens,
+   * refuse to send without a reason, fit the screen at every width with fingertip-sized controls, and send
+   * the reason the organizer typed - the server keeps it as the audit trail for the cancellation.
+   */
+  test(`Phase 04 UAT: cancelling a custom invoice requires a reason and sends it at ${width}px`, async ({ page }) => {
+    let isCancelled = false
+    const cancelRequests: Request[] = []
+
+    await mockShell(page)
+    await mockDetail(page, CUSTOM_ID, () =>
+      isCancelled
+        ? customDetail({ invoiceStatus: "Cancelled", invoiceStatusLabel: "Cancelled", canMarkAsPaid: false, canCancel: false, isOverdue: false })
+        : customDetail(),
+    )
+    await page.route(settlementApi(CUSTOM_ID, "cancel"), async (route) => {
+      cancelRequests.push(route.request())
+      isCancelled = true
+      await route.fulfill({ json: envelope(null) })
+    })
+
+    await openDetail(page, CUSTOM_ID, "INV-C-100", width)
+    await page.getByRole("button", { name: "Mark as cancelled" }).click()
+
+    const dialog = page.getByRole("alertdialog")
+    await expect(dialog.getByText("Cancel this order")).toBeVisible()
+    await expect(dialog).toContainText("will be closed unpaid")
+    await expect(dialog).toContainText("This cannot be undone.")
+    await settle(dialog)
+
+    if (SCREENSHOT_WIDTHS.includes(width)) {
+      await page.screenshot({ path: `${PHASE_04_SCREENSHOT_DIR}/cancel-dialog-${width}.png` })
+    }
+
+    expect(await findHorizontalPageOverflow(page), "the open cancel dialog makes the page scroll sideways").toEqual([])
+    const undersized = await findUndersizedTargets(dialog, false)
+    expect.soft(undersized, `controls under ${MIN_TOUCH_TARGET_PX}px in the cancel dialog at ${width}px`).toEqual([])
+
+    await dialog.getByRole("button", { name: "Cancel order" }).click()
+    await expect(dialog.getByText("Enter the reason for cancelling this order.")).toBeVisible()
+    expect(cancelRequests, "a cancellation without a reason reached the server").toHaveLength(0)
+
+    await dialog.getByLabel("Reason for cancelling").fill(`  ${CANCELLATION_REASON}  `)
+    await dialog.getByRole("button", { name: "Cancel order" }).click()
+
+    await expect(page.getByText("Invoice cancelled.")).toBeVisible()
+    await expect(dialog).toBeHidden()
+    expect(cancelRequests).toHaveLength(1)
+    expect(cancelRequests[0].postDataJSON()).toEqual({ note: CANCELLATION_REASON })
+    await expect(page.getByRole("button", { name: "Mark as cancelled" })).toHaveCount(0)
+  })
+}
+
+/**
+ * Phase 04 UAT, mark paid. A sponsor who paid outside the gateway is settled by hand: the organizer confirms,
+ * the server is asked once, and the refreshed detail reads Paid with no settlement actions left to take.
+ */
+test("Phase 04 UAT: marking a custom invoice paid confirms first and leaves it Paid", async ({ page }) => {
+  let isPaid = false
+  const markPaidRequests: Request[] = []
+
+  await mockShell(page)
+  await mockDetail(page, CUSTOM_ID, () =>
+    isPaid
+      ? customDetail({ invoiceStatus: "Paid", invoiceStatusLabel: "Paid", canMarkAsPaid: false, canCancel: false, isOverdue: false, balanceAmount: null })
+      : customDetail(),
+  )
+  await page.route(settlementApi(CUSTOM_ID, "mark-paid"), async (route) => {
+    markPaidRequests.push(route.request())
+    isPaid = true
+    await route.fulfill({ json: envelope(null) })
+  })
+
+  await openDetail(page, CUSTOM_ID, "INV-C-100", 375)
+  await page.getByRole("button", { name: "Mark as paid" }).click()
+
+  const dialog = page.getByRole("alertdialog")
+  await expect(dialog).toContainText("will be recorded as paid in full")
+  await settle(dialog)
+  expect(markPaidRequests, "marking paid reached the server before it was confirmed").toHaveLength(0)
+  const undersized = await findUndersizedTargets(dialog, false)
+  expect.soft(undersized, `controls under ${MIN_TOUCH_TARGET_PX}px in the mark-paid confirmation`).toEqual([])
+
+  await dialog.getByRole("button", { name: "Mark as paid" }).click()
+
+  await expect(page.getByText("Invoice marked as paid.")).toBeVisible()
+  await expect(dialog).toBeHidden()
+  expect(markPaidRequests).toHaveLength(1)
+  await expect(page.getByText("Paid", { exact: true }).first()).toBeVisible()
+  await expect(page.getByRole("button", { name: "Mark as paid" })).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Mark as cancelled" })).toHaveCount(0)
 })
