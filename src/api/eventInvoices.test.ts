@@ -10,6 +10,7 @@ import {
   unlinkEventInvoice,
   type EventInvoiceFilters,
 } from "./eventInvoices"
+import { extractApiError } from "@/utils/errors"
 
 const { getMock, postMock, deleteMock } = vi.hoisted(() => ({ getMock: vi.fn(), postMock: vi.fn(), deleteMock: vi.fn() }))
 
@@ -496,5 +497,26 @@ describe("createEventInvoicePaymentLink", () => {
     postMock.mockResolvedValue(mintedResponse(data))
 
     await expect(createEventInvoicePaymentLink("invoice-1")).rejects.toThrow()
+  })
+
+  /**
+   * A malformed mint is reported in words the organizer can act on. Schema wording such as "expected
+   * string, received undefined" would otherwise reach the error toast.
+   */
+  it("MalformedResponse_IsRejectedWithAPlainMessage", async () => {
+    postMock.mockResolvedValue(mintedResponse({ paymentIntentId: "pi_1" }))
+
+    const failure = await createEventInvoicePaymentLink("invoice-1").catch((error: unknown) => error)
+
+    expect(extractApiError(failure)).toBe("Online payment could not be started. Please try again.")
+  })
+
+  /** A response that reports its own failure carries the server's reason, never a schema complaint about the missing intent. */
+  it("ResponseReportingItsOwnFailure_IsRejectedWithTheServersReason", async () => {
+    postMock.mockResolvedValue({ data: { success: false, message: "This invoice has nothing left to pay.", data: null } })
+
+    const failure = await createEventInvoicePaymentLink("invoice-1").catch((error: unknown) => error)
+
+    expect(extractApiError(failure)).toBe("This invoice has nothing left to pay.")
   })
 })

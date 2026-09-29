@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { renderHook, waitFor } from "@testing-library/react"
+import { AxiosError, AxiosHeaders } from "axios"
 import {
   useAddEventInvoiceNote,
   useCreateEventInvoicePaymentLink,
@@ -247,4 +248,29 @@ describe("useCreateEventInvoicePaymentLink", () => {
     expect(toastMock).not.toHaveBeenCalledWith(expect.objectContaining({ type: "success" }))
     await waitFor(() => expect(invalidatedKeys(invalidateSpy)).toContainEqual(["event-invoice-detail", "invoice-1"]))
   })
+
+  /**
+   * A refusal the server words for the organizer - here, a payment already mid-charge - reaches the toast
+   * as written, so they learn why nothing new was opened instead of reading a generic failure.
+   */
+  it("Mint_RefusedWithAReason_ToastsThatReasonVerbatim", async () => {
+    const reason = "A payment for this invoice is already in progress, so a new one cannot be started."
+    api.createEventInvoicePaymentLink.mockRejectedValue(badRequest({ success: false, message: reason, data: null }))
+    const { result } = renderHook(() => useCreateEventInvoicePaymentLink("invoice-1"), { wrapper: createWrapper() })
+
+    await expect(result.current.mutateAsync()).rejects.toThrow()
+
+    expect(toastMock).toHaveBeenCalledWith({ type: "error", title: reason })
+  })
 })
+
+/** The 400 the API answers a refused service call with, carrying its camel-cased failure envelope. */
+function badRequest(body: unknown) {
+  return new AxiosError("Request failed with status code 400", "ERR_BAD_REQUEST", undefined, undefined, {
+    status: 400,
+    statusText: "Bad Request",
+    headers: {},
+    config: { headers: new AxiosHeaders() },
+    data: body,
+  })
+}
