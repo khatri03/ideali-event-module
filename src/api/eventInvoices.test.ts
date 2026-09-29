@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   addEventInvoiceNote,
   cancelEventInvoice,
+  createEventInvoicePaymentLink,
   fetchEventInvoiceDetail,
   fetchEventInvoices,
   linkEventInvoice,
@@ -451,5 +452,49 @@ describe("event invoice links", () => {
     const detail = await fetchEventInvoiceDetail("invoice-1")
 
     expect(detail.linkedInvoice).toBeNull()
+  })
+})
+
+describe("createEventInvoicePaymentLink", () => {
+  beforeEach(() => postMock.mockReset())
+
+  function mintedResponse(data: unknown) {
+    return { data: { success: true, data } }
+  }
+
+  /** The mint is a POST on the invoice's own payment-link resource, carrying no body: the server reads the amount off the invoice. */
+  it("PostsToTheInvoicesPaymentLinkEndpointWithoutABody", async () => {
+    postMock.mockResolvedValue(mintedResponse({ clientSecret: "pi_1_secret", paymentIntentId: "pi_1" }))
+
+    await createEventInvoicePaymentLink("invoice-1")
+
+    expect(postMock).toHaveBeenCalledWith("/api/organizer/events/invoices/invoice-1/payment-link")
+  })
+
+  /** The minted intent comes back whichever casing the server serialises it in. */
+  it.each([
+    ["camelCase", { clientSecret: "pi_1_secret", paymentIntentId: "pi_1" }],
+    ["PascalCase", { ClientSecret: "pi_1_secret", PaymentIntentId: "pi_1" }],
+  ])("MintedIntentSentIn%s_ReturnsItsSecretAndId", async (_casing, data) => {
+    postMock.mockResolvedValue(mintedResponse(data))
+
+    const minted = await createEventInvoicePaymentLink("invoice-1")
+
+    expect(minted).toEqual({ clientSecret: "pi_1_secret", paymentIntentId: "pi_1" })
+  })
+
+  /**
+   * A response without a usable secret or intent id cannot be paid against, so it is refused at the
+   * boundary rather than handed on as if a payment had been opened.
+   */
+  it.each([
+    ["AnEmptyClientSecret", { clientSecret: "", paymentIntentId: "pi_1" }],
+    ["NoClientSecret", { paymentIntentId: "pi_1" }],
+    ["AnEmptyIntentId", { clientSecret: "pi_1_secret", paymentIntentId: "" }],
+    ["NoData", null],
+  ])("ResponseWith%s_IsRejected", async (_case, data) => {
+    postMock.mockResolvedValue(mintedResponse(data))
+
+    await expect(createEventInvoicePaymentLink("invoice-1")).rejects.toThrow()
   })
 })

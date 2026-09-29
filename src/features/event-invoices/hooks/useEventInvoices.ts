@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClie
 import {
   addEventInvoiceNote,
   cancelEventInvoice,
+  createEventInvoicePaymentLink,
   fetchEventInvoiceDetail,
   fetchEventInvoiceFilterOptions,
   fetchEventInvoices,
@@ -96,6 +97,10 @@ export function useMarkEventInvoiceAsPaid(invoiceUniqueId: string) {
 
 export function useCancelEventInvoice(invoiceUniqueId: string) {
   return useInvoiceSettlementAction(invoiceUniqueId, cancelEventInvoice, "Invoice cancelled.")
+}
+
+export function useCreateEventInvoicePaymentLink(invoiceUniqueId: string) {
+  return useMutation({ mutationFn: () => createEventInvoicePaymentLink(invoiceUniqueId) })
 }
 
 export function useAddEventInvoiceNote(invoiceUniqueId: string) {

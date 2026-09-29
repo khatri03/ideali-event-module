@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { renderHook, waitFor } from "@testing-library/react"
 import {
   useAddEventInvoiceNote,
+  useCreateEventInvoicePaymentLink,
   useEventInvoiceDetail,
   useEventInvoices,
   useLinkEventInvoice,
@@ -17,6 +18,7 @@ const api = vi.hoisted(() => ({
   addEventInvoiceNote: vi.fn(),
   linkEventInvoice: vi.fn(),
   unlinkEventInvoice: vi.fn(),
+  createEventInvoicePaymentLink: vi.fn(),
 }))
 
 const { toastMock } = vi.hoisted(() => ({ toastMock: vi.fn() }))
@@ -191,5 +193,58 @@ describe("invoice link mutations", () => {
 
     expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ type: "error" }))
     expect(toastMock).not.toHaveBeenCalledWith(expect.objectContaining({ type: "success" }))
+  })
+})
+
+describe("useCreateEventInvoicePaymentLink", () => {
+  beforeEach(() => {
+    toastMock.mockReset()
+    api.createEventInvoicePaymentLink
+      .mockReset()
+      .mockResolvedValue({ clientSecret: "pi_1_secret", paymentIntentId: "pi_1" })
+  })
+
+  /**
+   * Opening a payment records a pending payment on the invoice, so the detail must refresh to show it,
+   * and the organizer is told the payment is open.
+   */
+  it("Mint_Succeeds_ConfirmsAndRefreshesTheInvoiceDetail", async () => {
+    const { queryClient, invalidateSpy } = createObservedClient()
+    const { result } = renderHook(() => useCreateEventInvoicePaymentLink("invoice-1"), {
+      wrapper: createWrapper(queryClient),
+    })
+
+    await result.current.mutateAsync()
+
+    expect(api.createEventInvoicePaymentLink).toHaveBeenCalledWith("invoice-1")
+    expect(toastMock).toHaveBeenCalledWith({ type: "success", title: "Online payment opened for this invoice." })
+    await waitFor(() => expect(invalidatedKeys(invalidateSpy)).toEqual([["event-invoice-detail", "invoice-1"]]))
+  })
+
+  /** The minted client secret is a payment credential and must never be echoed into a toast. */
+  it("Mint_Succeeds_NeverPutsTheClientSecretInAMessage", async () => {
+    const { result } = renderHook(() => useCreateEventInvoicePaymentLink("invoice-1"), { wrapper: createWrapper() })
+
+    await result.current.mutateAsync()
+
+    expect(JSON.stringify(toastMock.mock.calls)).not.toContain("pi_1_secret")
+  })
+
+  /**
+   * A refused mint must never read as success: the organizer sees the server's reason, and the detail
+   * still refreshes so it cannot show a payment that was never opened.
+   */
+  it("Mint_Refused_ToastsTheServerReasonAndStillRefreshesTheDetail", async () => {
+    api.createEventInvoicePaymentLink.mockRejectedValue(new Error("Invoice not found."))
+    const { queryClient, invalidateSpy } = createObservedClient()
+    const { result } = renderHook(() => useCreateEventInvoicePaymentLink("invoice-1"), {
+      wrapper: createWrapper(queryClient),
+    })
+
+    await expect(result.current.mutateAsync()).rejects.toThrow()
+
+    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ type: "error" }))
+    expect(toastMock).not.toHaveBeenCalledWith(expect.objectContaining({ type: "success" }))
+    await waitFor(() => expect(invalidatedKeys(invalidateSpy)).toContainEqual(["event-invoice-detail", "invoice-1"]))
   })
 })

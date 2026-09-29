@@ -865,6 +865,15 @@ export async function cancelEventInvoice(invoiceUniqueId: string): Promise<void>
   await client.post(API_ROUTES.eventInvoiceCancel(invoiceUniqueId))
 }
 
+export interface EventInvoicePaymentLink {
+  clientSecret: string
+  paymentIntentId: string
+}
+
+export async function createEventInvoicePaymentLink(invoiceUniqueId: string): Promise<EventInvoicePaymentLink> {
+  return { clientSecret: invoiceUniqueId, paymentIntentId: "" }
+}
+
 export interface EventInvoiceBuyerUpdate {
   buyerName: string
   buyerEmail: string
