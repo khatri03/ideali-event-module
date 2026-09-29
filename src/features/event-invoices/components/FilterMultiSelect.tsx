@@ -1,4 +1,4 @@
-import ReactSelect from "react-select"
+import ReactSelect, { type StylesConfig } from "react-select"
 
 export interface FilterSelectOption {
   value: string
@@ -13,12 +13,12 @@ interface FilterMultiSelectProps {
   onChange: (values: string[]) => void
 }
 
-/**
- * The menu is portalled to the body because the invoice table below has sticky headers of its own -
- * an inline menu paints underneath them and the last options become unreadable.
- */
-const MENU_ABOVE_STICKY_HEADERS = {
-  menuPortal: (base: Record<string, unknown>) => ({ ...base, zIndex: 1400 }),
+const SELECT_STYLES: StylesConfig<FilterSelectOption, true> = {
+  // The menu is portalled to the body because the invoice table below has sticky headers of its own -
+  // an inline menu paints underneath them and the last options become unreadable.
+  menuPortal: (base) => ({ ...base, zIndex: 1400 }),
+  control: (base) => ({ ...base, minHeight: 44 }),
+  multiValueRemove: (base) => ({ ...base, minWidth: 44, minHeight: 44, justifyContent: "center", cursor: "pointer" }),
 }
 
 export function FilterMultiSelect({
@@ -42,7 +42,7 @@ export function FilterMultiSelect({
       isClearable
       menuPortalTarget={typeof document === "undefined" ? undefined : document.body}
       menuPosition="fixed"
-      styles={MENU_ABOVE_STICKY_HEADERS}
+      styles={SELECT_STYLES}
     />
   )
 }
