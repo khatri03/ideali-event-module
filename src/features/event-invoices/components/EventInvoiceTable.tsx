@@ -83,7 +83,9 @@ export function EventInvoiceTable({
   const returnState = useInvoiceListReturnState()
 
   return (
-    <Box overflow="auto" maxH={TABLE_MAX_HEIGHT}>
+    // The overdue pill's visually hidden text is absolutely positioned; without a positioned scroller it escapes the
+    // overflow box and widens the whole page on narrow screens.
+    <Box overflow="auto" maxH={TABLE_MAX_HEIGHT} position="relative">
       <Table.Root
         variant="line"
         size="sm"

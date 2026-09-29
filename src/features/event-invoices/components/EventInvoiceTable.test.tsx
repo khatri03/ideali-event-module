@@ -102,3 +102,18 @@ describe("EventInvoiceTable", () => {
     expect(screen.queryByText(/Overdue/)).toBeNull()
   })
 })
+
+describe("EventInvoiceTable scroll container", () => {
+  /**
+   * The table's scroll box is a positioned ancestor, so the overdue pill's absolutely positioned screen-reader
+   * text is clipped by it; otherwise that text escapes the box and scrolls the whole page sideways on a phone.
+   */
+  it("ScrollContainer_IsPositioned_SoHiddenOverdueTextStaysInsideIt", () => {
+    renderTable([CUSTOM_OVERDUE_INVOICE])
+
+    const scrollContainer = screen.getByRole("table").parentElement as HTMLElement
+
+    expect(getComputedStyle(scrollContainer).overflow).toBe("auto")
+    expect(getComputedStyle(scrollContainer).position).toBe("relative")
+  })
+})
