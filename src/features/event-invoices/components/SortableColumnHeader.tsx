@@ -26,6 +26,7 @@ export function SortableColumnHeader({
       type="button"
       variant="plain"
       h="auto"
+      minH="11"
       p={0}
       w="full"
       fontSize="inherit"

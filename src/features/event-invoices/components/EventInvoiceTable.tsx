@@ -105,25 +105,25 @@ export function EventInvoiceTable({
                 Actions
               </Text>
             </Table.ColumnHeader>
-            <Table.ColumnHeader px={4} py={3}>
+            <Table.ColumnHeader px={4} py={0}>
               <SortableColumnHeader label="Invoice No" column="invoiceNo" activeSortBy={sortBy} activeSortOrder={sortOrder} onSortChange={onSortChange} />
             </Table.ColumnHeader>
-            <Table.ColumnHeader px={4} py={3}>
+            <Table.ColumnHeader px={4} py={0}>
               <SortableColumnHeader label="Event" column="eventName" activeSortBy={sortBy} activeSortOrder={sortOrder} onSortChange={onSortChange} />
             </Table.ColumnHeader>
-            <Table.ColumnHeader px={4} py={3}>
+            <Table.ColumnHeader px={4} py={0}>
               <SortableColumnHeader label="Buyer" column="buyerName" activeSortBy={sortBy} activeSortOrder={sortOrder} onSortChange={onSortChange} />
             </Table.ColumnHeader>
-            <Table.ColumnHeader px={4} py={3} textAlign="center">
+            <Table.ColumnHeader px={4} py={0} textAlign="center">
               <SortableColumnHeader label="Status" column="invoiceStatus" activeSortBy={sortBy} activeSortOrder={sortOrder} onSortChange={onSortChange} justify="center" />
             </Table.ColumnHeader>
-            <Table.ColumnHeader px={4} py={3} textAlign="center">
+            <Table.ColumnHeader px={4} py={0} textAlign="center">
               <SortableColumnHeader label="Date" column="invoiceDateUtc" activeSortBy={sortBy} activeSortOrder={sortOrder} onSortChange={onSortChange} justify="center" />
             </Table.ColumnHeader>
-            <Table.ColumnHeader px={4} py={3} textAlign="center">
+            <Table.ColumnHeader px={4} py={0} textAlign="center">
               <SortableColumnHeader label="Due date" column="dueDateUtc" activeSortBy={sortBy} activeSortOrder={sortOrder} onSortChange={onSortChange} justify="center" />
             </Table.ColumnHeader>
-            <Table.ColumnHeader px={4} py={3} textAlign="right">
+            <Table.ColumnHeader px={4} py={0} textAlign="right">
               <SortableColumnHeader label="Total" column="totalAmount" activeSortBy={sortBy} activeSortOrder={sortOrder} onSortChange={onSortChange} justify="flex-end" />
             </Table.ColumnHeader>
           </Table.Row>
