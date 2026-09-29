@@ -99,8 +99,15 @@ export function useCancelEventInvoice(invoiceUniqueId: string) {
   return useInvoiceSettlementAction(invoiceUniqueId, cancelEventInvoice, "Invoice cancelled.")
 }
 
+/** Opening a payment records a pending payment on the invoice, so the detail refreshes either way. */
 export function useCreateEventInvoicePaymentLink(invoiceUniqueId: string) {
-  return useMutation({ mutationFn: () => createEventInvoicePaymentLink(invoiceUniqueId) })
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => createEventInvoicePaymentLink(invoiceUniqueId),
+    onSuccess: () => toaster.create({ type: "success", title: "Online payment opened for this invoice." }),
+    onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] }),
+  })
 }
 
 export function useAddEventInvoiceNote(invoiceUniqueId: string) {

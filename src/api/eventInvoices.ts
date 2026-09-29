@@ -870,8 +870,27 @@ export interface EventInvoicePaymentLink {
   paymentIntentId: string
 }
 
+// Casing is collapsed first, then both values must be non-empty: a mint without them cannot be paid against.
+const paymentLinkSchema = z
+  .object({
+    ClientSecret: dual(z.string()),
+    clientSecret: dual(z.string()),
+    PaymentIntentId: dual(z.string()),
+    paymentIntentId: dual(z.string()),
+  })
+  .transform((raw) => ({
+    clientSecret: raw.ClientSecret ?? raw.clientSecret,
+    paymentIntentId: raw.PaymentIntentId ?? raw.paymentIntentId,
+  }))
+  .pipe(z.object({ clientSecret: z.string().min(1), paymentIntentId: z.string().min(1) }))
+
+/**
+ * Opens a Stripe card payment for a custom invoice. The client secret confirms a card against this one
+ * intent, so it is a payment credential: callers hand it to a Stripe surface and never render it.
+ */
 export async function createEventInvoicePaymentLink(invoiceUniqueId: string): Promise<EventInvoicePaymentLink> {
-  return { clientSecret: invoiceUniqueId, paymentIntentId: "" }
+  const response = await client.post<unknown>(API_ROUTES.eventInvoicePaymentLink(invoiceUniqueId))
+  return paymentLinkSchema.parse(parseServicePayload(response.data) ?? {})
 }
 
 export interface EventInvoiceBuyerUpdate {
