@@ -82,7 +82,7 @@ export function ConfirmDialog({
                 </Flex>
   
                 <Dialog.CloseTrigger asChild>
-                  <CloseButton aria-label="Close confirmation" cursor="pointer" />
+                  <CloseButton size="lg" aria-label="Close confirmation" cursor="pointer" />
                 </Dialog.CloseTrigger>
               </Flex>
             </Box>
