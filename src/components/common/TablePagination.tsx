@@ -38,9 +38,6 @@ export function TablePagination({
   const isLastPage = page >= resolvedTotalPages
   const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
   const rangeEnd = Math.min(page * pageSize, total)
-  // Compact on desktop where a mouse drives it; a full 44px touch target on mobile.
-  const controlHeight = { base: "44px", md: size === "sm" ? "32px" : "36px" }
-  const controlMinW = { base: "44px", md: "auto" }
   const fontSize = size === "sm" ? "xs" : "sm"
 
   return (
@@ -69,7 +66,7 @@ export function TablePagination({
               value={String(pageSize)}
               onChange={(event) => onPageSizeChange(Number(event.currentTarget.value))}
               aria-label={`${pluralLabel} per page`}
-              h={controlHeight}
+              h="11"
               minW="86px"
               borderRadius="10px"
               bg="card.bg"
@@ -100,7 +97,7 @@ export function TablePagination({
               value={String(page)}
               onChange={(event) => onPageChange(Number(event.currentTarget.value))}
               aria-label="Go to page"
-              h={controlHeight}
+              h="11"
               minW="86px"
               borderRadius="10px"
               bg="card.bg"
@@ -127,8 +124,8 @@ export function TablePagination({
           <Button
             variant="outline"
             size="sm"
-            h={controlHeight}
-            minW={controlMinW}
+            h="11"
+            minW="11"
             borderRadius="10px"
             cursor={isFirstPage ? "not-allowed" : "pointer"}
             disabled={isFirstPage}
@@ -139,8 +136,8 @@ export function TablePagination({
           <Button
             variant="outline"
             size="sm"
-            h={controlHeight}
-            minW={controlMinW}
+            h="11"
+            minW="11"
             borderRadius="10px"
             cursor={isLastPage ? "not-allowed" : "pointer"}
             disabled={isLastPage}
