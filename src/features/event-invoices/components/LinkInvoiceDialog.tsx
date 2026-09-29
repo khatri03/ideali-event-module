@@ -173,7 +173,7 @@ export function LinkInvoiceDialog({ open, invoiceUniqueId, onClose }: LinkInvoic
                   Link to an existing invoice
                 </Dialog.Title>
                 <Dialog.CloseTrigger asChild>
-                  <CloseButton aria-label="Close link invoice" cursor="pointer" />
+                  <CloseButton size="lg" aria-label="Close link invoice" cursor="pointer" />
                 </Dialog.CloseTrigger>
               </Flex>
             </Box>
