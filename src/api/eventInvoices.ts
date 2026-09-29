@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { client } from "@/api/client"
+import { assertSuccess, ServiceResponseError } from "@/api/serviceResponse"
 import type { ServiceResponse } from "@/api/types"
 import { API_ROUTES } from "@/utils/routes"
 import { endOfLocalDayAsUtcIso, startOfLocalDayAsUtcIso } from "@/utils/utcDates"
@@ -870,6 +871,8 @@ export interface EventInvoicePaymentLink {
   paymentIntentId: string
 }
 
+const PAYMENT_LINK_FAILED_MESSAGE = "Online payment could not be started. Please try again."
+
 // Casing is collapsed first, then both values must be non-empty: a mint without them cannot be paid against.
 const paymentLinkSchema = z
   .object({
@@ -890,7 +893,14 @@ const paymentLinkSchema = z
  */
 export async function createEventInvoicePaymentLink(invoiceUniqueId: string): Promise<EventInvoicePaymentLink> {
   const response = await client.post<unknown>(API_ROUTES.eventInvoicePaymentLink(invoiceUniqueId))
-  return paymentLinkSchema.parse(parseServicePayload(response.data) ?? {})
+  assertSuccess(response.data, PAYMENT_LINK_FAILED_MESSAGE)
+
+  const minted = paymentLinkSchema.safeParse(parseServicePayload(response.data) ?? {})
+  if (!minted.success) {
+    throw new ServiceResponseError(PAYMENT_LINK_FAILED_MESSAGE)
+  }
+
+  return minted.data
 }
 
 export interface EventInvoiceBuyerUpdate {
