@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Button, Flex, Link, Text } from "@chakra-ui/react"
-import { Unlink } from "lucide-react"
+import { Link2, Unlink } from "lucide-react"
 import { Link as RouterLink } from "react-router-dom"
 import type { EventInvoiceLinkedReference } from "@/api/eventInvoices"
 import { ConfirmDialog } from "@/components/common"
@@ -8,11 +8,14 @@ import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 import { useUnlinkEventInvoice } from "../hooks/useEventInvoices"
 import { InvoiceDetailPanel, InvoiceMutedLine } from "./InvoiceDetailPanel"
+import { LinkInvoiceDialog } from "./LinkInvoiceDialog"
 
 interface LinkedInvoicePanelProps {
   invoiceUniqueId: string
   invoiceNo: string
   linkedInvoice: EventInvoiceLinkedReference | null
+  /** Presentation only: whether to offer starting a link. The server refuses a disallowed link regardless. */
+  canLink: boolean
 }
 
 interface LinkedInvoiceReferenceProps {
@@ -98,14 +101,44 @@ function LinkedInvoiceReference({ invoiceUniqueId, invoiceNo, linkedInvoice }: L
   )
 }
 
-/** The reciprocal link reference on an invoice's detail, with the one mutation it admits: removing it. */
-export function LinkedInvoicePanel({ invoiceUniqueId, invoiceNo, linkedInvoice }: LinkedInvoicePanelProps) {
+function LinkInvoiceAction({ invoiceUniqueId }: { invoiceUniqueId: string }) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+
+  return (
+    <>
+      <Button
+        data-print-hide
+        colorPalette="brand"
+        color="white"
+        bg="brand.gradient"
+        borderRadius="14px"
+        minH="11"
+        px={4}
+        mt={2}
+        w={{ base: "full", sm: "auto" }}
+        alignSelf="flex-start"
+        cursor="pointer"
+        onClick={() => setIsDialogOpen(true)}
+      >
+        <Link2 size={16} />
+        Link invoice
+      </Button>
+      <LinkInvoiceDialog open={isDialogOpen} invoiceUniqueId={invoiceUniqueId} onClose={() => setIsDialogOpen(false)} />
+    </>
+  )
+}
+
+/** The reciprocal link reference on an invoice's detail: start a link, follow it, or remove it. */
+export function LinkedInvoicePanel({ invoiceUniqueId, invoiceNo, linkedInvoice, canLink }: LinkedInvoicePanelProps) {
   return (
     <InvoiceDetailPanel title="Linked invoice">
       {linkedInvoice ? (
         <LinkedInvoiceReference invoiceUniqueId={invoiceUniqueId} invoiceNo={invoiceNo} linkedInvoice={linkedInvoice} />
       ) : (
-        <InvoiceMutedLine>Not linked to another invoice.</InvoiceMutedLine>
+        <>
+          <InvoiceMutedLine>Not linked to another invoice.</InvoiceMutedLine>
+          {canLink ? <LinkInvoiceAction invoiceUniqueId={invoiceUniqueId} /> : null}
+        </>
       )}
     </InvoiceDetailPanel>
   )

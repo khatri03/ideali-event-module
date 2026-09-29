@@ -22,14 +22,18 @@ const LINKED: EventInvoiceLinkedReference = {
   invoiceStatusLabel: "Pending Payment",
 }
 
-function renderPanel(linkedInvoice: EventInvoiceLinkedReference | null = LINKED) {
-  return render(
+function panel(linkedInvoice: EventInvoiceLinkedReference | null, canLink: boolean) {
+  return (
     <ChakraProvider value={system}>
       <MemoryRouter>
-        <LinkedInvoicePanel invoiceUniqueId="invoice-1" invoiceNo="INV-2001" linkedInvoice={linkedInvoice} />
+        <LinkedInvoicePanel invoiceUniqueId="invoice-1" invoiceNo="INV-2001" linkedInvoice={linkedInvoice} canLink={canLink} />
       </MemoryRouter>
-    </ChakraProvider>,
+    </ChakraProvider>
   )
+}
+
+function renderPanel(linkedInvoice: EventInvoiceLinkedReference | null = LINKED, canLink = true) {
+  return render(panel(linkedInvoice, canLink))
 }
 
 function mockUnlinkState(state: { isPending?: boolean; error?: unknown } = {}) {
@@ -62,6 +66,28 @@ describe("LinkedInvoicePanel", () => {
 
     expect(screen.getByText("Not linked to another invoice.")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: /remove link/i })).not.toBeInTheDocument()
+  })
+
+  /** An unlinked invoice that may start a link offers the Link invoice action. */
+  it("NotLinkedAndLinkable_OffersLinkInvoice", () => {
+    renderPanel(null, true)
+
+    expect(screen.getByRole("button", { name: /link invoice/i })).toBeInTheDocument()
+  })
+
+  /** A cancelled invoice is refused by the server, so the action is not offered at all rather than failing on click. */
+  it("NotLinkedButNotLinkable_OffersNoLinkAction", () => {
+    renderPanel(null, false)
+
+    expect(screen.getByText("Not linked to another invoice.")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /link invoice/i })).not.toBeInTheDocument()
+  })
+
+  /** A link is singular: an invoice already linked offers removal, never a second link. */
+  it("AlreadyLinked_OffersNoLinkInvoiceAction", () => {
+    renderPanel(LINKED, true)
+
+    expect(screen.queryByRole("button", { name: /^link invoice$/i })).not.toBeInTheDocument()
   })
 
   /** Removing a link is destructive, so nothing is sent until the organizer confirms a dialog naming both invoices. */
@@ -103,13 +129,7 @@ describe("LinkedInvoicePanel", () => {
     await waitFor(() => expect(unlinkMock).toHaveBeenCalled())
 
     mockUnlinkState({ error: new Error("refused") })
-    rerender(
-      <ChakraProvider value={system}>
-        <MemoryRouter>
-          <LinkedInvoicePanel invoiceUniqueId="invoice-1" invoiceNo="INV-2001" linkedInvoice={LINKED} />
-        </MemoryRouter>
-      </ChakraProvider>,
-    )
+    rerender(panel(LINKED, true))
 
     expect(screen.getByRole("alertdialog")).toBeInTheDocument()
     expect(within(screen.getByRole("alertdialog")).getByText("An unexpected error occurred.")).toBeInTheDocument()

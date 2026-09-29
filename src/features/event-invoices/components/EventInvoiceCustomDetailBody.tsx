@@ -44,6 +44,7 @@ export function EventInvoiceCustomDetailBody({ invoice }: EventInvoiceCustomDeta
           invoiceUniqueId={invoice.invoiceUniqueId}
           invoiceNo={invoice.invoiceNo}
           linkedInvoice={invoice.linkedInvoice}
+          canLink={invoice.invoiceStatus !== "Cancelled"}
         />
 
         <CustomInvoiceLineItemsTable lineItems={invoice.customLineItems} currencySymbol={invoice.currencySymbol} />

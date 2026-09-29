@@ -121,6 +121,7 @@ export default function EventInvoiceDetailPage() {
                 invoiceUniqueId={invoice.invoiceUniqueId}
                 invoiceNo={invoice.invoiceNo}
                 linkedInvoice={invoice.linkedInvoice}
+                canLink={false}
               />
             </Box>
           ) : null}

@@ -367,6 +367,15 @@ describe("EventInvoiceDetailPage", () => {
     renderPage()
 
     expect(screen.getByText("Not linked to another invoice.")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Link invoice" })).toBeInTheDocument()
+  })
+
+  /** The server refuses a link from a cancelled invoice, so its detail does not offer one. */
+  it("CustomInvoiceCancelled_OffersNoLinkInvoiceAction", () => {
+    loaded({ ...CUSTOM_INVOICE, invoiceStatus: "Cancelled", invoiceStatusLabel: "Cancelled" })
+    renderPage()
+
+    expect(screen.queryByRole("button", { name: "Link invoice" })).not.toBeInTheDocument()
   })
 
   it("StillLoading_ShowsTheSkeletonRatherThanAnEmptyPage", () => {
