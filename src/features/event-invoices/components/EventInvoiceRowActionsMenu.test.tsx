@@ -53,6 +53,7 @@ async function openMenu(overrides: Partial<EventInvoiceListItem> = {}) {
 }
 
 describe("EventInvoiceRowActionsMenu", () => {
+  /** View is always offered and opens the row's own invoice, whatever state the invoice is in. */
   it("View_Clicked_OpensTheInvoiceDetail", async () => {
     const { onOpenDetail } = await openMenu()
 
@@ -61,6 +62,7 @@ describe("EventInvoiceRowActionsMenu", () => {
     expect(onOpenDetail).toHaveBeenCalledWith(expect.objectContaining({ invoiceUniqueId: "invoice-1" }))
   })
 
+  /** Edit is offered when the server marks the invoice editable, and it opens that invoice's form. */
   it("CanEdit_ShowsEdit_AndFiresHandler", async () => {
     const { onEdit } = await openMenu({ canEdit: true })
 
@@ -69,6 +71,7 @@ describe("EventInvoiceRowActionsMenu", () => {
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ invoiceUniqueId: "invoice-1" }))
   })
 
+  /** Edit is offered only when the server marks the invoice editable, so a paid invoice can never be reopened from the list. */
   it("CannotEdit_HidesEdit", async () => {
     await openMenu({ canEdit: false })
 
@@ -76,6 +79,7 @@ describe("EventInvoiceRowActionsMenu", () => {
     expect(screen.queryByText("Edit")).toBeNull()
   })
 
+  /** Mark as paid is offered on an invoice still owed money, and it hands the row to the confirmation. */
   it("CanMarkAsPaid_ShowsMarkAsPaid_AndFiresHandler", async () => {
     const { onMarkPaid } = await openMenu({ canMarkAsPaid: true })
 
@@ -84,6 +88,7 @@ describe("EventInvoiceRowActionsMenu", () => {
     expect(onMarkPaid).toHaveBeenCalledWith(expect.objectContaining({ invoiceUniqueId: "invoice-1" }))
   })
 
+  /** A settled or closed invoice never offers Mark as paid, so it cannot be recorded as paid twice. */
   it("CannotMarkAsPaid_HidesMarkAsPaid", async () => {
     await openMenu({ canMarkAsPaid: false })
 
@@ -91,6 +96,7 @@ describe("EventInvoiceRowActionsMenu", () => {
     expect(screen.queryByText("Mark as paid")).toBeNull()
   })
 
+  /** Cancel is offered on an invoice still owed money, and it hands the row to the destructive confirmation. */
   it("CanCancel_ShowsCancel_AndFiresHandler", async () => {
     const { onCancel } = await openMenu({ canCancel: true })
 
@@ -99,6 +105,7 @@ describe("EventInvoiceRowActionsMenu", () => {
     expect(onCancel).toHaveBeenCalledWith(expect.objectContaining({ invoiceUniqueId: "invoice-1" }))
   })
 
+  /** A paid or already-closed invoice never offers Cancel, so a settled record cannot be closed unpaid. */
   it("CannotCancel_HidesCancel", async () => {
     await openMenu({ canCancel: false })
 

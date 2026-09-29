@@ -302,6 +302,10 @@ describe("EventInvoiceDetailPage", () => {
     expect(screen.getByRole("button", { name: /add note/i })).toHaveAttribute("data-print-hide")
   })
 
+  /**
+   * A custom invoice renders its own body - billed company, structured buyer, category, free-text lines and
+   * the overdue due date - and never the ticket-delivery body it has no tickets for.
+   */
   it("CustomInvoice_RendersTheCustomBodyWithLinesCategoryAndOverdueDueDate", () => {
     loaded(CUSTOM_INVOICE)
     renderPage()
@@ -316,6 +320,7 @@ describe("EventInvoiceDetailPage", () => {
     expect(screen.queryByRole("heading", { name: /ticket delivery/i })).not.toBeInTheDocument()
   })
 
+  /** A ticket invoice keeps the ticket body it shipped with; the custom branch must not replace it. */
   it("TicketInvoice_StillRendersTheTicketBodyNotTheCustomOne", () => {
     loaded()
     renderPage()
@@ -324,6 +329,7 @@ describe("EventInvoiceDetailPage", () => {
     expect(screen.queryByText("Grand total")).not.toBeInTheDocument()
   })
 
+  /** A custom invoice that is paid or cancelled needs no payable link, so the panel says so instead of offering one. */
   it("CustomInvoicePaidOrCancelled_CollapsesThePayableLinkToItsStatusSentence", () => {
     loaded({ ...CUSTOM_INVOICE, invoiceStatus: "Paid", invoiceStatusLabel: "Paid", isOverdue: false })
     renderPage()
@@ -331,6 +337,7 @@ describe("EventInvoiceDetailPage", () => {
     expect(screen.getByText(/no payable link is needed/i)).toBeInTheDocument()
   })
 
+  /** Notes still work on a custom invoice through the shipped dialog, so the custom branch does not drop the note trail. */
   it("AddNoteAfterCreation_SavesTheNoteAndKeepsTheShippedDialog", async () => {
     loaded(CUSTOM_INVOICE)
     const user = userEvent.setup()
