@@ -1,5 +1,6 @@
-import { Box, Flex, Link, Stack, Text } from "@chakra-ui/react"
-import { ExternalLink } from "lucide-react"
+import { Link as RouterLink } from "react-router-dom"
+import { Box, Button, Flex, Link, Stack, Text } from "@chakra-ui/react"
+import { ExternalLink, Pencil } from "lucide-react"
 import { EMPTY_VALUE } from "@/utils/format"
 import { APP_ROUTES } from "@/utils/routes"
 import { formatUtcDate } from "@/utils/utcDates"
@@ -14,6 +15,8 @@ interface EventInvoiceDetailHeaderProps {
   invoiceDateUtc: string
   eventUniqueId: string
   eventName: string
+  /** Where the invoice's edit form lives, or undefined when the server says it can no longer be edited. */
+  editHref?: string
   onBack: () => void
 }
 
@@ -25,6 +28,7 @@ export function EventInvoiceDetailHeader({
   invoiceDateUtc,
   eventUniqueId,
   eventName,
+  editHref,
   onBack,
 }: EventInvoiceDetailHeaderProps) {
   return (
@@ -38,7 +42,27 @@ export function EventInvoiceDetailHeader({
           gap={2}
         >
           <BackToInvoicesButton onBack={onBack} tone="onBrand" />
-          <PrintInvoiceButton tone="onBrand" />
+          <Flex direction={{ base: "column", sm: "row" }} gap={2}>
+            {editHref ? (
+              <Button
+                asChild
+                variant="ghost"
+                color="whiteAlpha.900"
+                borderRadius="14px"
+                minH="11"
+                px={3}
+                w={{ base: "full", sm: "auto" }}
+                cursor="pointer"
+                _hover={{ bg: "whiteAlpha.200" }}
+              >
+                <RouterLink to={editHref}>
+                  <Pencil size={16} aria-hidden="true" />
+                  Edit
+                </RouterLink>
+              </Button>
+            ) : null}
+            <PrintInvoiceButton tone="onBrand" />
+          </Flex>
         </Flex>
 
         <Stack direction={{ base: "column", md: "row" }} justify="space-between" gap={4}>

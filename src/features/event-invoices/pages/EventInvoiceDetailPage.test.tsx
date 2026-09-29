@@ -378,6 +378,28 @@ describe("EventInvoiceDetailPage", () => {
     expect(screen.queryByRole("button", { name: "Link invoice" })).not.toBeInTheDocument()
   })
 
+  /**
+   * An editable custom invoice offers Edit from its own detail, so the organizer who lands here after
+   * creating it can correct a mistake without going back to the list.
+   */
+  it("CustomInvoiceEditable_OffersEditThatOpensItsForm", () => {
+    loaded(CUSTOM_INVOICE)
+    renderPage()
+
+    expect(screen.getByRole("link", { name: /^edit$/i })).toHaveAttribute(
+      "href",
+      APP_ROUTES.eventInvoices.customEdit(INVOICE.invoiceUniqueId),
+    )
+  })
+
+  /** Once the server says an invoice is no longer editable - paid, part-paid or cancelled - its detail offers no Edit. */
+  it("CustomInvoiceNotEditable_OffersNoEdit", () => {
+    loaded({ ...CUSTOM_INVOICE, canEdit: false, invoiceStatus: "Paid", invoiceStatusLabel: "Paid", isOverdue: false })
+    renderPage()
+
+    expect(screen.queryByRole("link", { name: /^edit$/i })).not.toBeInTheDocument()
+  })
+
   it("StillLoading_ShowsTheSkeletonRatherThanAnEmptyPage", () => {
     useEventInvoiceDetailMock.mockReturnValue({
       data: undefined,
