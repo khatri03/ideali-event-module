@@ -18,6 +18,7 @@ const ITEM_STYLE = {
   color: "text.secondary",
   px: 3,
   py: 2,
+  minH: "11",
   gap: 2.5,
   cursor: "pointer",
 } as const
@@ -35,10 +36,10 @@ export function EventInvoiceRowActionsMenu({
       <Menu.Trigger asChild>
         <Button
           variant="outline"
-          w="10"
-          h="10"
-          minW="10"
-          minH="10"
+          w="11"
+          h="11"
+          minW="11"
+          minH="11"
           p={0}
           borderRadius="full"
           borderColor="border.subtle"
