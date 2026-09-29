@@ -117,3 +117,25 @@ describe("EventInvoiceTable scroll container", () => {
     expect(getComputedStyle(scrollContainer).position).toBe("relative")
   })
 })
+
+describe("EventInvoiceTable buyer cell", () => {
+  /** A custom invoice bills a company, so its row leads with that company and still names the contact under it. */
+  it("CustomInvoiceWithCompany_ShowsCompanyAboveTheContactPerson", () => {
+    renderTable([CUSTOM_OVERDUE_INVOICE])
+
+    const company = screen.getByText("Northwind Traders")
+    const contact = screen.getByText("Sohail Ahmed")
+
+    expect(company.compareDocumentPosition(contact) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByText("sohail@example.com")).toBeInTheDocument()
+  })
+
+  /** A ticket order names only its buyer, so its row shows the person and email with no company line. */
+  it("TicketInvoiceWithoutCompany_ShowsOnlyTheBuyerAndEmail", () => {
+    renderTable([INVOICE])
+
+    const cell = screen.getByText("Sohail Ahmed").parentElement as HTMLElement
+
+    expect(cell).toHaveTextContent(/^Sohail Ahmedsohail@example\.com$/)
+  })
+})

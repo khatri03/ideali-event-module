@@ -9,6 +9,7 @@ import { formatUtcDate } from "@/utils/utcDates"
 import { useInvoiceListReturnState } from "../hooks/useInvoiceListReturnState"
 import { EventInvoiceRowActionsMenu } from "./EventInvoiceRowActionsMenu"
 import { EventInvoiceStatusBadge } from "./EventInvoiceStatusBadge"
+import { InvoiceBuyerCell } from "./InvoiceBuyerCell"
 import { PaymentPills } from "./PaymentPills"
 import { SortableColumnHeader } from "./SortableColumnHeader"
 import { TableBodySkeleton } from "./TableBodySkeleton"
@@ -186,14 +187,7 @@ export function EventInvoiceTable({
                     </Text>
                   </Table.Cell>
                   <Table.Cell px={4} py={4}>
-                    <Text fontSize="sm" fontWeight="600" color="text.primary">
-                      {invoice.buyerName || EMPTY_VALUE}
-                    </Text>
-                    {invoice.buyerEmail ? (
-                      <Text fontSize="xs" color="text.secondary">
-                        {invoice.buyerEmail}
-                      </Text>
-                    ) : null}
+                    <InvoiceBuyerCell companyName={invoice.companyName} buyerName={invoice.buyerName} buyerEmail={invoice.buyerEmail} />
                   </Table.Cell>
                   <Table.Cell px={4} py={4} textAlign="center">
                     <EventInvoiceStatusBadge

@@ -4,6 +4,7 @@ import type { EventInvoiceListItem } from "@/api/eventInvoices"
 import { EMPTY_VALUE } from "@/utils/format"
 import { formatUtcDate } from "@/utils/utcDates"
 import { EventInvoiceStatusBadge } from "./EventInvoiceStatusBadge"
+import { InvoiceBuyerCell } from "./InvoiceBuyerCell"
 import { TableBodySkeleton } from "./TableBodySkeleton"
 
 interface LinkInvoicePickerTableProps {
@@ -101,14 +102,7 @@ export function LinkInvoicePickerTable({
                       </Text>
                     </Table.Cell>
                     <Table.Cell px={3} py={3}>
-                      <Text fontSize="sm" color="text.primary">
-                        {invoice.buyerName || EMPTY_VALUE}
-                      </Text>
-                      {invoice.buyerEmail ? (
-                        <Text fontSize="xs" color="text.secondary">
-                          {invoice.buyerEmail}
-                        </Text>
-                      ) : null}
+                      <InvoiceBuyerCell companyName={invoice.companyName} buyerName={invoice.buyerName} buyerEmail={invoice.buyerEmail} />
                     </Table.Cell>
                     <Table.Cell px={3} py={3}>
                       <Text fontSize="sm" color="text.secondary" whiteSpace="nowrap">

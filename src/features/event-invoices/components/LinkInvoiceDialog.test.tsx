@@ -98,6 +98,25 @@ describe("LinkInvoiceDialog", () => {
     expect(screen.queryByRole("radio", { name: "Select invoice INV-2001" })).not.toBeInTheDocument()
   })
 
+  /** A candidate that bills a company is recognised by that company, with the contact person underneath. */
+  it("CandidateWithCompany_ShowsTheCompanyAboveTheBuyer", async () => {
+    mockQuery({ data: pageOf([CURRENT, { ...OTHER, companyName: "Contoso Ltd" }]) })
+    render(dialog())
+
+    const row = (await screen.findByRole("radio", { name: "Select invoice INV-2002" })).closest("tr") as HTMLElement
+
+    expect(within(row).getByText("Contoso Ltd").nextElementSibling).toHaveTextContent("Jane Doe")
+  })
+
+  /** A candidate with no company reads as its buyer alone, exactly as ticket orders always have. */
+  it("CandidateWithoutCompany_ShowsOnlyTheBuyer", async () => {
+    render(dialog())
+
+    const row = (await screen.findByRole("radio", { name: "Select invoice INV-2002" })).closest("tr") as HTMLElement
+
+    expect(within(row).getByText("Jane Doe").nextElementSibling).toBeNull()
+  })
+
   /** Results come from the server's own search, so typing must reach the list request rather than filter locally. */
   it("Searching_SendsTheDebouncedTermToTheServerFromPageOne", async () => {
     const user = userEvent.setup()
