@@ -3,6 +3,7 @@ import type { EventInvoiceDetail } from "@/api/eventInvoices"
 import { CustomInvoiceDetailPanels } from "./CustomInvoiceDetailPanels"
 import { CustomInvoiceLineItemsTable } from "./CustomInvoiceLineItemsTable"
 import { EventInvoiceBuyerPanel } from "./EventInvoiceBuyerPanel"
+import { LinkedInvoicePanel } from "./LinkedInvoicePanel"
 
 interface EventInvoiceCustomDetailBodyProps {
   invoice: EventInvoiceDetail
@@ -37,6 +38,12 @@ export function EventInvoiceCustomDetailBody({ invoice }: EventInvoiceCustomDeta
           specialNotes={invoice.specialNotes}
           invoiceStatus={invoice.invoiceStatus}
           invoiceStatusLabel={invoice.invoiceStatusLabel}
+        />
+
+        <LinkedInvoicePanel
+          invoiceUniqueId={invoice.invoiceUniqueId}
+          invoiceNo={invoice.invoiceNo}
+          linkedInvoice={invoice.linkedInvoice}
         />
 
         <CustomInvoiceLineItemsTable lineItems={invoice.customLineItems} currencySymbol={invoice.currencySymbol} />

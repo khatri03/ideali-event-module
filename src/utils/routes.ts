@@ -395,6 +395,9 @@ export const API_ROUTES = {
     `/api/organizer/events/invoices/custom/${invoiceUniqueId}`,
   eventInvoiceCustomForEdit: (invoiceUniqueId: string) =>
     `/api/organizer/events/invoices/custom/${invoiceUniqueId}/edit`,
+  /** POST links the invoice to another; DELETE removes that link from both sides. */
+  eventInvoiceCustomLink: (invoiceUniqueId: string) =>
+    `/api/organizer/events/invoices/custom/${invoiceUniqueId}/link`,
   stripePublicCredentials: (paymentAccountUniqueId: string) =>
     `/api/public/stripe/${paymentAccountUniqueId}/credentials`,
   sessionAttendees: (eventUniqueId: string, sessionUniqueId: string) =>

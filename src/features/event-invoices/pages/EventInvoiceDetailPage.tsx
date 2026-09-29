@@ -12,6 +12,7 @@ import { EventInvoiceNotesSection } from "../components/EventInvoiceNotesSection
 import { EventInvoiceSettlementActions } from "../components/EventInvoiceSettlementActions"
 import { EventInvoiceLineItemsSection } from "../components/EventInvoiceLineItemsSection"
 import { EventInvoicePaymentHistorySection } from "../components/EventInvoicePaymentHistorySection"
+import { LinkedInvoicePanel } from "../components/LinkedInvoicePanel"
 import { EventInvoiceDetailPageSkeleton } from "./EventInvoiceDetailPage.skeleton"
 import "../print.css"
 
@@ -112,6 +113,17 @@ export default function EventInvoiceDetailPage() {
       ) : (
         <>
           <EventInvoiceMoneyPanel invoice={invoice} />
+
+          {/* A ticket invoice is only ever the target of a link, so it shows the reference but offers no way to start one. */}
+          {invoice.linkedInvoice ? (
+            <Box border="1px solid" borderColor="border.subtle" borderRadius="20px" bg="card.bg" boxShadow="card" p={{ base: 4, md: 7 }}>
+              <LinkedInvoicePanel
+                invoiceUniqueId={invoice.invoiceUniqueId}
+                invoiceNo={invoice.invoiceNo}
+                linkedInvoice={invoice.linkedInvoice}
+              />
+            </Box>
+          ) : null}
 
           <EventInvoiceLineItemsSection
             invoiceUniqueId={invoice.invoiceUniqueId}

@@ -84,6 +84,7 @@ const INVOICE: EventInvoiceDetail = {
   canResendTickets: true,
   canEditBuyer: true,
   canEdit: false,
+  linkedInvoice: null,
 }
 
 const CUSTOM_INVOICE: Partial<EventInvoiceDetail> = {
@@ -341,6 +342,31 @@ describe("EventInvoiceDetailPage", () => {
     await user.click(within(dialog).getByRole("button", { name: /save note/i }))
 
     expect(addNoteMock).toHaveBeenCalledWith("Chased head office.")
+  })
+
+  /** A link is reciprocal: the ticket invoice a custom invoice points at must show the reference back. */
+  it("TicketInvoiceThatIsLinked_ShowsTheReferenceBackToTheCustomInvoice", () => {
+    loaded({ linkedInvoice: { invoiceUniqueId: "invoice-9", invoiceNo: "INV-9009", invoiceStatusLabel: "Pending Payment" } })
+    renderPage()
+
+    expect(screen.getByText("Linked invoice")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "INV-9009" })).toHaveAttribute("href", "/organizer/events/invoices/invoice-9")
+  })
+
+  /** An unlinked ticket invoice is never a link source, so it carries no empty link panel to clutter the page. */
+  it("TicketInvoiceNotLinked_ShowsNoLinkedInvoicePanel", () => {
+    loaded()
+    renderPage()
+
+    expect(screen.queryByText("Linked invoice")).not.toBeInTheDocument()
+  })
+
+  /** A standalone custom invoice still shows the panel, so the organizer knows it can be linked. */
+  it("CustomInvoiceNotLinked_ShowsTheNotLinkedSentence", () => {
+    loaded(CUSTOM_INVOICE)
+    renderPage()
+
+    expect(screen.getByText("Not linked to another invoice.")).toBeInTheDocument()
   })
 
   it("StillLoading_ShowsTheSkeletonRatherThanAnEmptyPage", () => {

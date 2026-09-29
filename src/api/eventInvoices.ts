@@ -239,7 +239,18 @@ const chargeSchema = z.object({
   displayOrder: dual(integer()),
 })
 
+const linkedInvoiceSchema = z.object({
+  InvoiceUniqueId: dual(z.string()),
+  invoiceUniqueId: dual(z.string()),
+  InvoiceNo: dual(z.string()),
+  invoiceNo: dual(z.string()),
+  InvoiceStatusLabel: dual(z.string()),
+  invoiceStatusLabel: dual(z.string()),
+})
+
 const detailSchema = z.object({
+  LinkedInvoice: linkedInvoiceSchema.nullable().optional(),
+  linkedInvoice: linkedInvoiceSchema.nullable().optional(),
   InvoiceUniqueId: dual(z.string()),
   invoiceUniqueId: dual(z.string()),
   InvoiceNo: dual(z.string()),
@@ -438,6 +449,13 @@ export interface EventInvoiceNote {
   createdOnUtc: string
 }
 
+/** The other half of a reciprocal link - enough to name the linked invoice and open it. */
+export interface EventInvoiceLinkedReference {
+  invoiceUniqueId: string
+  invoiceNo: string
+  invoiceStatusLabel: string
+}
+
 export interface EventInvoiceDetail {
   invoiceUniqueId: string
   invoiceNo: string
@@ -489,6 +507,8 @@ export interface EventInvoiceDetail {
   canEditBuyer: boolean
   /** True only for a Custom invoice still awaiting its first payment; ticket invoices are never editable here. */
   canEdit: boolean
+  /** The invoice this one is linked to, or null when it stands alone. */
+  linkedInvoice: EventInvoiceLinkedReference | null
 }
 
 export interface EventInvoiceFilterOption {
@@ -677,6 +697,18 @@ function normalizeInvoiceNote(raw: z.infer<typeof invoiceNoteSchema>): EventInvo
   }
 }
 
+function normalizeLinkedInvoice(raw: z.infer<typeof linkedInvoiceSchema> | null | undefined): EventInvoiceLinkedReference | null {
+  const invoiceUniqueId = raw?.InvoiceUniqueId ?? raw?.invoiceUniqueId
+  if (!raw || !invoiceUniqueId) {
+    return null
+  }
+  return {
+    invoiceUniqueId,
+    invoiceNo: raw.InvoiceNo ?? raw.invoiceNo ?? "",
+    invoiceStatusLabel: raw.InvoiceStatusLabel ?? raw.invoiceStatusLabel ?? "",
+  }
+}
+
 function normalizeDetail(raw: z.infer<typeof detailSchema>): EventInvoiceDetail {
   const invoiceStatus = raw.InvoiceStatus ?? raw.invoiceStatus ?? ""
   const invoiceType = raw.InvoiceType ?? raw.invoiceType ?? "Regular"
@@ -725,6 +757,7 @@ function normalizeDetail(raw: z.infer<typeof detailSchema>): EventInvoiceDetail 
       BUYER_EDITABLE_STATUSES.includes(invoiceStatus),
     ),
     canEdit: actionAllowance(raw.CanEdit ?? raw.canEdit, invoiceType === "Custom" && invoiceStatus === "PendingPayment"),
+    linkedInvoice: normalizeLinkedInvoice(raw.LinkedInvoice ?? raw.linkedInvoice),
   }
 }
 
@@ -905,6 +938,14 @@ export async function updateEventCustomInvoice(
   payload: UpdateEventCustomInvoicePayload,
 ): Promise<void> {
   await client.put(API_ROUTES.eventInvoiceCustomUpdate(invoiceUniqueId), payload)
+}
+
+export async function linkEventInvoice(invoiceUniqueId: string, targetInvoiceUniqueId: string): Promise<void> {
+  await client.post(API_ROUTES.eventInvoiceCustomLink(invoiceUniqueId), { targetInvoiceUniqueId })
+}
+
+export async function unlinkEventInvoice(invoiceUniqueId: string): Promise<void> {
+  await client.delete(API_ROUTES.eventInvoiceCustomLink(invoiceUniqueId))
 }
 
 export interface EventCustomInvoiceLineForEdit {

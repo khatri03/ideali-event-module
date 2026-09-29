@@ -1,13 +1,15 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query"
 import {
   addEventInvoiceNote,
   cancelEventInvoice,
   fetchEventInvoiceDetail,
   fetchEventInvoiceFilterOptions,
   fetchEventInvoices,
+  linkEventInvoice,
   markEventInvoiceAsPaid,
   resendEventInvoice,
   resendEventInvoiceTicket,
+  unlinkEventInvoice,
   updateEventInvoiceBuyer,
   updateEventInvoiceAttendee,
   type EventInvoiceAttendeeUpdate,
@@ -137,6 +139,38 @@ export function useResendEventInvoiceLineItem(invoiceUniqueId: string) {
     onSuccess: () => toaster.create({ type: "success", title: "Tickets queued for resend." }),
     onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] }),
+  })
+}
+
+/**
+ * A link is written on both invoices, so each side's detail and the list behind them are refreshed -
+ * otherwise the other invoice keeps showing the reference it had before.
+ */
+function invalidateLinkedPair(queryClient: QueryClient, invoiceUniqueIds: string[]) {
+  invoiceUniqueIds.forEach((invoiceUniqueId) =>
+    queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] }),
+  )
+  queryClient.invalidateQueries({ queryKey: ["event-invoices"] })
+}
+
+export function useLinkEventInvoice(invoiceUniqueId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (targetInvoiceUniqueId: string) => linkEventInvoice(invoiceUniqueId, targetInvoiceUniqueId),
+    onSuccess: () => toaster.create({ type: "success", title: "Invoices linked." }),
+    onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
+    onSettled: (_result, _error, targetInvoiceUniqueId) =>
+      invalidateLinkedPair(queryClient, [invoiceUniqueId, targetInvoiceUniqueId]),
+  })
+}
+
+export function useUnlinkEventInvoice(invoiceUniqueId: string, linkedInvoiceUniqueId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => unlinkEventInvoice(invoiceUniqueId),
+    onSuccess: () => toaster.create({ type: "success", title: "Link removed." }),
+    onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
+    onSettled: () => invalidateLinkedPair(queryClient, [invoiceUniqueId, linkedInvoiceUniqueId]),
   })
 }
 
