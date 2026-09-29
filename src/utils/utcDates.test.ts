@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { endOfLocalDayAsUtcIso, parseUtcDateTime, startOfLocalDayAsUtcIso } from "./utcDates"
+import { endOfLocalDayAsUtcIso, formatUtcDate, parseUtcDateTime, startOfLocalDayAsUtcIso } from "./utcDates"
 
 describe("parseUtcDateTime", () => {
   /** The API omits the offset; reading that as local time is what shifted invoice dates by a day. */
@@ -41,5 +41,17 @@ describe("local day boundaries", () => {
   it.each(["", "   ", "01/03/2026", "2026-3-1"])("MalformedCalendarDate_ReturnsNull", (value) => {
     expect(startOfLocalDayAsUtcIso(value)).toBeNull()
     expect(endOfLocalDayAsUtcIso(value)).toBeNull()
+  })
+})
+
+describe("formatUtcDate", () => {
+  /** Invoice screens show one short date form, read as UTC so a late-evening invoice does not shift a day. */
+  it("ApiTimestamp_IsShownAsTheShortCalendarDate", () => {
+    expect(formatUtcDate("2026-03-02T12:00:00")).toBe("Mar 2, 2026")
+  })
+
+  /** An unreadable timestamp yields nothing, so each screen picks its own placeholder instead of "Invalid Date". */
+  it.each([undefined, null, "", "not a date"])("UnusableValue_ReturnsNull", (value) => {
+    expect(formatUtcDate(value)).toBeNull()
   })
 })

@@ -1,12 +1,11 @@
 import { Box, Flex, Link, Table, Text } from "@chakra-ui/react"
-import { format } from "date-fns"
 import { AlertTriangle } from "lucide-react"
 import { Link as RouterLink } from "react-router-dom"
 import type { EventInvoiceListItem, EventInvoiceSortBy, EventInvoiceSortOrder } from "@/api/eventInvoices"
 import { TextPill } from "@/components/common"
 import { APP_ROUTES } from "@/utils/routes"
 import { EMPTY_VALUE, formatCurrency } from "@/utils/format"
-import { parseUtcDateTime } from "@/utils/utcDates"
+import { formatUtcDate } from "@/utils/utcDates"
 import { useInvoiceListReturnState } from "../hooks/useInvoiceListReturnState"
 import { EventInvoiceRowActionsMenu } from "./EventInvoiceRowActionsMenu"
 import { EventInvoiceStatusBadge } from "./EventInvoiceStatusBadge"
@@ -28,11 +27,6 @@ interface EventInvoiceTableProps {
   onSend: (invoice: EventInvoiceListItem) => void
 }
 
-function formatDate(value: string) {
-  const parsed = parseUtcDateTime(value)
-  return parsed ? format(parsed, "MMM d, yyyy") : EMPTY_VALUE
-}
-
 const COLUMN_COUNT = 8
 
 function DueDateCell({ invoice }: { invoice: EventInvoiceListItem }) {
@@ -44,7 +38,7 @@ function DueDateCell({ invoice }: { invoice: EventInvoiceListItem }) {
     )
   }
 
-  const dueDate = formatDate(invoice.dueDateUtc)
+  const dueDate = formatUtcDate(invoice.dueDateUtc) ?? EMPTY_VALUE
 
   if (!invoice.isOverdue) {
     return (
@@ -208,7 +202,7 @@ export function EventInvoiceTable({
                   </Table.Cell>
                   <Table.Cell px={4} py={4} textAlign="center">
                     <Text fontSize="sm" color="text.secondary">
-                      {formatDate(invoice.invoiceDateUtc)}
+                      {formatUtcDate(invoice.invoiceDateUtc) ?? EMPTY_VALUE}
                     </Text>
                   </Table.Cell>
                   <Table.Cell px={4} py={4} textAlign="center">

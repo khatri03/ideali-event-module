@@ -1,9 +1,8 @@
 import { useState } from "react"
 import { Box, Flex, HStack, Separator, SimpleGrid, Stack, Text } from "@chakra-ui/react"
-import { format } from "date-fns"
 import type { EventInvoiceDetail, EventInvoiceLineItem } from "@/api/eventInvoices"
 import { EMPTY_VALUE, formatCurrency, formatCurrencyMagnitude, moneySign, subtractMoney } from "@/utils/format"
-import { parseUtcDateTime } from "@/utils/utcDates"
+import { formatUtcDate } from "@/utils/utcDates"
 import { extractApiError } from "@/utils/errors"
 import { useResendEventInvoiceLineItem } from "../hooks/useEventInvoices"
 import { AttendeeDetailModal } from "./AttendeeDetailModal"
@@ -42,11 +41,6 @@ function balanceStanding(balanceAmount: string): BalanceStanding {
     return { tone: "credit", label: "Credit due to buyer" }
   }
   return { tone: "settled", label: "Settled in full" }
-}
-
-function formatDate(value: string) {
-  const parsed = parseUtcDateTime(value)
-  return parsed ? format(parsed, "MMM d, yyyy") : EMPTY_VALUE
 }
 
 function TotalRow({
@@ -155,7 +149,7 @@ export function EventInvoiceMoneyPanel({ invoice }: EventInvoiceMoneyPanelProps)
               {ticketCount} {ticketCount === 1 ? "ticket" : "tickets"} across {invoice.lineItems.length}{" "}
               {invoice.lineItems.length === 1 ? "line" : "lines"}
             </Text>
-            <InvoiceMutedLine>Issued {formatDate(invoice.invoiceDateUtc)}</InvoiceMutedLine>
+            <InvoiceMutedLine>Issued {formatUtcDate(invoice.invoiceDateUtc) ?? EMPTY_VALUE}</InvoiceMutedLine>
             {invoice.discountCouponCode ? (
               <InvoiceMutedLine>
                 Coupon{" "}

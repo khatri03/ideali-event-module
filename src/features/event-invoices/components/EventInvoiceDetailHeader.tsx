@@ -1,9 +1,8 @@
 import { Box, Flex, Link, Stack, Text } from "@chakra-ui/react"
 import { ExternalLink } from "lucide-react"
-import { format } from "date-fns"
 import { EMPTY_VALUE } from "@/utils/format"
 import { APP_ROUTES } from "@/utils/routes"
-import { parseUtcDateTime } from "@/utils/utcDates"
+import { formatUtcDate } from "@/utils/utcDates"
 import { BackToInvoicesButton } from "./BackToInvoicesButton"
 import { EventInvoiceStatusBadge } from "./EventInvoiceStatusBadge"
 import { PrintInvoiceButton } from "./PrintInvoiceButton"
@@ -16,11 +15,6 @@ interface EventInvoiceDetailHeaderProps {
   eventUniqueId: string
   eventName: string
   onBack: () => void
-}
-
-function formatIssuedDate(value: string) {
-  const parsed = parseUtcDateTime(value)
-  return parsed ? format(parsed, "MMM d, yyyy") : EMPTY_VALUE
 }
 
 /** The page's one identity band: which order this is and what state it is in. */
@@ -77,7 +71,7 @@ export function EventInvoiceDetailHeader({
           <Stack align={{ base: "flex-start", md: "flex-end" }} gap={2} flexShrink={0}>
             <EventInvoiceStatusBadge status={invoiceStatus} label={invoiceStatusLabel} />
             <Text fontSize="sm" color="whiteAlpha.800">
-              Issued {formatIssuedDate(invoiceDateUtc)}
+              Issued {formatUtcDate(invoiceDateUtc) ?? EMPTY_VALUE}
             </Text>
           </Stack>
         </Stack>

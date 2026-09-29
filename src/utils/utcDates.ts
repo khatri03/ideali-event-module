@@ -1,3 +1,5 @@
+import { format } from "date-fns"
+
 /**
  * The API serialises UTC timestamps with no offset suffix (`2026-03-02T02:00:00`), which `new Date`
  * would read as local time. Every timestamp from the API must come through here.
@@ -8,6 +10,12 @@ export function parseUtcDateTime(value: string | null | undefined) {
   const hasTimeZone = /([zZ]|[+-]\d{2}:?\d{2})$/.test(value)
   const date = new Date(hasTimeZone ? value : `${value}Z`)
   return Number.isNaN(date.getTime()) ? null : date
+}
+
+/** An API timestamp as the short calendar date the invoice screens show, or null when it cannot be read. */
+export function formatUtcDate(value: string | null | undefined): string | null {
+  const parsed = parseUtcDateTime(value)
+  return parsed ? format(parsed, "MMM d, yyyy") : null
 }
 
 const CALENDAR_DATE = /^(\d{4})-(\d{2})-(\d{2})$/

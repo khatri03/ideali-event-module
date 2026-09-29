@@ -1,6 +1,5 @@
 import { SimpleGrid, Text } from "@chakra-ui/react"
-import { format } from "date-fns"
-import { parseUtcDateTime } from "@/utils/utcDates"
+import { formatUtcDate } from "@/utils/utcDates"
 import { InvoiceDetailPanel, InvoiceMutedLine } from "./InvoiceDetailPanel"
 
 interface CustomInvoiceDetailPanelsProps {
@@ -15,11 +14,6 @@ interface CustomInvoiceDetailPanelsProps {
 
 const SETTLED_STATUSES = ["Paid", "Cancelled"]
 
-function formatDueDate(value: string | null): string | null {
-  const parsed = parseUtcDateTime(value)
-  return parsed ? format(parsed, "MMM d, yyyy") : null
-}
-
 /** The custom-invoice read panels: category, due date with overdue emphasis, special notes and the payable-link placeholder. */
 export function CustomInvoiceDetailPanels({
   categoryName,
@@ -29,7 +23,7 @@ export function CustomInvoiceDetailPanels({
   invoiceStatus,
   invoiceStatusLabel,
 }: CustomInvoiceDetailPanelsProps) {
-  const dueDate = formatDueDate(dueDateUtc)
+  const dueDate = formatUtcDate(dueDateUtc)
   const isSettled = SETTLED_STATUSES.includes(invoiceStatus)
 
   return (
