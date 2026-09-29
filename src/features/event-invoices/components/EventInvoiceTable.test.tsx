@@ -66,6 +66,7 @@ function renderTable(invoices: EventInvoiceListItem[] = [INVOICE]) {
 }
 
 describe("EventInvoiceTable", () => {
+  /** The invoice number is a real link to its detail, so it can be opened in a new tab or reached by keyboard. */
   it("InvoiceNumber_RendersAsAnchorToInvoiceDetail", () => {
     renderTable()
 
@@ -74,6 +75,7 @@ describe("EventInvoiceTable", () => {
     expect(link).toHaveAttribute("href", "/organizer/events/invoices/invoice-1")
   })
 
+  /** Only a custom invoice carries the Custom marker, so ticket orders are never mistaken for sponsor billing. */
   it("CustomInvoice_ShowsCustomMarker_TicketInvoiceDoesNot", () => {
     renderTable([CUSTOM_OVERDUE_INVOICE, INVOICE])
 
@@ -82,15 +84,21 @@ describe("EventInvoiceTable", () => {
     expect(markers).toHaveLength(1)
   })
 
-  it("OverdueCustomInvoice_ShowsOverduePillWithAriaLabel", () => {
+  /**
+   * The overdue state is spoken, not only shown: the pill's text reads "Overdue, due ..." so a screen-reader
+   * user hears what a sighted user sees from its colour and icon.
+   */
+  it("OverdueCustomInvoice_AnnouncesOverdueWithItsDueDate", () => {
     renderTable([CUSTOM_OVERDUE_INVOICE])
 
-    expect(screen.getByLabelText("Overdue — due Jan 1, 2026")).toBeTruthy()
+    expect(screen.getByText("Overdue, due").parentElement).toHaveTextContent("Overdue, due Jan 1, 2026")
   })
 
+  /** An invoice that is not overdue shows its due date without any overdue wording, visible or spoken. */
   it("NonOverdueInvoice_HasNoOverduePill", () => {
-    renderTable([INVOICE])
+    renderTable([{ ...CUSTOM_OVERDUE_INVOICE, isOverdue: false }])
 
-    expect(screen.queryByLabelText(/Overdue/)).toBeNull()
+    expect(screen.getByText("Jan 1, 2026")).toBeInTheDocument()
+    expect(screen.queryByText(/Overdue/)).toBeNull()
   })
 })

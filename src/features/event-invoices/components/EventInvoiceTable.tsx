@@ -1,4 +1,4 @@
-import { Box, Flex, Link, Table, Text } from "@chakra-ui/react"
+import { Box, Flex, Link, Table, Text, VisuallyHidden } from "@chakra-ui/react"
 import { AlertTriangle } from "lucide-react"
 import { Link as RouterLink } from "react-router-dom"
 import type { EventInvoiceListItem, EventInvoiceSortBy, EventInvoiceSortOrder } from "@/api/eventInvoices"
@@ -58,10 +58,10 @@ function DueDateCell({ invoice }: { invoice: EventInvoiceListItem }) {
       borderRadius="999px"
       bg="status.warning.bg"
       color="status.warning.fg"
-      aria-label={`Overdue — due ${dueDate}`}
     >
       <AlertTriangle size={14} aria-hidden />
       <Text as="span" fontSize="sm" fontWeight="700">
+        <VisuallyHidden>Overdue, due </VisuallyHidden>
         {dueDate}
       </Text>
     </Flex>
