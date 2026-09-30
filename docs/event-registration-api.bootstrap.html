@@ -1591,8 +1591,8 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
               <tr><td><code>invoiceNo</code></td><td>string</td><td>The invoice number the buyer was sent.</td></tr>
               <tr><td><code>eventName</code></td><td>string</td><td>The event the invoice was raised for.</td></tr>
               <tr><td><code>payState</code></td><td>string</td><td><code>Payable</code>, <code>Paid</code>, <code>Cancelled</code> or <code>Unavailable</code>. Decided by the server; the page renders from it and never infers it from amounts.</td></tr>
-              <tr><td><code>currencyCode</code></td><td>string?</td><td>ISO currency the amounts are in.</td></tr>
-              <tr><td><code>outstandingAmount</code></td><td>decimal</td><td>What is still owed. Sizes the Payment Element only; the charged amount is always the server's.</td></tr>
+              <tr><td><code>currencyCode</code></td><td>string?</td><td>The event Stripe account's currency as Stripe writes it, lower-case ISO (<code>usd</code>, <code>cad</code>). Null when the event has no usable Stripe account.</td></tr>
+              <tr><td><code>outstandingAmount</code></td><td>decimal</td><td>What is still owed; <code>0</code> once the invoice is <code>Paid</code> or <code>Cancelled</code>. Sizes the Payment Element only; the charged amount is always the server's.</td></tr>
               <tr><td><code>paymentAccountUniqueId</code></td><td>guid?</td><td>Non-null only when <code>Payable</code>. Passed to the Stripe credentials call to mount the card fields.</td></tr>
               <tr><td><code>lineItems[]</code></td><td>array</td><td>Each billed line as <code>description</code> and <code>amount</code>.</td></tr>
             </tbody>
