@@ -1,6 +1,5 @@
 import { z } from "zod"
 import { client } from "@/api/client"
-import { assertSuccess, ServiceResponseError } from "@/api/serviceResponse"
 import type { ServiceResponse } from "@/api/types"
 import { API_ROUTES } from "@/utils/routes"
 import { endOfLocalDayAsUtcIso, startOfLocalDayAsUtcIso } from "@/utils/utcDates"
@@ -864,43 +863,6 @@ export async function markEventInvoiceAsPaid(invoiceUniqueId: string): Promise<v
 
 export async function cancelEventInvoice(invoiceUniqueId: string, cancellationNotes: string): Promise<void> {
   await client.post(API_ROUTES.eventInvoiceCancel(invoiceUniqueId), { note: cancellationNotes.trim() })
-}
-
-export interface EventInvoicePaymentLink {
-  clientSecret: string
-  paymentIntentId: string
-}
-
-const PAYMENT_LINK_FAILED_MESSAGE = "Online payment could not be started. Please try again."
-
-// Casing is collapsed first, then both values must be non-empty: a mint without them cannot be paid against.
-const paymentLinkSchema = z
-  .object({
-    ClientSecret: dual(z.string()),
-    clientSecret: dual(z.string()),
-    PaymentIntentId: dual(z.string()),
-    paymentIntentId: dual(z.string()),
-  })
-  .transform((raw) => ({
-    clientSecret: raw.ClientSecret ?? raw.clientSecret,
-    paymentIntentId: raw.PaymentIntentId ?? raw.paymentIntentId,
-  }))
-  .pipe(z.object({ clientSecret: z.string().min(1), paymentIntentId: z.string().min(1) }))
-
-/**
- * Opens a Stripe card payment for a custom invoice. The client secret confirms a card against this one
- * intent, so it is a payment credential: callers hand it to a Stripe surface and never render it.
- */
-export async function createEventInvoicePaymentLink(invoiceUniqueId: string): Promise<EventInvoicePaymentLink> {
-  const response = await client.post<unknown>(API_ROUTES.eventInvoicePaymentLink(invoiceUniqueId))
-  assertSuccess(response.data, PAYMENT_LINK_FAILED_MESSAGE)
-
-  const minted = paymentLinkSchema.safeParse(parseServicePayload(response.data) ?? {})
-  if (!minted.success) {
-    throw new ServiceResponseError(PAYMENT_LINK_FAILED_MESSAGE)
-  }
-
-  return minted.data
 }
 
 export interface EventInvoiceBuyerUpdate {
