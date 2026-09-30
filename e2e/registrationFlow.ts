@@ -9,7 +9,7 @@ export const REGISTER_PATH = `/events/${EVENT_UNIQUE_ID}/register`
  * Stripe.js floats a developer tools frame over the page when it runs against test keys. Buyers
  * never see it, but it covers the wizard footer and swallows clicks meant for the primary action.
  */
-async function hideStripeDeveloperTools(page: Page) {
+export async function hideStripeDeveloperTools(page: Page) {
   await page.addStyleTag({
     content:
       'iframe[title="Stripe developer tools frame"] { pointer-events: none !important; visibility: hidden !important; width: 0 !important; height: 0 !important; }',
