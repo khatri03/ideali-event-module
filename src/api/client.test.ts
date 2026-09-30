@@ -16,6 +16,7 @@ vi.mock("@/lib/turnstile", () => ({
 const { client } = await import("./client")
 
 const CART_ID = "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
+const INVOICE_ID = "8c1f6b2a-1d3e-4f5a-9b7c-2e4d6f8a0b1c"
 
 let sentRequests: InternalAxiosRequestConfig[] = []
 
@@ -60,6 +61,19 @@ describe("api client bot challenge", () => {
     await client.post(`/api/events/cart/${CART_ID}/answers/files`, new FormData())
 
     expect(sentHeader()).toBe("0.minted-token")
+  })
+
+  it("Challenge_StartingAnInvoicePayment_SendsAFreshTurnstileToken", async () => {
+    await client.post(`/api/events/invoices/${INVOICE_ID}/pay`, {})
+
+    expect(sentHeader()).toBe("0.minted-token")
+  })
+
+  it("Challenge_ReadingAnInvoicePaySummary_SendsNoToken", async () => {
+    await client.get(`/api/events/invoices/${INVOICE_ID}/pay`)
+
+    expect(sentHeader()).toBeNull()
+    expect(turnstileMocks.requestTurnstileToken).not.toHaveBeenCalled()
   })
 
   it("Challenge_SubmittingAnswers_SendsNoTokenBecauseTheCartIdAlreadyProvesTheChallenge", async () => {
