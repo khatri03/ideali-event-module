@@ -594,6 +594,87 @@ for (const width of WIDTHS) {
   })
 }
 
+const PAY_PAGE_URL = new RegExp(`^https?://[^\\s]+/events/invoices/${CUSTOM_ID}/pay$`)
+
+/** The "Payable link" panel, found by its title so the checks stay scoped to the section under test. */
+const payableLinkPanel = (page: Page) => page.getByText("Payable link", { exact: true }).locator("xpath=ancestor::div[2]")
+
+/** A paid custom invoice as the server reports it: nothing outstanding and closed to online payment. */
+const PAID_PAYABLE_LINK_DETAIL = customDetail({
+  invoiceStatus: "Paid",
+  invoiceStatusLabel: "Paid",
+  balanceAmount: null,
+  isOverdue: false,
+  canMarkAsPaid: false,
+  canCancel: false,
+  canEdit: false,
+  canPayOnline: false,
+})
+
+for (const width of WIDTHS) {
+  /**
+   * Phase 04 UAT, payable link. The organizer gets paid online only by handing the buyer this URL, so at every
+   * width it must read in full as this invoice's pay page, leave the page from sliding sideways, and keep its
+   * actions big enough to tap.
+   */
+  test(`Phase 04 UAT: the payable link shows the buyer pay URL without page overflow at ${width}px`, async ({ page }) => {
+    await mockShell(page)
+    await mockDetail(page, CUSTOM_ID, () => customDetail({ canPayOnline: true }))
+    await openDetail(page, CUSTOM_ID, "INV-C-100", width)
+
+    const panel = payableLinkPanel(page)
+    const url = panel.getByText(PAY_PAGE_URL)
+    await expect(url).toBeVisible()
+    await expect(panel.getByRole("link", { name: "Open payment page" })).toHaveAttribute("href", (await url.textContent()) ?? "")
+    await expect(panel.getByRole("button", { name: "Copy link" })).toBeEnabled()
+
+    expect(await findHorizontalPageOverflow(page), "the payable link makes the page scroll sideways").toEqual([])
+    const undersized = await findUndersizedTargets(panel, false)
+    expect.soft(undersized, `payable link controls under ${MIN_TOUCH_TARGET_PX}px at ${width}px`).toEqual([])
+
+    if (SCREENSHOT_WIDTHS.includes(width)) {
+      await panel.screenshot({ path: `${PHASE_04_SCREENSHOT_DIR}/payable-link-${width}.png` })
+    }
+  })
+}
+
+/** Phase 04 UAT, copy. The copied text is what the sponsor receives, so it must be the pay URL shown and the organizer must be told. */
+test("Phase 04 UAT: copying the payable link puts the pay URL on the clipboard and confirms", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"])
+  await mockShell(page)
+  await mockDetail(page, CUSTOM_ID, () => customDetail({ canPayOnline: true }))
+  await openDetail(page, CUSTOM_ID, "INV-C-100", 375)
+
+  const panel = payableLinkPanel(page)
+  const shownUrl = await panel.getByText(PAY_PAGE_URL).textContent()
+  await panel.getByRole("button", { name: "Copy link" }).click()
+
+  await expect(page.getByText("Payment link copied.")).toBeVisible()
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(shownUrl)
+})
+
+for (const width of SCREENSHOT_WIDTHS) {
+  /**
+   * Phase 04 UAT, not payable. A paid invoice has nothing left to collect, so both actions are visibly unavailable
+   * with a not-allowed cursor and the panel says why, instead of offering a link the server would refuse.
+   */
+  test(`Phase 04 UAT: a paid custom invoice disables the payable link actions and says why at ${width}px`, async ({ page }) => {
+    await mockShell(page)
+    await mockDetail(page, PAID_CUSTOM_ID, () => ({ ...PAID_PAYABLE_LINK_DETAIL, invoiceUniqueId: PAID_CUSTOM_ID, invoiceNo: "INV-C-102" }))
+    await openDetail(page, PAID_CUSTOM_ID, "INV-C-102", width)
+
+    const panel = payableLinkPanel(page)
+    await expect(panel.getByText("This invoice is Paid, so it can't be paid online.")).toBeVisible()
+    await expect(panel.getByText(/\/events\/invoices\/.+\/pay/)).toHaveCount(0)
+    for (const name of ["Open payment page", "Copy link"]) {
+      const action = panel.getByRole("button", { name })
+      await expect(action).toBeDisabled()
+      await expect(action).toHaveCSS("cursor", "not-allowed")
+    }
+    expect(await findHorizontalPageOverflow(page), "the paid payable link makes the page scroll sideways").toEqual([])
+  })
+}
+
 /**
  * Phase 04 UAT, mark paid. A sponsor who paid outside the gateway is settled by hand: the organizer confirms,
  * the server is asked once, and the refreshed detail reads Paid with no settlement actions left to take.
