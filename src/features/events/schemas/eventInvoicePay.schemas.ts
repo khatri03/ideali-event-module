@@ -30,3 +30,11 @@ export type EventInvoicePaySummary = z.infer<typeof eventInvoicePaySummarySchema
 export function normalizeEventInvoicePaySummary(payload: unknown): EventInvoicePaySummary {
   return eventInvoicePaySummarySchema.parse(payload)
 }
+
+/** The only field the pay form owns: every card field lives in Stripe's Payment Element. */
+export const invoicePayFormSchema = z.object({
+  cardHolderName: z.string().trim().min(1, "Enter the name on the card.").max(100, "Keep the name under 100 characters."),
+})
+
+export type InvoicePayFormValues = z.infer<typeof invoicePayFormSchema>
+
