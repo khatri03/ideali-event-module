@@ -331,12 +331,24 @@ describe("EventInvoiceDetailPage", () => {
     expect(screen.queryByText("Grand total")).not.toBeInTheDocument()
   })
 
-  /** A custom invoice that is paid or cancelled needs no payable link, so the panel says so instead of offering one. */
-  it("CustomInvoicePaidOrCancelled_CollapsesThePayableLinkToItsStatusSentence", () => {
-    loaded({ ...CUSTOM_INVOICE, invoiceStatus: "Paid", invoiceStatusLabel: "Paid", isOverdue: false })
+  /**
+   * The link the organizer shares must land on this invoice's buyer pay page at the configured buyer origin;
+   * a link built from the organizer's own address or another invoice's id sends the sponsor nowhere useful.
+   */
+  it("CustomInvoicePayable_ShowsThePayPageUrlForThisInvoiceAtTheBuyerOrigin", () => {
+    loaded(CUSTOM_INVOICE)
     renderPage()
 
-    expect(screen.getByText(/no payable link is needed/i)).toBeInTheDocument()
+    expect(screen.getByText("https://pay.example.test/events/invoices/invoice-1/pay")).toBeInTheDocument()
+  })
+
+  /** A paid custom invoice has nothing left to collect, so the panel says why instead of handing out a pay link. */
+  it("CustomInvoicePaid_OffersNoPayLinkAndSaysWhy", () => {
+    loaded({ ...CUSTOM_INVOICE, invoiceStatus: "Paid", invoiceStatusLabel: "Paid", isOverdue: false, canPayOnline: false })
+    renderPage()
+
+    expect(screen.getByText("This invoice is Paid, so it can't be paid online.")).toBeInTheDocument()
+    expect(screen.queryByText(/\/events\/invoices\/invoice-1\/pay/)).not.toBeInTheDocument()
   })
 
   /** Notes still work on a custom invoice through the shipped dialog, so the custom branch does not drop the note trail. */

@@ -1,5 +1,7 @@
 import { Box, Stack } from "@chakra-ui/react"
 import type { EventInvoiceDetail } from "@/api/eventInvoices"
+import { buildBuyerAppUrl } from "@/lib/appConfig"
+import { APP_ROUTES } from "@/utils/routes"
 import { CustomInvoiceDetailPanels } from "./CustomInvoiceDetailPanels"
 import { CustomInvoiceLineItemsTable } from "./CustomInvoiceLineItemsTable"
 import { EventInvoiceBuyerPanel } from "./EventInvoiceBuyerPanel"
@@ -38,6 +40,8 @@ export function EventInvoiceCustomDetailBody({ invoice }: EventInvoiceCustomDeta
           specialNotes={invoice.specialNotes}
           invoiceStatus={invoice.invoiceStatus}
           invoiceStatusLabel={invoice.invoiceStatusLabel}
+          payPageUrl={buildBuyerAppUrl(APP_ROUTES.eventInvoicePay(invoice.invoiceUniqueId))}
+          canPayOnline={invoice.canPayOnline}
         />
 
         <LinkedInvoicePanel

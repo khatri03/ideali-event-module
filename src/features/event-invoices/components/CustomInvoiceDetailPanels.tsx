@@ -1,5 +1,6 @@
 import { SimpleGrid, Text } from "@chakra-ui/react"
 import { formatUtcDate } from "@/utils/utcDates"
+import { EventInvoicePayableLinkSection } from "./EventInvoicePayableLinkSection"
 import { InvoiceDetailPanel, InvoiceMutedLine } from "./InvoiceDetailPanel"
 
 interface CustomInvoiceDetailPanelsProps {
@@ -10,11 +11,11 @@ interface CustomInvoiceDetailPanelsProps {
   specialNotes: string | null
   invoiceStatus: string
   invoiceStatusLabel: string
+  payPageUrl: string
+  canPayOnline: boolean
 }
 
-const SETTLED_STATUSES = ["Paid", "Cancelled"]
-
-/** The custom-invoice read panels: category, due date with overdue emphasis, special notes and the payable-link placeholder. */
+/** The custom-invoice read panels: category, due date with overdue emphasis, special notes and the buyer's payable link. */
 export function CustomInvoiceDetailPanels({
   categoryName,
   dueDateUtc,
@@ -22,9 +23,10 @@ export function CustomInvoiceDetailPanels({
   specialNotes,
   invoiceStatus,
   invoiceStatusLabel,
+  payPageUrl,
+  canPayOnline,
 }: CustomInvoiceDetailPanelsProps) {
   const dueDate = formatUtcDate(dueDateUtc)
-  const isSettled = SETTLED_STATUSES.includes(invoiceStatus)
 
   return (
     <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
@@ -63,13 +65,12 @@ export function CustomInvoiceDetailPanels({
         )}
       </InvoiceDetailPanel>
 
-      <InvoiceDetailPanel title="Payable link">
-        <InvoiceMutedLine>
-          {isSettled
-            ? `This invoice is ${invoiceStatusLabel} — no payable link is needed.`
-            : "A payment link will be available once online payment is enabled for this invoice."}
-        </InvoiceMutedLine>
-      </InvoiceDetailPanel>
+      <EventInvoicePayableLinkSection
+        payPageUrl={payPageUrl}
+        canPayOnline={canPayOnline}
+        invoiceStatus={invoiceStatus}
+        invoiceStatusLabel={invoiceStatusLabel}
+      />
     </SimpleGrid>
   )
 }
