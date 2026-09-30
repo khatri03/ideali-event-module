@@ -546,6 +546,15 @@
           shares <code>/events/invoices/{invoiceUniqueId}/pay</code>, and these two anonymous calls are
           everything that page needs.
         </p>
+        <p>
+          The organizer gets that link from the <em>Payable link</em> panel on the invoice detail, which offers
+          Open and Copy only when the detail's <code>canPayOnline</code> is true (<code>EventInvoiceDetailDto.CanPayOnline</code>,
+          the same rule that decides <code>payState</code>). The panel builds the URL from
+          <code>VITE_BUYER_APP_BASE_URL</code> and never calls the pay endpoints, so no client secret reaches the
+          organizer's screen. That variable is required at build time: <code>vite build</code> and <code>vite dev</code>
+          refuse to start when it is missing, relative or not http(s), because every shared link would otherwise
+          point at the wrong host. Set it to the public origin buyers open in every build environment.
+        </p>
         <div class="table-responsive">
           <table class="table table-sm table-bordered align-middle">
             <thead class="table-light"><tr><th style="width:26rem">Endpoint</th><th style="width:20rem">Service method</th><th>Purpose</th></tr></thead>
