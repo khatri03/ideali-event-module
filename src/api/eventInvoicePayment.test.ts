@@ -34,18 +34,21 @@ const PAYABLE_PASCAL = {
 }
 
 function httpError(status: number) {
-  return new AxiosError("Request failed", "ERR_BAD_RESPONSE", undefined, undefined, {
+  return new AxiosError("Request failed", "ERR_BAD_RESPONSE", undefined, null, {
     status,
     statusText: "Error",
-    headers: {},
-    config: { headers: new AxiosHeaders() },
     data: {},
+    headers: new AxiosHeaders(),
+    config: { headers: new AxiosHeaders() },
   })
 }
 
-describe("fetchEventInvoicePaySummary", () => {
-  beforeEach(() => getMock.mockReset())
+beforeEach(() => {
+  getMock.mockReset()
+  postMock.mockReset()
+})
 
+describe("fetchEventInvoicePaySummary", () => {
   /** Both serialisation casings the API has shipped normalise to the same buyer-facing summary. */
   it.each([
     ["camelCase", PAYABLE_CAMEL],
@@ -71,27 +74,31 @@ describe("fetchEventInvoicePaySummary", () => {
   it("UnknownInvoice_ResolvesNull", async () => {
     getMock.mockRejectedValue(httpError(404))
 
-    await expect(fetchEventInvoicePaySummary(INVOICE_ID)).resolves.toBeNull()
+    const summary = await fetchEventInvoicePaySummary(INVOICE_ID)
+
+    expect(summary).toBeNull()
   })
 
   /** A 500 rejects so the page can offer a retry rather than claim the invoice does not exist. */
   it("ServerError_Rejects", async () => {
     getMock.mockRejectedValue(httpError(500))
 
-    await expect(fetchEventInvoicePaySummary(INVOICE_ID)).rejects.toBeInstanceOf(AxiosError)
+    const failure = await fetchEventInvoicePaySummary(INVOICE_ID).catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(AxiosError)
   })
 
   /** A payState outside the four known states is malformed input and is rejected at the boundary. */
   it("MalformedPayload_Rejects", async () => {
     getMock.mockResolvedValue({ data: { success: true, data: { ...PAYABLE_CAMEL, payState: "Bogus" } } })
 
-    await expect(fetchEventInvoicePaySummary(INVOICE_ID)).rejects.toThrow()
+    const failure = await fetchEventInvoicePaySummary(INVOICE_ID).catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(Error)
   })
 })
 
 describe("startEventInvoicePayment", () => {
-  beforeEach(() => postMock.mockReset())
-
   /** The start is a POST on the invoice's pay resource with no body; it returns the intent's secret and id. */
   it("PostsWithoutABodyAndReturnsTheSecret", async () => {
     postMock.mockResolvedValue({ data: { success: true, data: { clientSecret: "pi_1_secret", paymentIntentId: "pi_1" } } })

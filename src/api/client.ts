@@ -48,6 +48,8 @@ const CHALLENGED_ROUTES = [
   /^\/api\/events\/cart\/[^/]+\/checkout\/intent\/?$/,
   // Anonymous file upload: cheap to call, expensive to serve, so it never runs unchallenged.
   /^\/api\/events\/cart\/[^/]+\/answers\/files\/?$/,
+  // Starting a buyer invoice payment reaches Stripe on an anonymous caller's behalf, like checkout intent.
+  /^\/api\/events\/invoices\/[^/]+\/pay\/?$/,
 ]
 
 function requiresBotChallenge(method: string | undefined, url: string | undefined) {

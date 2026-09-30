@@ -69,6 +69,8 @@ export const APP_ROUTES = {
   eventTicketView: (ticketUniqueId: string) => `/events/tickets/${ticketUniqueId}/view`,
   eventOrderRoute: "/events/orders/:orderUniqueId",
   eventOrder: (orderUniqueId: string) => `/events/orders/${orderUniqueId}`,
+  eventInvoicePayRoute: "/events/invoices/:invoiceUniqueId/pay",
+  eventInvoicePay: (invoiceUniqueId: string) => `/events/invoices/${invoiceUniqueId}/pay`,
   eventCheckInRoute: "/organizer/events/:eventUniqueId/sessions/:sessionUniqueId/check-in",
   eventCheckIn: (eventUniqueId: string, sessionUniqueId: string) =>
     `/organizer/events/${eventUniqueId}/sessions/${sessionUniqueId}/check-in`,
@@ -192,6 +194,7 @@ export const API_ROUTES = {
   eventCartCheckoutConfirm: (cartUniqueId: string) => `/api/events/cart/${cartUniqueId}/checkout/confirm`,
   eventTicketView: (ticketUniqueId: string) => `/api/events/tickets/${ticketUniqueId}/view`,
   eventOrderStatus: (orderUniqueId: string) => `/api/events/orders/${orderUniqueId}`,
+  eventInvoicePay: (invoiceUniqueId: string) => `/api/events/invoices/${invoiceUniqueId}/pay`,
   eventWizardProgress: (id: string) => `/api/organizer/events/${id}/wizard-progress`,
   eventWizardNameCreate: "/api/organizer/events/name",
   eventWizardSkip: (id: string) => `/api/organizer/events/${id}/skip`,

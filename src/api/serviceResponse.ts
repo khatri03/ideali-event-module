@@ -48,9 +48,14 @@ export class ServiceResponseError extends Error {
 }
 
 export function assertSuccess(payload: unknown, fallbackMessage: string): void {
-  const response = serviceResponseSchema.parse(camelizeKeys(payload))
+  // A 200 whose body is not an envelope object - an HTML fallback page, a bare string - reads as the
+  // caller's plain message (IN-01) rather than letting a ZodError about the shape escape to the buyer.
+  const parsed = serviceResponseSchema.safeParse(camelizeKeys(payload))
+  if (!parsed.success) {
+    throw new ServiceResponseError(fallbackMessage)
+  }
 
-  if (response.success === false) {
-    throw new ServiceResponseError(response.message?.trim() || fallbackMessage)
+  if (parsed.data.success === false) {
+    throw new ServiceResponseError(parsed.data.message?.trim() || fallbackMessage)
   }
 }
