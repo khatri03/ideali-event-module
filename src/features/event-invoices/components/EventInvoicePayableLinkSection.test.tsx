@@ -62,4 +62,56 @@ describe("EventInvoicePayableLinkSection", () => {
     await waitFor(() => expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ type: "success", title: "Payment link copied." })))
     expect(writeText).toHaveBeenCalledWith(PAY_PAGE_URL)
   })
+
+  /**
+   * A blocked clipboard must not leave the organizer believing the link was copied: the failure is said in plain
+   * words next to the URL, which stays on screen so they can copy it by hand.
+   */
+  it("PayableLink_CopyFails_ShowsAPlainMessageAndKeepsTheUrlSelectable", async () => {
+    const user = userEvent.setup()
+    vi.spyOn(navigator.clipboard, "writeText").mockRejectedValue(new DOMException("Denied", "NotAllowedError"))
+    renderSection()
+
+    await user.click(screen.getByRole("button", { name: /copy link/i }))
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't copy the link. Select it above and copy it manually.")
+    expect(screen.getByText(PAY_PAGE_URL)).toBeInTheDocument()
+    expect(toastMock).not.toHaveBeenCalledWith(expect.objectContaining({ type: "success" }))
+  })
+
+  /**
+   * A settled or cancelled invoice has nothing to collect; offering its link would invite a payment the server
+   * refuses, so the actions stay visible but disabled and the panel names the status that closed it.
+   */
+  it.each([
+    ["Paid", "Paid"],
+    ["Cancelled", "Cancelled"],
+  ])("PayableLink_%sInvoice_DisablesActionsAndSaysWhy", (invoiceStatus, invoiceStatusLabel) => {
+    renderSection({ canPayOnline: false, invoiceStatus, invoiceStatusLabel })
+
+    expect(screen.getByText(`This invoice is ${invoiceStatusLabel}, so it can't be paid online.`)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /open payment page/i })).toBeDisabled()
+    expect(screen.getByRole("button", { name: /copy link/i })).toBeDisabled()
+    expect(screen.queryByText(PAY_PAGE_URL)).not.toBeInTheDocument()
+  })
+
+  /** Any other state the server will not collect online gets a general reason rather than a status it does not explain. */
+  it("PayableLink_OtherNonPayableState_DisablesActionsWithAGeneralReason", () => {
+    renderSection({ canPayOnline: false, invoiceStatus: "PartiallyPaid", invoiceStatusLabel: "Partially Paid" })
+
+    expect(screen.getByText("This invoice can't be paid online in its current state.")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /open payment page/i })).toBeDisabled()
+    expect(screen.getByRole("button", { name: /copy link/i })).toBeDisabled()
+  })
+
+  /** The organizer UI only ever shares a URL; anything resembling a Stripe payment id or client secret on screen is a leak. */
+  it.each([
+    ["payable", { canPayOnline: true }],
+    ["paid", { canPayOnline: false, invoiceStatus: "Paid", invoiceStatusLabel: "Paid" }],
+    ["other", { canPayOnline: false, invoiceStatus: "Failed", invoiceStatusLabel: "Failed" }],
+  ])("PayableLink_NeverRendersAClientSecret_%s", (_case, state) => {
+    const { container } = renderSection(state)
+
+    expect(container.textContent).not.toMatch(/pi_|_secret_/)
+  })
 })
