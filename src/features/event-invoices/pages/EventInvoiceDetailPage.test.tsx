@@ -84,6 +84,7 @@ const INVOICE: EventInvoiceDetail = {
   canResendTickets: true,
   canEditBuyer: true,
   canEdit: false,
+  canPayOnline: false,
   linkedInvoice: null,
 }
 
@@ -99,6 +100,7 @@ const CUSTOM_INVOICE: Partial<EventInvoiceDetail> = {
   buyerMiddleName: "K",
   buyerLastName: "Lovelace",
   canEdit: true,
+  canPayOnline: true,
   lineItems: [],
   customLineItems: [
     { invoiceItemUniqueId: "cline-1", description: "Headline sponsorship", amount: "1500.50" },

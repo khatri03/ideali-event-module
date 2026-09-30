@@ -329,6 +329,8 @@ const detailSchema = z.object({
   canEditBuyer: dual(z.boolean()),
   CanEdit: dual(z.boolean()),
   canEdit: dual(z.boolean()),
+  CanPayOnline: dual(z.boolean()),
+  canPayOnline: dual(z.boolean()),
 })
 
 const pageSchema = <T extends z.ZodTypeAny>(item: T) =>
@@ -507,6 +509,8 @@ export interface EventInvoiceDetail {
   canEditBuyer: boolean
   /** True only for a Custom invoice still awaiting its first payment; ticket invoices are never editable here. */
   canEdit: boolean
+  /** The server's verdict that this invoice can take an online card payment - the 04-09 payable link reads it. */
+  canPayOnline: boolean
   /** The invoice this one is linked to, or null when it stands alone. */
   linkedInvoice: EventInvoiceLinkedReference | null
 }
@@ -757,6 +761,10 @@ function normalizeDetail(raw: z.infer<typeof detailSchema>): EventInvoiceDetail 
       BUYER_EDITABLE_STATUSES.includes(invoiceStatus),
     ),
     canEdit: actionAllowance(raw.CanEdit ?? raw.canEdit, invoiceType === "Custom" && invoiceStatus === "PendingPayment"),
+    canPayOnline: actionAllowance(
+      raw.CanPayOnline ?? raw.canPayOnline,
+      invoiceType === "Custom" && invoiceStatus === "PendingPayment",
+    ),
     linkedInvoice: normalizeLinkedInvoice(raw.LinkedInvoice ?? raw.linkedInvoice),
   }
 }

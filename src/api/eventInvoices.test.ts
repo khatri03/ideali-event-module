@@ -301,6 +301,38 @@ describe("fetchEventInvoiceDetail settlement allowances", () => {
 
     expect(detail.canEditBuyer).toBe(false)
   })
+
+  /** The server's CanPayOnline wins over the status-derived guess, both when it opens and when it closes online pay. */
+  it.each([
+    ["true", true],
+    ["false", false],
+  ])("PayOnlineFlagSentByApi_OverridesWhatTheStatusWouldImply_%s", async (_case, canPayOnline) => {
+    getMock.mockResolvedValue(
+      detailResponse({ invoiceType: "Custom", invoiceStatus: "PendingPayment", canPayOnline }),
+    )
+
+    const detail = await fetchEventInvoiceDetail("invoice-1")
+
+    expect(detail.canPayOnline).toBe(canPayOnline)
+  })
+
+  /** An older API that omits CanPayOnline falls back to a custom invoice still awaiting its first payment. */
+  it("PayOnlineFlagMissing_FallsBackToACustomInvoiceAwaitingPayment", async () => {
+    getMock.mockResolvedValue(detailResponse({ invoiceType: "Custom", invoiceStatus: "PendingPayment" }))
+
+    const detail = await fetchEventInvoiceDetail("invoice-1")
+
+    expect(detail.canPayOnline).toBe(true)
+  })
+
+  /** Without the flag, a ticket invoice cannot be paid online - the buyer pay page is only for custom invoices. */
+  it("PayOnlineFlagMissing_IsFalseForATicketInvoice", async () => {
+    getMock.mockResolvedValue(detailResponse({ invoiceStatus: "PendingPayment" }))
+
+    const detail = await fetchEventInvoiceDetail("invoice-1")
+
+    expect(detail.canPayOnline).toBe(false)
+  })
 })
 
 describe("event invoice settlement endpoints", () => {

@@ -32,6 +32,7 @@ function makeInvoice(overrides: Partial<EventInvoiceDetail> = {}): EventInvoiceD
     canResendTickets: true,
     canEditBuyer: true,
     canEdit: false,
+    canPayOnline: false,
     linkedInvoice: null,
     invoiceType: "Regular",
     invoiceTypeLabel: "Regular",
