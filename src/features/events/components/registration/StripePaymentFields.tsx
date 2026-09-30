@@ -37,6 +37,7 @@ export function StripePaymentFields({ cardHolderName, onCardHolderNameChange }: 
           <Input
             value={cardHolderName}
             onChange={(event) => onCardHolderNameChange(event.currentTarget.value)}
+            aria-label="Name on card"
             autoComplete="cc-name"
             placeholder="Enter cardholder name"
             borderColor="gray.200"

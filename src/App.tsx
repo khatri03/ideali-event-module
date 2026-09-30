@@ -38,6 +38,7 @@ import {
   EventDescriptionStepPage,
   EventDiscountCouponStepPage,
   EventDateTimeStepPage,
+  EventInvoicePayPage,
   EventNameStepPage,
   EventOrderConfirmationPage,
   EventPaymentAccountStepPage,
@@ -132,6 +133,9 @@ export default function App() {
 
         {/* Public: the buyer reaches their order with the link alone, signed in or not. */}
         <Route path={APP_ROUTES.eventOrderRoute} element={<EventOrderConfirmationPage />} />
+
+        {/* Public: the invoice link is the buyer's only credential, so paying needs no sign-in. */}
+        <Route path={APP_ROUTES.eventInvoicePayRoute} element={<EventInvoicePayPage />} />
 
         {/* Public and deliberately outside AppLayout: its fixed-height shell would clip the PDF. */}
         <Route path={APP_ROUTES.eventTicketViewRoute} element={<EventTicketViewPage />} />
