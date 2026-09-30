@@ -1,0 +1,175 @@
+import type { ReactNode } from "react"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { ChakraProvider } from "@chakra-ui/react"
+import { MemoryRouter, Route, Routes } from "react-router-dom"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { system } from "@/theme"
+import type { EventInvoicePaySummary } from "@/features/events/schemas/eventInvoicePay.schemas"
+import { APP_ROUTES } from "@/utils/routes"
+import { EventInvoicePayPage } from "./EventInvoicePayPage"
+
+const { payApiMocks, fetchStripePublicCredentialsMock, stripeMock, elementsMock } = vi.hoisted(() => ({
+  payApiMocks: { fetchEventInvoicePaySummary: vi.fn(), startEventInvoicePayment: vi.fn() },
+  fetchStripePublicCredentialsMock: vi.fn(),
+  stripeMock: { confirmPayment: vi.fn() },
+  elementsMock: { submit: vi.fn() },
+}))
+
+vi.mock("@/api/eventInvoicePayment", () => payApiMocks)
+vi.mock("@/api/stripe", () => ({ fetchStripePublicCredentials: fetchStripePublicCredentialsMock }))
+vi.mock("@stripe/stripe-js", () => ({ loadStripe: vi.fn(() => Promise.resolve(null)) }))
+vi.mock("@stripe/react-stripe-js", () => ({
+  Elements: ({ children }: { children: ReactNode }) => <>{children}</>,
+  PaymentElement: () => null,
+  useStripe: () => stripeMock,
+  useElements: () => elementsMock,
+}))
+
+const INVOICE_UNIQUE_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+const LONG_DESCRIPTION =
+  "Gold sponsorship package including stage branding, twelve reserved seats and a full-page programme advert"
+
+function buildSummary(overrides: Partial<EventInvoicePaySummary> = {}): EventInvoicePaySummary {
+  return {
+    invoiceNo: "INV-2041",
+    eventName: "Golden Jubilee Gala",
+    payState: "Payable",
+    currencyCode: "USD",
+    outstandingAmount: 1250,
+    paymentAccountUniqueId: "account-1",
+    lineItems: [
+      { description: LONG_DESCRIPTION, amount: 1000 },
+      { description: "Exhibitor table", amount: 250 },
+    ],
+    ...overrides,
+  }
+}
+
+function renderPage() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+  render(
+    <ChakraProvider value={system}>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[APP_ROUTES.eventInvoicePay(INVOICE_UNIQUE_ID)]}>
+          <Routes>
+            <Route path={APP_ROUTES.eventInvoicePayRoute} element={<EventInvoicePayPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    </ChakraProvider>,
+  )
+}
+
+const cardHolderField = () => screen.queryByRole("textbox", { name: "Name on card" })
+
+describe("EventInvoicePayPage", () => {
+  beforeEach(() => {
+    payApiMocks.fetchEventInvoicePaySummary.mockReset().mockResolvedValue(buildSummary())
+    payApiMocks.startEventInvoicePayment.mockReset().mockResolvedValue({ clientSecret: "pi_1_secret_2", paymentIntentId: "pi_1" })
+    fetchStripePublicCredentialsMock.mockReset().mockResolvedValue({ publishableKey: "pk_test_1", stripeAccount: "acct_1" })
+    stripeMock.confirmPayment.mockReset().mockResolvedValue({})
+    elementsMock.submit.mockReset().mockResolvedValue({})
+  })
+
+  /** A blank area while the invoice loads reads as a broken link; the buyer sees the summary's outline instead. */
+  it("PayPage_WhileLoading_ShowsTheSummarySkeleton", () => {
+    payApiMocks.fetchEventInvoicePaySummary.mockReturnValue(new Promise(() => {}))
+
+    renderPage()
+
+    expect(screen.getByRole("status", { name: "Loading invoice" })).toBeInTheDocument()
+    expect(cardHolderField()).not.toBeInTheDocument()
+  })
+
+  /** A wrong or non-custom invoice id must never lead to a card form, only to advice on getting the right link. */
+  it("PayPage_UnknownInvoice_ShowsNotFoundAndNoCardForm", async () => {
+    payApiMocks.fetchEventInvoicePaySummary.mockResolvedValue(null)
+
+    renderPage()
+
+    expect(await screen.findByRole("heading", { name: "We couldn't find this invoice" })).toBeInTheDocument()
+    expect(cardHolderField()).not.toBeInTheDocument()
+  })
+
+  /** A settled invoice cannot be charged twice from the page the buyer already paid through. */
+  it("PayPage_PaidInvoice_ShowsPaidAndNoCardForm", async () => {
+    payApiMocks.fetchEventInvoicePaySummary.mockResolvedValue(buildSummary({ payState: "Paid", paymentAccountUniqueId: null }))
+
+    renderPage()
+
+    expect(await screen.findByRole("heading", { name: "This invoice is paid" })).toBeInTheDocument()
+    expect(screen.getByText(/Invoice INV-2041 for Golden Jubilee Gala has been paid/)).toBeInTheDocument()
+    expect(cardHolderField()).not.toBeInTheDocument()
+  })
+
+  /** An invoice the organizer cancelled is void; offering to take money for it would be a false charge. */
+  it("PayPage_CancelledInvoice_ShowsCancelledAndNoCardForm", async () => {
+    payApiMocks.fetchEventInvoicePaySummary.mockResolvedValue(buildSummary({ payState: "Cancelled", paymentAccountUniqueId: null }))
+
+    renderPage()
+
+    expect(await screen.findByRole("heading", { name: "This invoice was cancelled" })).toBeInTheDocument()
+    expect(cardHolderField()).not.toBeInTheDocument()
+  })
+
+  /** With no working payment account the charge cannot land, so the buyer is sent to the organizer instead. */
+  it("PayPage_UnavailableInvoice_ShowsContactTheOrganizerAndNoCardForm", async () => {
+    payApiMocks.fetchEventInvoicePaySummary.mockResolvedValue(buildSummary({ payState: "Unavailable", paymentAccountUniqueId: null }))
+
+    renderPage()
+
+    expect(await screen.findByRole("heading", { name: "Online payment isn't available" })).toBeInTheDocument()
+    expect(screen.getByText(/Contact the organizer to arrange payment/)).toBeInTheDocument()
+    expect(cardHolderField()).not.toBeInTheDocument()
+  })
+
+  /** A failed load may be a blip; the buyer must be able to ask again without hunting for the link. */
+  it("PayPage_LoadFailure_OffersTryAgainWhichRefetches", async () => {
+    payApiMocks.fetchEventInvoicePaySummary.mockRejectedValueOnce(new Error("Network Error"))
+
+    renderPage()
+
+    expect(await screen.findByRole("heading", { name: "We couldn't load this invoice" })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }))
+
+    expect(await screen.findByText("INV-2041")).toBeInTheDocument()
+    expect(payApiMocks.fetchEventInvoicePaySummary).toHaveBeenCalledTimes(2)
+  })
+
+  /** The buyer must see exactly what they are paying for before the card form asks for money. */
+  it("PayPage_PayableInvoice_ListsEveryLineAndTheAmountDue", async () => {
+    renderPage()
+
+    expect(await screen.findByText(LONG_DESCRIPTION)).toBeInTheDocument()
+    expect(screen.getByText("Exhibitor table")).toBeInTheDocument()
+    expect(screen.getByText("USD$1,000.00")).toBeInTheDocument()
+    expect(screen.getByText("USD$250.00")).toBeInTheDocument()
+    expect(screen.getByText("USD$1,250.00")).toBeInTheDocument()
+    expect(await screen.findByRole("button", { name: "Pay USD$1,250.00" })).toBeInTheDocument()
+  })
+
+  /** Without Stripe's keys the Payment Element cannot mount; an empty form would look payable and fail. */
+  it("PayPage_StripeCredentialsFail_ShowsAPlainErrorInsteadOfTheForm", async () => {
+    fetchStripePublicCredentialsMock.mockRejectedValue(new Error("Network Error"))
+
+    renderPage()
+
+    expect(await screen.findByText("The card form couldn't load. Try again in a moment.")).toBeInTheDocument()
+    expect(cardHolderField()).not.toBeInTheDocument()
+  })
+
+  /** Once Stripe confirms the card, the buyer needs proof of what went through before they close the page. */
+  it("PayPage_AfterPaying_ShowsPaymentReceivedWithTheAmountAndInvoiceNo", async () => {
+    renderPage()
+
+    await userEvent.type(await screen.findByRole("textbox", { name: "Name on card" }), "Aisha Khan")
+    await userEvent.click(screen.getByRole("button", { name: "Pay USD$1,250.00" }))
+
+    expect(await screen.findByRole("heading", { name: "Payment received" })).toBeInTheDocument()
+    expect(screen.getByText("Thank you. Your payment of USD$1,250.00 for invoice INV-2041 went through.")).toBeInTheDocument()
+    await waitFor(() => expect(cardHolderField()).not.toBeInTheDocument())
+  })
+})
