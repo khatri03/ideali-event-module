@@ -6,11 +6,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { system } from "@/theme"
 import { EventInvoiceSettlementActions } from "./EventInvoiceSettlementActions"
 
-const { markEventInvoiceAsPaidMock, cancelEventInvoiceMock, resendEventInvoiceMock } = vi.hoisted(() => ({
-  markEventInvoiceAsPaidMock: vi.fn(),
-  cancelEventInvoiceMock: vi.fn(),
-  resendEventInvoiceMock: vi.fn(),
-}))
+const { markEventInvoiceAsPaidMock, cancelEventInvoiceMock, resendEventInvoiceMock, toasterCreateMock } = vi.hoisted(
+  () => ({
+    markEventInvoiceAsPaidMock: vi.fn(),
+    cancelEventInvoiceMock: vi.fn(),
+    resendEventInvoiceMock: vi.fn(),
+    toasterCreateMock: vi.fn(),
+  }),
+)
 
 vi.mock("@/api/eventInvoices", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/api/eventInvoices")>()
@@ -21,6 +24,15 @@ vi.mock("@/api/eventInvoices", async (importOriginal) => {
     resendEventInvoice: resendEventInvoiceMock,
   }
 })
+
+vi.mock("@/lib/toaster", () => ({ toaster: { create: toasterCreateMock } }))
+
+function successTitles() {
+  return toasterCreateMock.mock.calls
+    .map(([options]) => options)
+    .filter((options) => options?.type === "success")
+    .map((options) => String(options.title))
+}
 
 const INVOICE_UNIQUE_ID = "invoice-1"
 
@@ -54,6 +66,7 @@ describe("EventInvoiceSettlementActions", () => {
     markEventInvoiceAsPaidMock.mockReset().mockResolvedValue(undefined)
     cancelEventInvoiceMock.mockReset().mockResolvedValue(undefined)
     resendEventInvoiceMock.mockReset().mockResolvedValue(undefined)
+    toasterCreateMock.mockReset()
   })
 
   /** An order the server allows no action on shows no empty button row. */
@@ -223,6 +236,31 @@ describe("EventInvoiceSettlementActions", () => {
 
     await waitFor(() => expect(resendEventInvoiceMock).toHaveBeenCalledWith(INVOICE_UNIQUE_ID))
     expect(markEventInvoiceAsPaidMock).not.toHaveBeenCalled()
+  })
+
+  /** A custom-invoice send reports an invoice message, never the ticket-resend language that has nothing to send. */
+  it("reports invoice-worded success when the email is sent, never ticket language", async () => {
+    const user = userEvent.setup()
+    renderActions({ canResendTickets: false, canEmailInvoice: true })
+
+    await user.click(screen.getByRole("button", { name: /email invoice to buyer/i }))
+    const dialog = await screen.findByRole("alertdialog")
+    await user.click(within(dialog).getByRole("button", { name: /^send invoice$/i }))
+
+    await waitFor(() => expect(successTitles()).toContainEqual(expect.stringMatching(/invoice/i)))
+    expect(successTitles()).not.toContainEqual(expect.stringMatching(/tickets/i))
+  })
+
+  /** Splitting the email path off the resend hook must leave the ticket path reporting its own copy. */
+  it("still reports ticket-worded success when all tickets are resent", async () => {
+    const user = userEvent.setup()
+    renderActions()
+
+    await user.click(screen.getByRole("button", { name: /resend all tickets/i }))
+    const dialog = await screen.findByRole("alertdialog")
+    await user.click(within(dialog).getByRole("button", { name: /^resend all$/i }))
+
+    await waitFor(() => expect(successTitles()).toContainEqual(expect.stringMatching(/tickets/i)))
   })
 
   /** A failed send stays on screen with its reason so the organizer can see why and retry. */
