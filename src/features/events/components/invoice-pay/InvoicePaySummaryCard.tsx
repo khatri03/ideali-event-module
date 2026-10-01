@@ -24,7 +24,7 @@ export function InvoicePaySummaryCard({
   currencyCode,
 }: InvoicePaySummaryCardProps) {
   return (
-    <Box borderWidth="1px" borderColor="gray.200" borderRadius="24px" bg="white" p={{ base: 5, md: 6 }} boxShadow="0 16px 40px rgba(15, 23, 42, 0.06)">
+    <Box data-print-allow-break borderWidth="1px" borderColor="gray.200" borderRadius="24px" bg="white" p={{ base: 5, md: 6 }} boxShadow="0 16px 40px rgba(15, 23, 42, 0.06)">
       <Stack gap={5}>
         <Flex justify="space-between" align="start" gap={4} direction={{ base: "column", sm: "row" }}>
           <Stack gap={1} minW="0">

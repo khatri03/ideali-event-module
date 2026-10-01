@@ -2,6 +2,7 @@ import { Box, Container } from "@chakra-ui/react"
 import { useParams } from "react-router-dom"
 import { InvoicePayView } from "@/features/events/components/invoice-pay/InvoicePayView"
 import { useEventInvoicePaySummary, useStartEventInvoicePayment } from "@/features/events/hooks/useEventInvoicePay"
+import "@/styles/print.css"
 
 /** Public: the buyer pays an organizer's custom invoice with the shared link alone, signed in or not. */
 export function EventInvoicePayPage() {

@@ -1,7 +1,7 @@
 /*
- * Print rules for the invoice detail page. An organizer asked for a paper copy wants the order, not a
- * photograph of the application it was read in, so the surrounding chrome stops painting and the controls
- * that only mean something to a pointer are dropped outright.
+ * Print rules shared by every invoice surface a reader prints - the organizer detail page and the public
+ * buyer pay page. A paper copy wants the invoice, not a photograph of the application it was read in, so the
+ * surrounding chrome stops painting and the controls that only mean something to a pointer are dropped outright.
  */
 @media print {
   @page {

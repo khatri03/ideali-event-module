@@ -1,12 +1,12 @@
 import { Link as RouterLink } from "react-router-dom"
 import { Box, Button, Flex, Link, Stack, Text } from "@chakra-ui/react"
 import { ExternalLink, Pencil } from "lucide-react"
+import { PrintInvoiceButton } from "@/components/common"
 import { EMPTY_VALUE } from "@/utils/format"
 import { APP_ROUTES } from "@/utils/routes"
 import { formatUtcDate } from "@/utils/utcDates"
 import { BackToInvoicesButton } from "./BackToInvoicesButton"
 import { EventInvoiceStatusBadge } from "./EventInvoiceStatusBadge"
-import { PrintInvoiceButton } from "./PrintInvoiceButton"
 
 interface EventInvoiceDetailHeaderProps {
   invoiceNo: string

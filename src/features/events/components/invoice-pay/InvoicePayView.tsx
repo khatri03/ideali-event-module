@@ -1,12 +1,12 @@
 import { useState } from "react"
-import { Stack } from "@chakra-ui/react"
+import { Box, Stack } from "@chakra-ui/react"
 import { RegistrationStripeProvider } from "@/features/events/components/registration/RegistrationStripeProvider"
 import { useStripeCredentials } from "@/features/events/hooks/useStripeCredentials"
 import type { EventInvoicePaySummary } from "@/features/events/schemas/eventInvoicePay.schemas"
 import { formatAmount } from "@/features/events/utils/registrationFormat"
 import { InvoicePayForm } from "./InvoicePayForm"
+import { InvoicePayPrintableInvoice } from "./InvoicePayPrintableInvoice"
 import { InvoicePayStatusCard } from "./InvoicePayStatusCard"
-import { InvoicePaySummaryCard } from "./InvoicePaySummaryCard"
 import { InvoicePayFormSkeleton, InvoicePaySummaryCardSkeleton } from "./InvoicePaySummaryCard.skeleton"
 
 type StartPayment = () => Promise<{ clientSecret: string }>
@@ -82,31 +82,33 @@ export function InvoicePayView({ invoiceUniqueId, summary, isLoading, isError, i
 function TerminalInvoiceCard({ summary }: { summary: EventInvoicePaySummary }) {
   const { invoiceNo, eventName } = summary
 
-  if (summary.payState === "Paid") {
-    return (
+  const statusCard =
+    summary.payState === "Paid" ? (
       <InvoicePayStatusCard
         tone="success"
         title="This invoice is paid"
         description={`Invoice ${invoiceNo} for ${eventName} has been paid. There is nothing left to pay.`}
       />
-    )
-  }
-  if (summary.payState === "Cancelled") {
-    return (
+    ) : summary.payState === "Cancelled" ? (
       <InvoicePayStatusCard
         tone="danger"
         title="This invoice was cancelled"
         description={`Invoice ${invoiceNo} was cancelled by the organizer and can no longer be paid. Contact the organizer if you think this is a mistake.`}
       />
+    ) : (
+      <InvoicePayStatusCard
+        tone="pending"
+        title="Online payment isn't available"
+        description={`Invoice ${invoiceNo} can't be paid online right now. Contact the organizer to arrange payment.`}
+      />
     )
-  }
 
+  // The on-screen explanation is chrome; the invoice itself still prints so the buyer can keep a paper copy.
   return (
-    <InvoicePayStatusCard
-      tone="pending"
-      title="Online payment isn't available"
-      description={`Invoice ${invoiceNo} can't be paid online right now. Contact the organizer to arrange payment.`}
-    />
+    <Stack gap={4}>
+      <Box data-print-hide>{statusCard}</Box>
+      <InvoicePayPrintableInvoice summary={summary} />
+    </Stack>
   )
 }
 
@@ -124,32 +126,34 @@ function PayableInvoice({ summary, paymentAccountUniqueId, invoiceUniqueId, onSt
 
   return (
     <Stack gap={4}>
-      <InvoicePaySummaryCard {...summary} />
-      {credentials.isError ? (
-        <InvoicePayStatusCard
-          tone="danger"
-          title="Card payment is unavailable"
-          description="The card form couldn't load. Try again in a moment."
-          onRetry={() => void credentials.refetch()}
-          isRetrying={credentials.isFetching}
-        />
-      ) : credentials.isPending ? (
-        <InvoicePayFormSkeleton />
-      ) : (
-        <RegistrationStripeProvider
-          paymentAccountUniqueId={paymentAccountUniqueId}
-          amount={summary.outstandingAmount}
-          currencyCode={summary.currencyCode}
-        >
-          <InvoicePayForm
+      <InvoicePayPrintableInvoice summary={summary} />
+      <Box data-print-hide>
+        {credentials.isError ? (
+          <InvoicePayStatusCard
+            tone="danger"
+            title="Card payment is unavailable"
+            description="The card form couldn't load. Try again in a moment."
+            onRetry={() => void credentials.refetch()}
+            isRetrying={credentials.isFetching}
+          />
+        ) : credentials.isPending ? (
+          <InvoicePayFormSkeleton />
+        ) : (
+          <RegistrationStripeProvider
+            paymentAccountUniqueId={paymentAccountUniqueId}
             amount={summary.outstandingAmount}
             currencyCode={summary.currencyCode}
-            invoiceUniqueId={invoiceUniqueId}
-            onStartPayment={onStartPayment}
-            onPaid={onPaid}
-          />
-        </RegistrationStripeProvider>
-      )}
+          >
+            <InvoicePayForm
+              amount={summary.outstandingAmount}
+              currencyCode={summary.currencyCode}
+              invoiceUniqueId={invoiceUniqueId}
+              onStartPayment={onStartPayment}
+              onPaid={onPaid}
+            />
+          </RegistrationStripeProvider>
+        )}
+      </Box>
     </Stack>
   )
 }

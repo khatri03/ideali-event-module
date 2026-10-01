@@ -14,7 +14,7 @@ import { EventInvoiceLineItemsSection } from "../components/EventInvoiceLineItem
 import { EventInvoicePaymentHistorySection } from "../components/EventInvoicePaymentHistorySection"
 import { LinkedInvoicePanel } from "../components/LinkedInvoicePanel"
 import { EventInvoiceDetailPageSkeleton } from "./EventInvoiceDetailPage.skeleton"
-import "../print.css"
+import "@/styles/print.css"
 
 /**
  * Where "back" should land, as the list recorded it when it opened this invoice. Only an in-app path is
