@@ -54,6 +54,18 @@
     border-radius: 0 !important;
   }
 
+  /*
+   * A custom invoice's billed lines can run past one page. Keeping the whole card on a single sheet would
+   * clip them, so the card is allowed to break while each row and the grand-total line stay whole.
+   */
+  [data-print-region] [data-print-allow-break] {
+    break-inside: auto !important;
+  }
+
+  [data-print-region] tr {
+    break-inside: avoid;
+  }
+
   /* A status chip loses its fill above; the outline is what keeps it reading as a chip rather than stray text. */
   [data-print-region] [data-status-tone],
   [data-print-region] [data-balance-tone] {

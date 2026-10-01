@@ -55,7 +55,7 @@ export function CustomInvoiceDetailPanels({
         )}
       </InvoiceDetailPanel>
 
-      <InvoiceDetailPanel title="Special notes">
+      <InvoiceDetailPanel title="Special notes" printHidden={!specialNotes?.trim()}>
         {specialNotes?.trim() ? (
           <Text fontSize="sm" color="text.primary" whiteSpace="pre-wrap">
             {specialNotes}

@@ -14,7 +14,7 @@ interface EventInvoiceCustomDetailBodyProps {
 /** The read surface of a custom invoice: structured buyer, category/due/notes/payable panels, then the billed lines. */
 export function EventInvoiceCustomDetailBody({ invoice }: EventInvoiceCustomDetailBodyProps) {
   return (
-    <Box border="1px solid" borderColor="border.subtle" borderRadius="20px" bg="card.bg" boxShadow="card" p={{ base: 4, md: 7 }}>
+    <Box data-print-allow-break border="1px solid" borderColor="border.subtle" borderRadius="20px" bg="card.bg" boxShadow="card" p={{ base: 4, md: 7 }}>
       <Stack gap={{ base: 5, md: 6 }}>
         <EventInvoiceBuyerPanel
           invoiceUniqueId={invoice.invoiceUniqueId}

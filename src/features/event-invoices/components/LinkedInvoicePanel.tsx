@@ -131,7 +131,7 @@ function LinkInvoiceAction({ invoiceUniqueId }: { invoiceUniqueId: string }) {
 /** The reciprocal link reference on an invoice's detail: start a link, follow it, or remove it. */
 export function LinkedInvoicePanel({ invoiceUniqueId, invoiceNo, linkedInvoice, canLink }: LinkedInvoicePanelProps) {
   return (
-    <InvoiceDetailPanel title="Linked invoice">
+    <InvoiceDetailPanel title="Linked invoice" printHidden={!linkedInvoice}>
       {linkedInvoice ? (
         <LinkedInvoiceReference invoiceUniqueId={invoiceUniqueId} invoiceNo={invoiceNo} linkedInvoice={linkedInvoice} />
       ) : (
