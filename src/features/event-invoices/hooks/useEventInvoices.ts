@@ -69,6 +69,18 @@ export function useResendEventInvoice(invoiceUniqueId: string) {
   })
 }
 
+// Shares the /resend endpoint with useResendEventInvoice but carries the invoice-send copy, so emailing
+// a custom invoice never reports the ticket-resend language that has nothing to send on it.
+export function useEmailEventInvoice(invoiceUniqueId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => resendEventInvoice(invoiceUniqueId),
+    onSuccess: () => toaster.create({ type: "success", title: "Invoice emailed to the buyer." }),
+    onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] }),
+  })
+}
+
 /**
  * Both settlement actions change the invoice's status, its notes and its place in the list, so each
  * one refreshes the detail it was launched from and the list behind it.

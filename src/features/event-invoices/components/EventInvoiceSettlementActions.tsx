@@ -3,7 +3,12 @@ import { Button, Stack, Text } from "@chakra-ui/react"
 import { Ban, CheckCircle2, Mail, Send } from "lucide-react"
 import { ConfirmDialog } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
-import { useCancelEventInvoice, useMarkEventInvoiceAsPaid, useResendEventInvoice } from "../hooks/useEventInvoices"
+import {
+  useCancelEventInvoice,
+  useEmailEventInvoice,
+  useMarkEventInvoiceAsPaid,
+  useResendEventInvoice,
+} from "../hooks/useEventInvoices"
 import { CancelInvoiceDialog } from "./CancelInvoiceDialog"
 
 type ConfirmAction = "mark-paid" | "resend" | "email-invoice"
@@ -51,6 +56,7 @@ export function EventInvoiceSettlementActions({
   const markPaidMutation = useMarkEventInvoiceAsPaid(invoiceUniqueId)
   const cancelMutation = useCancelEventInvoice(invoiceUniqueId)
   const resendMutation = useResendEventInvoice(invoiceUniqueId)
+  const emailMutation = useEmailEventInvoice(invoiceUniqueId)
 
   if (!canMarkAsPaid && !canCancel && !canResendTickets && !canEmailInvoice) {
     return null
@@ -67,8 +73,10 @@ export function EventInvoiceSettlementActions({
     setIsCancelOpen(true)
   }
 
-  const isSendAction = confirmAction === "resend" || confirmAction === "email-invoice"
-  const confirmMutation = isSendAction ? resendMutation : markPaidMutation
+  // Each action owns its own mutation so the success copy and cache invalidation stay distinct, even
+  // though resend and email share the same /resend endpoint.
+  const confirmMutation =
+    confirmAction === "email-invoice" ? emailMutation : confirmAction === "resend" ? resendMutation : markPaidMutation
   const recipientLabel = buyerEmail?.trim() || "the buyer on file"
 
   const runThenClose = async (run: () => Promise<void>, close: () => void) => {
