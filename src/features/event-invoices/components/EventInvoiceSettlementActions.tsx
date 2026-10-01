@@ -1,12 +1,12 @@
 import { useState } from "react"
 import { Button, Stack, Text } from "@chakra-ui/react"
-import { Ban, CheckCircle2, Send } from "lucide-react"
+import { Ban, CheckCircle2, Mail, Send } from "lucide-react"
 import { ConfirmDialog } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
 import { useCancelEventInvoice, useMarkEventInvoiceAsPaid, useResendEventInvoice } from "../hooks/useEventInvoices"
 import { CancelInvoiceDialog } from "./CancelInvoiceDialog"
 
-type ConfirmAction = "mark-paid" | "resend"
+type ConfirmAction = "mark-paid" | "resend" | "email-invoice"
 
 interface EventInvoiceSettlementActionsProps {
   invoiceUniqueId: string
@@ -15,6 +15,10 @@ interface EventInvoiceSettlementActionsProps {
   canMarkAsPaid: boolean
   canCancel: boolean
   canResendTickets: boolean
+  /** A custom invoice that can still be paid online can be emailed to its buyer with its payable link. */
+  canEmailInvoice?: boolean
+  /** The recipient named in the email confirm dialog, so a wrong address is caught before anything sends. */
+  buyerEmail?: string | null
 }
 
 const ACTION_BUTTON_PROPS = {
@@ -35,6 +39,8 @@ export function EventInvoiceSettlementActions({
   canMarkAsPaid,
   canCancel,
   canResendTickets,
+  canEmailInvoice = false,
+  buyerEmail,
 }: EventInvoiceSettlementActionsProps) {
   // `confirmAction` names which confirmation to show and is sticky across a close - only the open flags
   // drive visibility, so each dialog stays mounted after its first use and Ark's own close transition
@@ -46,7 +52,7 @@ export function EventInvoiceSettlementActions({
   const cancelMutation = useCancelEventInvoice(invoiceUniqueId)
   const resendMutation = useResendEventInvoice(invoiceUniqueId)
 
-  if (!canMarkAsPaid && !canCancel && !canResendTickets) {
+  if (!canMarkAsPaid && !canCancel && !canResendTickets && !canEmailInvoice) {
     return null
   }
 
@@ -61,7 +67,9 @@ export function EventInvoiceSettlementActions({
     setIsCancelOpen(true)
   }
 
-  const confirmMutation = confirmAction === "resend" ? resendMutation : markPaidMutation
+  const isSendAction = confirmAction === "resend" || confirmAction === "email-invoice"
+  const confirmMutation = isSendAction ? resendMutation : markPaidMutation
+  const recipientLabel = buyerEmail?.trim() || "the buyer on file"
 
   const runThenClose = async (run: () => Promise<void>, close: () => void) => {
     try {
@@ -95,13 +103,31 @@ export function EventInvoiceSettlementActions({
         </Button>
       ) : null}
 
+      {canEmailInvoice ? (
+        <Button variant="outline" colorPalette="brand" {...ACTION_BUTTON_PROPS} onClick={() => openConfirm("email-invoice")}>
+          <Mail size={16} />
+          Email invoice to buyer
+        </Button>
+      ) : null}
+
       {confirmAction ? (
         <ConfirmDialog
           open={isConfirmOpen}
-          title={confirmAction === "resend" ? "Resend all tickets" : "Mark this order as paid"}
+          title={
+            confirmAction === "resend"
+              ? "Resend all tickets"
+              : confirmAction === "email-invoice"
+                ? "Email invoice to buyer"
+                : "Mark this order as paid"
+          }
           description={
             confirmAction === "resend" ? (
               <Text>Re-email every ticket on this order to the buyer and any attendees with their own address?</Text>
+            ) : confirmAction === "email-invoice" ? (
+              <Text>
+                Invoice <strong>{invoiceNo}</strong> and its online payable link will be emailed to{" "}
+                <strong>{recipientLabel}</strong>.
+              </Text>
             ) : (
               <Text>
                 Order <strong>{invoiceNo}</strong> will be recorded as paid in full, the buyer emailed, and
@@ -109,8 +135,10 @@ export function EventInvoiceSettlementActions({
               </Text>
             )
           }
-          confirmLabel={confirmAction === "resend" ? "Resend all" : "Mark as paid"}
-          loadingLabel={confirmAction === "resend" ? "Sending..." : "Settling..."}
+          confirmLabel={
+            confirmAction === "resend" ? "Resend all" : confirmAction === "email-invoice" ? "Send invoice" : "Mark as paid"
+          }
+          loadingLabel={confirmAction === "mark-paid" ? "Settling..." : "Sending..."}
           tone="primary"
           errorMessage={confirmMutation.error ? extractApiError(confirmMutation.error) : null}
           isPending={confirmMutation.isPending}

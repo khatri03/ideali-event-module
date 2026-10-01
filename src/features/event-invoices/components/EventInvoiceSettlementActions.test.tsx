@@ -24,7 +24,13 @@ vi.mock("@/api/eventInvoices", async (importOriginal) => {
 
 const INVOICE_UNIQUE_ID = "invoice-1"
 
-function renderActions({ canMarkAsPaid = true, canCancel = true, canResendTickets = true } = {}) {
+function renderActions({
+  canMarkAsPaid = true,
+  canCancel = true,
+  canResendTickets = true,
+  canEmailInvoice = false,
+  buyerEmail = "sponsor@example.com" as string | null,
+} = {}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   return render(
     <ChakraProvider value={system}>
@@ -35,6 +41,8 @@ function renderActions({ canMarkAsPaid = true, canCancel = true, canResendTicket
           canMarkAsPaid={canMarkAsPaid}
           canCancel={canCancel}
           canResendTickets={canResendTickets}
+          canEmailInvoice={canEmailInvoice}
+          buyerEmail={buyerEmail}
         />
       </QueryClientProvider>
     </ChakraProvider>,
@@ -190,6 +198,45 @@ describe("EventInvoiceSettlementActions", () => {
 
     await screen.findByRole("alertdialog")
     expect(screen.queryByText(/an unexpected error occurred/i)).not.toBeInTheDocument()
+  })
+
+  /** A custom invoice offers an email action, never the ticket-resend copy that has nothing to send. */
+  it("offers 'Email invoice to buyer' for a custom invoice instead of resend-all-tickets", () => {
+    renderActions({ canResendTickets: false, canEmailInvoice: true })
+
+    expect(screen.getByRole("button", { name: /email invoice to buyer/i })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /resend all tickets/i })).not.toBeInTheDocument()
+  })
+
+  /** Naming the recipient before sending lets a wrong address be caught before the invoice leaves. */
+  it("names the buyer's email in the confirm dialog and sends on confirm", async () => {
+    const user = userEvent.setup()
+    renderActions({ canResendTickets: false, canEmailInvoice: true, buyerEmail: "sponsor@example.com" })
+
+    await user.click(screen.getByRole("button", { name: /email invoice to buyer/i }))
+    const dialog = await screen.findByRole("alertdialog")
+    expect(within(dialog).getByText("sponsor@example.com")).toBeInTheDocument()
+    expect(within(dialog).getByText(/payable link/i)).toBeInTheDocument()
+    expect(resendEventInvoiceMock).not.toHaveBeenCalled()
+
+    await user.click(within(dialog).getByRole("button", { name: /^send invoice$/i }))
+
+    await waitFor(() => expect(resendEventInvoiceMock).toHaveBeenCalledWith(INVOICE_UNIQUE_ID))
+    expect(markEventInvoiceAsPaidMock).not.toHaveBeenCalled()
+  })
+
+  /** A failed send stays on screen with its reason so the organizer can see why and retry. */
+  it("keeps the email dialog open and shows the error when the send fails", async () => {
+    resendEventInvoiceMock.mockRejectedValue(new Error("network down"))
+    const user = userEvent.setup()
+    renderActions({ canResendTickets: false, canEmailInvoice: true })
+
+    await user.click(screen.getByRole("button", { name: /email invoice to buyer/i }))
+    const dialog = await screen.findByRole("alertdialog")
+    await user.click(within(dialog).getByRole("button", { name: /^send invoice$/i }))
+
+    expect(await screen.findByText(/an unexpected error occurred/i)).toBeInTheDocument()
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument()
   })
 
   /** A refused mark-paid stays open with the reason, and nothing is cancelled along the way. */

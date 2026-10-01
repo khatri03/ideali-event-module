@@ -80,7 +80,9 @@ export default function EventInvoiceDetailPage() {
   const isCustom = invoice.invoiceType === "Custom"
   const hasAnyIssuedTicket = invoice.lineItems.some((item) => item.tickets.length > 0)
   const canResendAllTickets = invoice.canResendTickets && hasAnyIssuedTicket
-  const hasSettlementActions = invoice.canMarkAsPaid || invoice.canCancel || canResendAllTickets
+  // A custom invoice still open to online payment can be emailed to its buyer with a working payable link.
+  const canEmailInvoice = isCustom && invoice.canPayOnline
+  const hasSettlementActions = invoice.canMarkAsPaid || invoice.canCancel || canResendAllTickets || canEmailInvoice
 
   return (
     <Stack gap={5} data-print-region>
@@ -104,6 +106,8 @@ export default function EventInvoiceDetailPage() {
               canMarkAsPaid={invoice.canMarkAsPaid}
               canCancel={invoice.canCancel}
               canResendTickets={canResendAllTickets}
+              canEmailInvoice={canEmailInvoice}
+              buyerEmail={invoice.buyerEmail}
             />
           </Flex>
         </Box>
