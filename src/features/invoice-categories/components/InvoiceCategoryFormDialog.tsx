@@ -3,23 +3,23 @@ import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Box, Button, CloseButton, Dialog, Field, Flex, Input, Stack, Switch, Text } from "@chakra-ui/react"
 import { extractApiError } from "@/utils/errors"
-import type { EventInvoiceCategoryListItem } from "@/api/eventInvoiceCategories"
+import type { InvoiceCategoryListItem } from "@/api/invoiceCategories"
 import {
-  eventInvoiceCategoryFormSchema,
-  type EventInvoiceCategoryFormValues,
-} from "../schemas/eventInvoiceCategory.schemas"
+  invoiceCategoryFormSchema,
+  type InvoiceCategoryFormValues,
+} from "../schemas/invoiceCategory.schemas"
 import {
-  useCreateEventInvoiceCategory,
-  useUpdateEventInvoiceCategory,
-} from "../hooks/useEventInvoiceCategoryMutations"
+  useCreateInvoiceCategory,
+  useUpdateInvoiceCategory,
+} from "../hooks/useInvoiceCategoryMutations"
 
-interface EventInvoiceCategoryFormDialogProps {
+interface InvoiceCategoryFormDialogProps {
   /** Reactive visibility. The dialog stays mounted between opens so its close transition can run. */
   open: boolean
   /** Bumped by the caller on every open, so the form below remounts with a clean slate each time. */
   editSessionKey: number
   /** The row being edited, or null when creating. */
-  category: EventInvoiceCategoryListItem | null
+  category: InvoiceCategoryListItem | null
   onClose: () => void
 }
 
@@ -27,12 +27,12 @@ interface EventInvoiceCategoryFormDialogProps {
  * Owns only the dialog chrome. Kept mounted across opens so Ark's dialog machine runs its own close
  * transition before anything is torn down, rather than that cleanup being skipped mid-transition.
  */
-export function EventInvoiceCategoryFormDialog({
+export function InvoiceCategoryFormDialog({
   open,
   editSessionKey,
   category,
   onClose,
-}: EventInvoiceCategoryFormDialogProps) {
+}: InvoiceCategoryFormDialogProps) {
   // The form remounts (via key) on each open, so the trap's default initial-focus target can resolve to a
   // detached node mid-transition. Anchoring focus to the always-mounted content keeps that node valid.
   const contentRef = useRef<HTMLDivElement>(null)
@@ -69,15 +69,15 @@ export function EventInvoiceCategoryFormDialog({
             </Flex>
           </Box>
 
-          <EventInvoiceCategoryForm key={editSessionKey} category={category} onClose={onClose} />
+          <InvoiceCategoryForm key={editSessionKey} category={category} onClose={onClose} />
         </Dialog.Content>
       </Dialog.Positioner>
     </Dialog.Root>
   )
 }
 
-interface EventInvoiceCategoryFormProps {
-  category: EventInvoiceCategoryListItem | null
+interface InvoiceCategoryFormProps {
+  category: InvoiceCategoryListItem | null
   onClose: () => void
 }
 
@@ -85,10 +85,10 @@ interface EventInvoiceCategoryFormProps {
  * The form and its mutations - remounted fresh (via the parent's `key`) every time the dialog opens,
  * so a stale value or a previous attempt's error never survives into a later edit.
  */
-function EventInvoiceCategoryForm({ category, onClose }: EventInvoiceCategoryFormProps) {
+function InvoiceCategoryForm({ category, onClose }: InvoiceCategoryFormProps) {
   const isEdit = category !== null
-  const createMutation = useCreateEventInvoiceCategory()
-  const updateMutation = useUpdateEventInvoiceCategory()
+  const createMutation = useCreateInvoiceCategory()
+  const updateMutation = useUpdateInvoiceCategory()
 
   const {
     register,
@@ -96,8 +96,8 @@ function EventInvoiceCategoryForm({ category, onClose }: EventInvoiceCategoryFor
     control,
     setValue,
     formState: { errors },
-  } = useForm<EventInvoiceCategoryFormValues>({
-    resolver: zodResolver(eventInvoiceCategoryFormSchema),
+  } = useForm<InvoiceCategoryFormValues>({
+    resolver: zodResolver(invoiceCategoryFormSchema),
     defaultValues: {
       name: category?.name ?? "",
       isActive: category?.isActive ?? true,
@@ -108,7 +108,7 @@ function EventInvoiceCategoryForm({ category, onClose }: EventInvoiceCategoryFor
   const isActive = useWatch({ control, name: "isActive" })
   const isSaving = createMutation.isPending || updateMutation.isPending
 
-  async function onSubmit(values: EventInvoiceCategoryFormValues) {
+  async function onSubmit(values: InvoiceCategoryFormValues) {
     const payload = {
       name: values.name.trim(),
       isActive: values.isActive,

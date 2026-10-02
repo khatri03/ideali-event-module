@@ -14,15 +14,15 @@ const serviceResponseSchema = z.object({
   data: z.unknown().optional(),
 })
 
-export type EventInvoiceCategorySortBy = "name" | "displayOrder" | "createdOnUtc"
-export type EventInvoiceCategorySortOrder = "asc" | "desc"
+export type InvoiceCategorySortBy = "name" | "displayOrder" | "createdOnUtc"
+export type InvoiceCategorySortOrder = "asc" | "desc"
 
 // Serialization casing is not guaranteed across endpoints, so every field is accepted in both forms
 // and collapsed in the normalizer below - the same approach as api/documentCategories.ts.
 const dual = <T extends z.ZodTypeAny>(schema: T) => schema.optional()
 const integer = () => z.coerce.number().int()
 
-const eventInvoiceCategorySchema = z.object({
+const invoiceCategorySchema = z.object({
   UniqueId: dual(z.string()),
   uniqueId: dual(z.string()),
   Name: dual(z.string()),
@@ -49,7 +49,7 @@ const pageSchema = <T extends z.ZodTypeAny>(item: T) =>
     pageData: z.array(item).optional(),
   })
 
-export interface EventInvoiceCategoryListItem {
+export interface InvoiceCategoryListItem {
   uniqueId: string
   name: string
   isActive: boolean
@@ -57,14 +57,14 @@ export interface EventInvoiceCategoryListItem {
   createdOnUtc: string
 }
 
-export interface EventInvoiceCategoryFilters {
+export interface InvoiceCategoryFilters {
   searchTerm: string
-  sortBy: EventInvoiceCategorySortBy
-  sortOrder: EventInvoiceCategorySortOrder
+  sortBy: InvoiceCategorySortBy
+  sortOrder: InvoiceCategorySortOrder
 }
 
 /** Shared by create and (from plan 03) update. */
-export interface SaveEventInvoiceCategoryPayload {
+export interface SaveInvoiceCategoryPayload {
   name: string
   isActive: boolean
   displayOrder: number
@@ -96,9 +96,9 @@ function assertSuccess(payload: unknown, fallbackMessage: string): void {
   }
 }
 
-function normalizeEventInvoiceCategory(
-  raw: z.infer<typeof eventInvoiceCategorySchema>,
-): EventInvoiceCategoryListItem {
+function normalizeInvoiceCategory(
+  raw: z.infer<typeof invoiceCategorySchema>,
+): InvoiceCategoryListItem {
   return {
     uniqueId: raw.UniqueId ?? raw.uniqueId ?? "",
     name: raw.Name ?? raw.name ?? "",
@@ -112,11 +112,11 @@ function toPage(
   parsed: z.infer<ReturnType<typeof pageSchema>>,
   pageNo: number,
   pageSize: number,
-): Page<EventInvoiceCategoryListItem> {
+): Page<InvoiceCategoryListItem> {
   const rawItems = (parsed.PageData ?? parsed.pageData ?? []) as z.infer<
-    typeof eventInvoiceCategorySchema
+    typeof invoiceCategorySchema
   >[]
-  const items = rawItems.map(normalizeEventInvoiceCategory)
+  const items = rawItems.map(normalizeInvoiceCategory)
   return {
     items,
     total: parsed.TotalRecordsCount ?? parsed.totalRecordsCount ?? items.length,
@@ -126,11 +126,11 @@ function toPage(
   }
 }
 
-export async function fetchEventInvoiceCategories(
-  filters: EventInvoiceCategoryFilters,
+export async function fetchInvoiceCategories(
+  filters: InvoiceCategoryFilters,
   pageNo: number,
   pageSize: number,
-): Promise<Page<EventInvoiceCategoryListItem>> {
+): Promise<Page<InvoiceCategoryListItem>> {
   const params = new URLSearchParams()
   params.set("pageNo", String(pageNo))
   params.set("pageSize", String(pageSize))
@@ -140,29 +140,29 @@ export async function fetchEventInvoiceCategories(
     params.set("searchTerm", filters.searchTerm.trim())
   }
 
-  const response = await client.get<unknown>(API_ROUTES.eventInvoiceCategories, { params })
-  const parsed = pageSchema(eventInvoiceCategorySchema).parse(parseServicePayload(response.data))
+  const response = await client.get<unknown>(API_ROUTES.invoiceCategories, { params })
+  const parsed = pageSchema(invoiceCategorySchema).parse(parseServicePayload(response.data))
   return toPage(parsed, pageNo, pageSize)
 }
 
-export async function createEventInvoiceCategory(
-  payload: SaveEventInvoiceCategoryPayload,
+export async function createInvoiceCategory(
+  payload: SaveInvoiceCategoryPayload,
 ): Promise<string> {
-  const response = await client.post<unknown>(API_ROUTES.eventInvoiceCategoryCreate, payload)
+  const response = await client.post<unknown>(API_ROUTES.invoiceCategoryCreate, payload)
   assertSuccess(response.data, "Failed to create category.")
   const data = parseServicePayload(response.data)
   return typeof data === "string" ? data : ""
 }
 
-export async function updateEventInvoiceCategory(
+export async function updateInvoiceCategory(
   uniqueId: string,
-  payload: SaveEventInvoiceCategoryPayload,
+  payload: SaveInvoiceCategoryPayload,
 ): Promise<void> {
-  const response = await client.put<unknown>(API_ROUTES.eventInvoiceCategoryDetail(uniqueId), payload)
+  const response = await client.put<unknown>(API_ROUTES.invoiceCategoryDetail(uniqueId), payload)
   assertSuccess(response.data, "Failed to update category.")
 }
 
-export async function deleteEventInvoiceCategory(uniqueId: string): Promise<void> {
-  const response = await client.delete<unknown>(API_ROUTES.eventInvoiceCategoryDetail(uniqueId))
+export async function deleteInvoiceCategory(uniqueId: string): Promise<void> {
+  const response = await client.delete<unknown>(API_ROUTES.invoiceCategoryDetail(uniqueId))
   assertSuccess(response.data, "Failed to delete category.")
 }

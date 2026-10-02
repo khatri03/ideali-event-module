@@ -1,14 +1,14 @@
 import { Skeleton, Table } from "@chakra-ui/react"
 
-interface EventInvoiceCategoriesTableSkeletonProps {
+interface InvoiceCategoriesTableSkeletonProps {
   columns: number
   rows?: number
 }
 
-export function EventInvoiceCategoriesTableSkeleton({
+export function InvoiceCategoriesTableSkeleton({
   columns,
   rows = 3,
-}: EventInvoiceCategoriesTableSkeletonProps) {
+}: InvoiceCategoriesTableSkeletonProps) {
   return (
     <Table.Body>
       {Array.from({ length: rows }, (_, rowIndex) => (

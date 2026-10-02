@@ -1049,7 +1049,7 @@ const categoryOptionSchema = z.object({
  */
 export async function fetchActiveEventInvoiceCategoryOptions(): Promise<EventInvoiceCategoryOption[]> {
   const params = new URLSearchParams({ pageNo: "1", pageSize: "200", sortBy: "displayOrder", sortOrder: "asc" })
-  const response = await client.get<unknown>(API_ROUTES.eventInvoiceCategories, { params })
+  const response = await client.get<unknown>(API_ROUTES.invoiceCategories, { params })
   const parsed = pageSchema(categoryOptionSchema).parse(parseServicePayload(response.data))
 
   return (parsed.PageData ?? parsed.pageData ?? [])

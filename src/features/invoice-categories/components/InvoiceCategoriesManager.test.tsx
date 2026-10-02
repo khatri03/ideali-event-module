@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ChakraProvider } from "@chakra-ui/react"
 import { AxiosError } from "axios"
 import { system } from "@/theme"
-import { EventInvoiceCategoriesManager } from "./EventInvoiceCategoriesManager"
+import { InvoiceCategoriesManager } from "./InvoiceCategoriesManager"
 
 const http = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() }))
 vi.mock("@/api/client", () => ({ client: http }))
@@ -75,10 +75,10 @@ function renderManager() {
       </ChakraProvider>
     )
   }
-  return render(<EventInvoiceCategoriesManager />, { wrapper: Wrapper })
+  return render(<InvoiceCategoriesManager />, { wrapper: Wrapper })
 }
 
-describe("EventInvoiceCategoriesManager", () => {
+describe("InvoiceCategoriesManager", () => {
   beforeEach(() => {
     http.get.mockReset()
     http.post.mockReset()

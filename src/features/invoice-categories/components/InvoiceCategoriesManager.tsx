@@ -5,16 +5,16 @@ import { ConfirmDialog, ErrorState, TablePagination } from "@/components/common"
 import { useDebounce } from "@/hooks/useDebounce"
 import { extractApiError } from "@/utils/errors"
 import type {
-  EventInvoiceCategoryFilters,
-  EventInvoiceCategoryListItem,
-} from "@/api/eventInvoiceCategories"
-import { useEventInvoiceCategories } from "../hooks/useEventInvoiceCategories"
-import { useDeleteEventInvoiceCategory } from "../hooks/useEventInvoiceCategoryMutations"
-import { EventInvoiceCategoriesTable } from "./EventInvoiceCategoriesTable"
-import { EventInvoiceCategoryFormDialog } from "./EventInvoiceCategoryFormDialog"
+  InvoiceCategoryFilters,
+  InvoiceCategoryListItem,
+} from "@/api/invoiceCategories"
+import { useInvoiceCategories } from "../hooks/useInvoiceCategories"
+import { useDeleteInvoiceCategory } from "../hooks/useInvoiceCategoryMutations"
+import { InvoiceCategoriesTable } from "./InvoiceCategoriesTable"
+import { InvoiceCategoryFormDialog } from "./InvoiceCategoryFormDialog"
 import { DEFAULT_PAGE_SIZE } from "../constants"
 
-const SORT: Pick<EventInvoiceCategoryFilters, "sortBy" | "sortOrder"> = {
+const SORT: Pick<InvoiceCategoryFilters, "sortBy" | "sortOrder"> = {
   sortBy: "displayOrder",
   sortOrder: "asc",
 }
@@ -22,21 +22,21 @@ const SORT: Pick<EventInvoiceCategoryFilters, "sortBy" | "sortOrder"> = {
 interface FormSession {
   open: boolean
   key: number
-  category: EventInvoiceCategoryListItem | null
+  category: InvoiceCategoryListItem | null
 }
 
 const CLOSED_FORM: FormSession = { open: false, key: 0, category: null }
 
-export function EventInvoiceCategoriesManager() {
+export function InvoiceCategoriesManager() {
   const [searchTerm, setSearchTerm] = useState("")
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE)
   const [form, setForm] = useState<FormSession>(CLOSED_FORM)
-  const [pendingDelete, setPendingDelete] = useState<EventInvoiceCategoryListItem | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<InvoiceCategoryListItem | null>(null)
   const debouncedSearch = useDebounce(searchTerm, 300)
 
-  const deleteMutation = useDeleteEventInvoiceCategory()
-  const categoriesQuery = useEventInvoiceCategories(
+  const deleteMutation = useDeleteInvoiceCategory()
+  const categoriesQuery = useInvoiceCategories(
     { ...SORT, searchTerm: debouncedSearch },
     page,
     pageSize,
@@ -59,7 +59,7 @@ export function EventInvoiceCategoriesManager() {
     setForm((current) => ({ open: true, key: current.key + 1, category: null }))
   }
 
-  function openEdit(category: EventInvoiceCategoryListItem) {
+  function openEdit(category: InvoiceCategoryListItem) {
     setForm((current) => ({ open: true, key: current.key + 1, category }))
   }
 
@@ -145,7 +145,7 @@ export function EventInvoiceCategoriesManager() {
           />
         ) : (
           <Box borderRadius="20px" border="1px solid" borderColor="border.subtle" bg="card.bg" boxShadow="card" overflow="hidden">
-            <EventInvoiceCategoriesTable
+            <InvoiceCategoriesTable
               categories={categories}
               isLoading={categoriesQuery.isLoading}
               onEdit={openEdit}
@@ -165,7 +165,7 @@ export function EventInvoiceCategoriesManager() {
         )}
       </Stack>
 
-      <EventInvoiceCategoryFormDialog
+      <InvoiceCategoryFormDialog
         open={form.open}
         editSessionKey={form.key}
         category={form.category}

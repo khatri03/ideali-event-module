@@ -5,7 +5,7 @@ import { MemoryRouter } from "react-router-dom"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ChakraProvider } from "@chakra-ui/react"
 import { system } from "@/theme"
-import { EventInvoiceCategoriesPage } from "./EventInvoiceCategoriesPage"
+import { InvoiceCategoriesPage } from "./InvoiceCategoriesPage"
 
 const http = vi.hoisted(() => ({ get: vi.fn() }))
 vi.mock("@/api/client", () => ({ client: http }))
@@ -36,10 +36,10 @@ function renderPage() {
       </ChakraProvider>
     )
   }
-  return render(<EventInvoiceCategoriesPage />, { wrapper: Wrapper })
+  return render(<InvoiceCategoriesPage />, { wrapper: Wrapper })
 }
 
-describe("EventInvoiceCategoriesPage", () => {
+describe("InvoiceCategoriesPage", () => {
   beforeEach(() => {
     http.get.mockReset()
   })

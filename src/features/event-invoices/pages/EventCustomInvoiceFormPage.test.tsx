@@ -137,7 +137,7 @@ describe("EventCustomInvoiceFormPage", () => {
 
     http.get.mockImplementation((url: string) => {
       if (url === API_ROUTES.eventInvoiceFilterOptions) return Promise.resolve(filterOptionsResponse())
-      if (url === API_ROUTES.eventInvoiceCategories) return Promise.resolve(categoriesResponse())
+      if (url === API_ROUTES.invoiceCategories) return Promise.resolve(categoriesResponse())
       if (url === API_ROUTES.eventInvoiceCustomForEdit(EDIT_ID)) return Promise.resolve(editResponse("PendingPayment", true))
       return Promise.resolve({ data: { success: true, Data: null } })
     })
@@ -238,7 +238,7 @@ describe("EventCustomInvoiceFormPage", () => {
   it("Edit_PaidInvoice_LocksTheForm", async () => {
     http.get.mockImplementation((url: string) => {
       if (url === API_ROUTES.eventInvoiceFilterOptions) return Promise.resolve(filterOptionsResponse())
-      if (url === API_ROUTES.eventInvoiceCategories) return Promise.resolve(categoriesResponse())
+      if (url === API_ROUTES.invoiceCategories) return Promise.resolve(categoriesResponse())
       if (url === API_ROUTES.eventInvoiceCustomForEdit(EDIT_ID)) return Promise.resolve(editResponse("Paid", false))
       return Promise.resolve({ data: { success: true, Data: null } })
     })
@@ -253,7 +253,7 @@ describe("EventCustomInvoiceFormPage", () => {
   it("Edit_PartiallyPaidInvoice_LocksTheForm", async () => {
     http.get.mockImplementation((url: string) => {
       if (url === API_ROUTES.eventInvoiceFilterOptions) return Promise.resolve(filterOptionsResponse())
-      if (url === API_ROUTES.eventInvoiceCategories) return Promise.resolve(categoriesResponse())
+      if (url === API_ROUTES.invoiceCategories) return Promise.resolve(categoriesResponse())
       if (url === API_ROUTES.eventInvoiceCustomForEdit(EDIT_ID)) return Promise.resolve(editResponse("PartiallyPaid", false))
       return Promise.resolve({ data: { success: true, Data: null } })
     })

@@ -1,7 +1,7 @@
 import { z } from "zod"
 
-/** Mirrors the backend validation in EventInvoiceCategoryService exactly; message strings kept byte-identical. */
-export const eventInvoiceCategoryFormSchema = z.object({
+/** Mirrors the backend validation in InvoiceCategoryService exactly; message strings kept byte-identical. */
+export const invoiceCategoryFormSchema = z.object({
   name: z
     .string()
     .trim()
@@ -19,4 +19,4 @@ export const eventInvoiceCategoryFormSchema = z.object({
     .regex(/^\d*$/, "Display order must be a whole number, zero or greater."),
 })
 
-export type EventInvoiceCategoryFormValues = z.infer<typeof eventInvoiceCategoryFormSchema>
+export type InvoiceCategoryFormValues = z.infer<typeof invoiceCategoryFormSchema>

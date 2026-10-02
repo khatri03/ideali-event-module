@@ -149,8 +149,8 @@ export const APP_ROUTES = {
     detailRoute: "/organizer/events/invoices/:invoiceUniqueId",
     detail: (invoiceUniqueId: string) => `/organizer/events/invoices/${invoiceUniqueId}`,
   },
-  eventInvoiceCategories: {
-    list: "/organizer/events/invoices/categories",
+  invoiceCategories: {
+    list: "/organizer/custom-invoices/categories",
   },
   customFormReports: {
     base: "/organizer/custom-form-report",
@@ -391,9 +391,9 @@ export const API_ROUTES = {
     `/api/organizer/events/invoices/${invoiceUniqueId}/tickets/${ticketUniqueId}/resend`,
   eventInvoiceLineItemAttendee: (invoiceUniqueId: string, lineItemUniqueId: string, slotIndex: number) =>
     `/api/organizer/events/invoices/${invoiceUniqueId}/line-items/${lineItemUniqueId}/attendees/${slotIndex}`,
-  eventInvoiceCategories: "/api/organizer/events/invoices/categories/list",
-  eventInvoiceCategoryCreate: "/api/organizer/events/invoices/categories",
-  eventInvoiceCategoryDetail: (uniqueId: string) => `/api/organizer/events/invoices/categories/${uniqueId}`,
+  invoiceCategories: "/api/organizer/custom-invoices/categories/list",
+  invoiceCategoryCreate: "/api/organizer/custom-invoices/categories",
+  invoiceCategoryDetail: (uniqueId: string) => `/api/organizer/custom-invoices/categories/${uniqueId}`,
   customInvoiceCreate: "/api/organizer/custom-invoices",
   eventInvoiceCustomUpdate: (invoiceUniqueId: string) =>
     `/api/organizer/events/invoices/custom/${invoiceUniqueId}`,

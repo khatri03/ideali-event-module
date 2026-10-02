@@ -1,8 +1,8 @@
-export { EventInvoiceCategoriesPage } from "./pages/EventInvoiceCategoriesPage"
-export { EventInvoiceCategoriesManager } from "./components/EventInvoiceCategoriesManager"
-export { useEventInvoiceCategories, EVENT_INVOICE_CATEGORY_QUERY_KEY } from "./hooks/useEventInvoiceCategories"
+export { InvoiceCategoriesPage } from "./pages/InvoiceCategoriesPage"
+export { InvoiceCategoriesManager } from "./components/InvoiceCategoriesManager"
+export { useInvoiceCategories, INVOICE_CATEGORY_QUERY_KEY } from "./hooks/useInvoiceCategories"
 export {
-  useCreateEventInvoiceCategory,
-  useUpdateEventInvoiceCategory,
-  useDeleteEventInvoiceCategory,
-} from "./hooks/useEventInvoiceCategoryMutations"
+  useCreateInvoiceCategory,
+  useUpdateInvoiceCategory,
+  useDeleteInvoiceCategory,
+} from "./hooks/useInvoiceCategoryMutations"

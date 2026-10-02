@@ -1,15 +1,15 @@
 import { Badge, Box, Button, Menu, Portal, Table, Text } from "@chakra-ui/react"
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
-import type { EventInvoiceCategoryListItem } from "@/api/eventInvoiceCategories"
+import type { InvoiceCategoryListItem } from "@/api/invoiceCategories"
 import { EMPTY_VALUE } from "@/utils/format"
 import { formatDate } from "../constants"
-import { EventInvoiceCategoriesTableSkeleton } from "./EventInvoiceCategoriesTable.skeleton"
+import { InvoiceCategoriesTableSkeleton } from "./InvoiceCategoriesTable.skeleton"
 
-interface EventInvoiceCategoriesTableProps {
-  categories: EventInvoiceCategoryListItem[]
+interface InvoiceCategoriesTableProps {
+  categories: InvoiceCategoryListItem[]
   isLoading: boolean
-  onEdit: (category: EventInvoiceCategoryListItem) => void
-  onDelete: (category: EventInvoiceCategoryListItem) => void
+  onEdit: (category: InvoiceCategoryListItem) => void
+  onDelete: (category: InvoiceCategoryListItem) => void
 }
 
 const COLUMN_COUNT = 5
@@ -37,9 +37,9 @@ function RowActionsMenu({
   onEdit,
   onDelete,
 }: {
-  category: EventInvoiceCategoryListItem
-  onEdit: (category: EventInvoiceCategoryListItem) => void
-  onDelete: (category: EventInvoiceCategoryListItem) => void
+  category: InvoiceCategoryListItem
+  onEdit: (category: InvoiceCategoryListItem) => void
+  onDelete: (category: InvoiceCategoryListItem) => void
 }) {
   return (
     <Menu.Root>
@@ -103,12 +103,12 @@ function EmptyRow() {
   )
 }
 
-export function EventInvoiceCategoriesTable({
+export function InvoiceCategoriesTable({
   categories,
   isLoading,
   onEdit,
   onDelete,
-}: EventInvoiceCategoriesTableProps) {
+}: InvoiceCategoriesTableProps) {
   return (
     <Box overflowX="auto">
       <Table.Root
@@ -128,7 +128,7 @@ export function EventInvoiceCategoriesTable({
         </Table.Header>
 
         {isLoading ? (
-          <EventInvoiceCategoriesTableSkeleton columns={COLUMN_COUNT} />
+          <InvoiceCategoriesTableSkeleton columns={COLUMN_COUNT} />
         ) : categories.length === 0 ? (
           <EmptyRow />
         ) : (

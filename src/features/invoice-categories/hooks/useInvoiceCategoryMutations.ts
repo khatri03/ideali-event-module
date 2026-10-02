@@ -1,19 +1,19 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import {
-  createEventInvoiceCategory,
-  deleteEventInvoiceCategory,
-  updateEventInvoiceCategory,
-  type SaveEventInvoiceCategoryPayload,
-} from "@/api/eventInvoiceCategories"
+  createInvoiceCategory,
+  deleteInvoiceCategory,
+  updateInvoiceCategory,
+  type SaveInvoiceCategoryPayload,
+} from "@/api/invoiceCategories"
 import { extractApiError } from "@/utils/errors"
 import { toaster } from "@/lib/toaster"
-import { EVENT_INVOICE_CATEGORY_QUERY_KEY } from "./useEventInvoiceCategories"
+import { INVOICE_CATEGORY_QUERY_KEY } from "./useInvoiceCategories"
 
-export function useCreateEventInvoiceCategory() {
+export function useCreateInvoiceCategory() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (payload: SaveEventInvoiceCategoryPayload) => createEventInvoiceCategory(payload),
+    mutationFn: (payload: SaveInvoiceCategoryPayload) => createInvoiceCategory(payload),
     onSuccess: () => {
       toaster.create({ type: "success", title: "Category created." })
     },
@@ -21,12 +21,12 @@ export function useCreateEventInvoiceCategory() {
       toaster.create({ type: "error", title: extractApiError(error) })
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: EVENT_INVOICE_CATEGORY_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: INVOICE_CATEGORY_QUERY_KEY })
     },
   })
 }
 
-export function useUpdateEventInvoiceCategory() {
+export function useUpdateInvoiceCategory() {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -35,8 +35,8 @@ export function useUpdateEventInvoiceCategory() {
       payload,
     }: {
       uniqueId: string
-      payload: SaveEventInvoiceCategoryPayload
-    }) => updateEventInvoiceCategory(uniqueId, payload),
+      payload: SaveInvoiceCategoryPayload
+    }) => updateInvoiceCategory(uniqueId, payload),
     onSuccess: () => {
       toaster.create({ type: "success", title: "Category updated." })
     },
@@ -44,16 +44,16 @@ export function useUpdateEventInvoiceCategory() {
       toaster.create({ type: "error", title: extractApiError(error) })
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: EVENT_INVOICE_CATEGORY_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: INVOICE_CATEGORY_QUERY_KEY })
     },
   })
 }
 
-export function useDeleteEventInvoiceCategory() {
+export function useDeleteInvoiceCategory() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (uniqueId: string) => deleteEventInvoiceCategory(uniqueId),
+    mutationFn: (uniqueId: string) => deleteInvoiceCategory(uniqueId),
     onSuccess: () => {
       toaster.create({ type: "success", title: "Category deleted." })
     },
@@ -61,7 +61,7 @@ export function useDeleteEventInvoiceCategory() {
       toaster.create({ type: "error", title: extractApiError(error) })
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: EVENT_INVOICE_CATEGORY_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: INVOICE_CATEGORY_QUERY_KEY })
     },
   })
 }

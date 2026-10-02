@@ -37,8 +37,6 @@ interface NavItem {
   roles: string[]
   /** Base path used for the active check when the section has child routes (create/edit). Defaults to `path`. */
   matchPath?: string
-  /** Sub-trees that belong to a more specific sibling item, so this item does not claim them by prefix. */
-  excludePrefixes?: string[]
   badge?: string
 }
 
@@ -61,13 +59,12 @@ const mainNav: NavItem[] = [
     label: "Event Invoices",
     icon: <Receipt size={17} />,
     path: APP_ROUTES.eventInvoices.list,
-    excludePrefixes: [APP_ROUTES.eventInvoiceCategories.list],
     roles: ["Organizer", "Admin"],
   },
   {
     label: "Invoice Categories",
     icon: <Tags size={17} />,
-    path: APP_ROUTES.eventInvoiceCategories.list,
+    path: APP_ROUTES.invoiceCategories.list,
     roles: ["Organizer", "Admin"],
   },
 ]
@@ -129,11 +126,7 @@ function NavSection({
     <VStack gap={0.5} align="stretch" mb={6}>
       {visibleItems.map((item) => {
         const matchPath = item.matchPath ?? item.path
-        const isExcluded = item.excludePrefixes?.some(
-          (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-        )
-        const isActive =
-          !isExcluded && (pathname === matchPath || pathname.startsWith(`${matchPath}/`))
+        const isActive = pathname === matchPath || pathname.startsWith(`${matchPath}/`)
         return (
           <NavLink key={item.path} to={item.path} style={{ textDecoration: "none" }} onClick={onNavigate}>
             <Flex
