@@ -57,7 +57,7 @@ import {
   LegacyCustomInvoicePayRedirect,
 } from "./features/events"
 import { SessionListPage, SessionWizardLayout, SessionWizardStepPage } from "./features/sessions"
-import { EventCustomInvoiceFormPage, EventInvoiceDetailPage, EventInvoicesPage } from "./features/event-invoices"
+import { CustomInvoiceFormPage, EventInvoiceDetailPage, EventInvoicesPage } from "./features/event-invoices"
 import { InvoiceCategoriesPage } from "./features/invoice-categories"
 import { APP_ROUTES } from "@/utils/routes"
 
@@ -175,8 +175,8 @@ export default function App() {
           <Route path={APP_ROUTES.eventCheckInRoute} element={<EventCheckInPage />} />
           <Route path={APP_ROUTES.invoiceCategories.list} element={<InvoiceCategoriesPage />} />
           <Route path={APP_ROUTES.eventInvoices.list} element={<EventInvoicesPage />} />
-          <Route path={APP_ROUTES.eventInvoices.customNew} element={<EventCustomInvoiceFormPage />} />
-          <Route path={APP_ROUTES.eventInvoices.customEditRoute} element={<EventCustomInvoiceFormPage />} />
+          <Route path={APP_ROUTES.customInvoices.new} element={<CustomInvoiceFormPage />} />
+          <Route path={APP_ROUTES.customInvoices.editRoute} element={<CustomInvoiceFormPage />} />
           <Route path={APP_ROUTES.eventInvoices.detailRoute} element={<EventInvoiceDetailPage />} />
           <Route path={APP_ROUTES.memberDocuments.list} element={<MemberDocumentsPage />} />
           <Route path={APP_ROUTES.memberDocuments.detailRoute} element={<MemberDocumentCategoryPage />} />

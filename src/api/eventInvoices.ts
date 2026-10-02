@@ -188,7 +188,7 @@ const customLineItemSchema = z.object({
   amount: dual(money()),
 })
 
-const paymentAttemptSchema = z.object({
+export const paymentAttemptSchema = z.object({
   PaymentMethod: dual(z.string()),
   paymentMethod: dual(z.string()),
   PaymentStatus: dual(z.string()),
@@ -205,7 +205,7 @@ const paymentAttemptSchema = z.object({
   paymentDateUtc: dual(z.string()),
 })
 
-const invoiceNoteSchema = z.object({
+export const invoiceNoteSchema = z.object({
   Note: dual(z.string()),
   note: dual(z.string()),
   CreatedBy: dual(z.string().nullable()),
@@ -663,7 +663,7 @@ function normalizeCustomLineItem(raw: z.infer<typeof customLineItemSchema>): Eve
   }
 }
 
-function normalizePaymentAttempt(raw: z.infer<typeof paymentAttemptSchema>): EventInvoicePaymentAttempt {
+export function normalizePaymentAttempt(raw: z.infer<typeof paymentAttemptSchema>): EventInvoicePaymentAttempt {
   const paymentStatus = raw.PaymentStatus ?? raw.paymentStatus ?? ""
 
   return {
@@ -693,7 +693,7 @@ function normalizeCharge(raw: z.infer<typeof chargeSchema>): EventInvoiceCharge 
   }
 }
 
-function normalizeInvoiceNote(raw: z.infer<typeof invoiceNoteSchema>): EventInvoiceNote {
+export function normalizeInvoiceNote(raw: z.infer<typeof invoiceNoteSchema>): EventInvoiceNote {
   return {
     note: raw.Note ?? raw.note ?? "",
     createdBy: raw.CreatedBy ?? raw.createdBy ?? "System",
@@ -903,161 +903,4 @@ export async function updateEventInvoiceAttendee(
   data: EventInvoiceAttendeeUpdate,
 ): Promise<void> {
   await client.put(API_ROUTES.eventInvoiceLineItemAttendee(invoiceUniqueId, lineItemUniqueId, slotIndex), data)
-}
-
-export interface CreateEventCustomInvoicePayload {
-  eventUniqueId: string
-  categoryUniqueId: string
-  dueDateUtc: string
-  memberUniqueId?: string | null
-  contactUniqueId?: string | null
-  companyName: string
-  firstName?: string
-  middleName?: string
-  lastName: string
-  cellPhone?: string
-  email: string
-  specialNotes?: string
-  /** Amounts stay decimal strings the whole way to the server - never float. */
-  lineItems: { description: string; amount: string }[]
-}
-
-/** An update carries the same shape as a create; the invoice it targets is named in the URL. */
-export type UpdateEventCustomInvoicePayload = CreateEventCustomInvoicePayload
-
-export async function updateEventCustomInvoice(
-  invoiceUniqueId: string,
-  payload: UpdateEventCustomInvoicePayload,
-): Promise<void> {
-  await client.put(API_ROUTES.eventInvoiceCustomUpdate(invoiceUniqueId), payload)
-}
-
-export async function linkEventInvoice(invoiceUniqueId: string, targetInvoiceUniqueId: string): Promise<void> {
-  await client.post(API_ROUTES.eventInvoiceCustomLink(invoiceUniqueId), { targetInvoiceUniqueId })
-}
-
-export async function unlinkEventInvoice(invoiceUniqueId: string): Promise<void> {
-  await client.delete(API_ROUTES.eventInvoiceCustomLink(invoiceUniqueId))
-}
-
-export interface EventCustomInvoiceLineForEdit {
-  description: string
-  /** Decimal text as the server stored it - never a float. */
-  amount: string
-}
-
-export interface EventCustomInvoiceForEdit {
-  invoiceUniqueId: string
-  eventUniqueId: string
-  categoryUniqueId: string
-  dueDateUtc: string
-  companyName: string
-  firstName: string
-  middleName: string
-  lastName: string
-  cellPhone: string
-  email: string
-  specialNotes: string
-  invoiceStatus: string
-  /** The server's own verdict on whether this invoice may still be edited - a Paid or PartiallyPaid one may not. */
-  canEdit: boolean
-  lineItems: EventCustomInvoiceLineForEdit[]
-}
-
-const forEditLineSchema = z.object({
-  Description: dual(z.string()),
-  description: dual(z.string()),
-  Amount: dual(money()),
-  amount: dual(money()),
-})
-
-const forEditSchema = z.object({
-  InvoiceUniqueId: dual(z.string()),
-  invoiceUniqueId: dual(z.string()),
-  EventUniqueId: dual(z.string()),
-  eventUniqueId: dual(z.string()),
-  CategoryUniqueId: dual(z.string()),
-  categoryUniqueId: dual(z.string()),
-  DueDateUtc: dual(z.string()),
-  dueDateUtc: dual(z.string()),
-  CompanyName: dual(z.string().nullable()),
-  companyName: dual(z.string().nullable()),
-  FirstName: dual(z.string().nullable()),
-  firstName: dual(z.string().nullable()),
-  MiddleName: dual(z.string().nullable()),
-  middleName: dual(z.string().nullable()),
-  LastName: dual(z.string().nullable()),
-  lastName: dual(z.string().nullable()),
-  CellPhone: dual(z.string().nullable()),
-  cellPhone: dual(z.string().nullable()),
-  Email: dual(z.string().nullable()),
-  email: dual(z.string().nullable()),
-  SpecialNotes: dual(z.string().nullable()),
-  specialNotes: dual(z.string().nullable()),
-  InvoiceStatus: dual(z.string()),
-  invoiceStatus: dual(z.string()),
-  CanEdit: dual(z.boolean()),
-  canEdit: dual(z.boolean()),
-  LineItems: z.array(forEditLineSchema).nullable().optional(),
-  lineItems: z.array(forEditLineSchema).nullable().optional(),
-})
-
-export async function fetchEventCustomInvoiceForEdit(invoiceUniqueId: string): Promise<EventCustomInvoiceForEdit> {
-  const response = await client.get<unknown>(API_ROUTES.eventInvoiceCustomForEdit(invoiceUniqueId))
-  const raw = forEditSchema.parse(parseServicePayload(response.data))
-  const invoiceStatus = raw.InvoiceStatus ?? raw.invoiceStatus ?? ""
-
-  return {
-    invoiceUniqueId: raw.InvoiceUniqueId ?? raw.invoiceUniqueId ?? "",
-    eventUniqueId: raw.EventUniqueId ?? raw.eventUniqueId ?? "",
-    categoryUniqueId: raw.CategoryUniqueId ?? raw.categoryUniqueId ?? "",
-    dueDateUtc: raw.DueDateUtc ?? raw.dueDateUtc ?? "",
-    companyName: raw.CompanyName ?? raw.companyName ?? "",
-    firstName: raw.FirstName ?? raw.firstName ?? "",
-    middleName: raw.MiddleName ?? raw.middleName ?? "",
-    lastName: raw.LastName ?? raw.lastName ?? "",
-    cellPhone: raw.CellPhone ?? raw.cellPhone ?? "",
-    email: raw.Email ?? raw.email ?? "",
-    specialNotes: raw.SpecialNotes ?? raw.specialNotes ?? "",
-    invoiceStatus,
-    // A response predating the flag still has to render a usable page; only PendingPayment admits an edit.
-    canEdit: (raw.CanEdit ?? raw.canEdit) ?? invoiceStatus === "PendingPayment",
-    lineItems: (raw.LineItems ?? raw.lineItems ?? []).map((line) => ({
-      description: line.Description ?? line.description ?? "",
-      amount: line.Amount ?? line.amount ?? "0",
-    })),
-  }
-}
-
-export interface EventInvoiceCategoryOption {
-  uniqueId: string
-  name: string
-}
-
-const categoryOptionSchema = z.object({
-  UniqueId: dual(z.string()),
-  uniqueId: dual(z.string()),
-  Name: dual(z.string()),
-  name: dual(z.string()),
-  IsActive: dual(z.boolean()),
-  isActive: dual(z.boolean()),
-})
-
-/**
- * The sponsorship types a new custom invoice may be billed under: the organizer's categories, narrowed to
- * the active ones. Reuses the Phase 1 categories list endpoint rather than a dedicated options route.
- */
-export async function fetchActiveEventInvoiceCategoryOptions(): Promise<EventInvoiceCategoryOption[]> {
-  const params = new URLSearchParams({ pageNo: "1", pageSize: "200", sortBy: "displayOrder", sortOrder: "asc" })
-  const response = await client.get<unknown>(API_ROUTES.invoiceCategories, { params })
-  const parsed = pageSchema(categoryOptionSchema).parse(parseServicePayload(response.data))
-
-  return (parsed.PageData ?? parsed.pageData ?? [])
-    .map((raw) => ({
-      uniqueId: raw.UniqueId ?? raw.uniqueId ?? "",
-      name: raw.Name ?? raw.name ?? "",
-      isActive: raw.IsActive ?? raw.isActive ?? true,
-    }))
-    .filter((option) => option.isActive && option.uniqueId)
-    .map(({ uniqueId, name }) => ({ uniqueId, name }))
 }

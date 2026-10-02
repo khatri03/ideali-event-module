@@ -142,12 +142,15 @@ export const APP_ROUTES = {
     list: "/organizer/events/invoices",
     listForEvent: (eventUniqueId: string) =>
       `/organizer/events/invoices?eventUniqueId=${encodeURIComponent(eventUniqueId)}`,
-    customNew: "/organizer/events/invoices/custom/new",
-    customEditRoute: "/organizer/events/invoices/custom/:invoiceUniqueId/edit",
-    customEdit: (invoiceUniqueId: string) =>
-      `/organizer/events/invoices/custom/${invoiceUniqueId}/edit`,
     detailRoute: "/organizer/events/invoices/:invoiceUniqueId",
     detail: (invoiceUniqueId: string) => `/organizer/events/invoices/${invoiceUniqueId}`,
+  },
+  customInvoices: {
+    new: "/organizer/custom-invoices/new",
+    editRoute: "/organizer/custom-invoices/:invoiceUniqueId/edit",
+    edit: (invoiceUniqueId: string) => `/organizer/custom-invoices/${invoiceUniqueId}/edit`,
+    detailRoute: "/organizer/custom-invoices/:invoiceUniqueId",
+    detail: (invoiceUniqueId: string) => `/organizer/custom-invoices/${invoiceUniqueId}`,
   },
   invoiceCategories: {
     list: "/organizer/custom-invoices/categories",
@@ -395,13 +398,15 @@ export const API_ROUTES = {
   invoiceCategoryCreate: "/api/organizer/custom-invoices/categories",
   invoiceCategoryDetail: (uniqueId: string) => `/api/organizer/custom-invoices/categories/${uniqueId}`,
   customInvoiceCreate: "/api/organizer/custom-invoices",
-  eventInvoiceCustomUpdate: (invoiceUniqueId: string) =>
-    `/api/organizer/events/invoices/custom/${invoiceUniqueId}`,
-  eventInvoiceCustomForEdit: (invoiceUniqueId: string) =>
-    `/api/organizer/events/invoices/custom/${invoiceUniqueId}/edit`,
+  customInvoiceUpdate: (invoiceUniqueId: string) => `/api/organizer/custom-invoices/${invoiceUniqueId}`,
+  customInvoiceForEdit: (invoiceUniqueId: string) => `/api/organizer/custom-invoices/${invoiceUniqueId}/edit`,
+  customInvoiceDetail: (invoiceUniqueId: string) => `/api/organizer/custom-invoices/${invoiceUniqueId}`,
   /** POST links the invoice to another; DELETE removes that link from both sides. */
-  eventInvoiceCustomLink: (invoiceUniqueId: string) =>
-    `/api/organizer/events/invoices/custom/${invoiceUniqueId}/link`,
+  customInvoiceLink: (invoiceUniqueId: string) => `/api/organizer/custom-invoices/${invoiceUniqueId}/link`,
+  customInvoiceMarkPaid: (invoiceUniqueId: string) => `/api/organizer/custom-invoices/${invoiceUniqueId}/mark-paid`,
+  customInvoiceCancel: (invoiceUniqueId: string) => `/api/organizer/custom-invoices/${invoiceUniqueId}/cancel`,
+  customInvoiceSend: (invoiceUniqueId: string) => `/api/organizer/custom-invoices/${invoiceUniqueId}/send`,
+  customInvoiceAddNote: (invoiceUniqueId: string) => `/api/organizer/custom-invoices/${invoiceUniqueId}/add-note`,
   stripePublicCredentials: (paymentAccountUniqueId: string) =>
     `/api/public/stripe/${paymentAccountUniqueId}/credentials`,
   sessionAttendees: (eventUniqueId: string, sessionUniqueId: string) =>

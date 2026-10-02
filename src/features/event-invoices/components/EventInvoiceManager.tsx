@@ -136,7 +136,7 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
   }
 
   function handleEdit(invoice: EventInvoiceListItem) {
-    navigate(APP_ROUTES.eventInvoices.customEdit(invoice.invoiceUniqueId), { state: returnState })
+    navigate(APP_ROUTES.customInvoices.edit(invoice.invoiceUniqueId), { state: returnState })
   }
 
   function handleCloseResend() {

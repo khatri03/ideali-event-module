@@ -15,8 +15,11 @@ const api = vi.hoisted(() => ({
   fetchEventInvoices: vi.fn(),
   fetchEventInvoiceDetail: vi.fn(),
   addEventInvoiceNote: vi.fn(),
-  linkEventInvoice: vi.fn(),
-  unlinkEventInvoice: vi.fn(),
+}))
+
+const customApi = vi.hoisted(() => ({
+  linkCustomInvoice: vi.fn(),
+  unlinkCustomInvoice: vi.fn(),
 }))
 
 const { toastMock } = vi.hoisted(() => ({ toastMock: vi.fn() }))
@@ -26,6 +29,11 @@ vi.mock("@/lib/toaster", () => ({ toaster: { create: toastMock } }))
 vi.mock("@/api/eventInvoices", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/api/eventInvoices")>()
   return { ...actual, ...api }
+})
+
+vi.mock("@/api/customInvoices", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/api/customInvoices")>()
+  return { ...actual, ...customApi }
 })
 
 const FILTERS: EventInvoiceFilters = {
@@ -121,8 +129,8 @@ function invalidatedKeys(invalidateSpy: ReturnType<typeof createObservedClient>[
 describe("invoice link mutations", () => {
   beforeEach(() => {
     toastMock.mockReset()
-    api.linkEventInvoice.mockReset().mockResolvedValue(undefined)
-    api.unlinkEventInvoice.mockReset().mockResolvedValue(undefined)
+    customApi.linkCustomInvoice.mockReset().mockResolvedValue(undefined)
+    customApi.unlinkCustomInvoice.mockReset().mockResolvedValue(undefined)
   })
 
   /**
@@ -135,7 +143,7 @@ describe("invoice link mutations", () => {
 
     await result.current.mutateAsync("invoice-2")
 
-    expect(api.linkEventInvoice).toHaveBeenCalledWith("invoice-1", "invoice-2")
+    expect(customApi.linkCustomInvoice).toHaveBeenCalledWith("invoice-1", "invoice-2")
     expect(toastMock).toHaveBeenCalledWith({ type: "success", title: "Invoices linked." })
     await waitFor(() =>
       expect(invalidatedKeys(invalidateSpy)).toEqual([
@@ -151,7 +159,7 @@ describe("invoice link mutations", () => {
    * still refresh so a partial or concurrent change is not hidden behind a stale view.
    */
   it("Link_Refused_ToastsTheServerReasonAndStillRefreshesBothSides", async () => {
-    api.linkEventInvoice.mockRejectedValue(new Error("One of these invoices is already linked."))
+    customApi.linkCustomInvoice.mockRejectedValue(new Error("One of these invoices is already linked."))
     const { queryClient, invalidateSpy } = createObservedClient()
     const { result } = renderHook(() => useLinkEventInvoice("invoice-1"), { wrapper: createWrapper(queryClient) })
 
@@ -171,7 +179,7 @@ describe("invoice link mutations", () => {
 
     await result.current.mutateAsync()
 
-    expect(api.unlinkEventInvoice).toHaveBeenCalledWith("invoice-1")
+    expect(customApi.unlinkCustomInvoice).toHaveBeenCalledWith("invoice-1")
     expect(toastMock).toHaveBeenCalledWith({ type: "success", title: "Link removed." })
     await waitFor(() =>
       expect(invalidatedKeys(invalidateSpy)).toEqual([
@@ -184,7 +192,7 @@ describe("invoice link mutations", () => {
 
   /** A failed unlink leaves the link in place, so the organizer must be told rather than shown success. */
   it("Unlink_Refused_ToastsAnErrorAndNeverClaimsSuccess", async () => {
-    api.unlinkEventInvoice.mockRejectedValue(new Error("This invoice is not linked."))
+    customApi.unlinkCustomInvoice.mockRejectedValue(new Error("This invoice is not linked."))
     const { result } = renderHook(() => useUnlinkEventInvoice("invoice-1", "invoice-2"), { wrapper: createWrapper() })
 
     await expect(result.current.mutateAsync()).rejects.toThrow()

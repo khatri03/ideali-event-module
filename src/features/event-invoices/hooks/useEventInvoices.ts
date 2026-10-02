@@ -5,11 +5,9 @@ import {
   fetchEventInvoiceDetail,
   fetchEventInvoiceFilterOptions,
   fetchEventInvoices,
-  linkEventInvoice,
   markEventInvoiceAsPaid,
   resendEventInvoice,
   resendEventInvoiceTicket,
-  unlinkEventInvoice,
   updateEventInvoiceBuyer,
   updateEventInvoiceAttendee,
   type EventInvoiceAttendeeUpdate,
@@ -19,6 +17,7 @@ import {
   type EventInvoiceSortBy,
   type EventInvoiceSortOrder,
 } from "@/api/eventInvoices"
+import { linkCustomInvoice, unlinkCustomInvoice } from "@/api/customInvoices"
 import { toaster } from "@/lib/toaster"
 import { extractApiError, isNotFoundError } from "@/utils/errors"
 
@@ -172,7 +171,7 @@ function invalidateLinkedPair(queryClient: QueryClient, invoiceUniqueIds: string
 export function useLinkEventInvoice(invoiceUniqueId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (targetInvoiceUniqueId: string) => linkEventInvoice(invoiceUniqueId, targetInvoiceUniqueId),
+    mutationFn: (targetInvoiceUniqueId: string) => linkCustomInvoice(invoiceUniqueId, targetInvoiceUniqueId),
     onSuccess: () => toaster.create({ type: "success", title: "Invoices linked." }),
     onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
     onSettled: (_result, _error, targetInvoiceUniqueId) =>
@@ -183,7 +182,7 @@ export function useLinkEventInvoice(invoiceUniqueId: string) {
 export function useUnlinkEventInvoice(invoiceUniqueId: string, linkedInvoiceUniqueId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () => unlinkEventInvoice(invoiceUniqueId),
+    mutationFn: () => unlinkCustomInvoice(invoiceUniqueId),
     onSuccess: () => toaster.create({ type: "success", title: "Link removed." }),
     onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
     onSettled: () => invalidateLinkedPair(queryClient, [invoiceUniqueId, linkedInvoiceUniqueId]),

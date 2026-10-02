@@ -4,9 +4,7 @@ import {
   cancelEventInvoice,
   fetchEventInvoiceDetail,
   fetchEventInvoices,
-  linkEventInvoice,
   markEventInvoiceAsPaid,
-  unlinkEventInvoice,
   type EventInvoiceFilters,
 } from "./eventInvoices"
 
@@ -445,22 +443,6 @@ describe("event invoice links", () => {
   function detailWith(extra: Record<string, unknown>) {
     return { data: { success: true, data: { invoiceUniqueId: "invoice-1", invoiceNo: "INV-1", ...extra } } }
   }
-
-  /** The source travels in the route and the target in the body, exactly as the backend binds them. */
-  it("Link_PostsTheTargetToTheSourceInvoicesLinkEndpoint", async () => {
-    await linkEventInvoice("invoice-1", "invoice-2")
-
-    expect(postMock).toHaveBeenCalledWith("/api/organizer/events/invoices/custom/invoice-1/link", {
-      targetInvoiceUniqueId: "invoice-2",
-    })
-  })
-
-  /** Unlinking is a DELETE on the same resource, carrying no body. */
-  it("Unlink_DeletesTheInvoicesLink", async () => {
-    await unlinkEventInvoice("invoice-1")
-
-    expect(deleteMock).toHaveBeenCalledWith("/api/organizer/events/invoices/custom/invoice-1/link")
-  })
 
   /** The detail names the other invoice whichever casing the server serialises it in. */
   it.each([

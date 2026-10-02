@@ -11,19 +11,19 @@ import { RequiredFieldLabel } from "@/features/custom-lists"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 import { parseUtcDateTime, startOfLocalDayAsUtcIso } from "@/utils/utcDates"
-import type { EventCustomInvoiceForEdit } from "@/api/eventInvoices"
+import type { CustomInvoiceForEdit, CustomInvoiceWritePayload } from "@/api/customInvoices"
 import { useEventInvoiceFilterOptions } from "../hooks/useEventInvoices"
 import {
-  useActiveEventInvoiceCategoryOptions,
-  useCreateEventCustomInvoice,
-  useUpdateEventCustomInvoice,
-} from "../hooks/useEventCustomInvoiceMutations"
-import { useEventCustomInvoiceForEdit } from "../hooks/useEventCustomInvoiceForEdit"
+  useActiveInvoiceCategoryOptions,
+  useCreateCustomInvoice,
+  useUpdateCustomInvoice,
+} from "../hooks/useCustomInvoiceMutations"
+import { useCustomInvoiceForEdit } from "../hooks/useCustomInvoiceForEdit"
 import { customInvoiceSchema, type CustomInvoiceFormValues } from "../schemas/customInvoice.schemas"
 import { BackToInvoicesButton } from "../components/BackToInvoicesButton"
 import { CustomInvoiceBuyerSection } from "../components/CustomInvoiceBuyerSection"
 import { CustomInvoiceLineItems } from "../components/CustomInvoiceLineItems"
-import { EventCustomInvoiceFormPageSkeleton } from "./EventCustomInvoiceFormPage.skeleton"
+import { CustomInvoiceFormPageSkeleton } from "./CustomInvoiceFormPage.skeleton"
 
 const NOTES_MAX = 2000
 
@@ -49,9 +49,9 @@ function toDateInputValue(dueDateUtc: string): string {
   return parsed ? format(parsed, "yyyy-MM-dd") : ""
 }
 
-function toFormValues(initial: EventCustomInvoiceForEdit): CustomInvoiceFormValues {
+function toFormValues(initial: CustomInvoiceForEdit): CustomInvoiceFormValues {
   return {
-    eventUniqueId: initial.eventUniqueId,
+    eventUniqueId: initial.entityUniqueId,
     categoryUniqueId: initial.categoryUniqueId,
     memberUniqueId: "",
     dueDate: toDateInputValue(initial.dueDateUtc),
@@ -71,7 +71,7 @@ function toFormValues(initial: EventCustomInvoiceForEdit): CustomInvoiceFormValu
 
 interface CustomInvoiceFormProps {
   invoiceUniqueId?: string
-  initial?: EventCustomInvoiceForEdit
+  initial?: CustomInvoiceForEdit
 }
 
 /**
@@ -86,9 +86,9 @@ function CustomInvoiceForm({ invoiceUniqueId, initial }: CustomInvoiceFormProps)
   const isReadOnly = Boolean(initial) && initial?.canEdit === false
 
   const eventsQuery = useEventInvoiceFilterOptions()
-  const categoriesQuery = useActiveEventInvoiceCategoryOptions()
-  const createMutation = useCreateEventCustomInvoice()
-  const updateMutation = useUpdateEventCustomInvoice()
+  const categoriesQuery = useActiveInvoiceCategoryOptions()
+  const createMutation = useCreateCustomInvoice()
+  const updateMutation = useUpdateCustomInvoice()
   const activeMutation = isEditMode ? updateMutation : createMutation
 
   const [isDiscardOpen, setIsDiscardOpen] = useState(false)
@@ -111,7 +111,7 @@ function CustomInvoiceForm({ invoiceUniqueId, initial }: CustomInvoiceFormProps)
   const notes = useWatch({ control, name: "specialNotes" }) ?? ""
 
   function leave() {
-    navigate(isEditMode && invoiceUniqueId ? APP_ROUTES.eventInvoices.detail(invoiceUniqueId) : APP_ROUTES.eventInvoices.list)
+    navigate(isEditMode && invoiceUniqueId ? APP_ROUTES.customInvoices.detail(invoiceUniqueId) : APP_ROUTES.eventInvoices.list)
   }
 
   function handleCancel() {
@@ -123,8 +123,10 @@ function CustomInvoiceForm({ invoiceUniqueId, initial }: CustomInvoiceFormProps)
   }
 
   async function onSubmit(values: CustomInvoiceFormValues) {
-    const payload = {
-      eventUniqueId: values.eventUniqueId,
+    // What an invoice bills is fixed at creation, so an edit repeats the stored binding rather than the picker.
+    const payload: CustomInvoiceWritePayload = {
+      moduleType: initial?.moduleType ?? "Event",
+      entityUniqueId: initial ? initial.entityUniqueId : values.eventUniqueId,
       categoryUniqueId: values.categoryUniqueId,
       memberUniqueId: values.memberUniqueId ? values.memberUniqueId : null,
       dueDateUtc: startOfLocalDayAsUtcIso(values.dueDate) ?? "",
@@ -141,10 +143,10 @@ function CustomInvoiceForm({ invoiceUniqueId, initial }: CustomInvoiceFormProps)
     try {
       if (isEditMode && invoiceUniqueId) {
         await updateMutation.mutateAsync({ invoiceUniqueId, payload })
-        navigate(APP_ROUTES.eventInvoices.detail(invoiceUniqueId))
+        navigate(APP_ROUTES.customInvoices.detail(invoiceUniqueId))
       } else {
         const newInvoiceId = await createMutation.mutateAsync(payload)
-        navigate(newInvoiceId ? APP_ROUTES.eventInvoices.detail(newInvoiceId) : APP_ROUTES.eventInvoices.list)
+        navigate(newInvoiceId ? APP_ROUTES.customInvoices.detail(newInvoiceId) : APP_ROUTES.eventInvoices.list)
       }
     } catch {
       // Kept on the page so the banner stays visible with the entered values still in view.
@@ -340,14 +342,14 @@ function CustomInvoiceForm({ invoiceUniqueId, initial }: CustomInvoiceFormProps)
  * arrives and a retryable error state if it fails - then hands the resolved values to the form; in create
  * mode it renders the empty form straight away.
  */
-export function EventCustomInvoiceFormPage() {
+export function CustomInvoiceFormPage() {
   const navigate = useNavigate()
   const { invoiceUniqueId } = useParams<{ invoiceUniqueId: string }>()
-  const editQuery = useEventCustomInvoiceForEdit(invoiceUniqueId)
+  const editQuery = useCustomInvoiceForEdit(invoiceUniqueId)
 
   if (invoiceUniqueId) {
     if (editQuery.isLoading) {
-      return <EventCustomInvoiceFormPageSkeleton />
+      return <CustomInvoiceFormPageSkeleton />
     }
     if (editQuery.isError || !editQuery.data) {
       return (

@@ -5,7 +5,7 @@ import { type FieldErrors, type UseFormRegister, type UseFormSetValue } from "re
 import { RequiredFieldLabel } from "@/features/custom-lists"
 import { useDebounce } from "@/hooks/useDebounce"
 import { extractApiError } from "@/utils/errors"
-import { useEventInvoiceBuyerMemberOptions } from "../hooks/useEventCustomInvoiceMutations"
+import { useCustomInvoiceBuyerMemberOptions } from "../hooks/useCustomInvoiceMutations"
 import type { CustomInvoiceFormValues } from "../schemas/customInvoice.schemas"
 
 type BuyerSource = "manual" | "member"
@@ -83,7 +83,7 @@ export function CustomInvoiceBuyerSection({
   const [source, setSource] = useState<BuyerSource>("manual")
   const [searchTerm, setSearchTerm] = useState("")
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
-  const membersQuery = useEventInvoiceBuyerMemberOptions(source === "member" ? debouncedSearchTerm : "")
+  const membersQuery = useCustomInvoiceBuyerMemberOptions(source === "member" ? debouncedSearchTerm : "")
 
   const members = membersQuery.data?.items ?? []
   const hasSearched = source === "member" && debouncedSearchTerm.trim().length >= 2

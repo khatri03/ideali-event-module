@@ -10,9 +10,9 @@ function CardSkeleton({ children }: { children: ReactNode }) {
 }
 
 /** Mirrors the form layout block for block, so nothing shifts once the invoice loads for editing. */
-export function EventCustomInvoiceFormPageSkeleton() {
+export function CustomInvoiceFormPageSkeleton() {
   return (
-    <Stack gap={5} maxW="4xl" mx="auto" data-testid="event-custom-invoice-form-skeleton" aria-busy="true">
+    <Stack gap={5} maxW="4xl" mx="auto" data-testid="custom-invoice-form-skeleton" aria-busy="true">
       <Box borderRadius="20px" bg="brand.700" px={{ base: 4, md: 7 }} py={{ base: 5, md: 6 }}>
         <Stack gap={5}>
           <Skeleton h="44px" w="170px" borderRadius="14px" />

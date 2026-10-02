@@ -409,7 +409,7 @@ describe("EventInvoiceDetailPage", () => {
 
     expect(screen.getByRole("link", { name: /^edit$/i })).toHaveAttribute(
       "href",
-      APP_ROUTES.eventInvoices.customEdit(INVOICE.invoiceUniqueId),
+      APP_ROUTES.customInvoices.edit(INVOICE.invoiceUniqueId),
     )
   })
 

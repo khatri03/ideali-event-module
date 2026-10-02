@@ -93,7 +93,7 @@ export default function EventInvoiceDetailPage() {
         invoiceDateUtc={invoice.invoiceDateUtc}
         eventUniqueId={invoice.eventUniqueId}
         eventName={invoice.eventName}
-        editHref={invoice.canEdit ? APP_ROUTES.eventInvoices.customEdit(invoice.invoiceUniqueId) : undefined}
+        editHref={invoice.canEdit ? APP_ROUTES.customInvoices.edit(invoice.invoiceUniqueId) : undefined}
         onBack={handleBack}
       />
 
