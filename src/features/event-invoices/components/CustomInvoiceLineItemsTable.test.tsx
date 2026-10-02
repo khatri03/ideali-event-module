@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest"
 import { render, screen, within } from "@testing-library/react"
 import { ChakraProvider } from "@chakra-ui/react"
 import { system } from "@/theme"
-import type { EventInvoiceCustomLineItem } from "@/api/eventInvoices"
+import type { CustomInvoiceLineItem } from "@/api/customInvoices"
 import { CustomInvoiceLineItemsTable } from "./CustomInvoiceLineItemsTable"
 
-function line(description: string, amount: string): EventInvoiceCustomLineItem {
+function line(description: string, amount: string): CustomInvoiceLineItem {
   return { invoiceItemUniqueId: `line-${description}`, description, amount }
 }
 
-function renderTable(lineItems: EventInvoiceCustomLineItem[]) {
+function renderTable(lineItems: CustomInvoiceLineItem[]) {
   return render(
     <ChakraProvider value={system}>
       <CustomInvoiceLineItemsTable lineItems={lineItems} currencySymbol="$" />

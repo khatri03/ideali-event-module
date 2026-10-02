@@ -6,11 +6,12 @@ import type { EventInvoiceNote } from "@/api/eventInvoices"
 import { extractApiError } from "@/utils/errors"
 import { EMPTY_VALUE } from "@/utils/format"
 import { parseUtcDateTime } from "@/utils/utcDates"
-import { useAddEventInvoiceNote } from "../hooks/useEventInvoices"
+import type { InvoiceActionMutation } from "../types"
 
-interface EventInvoiceNotesSectionProps {
-  invoiceUniqueId: string
+interface InvoiceNotesSectionProps {
   notes: EventInvoiceNote[]
+  /** The page's own add-note mutation, so the section never decides which module's endpoint it writes to. */
+  addNote: InvoiceActionMutation<string>
 }
 
 function formatTimestamp(value: string) {
@@ -18,13 +19,12 @@ function formatTimestamp(value: string) {
   return parsed ? format(parsed, "MMM d, yyyy h:mm a") : EMPTY_VALUE
 }
 
-export function EventInvoiceNotesSection({ invoiceUniqueId, notes }: EventInvoiceNotesSectionProps) {
+export function InvoiceNotesSection({ notes, addNote: addNoteMutation }: InvoiceNotesSectionProps) {
   const [isExpanded, setIsExpanded] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [hasOpenedDialog, setHasOpenedDialog] = useState(false)
   const [noteText, setNoteText] = useState("")
   const contentId = useId()
-  const addNoteMutation = useAddEventInvoiceNote(invoiceUniqueId)
 
   const trimmedNote = noteText.trim()
   const showNotes = notes.length > 0

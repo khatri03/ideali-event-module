@@ -1,4 +1,4 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query"
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   addEventInvoiceNote,
   cancelEventInvoice,
@@ -17,7 +17,6 @@ import {
   type EventInvoiceSortBy,
   type EventInvoiceSortOrder,
 } from "@/api/eventInvoices"
-import { linkCustomInvoice, unlinkCustomInvoice } from "@/api/customInvoices"
 import { toaster } from "@/lib/toaster"
 import { extractApiError, isNotFoundError } from "@/utils/errors"
 
@@ -63,18 +62,6 @@ export function useResendEventInvoice(invoiceUniqueId: string) {
   return useMutation({
     mutationFn: () => resendEventInvoice(invoiceUniqueId),
     onSuccess: () => toaster.create({ type: "success", title: "Tickets queued for resend." }),
-    onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] }),
-  })
-}
-
-// Shares the /resend endpoint with useResendEventInvoice but carries the invoice-send copy, so emailing
-// a custom invoice never reports the ticket-resend language that has nothing to send on it.
-export function useEmailEventInvoice(invoiceUniqueId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: () => resendEventInvoice(invoiceUniqueId),
-    onSuccess: () => toaster.create({ type: "success", title: "Invoice emailed to the buyer." }),
     onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] }),
   })
@@ -154,38 +141,6 @@ export function useResendEventInvoiceLineItem(invoiceUniqueId: string) {
     onSuccess: () => toaster.create({ type: "success", title: "Tickets queued for resend." }),
     onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] }),
-  })
-}
-
-/**
- * A link is written on both invoices, so each side's detail and the list behind them are refreshed -
- * otherwise the other invoice keeps showing the reference it had before.
- */
-function invalidateLinkedPair(queryClient: QueryClient, invoiceUniqueIds: string[]) {
-  invoiceUniqueIds.forEach((invoiceUniqueId) =>
-    queryClient.invalidateQueries({ queryKey: ["event-invoice-detail", invoiceUniqueId] }),
-  )
-  queryClient.invalidateQueries({ queryKey: ["event-invoices"] })
-}
-
-export function useLinkEventInvoice(invoiceUniqueId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (targetInvoiceUniqueId: string) => linkCustomInvoice(invoiceUniqueId, targetInvoiceUniqueId),
-    onSuccess: () => toaster.create({ type: "success", title: "Invoices linked." }),
-    onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
-    onSettled: (_result, _error, targetInvoiceUniqueId) =>
-      invalidateLinkedPair(queryClient, [invoiceUniqueId, targetInvoiceUniqueId]),
-  })
-}
-
-export function useUnlinkEventInvoice(invoiceUniqueId: string, linkedInvoiceUniqueId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: () => unlinkCustomInvoice(invoiceUniqueId),
-    onSuccess: () => toaster.create({ type: "success", title: "Link removed." }),
-    onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
-    onSettled: () => invalidateLinkedPair(queryClient, [invoiceUniqueId, linkedInvoiceUniqueId]),
   })
 }
 

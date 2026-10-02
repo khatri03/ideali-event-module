@@ -2,32 +2,22 @@ import { useParams } from "react-router-dom"
 import { Stack } from "@chakra-ui/react"
 import { isNotFoundError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
-import {
-  useAddEventInvoiceNote,
-  useCancelEventInvoice,
-  useEventInvoiceDetail,
-  useMarkEventInvoiceAsPaid,
-  useResendEventInvoice,
-} from "../hooks/useEventInvoices"
+import { useCustomInvoiceDetail, useCustomInvoiceDetailActions } from "../hooks/useCustomInvoices"
 import { useBackToInvoiceList } from "../hooks/useInvoiceListReturnState"
+import { CustomInvoiceDetailBody } from "../components/CustomInvoiceDetailBody"
 import { EventInvoiceDetailHeader } from "../components/EventInvoiceDetailHeader"
-import { EventInvoiceMoneyPanel } from "../components/EventInvoiceMoneyPanel"
+import { EventInvoicePaymentHistorySection } from "../components/EventInvoicePaymentHistorySection"
 import { InvoiceDetailFallback } from "../components/InvoiceDetailFallback"
 import { InvoiceNotesSection } from "../components/InvoiceNotesSection"
 import { InvoiceSettlementActions } from "../components/InvoiceSettlementActions"
-import { EventInvoiceLineItemsSection } from "../components/EventInvoiceLineItemsSection"
-import { EventInvoicePaymentHistorySection } from "../components/EventInvoicePaymentHistorySection"
 import "@/styles/print.css"
 
-/** A ticket order's detail. Custom invoices open on their own page at /organizer/custom-invoices/:id. */
-export default function EventInvoiceDetailPage() {
+/** A custom invoice's detail, whatever module it bills; only an Event-bound invoice links to its record. */
+export default function CustomInvoiceDetailPage() {
   const { invoiceUniqueId = "" } = useParams()
   const handleBack = useBackToInvoiceList()
-  const detailQuery = useEventInvoiceDetail(invoiceUniqueId)
-  const markPaid = useMarkEventInvoiceAsPaid(invoiceUniqueId)
-  const cancel = useCancelEventInvoice(invoiceUniqueId)
-  const resendTickets = useResendEventInvoice(invoiceUniqueId)
-  const addNote = useAddEventInvoiceNote(invoiceUniqueId)
+  const detailQuery = useCustomInvoiceDetail(invoiceUniqueId)
+  const { markPaid, cancel, emailInvoice, addNote } = useCustomInvoiceDetailActions(invoiceUniqueId)
   const invoice = detailQuery.data
 
   if (!invoiceUniqueId || detailQuery.isError || !invoice) {
@@ -42,41 +32,27 @@ export default function EventInvoiceDetailPage() {
     )
   }
 
-  const hasAnyIssuedTicket = invoice.lineItems.some((item) => item.tickets.length > 0)
-
+  const { entityUniqueId } = invoice
   return (
     <Stack gap={5} data-print-region>
       <EventInvoiceDetailHeader
-        invoiceNo={invoice.invoiceNo}
-        invoiceStatus={invoice.invoiceStatus}
-        invoiceStatusLabel={invoice.invoiceStatusLabel}
-        invoiceDateUtc={invoice.invoiceDateUtc}
-        entityName={invoice.eventName}
-        entityHref={APP_ROUTES.eventWizard.edit(invoice.eventUniqueId)}
+        {...invoice}
+        entityHref={invoice.moduleType === "Event" && entityUniqueId ? APP_ROUTES.eventWizard.edit(entityUniqueId) : undefined}
+        editHref={invoice.canEdit ? APP_ROUTES.customInvoices.edit(invoice.invoiceUniqueId) : undefined}
         onBack={handleBack}
       />
-
       <InvoiceSettlementActions
         invoiceNo={invoice.invoiceNo}
         canMarkAsPaid={invoice.canMarkAsPaid}
         canCancel={invoice.canCancel}
-        canResendTickets={invoice.canResendTickets && hasAnyIssuedTicket}
+        canEmailInvoice={invoice.canSend}
         buyerEmail={invoice.buyerEmail}
         markPaid={markPaid}
         cancel={cancel}
-        resendTickets={resendTickets}
+        emailInvoice={emailInvoice}
       />
-
-      <EventInvoiceMoneyPanel invoice={invoice} />
-
-      <EventInvoiceLineItemsSection
-        invoiceUniqueId={invoice.invoiceUniqueId}
-        lineItems={invoice.lineItems}
-        canResendTickets={invoice.canResendTickets}
-      />
-
+      <CustomInvoiceDetailBody invoice={invoice} />
       <EventInvoicePaymentHistorySection payments={invoice.payments} currencySymbol={invoice.currencySymbol} />
-
       <InvoiceNotesSection notes={invoice.notes} addNote={addNote} />
     </Stack>
   )

@@ -6,16 +6,19 @@ import type { EventInvoiceListItem, Page } from "@/api/eventInvoices"
 import { system } from "@/theme"
 import { LinkInvoiceDialog } from "./LinkInvoiceDialog"
 
-const { useEventInvoicesMock, useLinkEventInvoiceMock, linkMock, refetchMock } = vi.hoisted(() => ({
+const { useEventInvoicesMock, useLinkCustomInvoiceMock, linkMock, refetchMock } = vi.hoisted(() => ({
   useEventInvoicesMock: vi.fn(),
-  useLinkEventInvoiceMock: vi.fn(),
+  useLinkCustomInvoiceMock: vi.fn(),
   linkMock: vi.fn(),
   refetchMock: vi.fn(),
 }))
 
 vi.mock("../hooks/useEventInvoices", () => ({
   useEventInvoices: useEventInvoicesMock,
-  useLinkEventInvoice: useLinkEventInvoiceMock,
+}))
+
+vi.mock("../hooks/useCustomInvoices", () => ({
+  useLinkCustomInvoice: useLinkCustomInvoiceMock,
 }))
 
 function listItem(invoiceUniqueId: string, invoiceNo: string, buyerName: string): EventInvoiceListItem {
@@ -64,7 +67,7 @@ function mockQuery(state: { data?: Page<EventInvoiceListItem>; isFetching?: bool
 }
 
 function mockLink(state: { isPending?: boolean; error?: unknown } = {}) {
-  useLinkEventInvoiceMock.mockReturnValue({ mutateAsync: linkMock, isPending: state.isPending ?? false, error: state.error ?? null })
+  useLinkCustomInvoiceMock.mockReturnValue({ mutateAsync: linkMock, isPending: state.isPending ?? false, error: state.error ?? null })
 }
 
 function dialog(onClose = vi.fn()) {
@@ -83,7 +86,7 @@ function lastRequestedSearchTerm() {
 describe("LinkInvoiceDialog", () => {
   beforeEach(() => {
     useEventInvoicesMock.mockReset()
-    useLinkEventInvoiceMock.mockReset()
+    useLinkCustomInvoiceMock.mockReset()
     linkMock.mockReset().mockResolvedValue(undefined)
     refetchMock.mockReset()
     mockQuery({ data: pageOf([CURRENT, OTHER]) })

@@ -2,18 +2,18 @@ import { useState } from "react"
 import { Button, Flex, Link, Text } from "@chakra-ui/react"
 import { Link2, Unlink } from "lucide-react"
 import { Link as RouterLink } from "react-router-dom"
-import type { EventInvoiceLinkedReference } from "@/api/eventInvoices"
+import type { LinkedInvoiceReference } from "@/api/customInvoices"
 import { ConfirmDialog } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
-import { useUnlinkEventInvoice } from "../hooks/useEventInvoices"
+import { useUnlinkCustomInvoice } from "../hooks/useCustomInvoices"
 import { InvoiceDetailPanel, InvoiceMutedLine } from "./InvoiceDetailPanel"
 import { LinkInvoiceDialog } from "./LinkInvoiceDialog"
 
 interface LinkedInvoicePanelProps {
   invoiceUniqueId: string
   invoiceNo: string
-  linkedInvoice: EventInvoiceLinkedReference | null
+  linkedInvoice: LinkedInvoiceReference | null
   /** Presentation only: whether to offer starting a link. The server refuses a disallowed link regardless. */
   canLink: boolean
 }
@@ -21,12 +21,12 @@ interface LinkedInvoicePanelProps {
 interface LinkedInvoiceReferenceProps {
   invoiceUniqueId: string
   invoiceNo: string
-  linkedInvoice: EventInvoiceLinkedReference
+  linkedInvoice: LinkedInvoiceReference
 }
 
 function LinkedInvoiceReference({ invoiceUniqueId, invoiceNo, linkedInvoice }: LinkedInvoiceReferenceProps) {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
-  const unlinkMutation = useUnlinkEventInvoice(invoiceUniqueId, linkedInvoice.invoiceUniqueId)
+  const unlinkMutation = useUnlinkCustomInvoice(invoiceUniqueId, linkedInvoice.invoiceUniqueId)
 
   const handleConfirm = async () => {
     try {

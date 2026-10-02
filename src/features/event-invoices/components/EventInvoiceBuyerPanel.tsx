@@ -19,10 +19,10 @@ interface EventInvoiceBuyerPanelProps {
    * A custom invoice names a company and a structured buyer. When set, the panel renders that read-only
    * form and hides the quick buyer dialog - a custom invoice's buyer is edited through its own form.
    */
-  custom?: EventInvoiceCustomBuyer
+  custom?: CustomInvoiceBuyer
 }
 
-export interface EventInvoiceCustomBuyer {
+interface CustomInvoiceBuyer {
   companyName: string | null
   firstName: string | null
   middleName: string | null
@@ -30,7 +30,7 @@ export interface EventInvoiceCustomBuyer {
 }
 
 /** The buyer's name as a custom invoice composes it, structured parts first, falling back to the stored name. */
-function composeCustomBuyerName(custom: EventInvoiceCustomBuyer, buyerName: string): string {
+function composeCustomBuyerName(custom: CustomInvoiceBuyer, buyerName: string): string {
   const composed = [custom.firstName, custom.middleName, custom.lastName]
     .map((part) => part?.trim())
     .filter((part): part is string => Boolean(part))

@@ -8,9 +8,9 @@ import {
   type EventInvoiceFilters,
 } from "./eventInvoices"
 
-const { getMock, postMock, deleteMock } = vi.hoisted(() => ({ getMock: vi.fn(), postMock: vi.fn(), deleteMock: vi.fn() }))
+const { getMock, postMock } = vi.hoisted(() => ({ getMock: vi.fn(), postMock: vi.fn() }))
 
-vi.mock("./client", () => ({ client: { get: getMock, post: postMock, delete: deleteMock } }))
+vi.mock("./client", () => ({ client: { get: getMock, post: postMock } }))
 
 const NO_FILTERS: EventInvoiceFilters = {
   eventUniqueIds: [],
@@ -299,38 +299,6 @@ describe("fetchEventInvoiceDetail settlement allowances", () => {
 
     expect(detail.canEditBuyer).toBe(false)
   })
-
-  /** The server's CanPayOnline wins over the status-derived guess, both when it opens and when it closes online pay. */
-  it.each([
-    ["true", true],
-    ["false", false],
-  ])("PayOnlineFlagSentByApi_OverridesWhatTheStatusWouldImply_%s", async (_case, canPayOnline) => {
-    getMock.mockResolvedValue(
-      detailResponse({ invoiceType: "Custom", invoiceStatus: "PendingPayment", canPayOnline }),
-    )
-
-    const detail = await fetchEventInvoiceDetail("invoice-1")
-
-    expect(detail.canPayOnline).toBe(canPayOnline)
-  })
-
-  /** An older API that omits CanPayOnline falls back to a custom invoice still awaiting its first payment. */
-  it("PayOnlineFlagMissing_FallsBackToACustomInvoiceAwaitingPayment", async () => {
-    getMock.mockResolvedValue(detailResponse({ invoiceType: "Custom", invoiceStatus: "PendingPayment" }))
-
-    const detail = await fetchEventInvoiceDetail("invoice-1")
-
-    expect(detail.canPayOnline).toBe(true)
-  })
-
-  /** Without the flag, a ticket invoice cannot be paid online - the buyer pay page is only for custom invoices. */
-  it("PayOnlineFlagMissing_IsFalseForATicketInvoice", async () => {
-    getMock.mockResolvedValue(detailResponse({ invoiceStatus: "PendingPayment" }))
-
-    const detail = await fetchEventInvoiceDetail("invoice-1")
-
-    expect(detail.canPayOnline).toBe(false)
-  })
 })
 
 describe("event invoice settlement endpoints", () => {
@@ -430,41 +398,5 @@ describe("event invoice money", () => {
 
     expect(detail.charges[0].value).toBe(17.99)
     expect(detail.charges[0].amount).toBe("75.56")
-  })
-})
-
-describe("event invoice links", () => {
-  beforeEach(() => {
-    getMock.mockReset()
-    postMock.mockReset().mockResolvedValue({})
-    deleteMock.mockReset().mockResolvedValue({})
-  })
-
-  function detailWith(extra: Record<string, unknown>) {
-    return { data: { success: true, data: { invoiceUniqueId: "invoice-1", invoiceNo: "INV-1", ...extra } } }
-  }
-
-  /** The detail names the other invoice whichever casing the server serialises it in. */
-  it.each([
-    ["camelCase", { linkedInvoice: { invoiceUniqueId: "invoice-2", invoiceNo: "INV-2", invoiceStatusLabel: "Paid" } }],
-    ["PascalCase", { LinkedInvoice: { InvoiceUniqueId: "invoice-2", InvoiceNo: "INV-2", InvoiceStatusLabel: "Paid" } }],
-  ])("LinkedInvoiceSentIn%s_IsNormalizedOntoTheDetail", async (_casing, linked) => {
-    getMock.mockResolvedValue(detailWith(linked))
-
-    const detail = await fetchEventInvoiceDetail("invoice-1")
-
-    expect(detail.linkedInvoice).toEqual({ invoiceUniqueId: "invoice-2", invoiceNo: "INV-2", invoiceStatusLabel: "Paid" })
-  })
-
-  /** A standalone invoice - null or an absent field - reads as not linked, never as a link to nothing. */
-  it.each([
-    ["null", { linkedInvoice: null }],
-    ["absent", {}],
-  ])("LinkedInvoice%s_IsNotLinked", async (_case, extra) => {
-    getMock.mockResolvedValue(detailWith(extra))
-
-    const detail = await fetchEventInvoiceDetail("invoice-1")
-
-    expect(detail.linkedInvoice).toBeNull()
   })
 })

@@ -3,7 +3,6 @@ import { Box, Button, Flex, Link, Stack, Text } from "@chakra-ui/react"
 import { ExternalLink, Pencil } from "lucide-react"
 import { PrintInvoiceButton } from "@/components/common"
 import { EMPTY_VALUE } from "@/utils/format"
-import { APP_ROUTES } from "@/utils/routes"
 import { formatUtcDate } from "@/utils/utcDates"
 import { BackToInvoicesButton } from "./BackToInvoicesButton"
 import { EventInvoiceStatusBadge } from "./EventInvoiceStatusBadge"
@@ -13,8 +12,10 @@ interface EventInvoiceDetailHeaderProps {
   invoiceStatus: string
   invoiceStatusLabel: string
   invoiceDateUtc: string
-  eventUniqueId: string
-  eventName: string
+  /** What the invoice bills - an event, membership type or donation campaign - or null when it no longer exists. */
+  entityName: string | null
+  /** Where the billed record opens, when the organizer has a screen for it. */
+  entityHref?: string
   /** Where the invoice's edit form lives, or undefined when the server says it can no longer be edited. */
   editHref?: string
   onBack: () => void
@@ -26,8 +27,8 @@ export function EventInvoiceDetailHeader({
   invoiceStatus,
   invoiceStatusLabel,
   invoiceDateUtc,
-  eventUniqueId,
-  eventName,
+  entityName,
+  entityHref,
   editHref,
   onBack,
 }: EventInvoiceDetailHeaderProps) {
@@ -73,23 +74,29 @@ export function EventInvoiceDetailHeader({
             <Text fontSize={{ base: "2xl", md: "3xl" }} fontWeight="900" lineHeight="1.1" wordBreak="break-word">
               {invoiceNo}
             </Text>
-            <Link
-              href={APP_ROUTES.eventWizard.edit(eventUniqueId)}
-              target="_blank"
-              rel="noopener noreferrer"
-              color="whiteAlpha.900"
-              fontSize={{ base: "sm", md: "md" }}
-              fontWeight="700"
-              display="inline-flex"
-              alignItems="center"
-              gap={2}
-              minH="11"
-              cursor="pointer"
-              _hover={{ textDecoration: "underline" }}
-            >
-              {eventName}
-              <ExternalLink size={14} aria-hidden="true" />
-            </Link>
+            {entityName && entityHref ? (
+              <Link
+                href={entityHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                color="whiteAlpha.900"
+                fontSize={{ base: "sm", md: "md" }}
+                fontWeight="700"
+                display="inline-flex"
+                alignItems="center"
+                gap={2}
+                minH="11"
+                cursor="pointer"
+                _hover={{ textDecoration: "underline" }}
+              >
+                {entityName}
+                <ExternalLink size={14} aria-hidden="true" />
+              </Link>
+            ) : entityName ? (
+              <Text color="whiteAlpha.900" fontSize={{ base: "sm", md: "md" }} fontWeight="700">
+                {entityName}
+              </Text>
+            ) : null}
           </Stack>
 
           <Stack align={{ base: "flex-start", md: "flex-end" }} gap={2} flexShrink={0}>

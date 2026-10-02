@@ -5,7 +5,8 @@ import { DEFAULT_PAGE_SIZE, ErrorState, TablePagination } from "@/components/com
 import { useDebounce } from "@/hooks/useDebounce"
 import { useModalGuardRelease } from "@/hooks/useModalGuardRelease"
 import { extractApiError } from "@/utils/errors"
-import { useEventInvoices, useLinkEventInvoice } from "../hooks/useEventInvoices"
+import { useLinkCustomInvoice } from "../hooks/useCustomInvoices"
+import { useEventInvoices } from "../hooks/useEventInvoices"
 import { LinkInvoicePickerTable } from "./LinkInvoicePickerTable"
 
 interface LinkInvoiceDialogProps {
@@ -37,7 +38,7 @@ function LinkInvoicePicker({ invoiceUniqueId, onClose }: LinkInvoicePickerProps)
   const [selectedInvoiceUniqueId, setSelectedInvoiceUniqueId] = useState<string | null>(null)
   const searchTerm = useDebounce(searchInput, 300)
   const invoicesQuery = useEventInvoices({ ...UNFILTERED, searchTerm }, page, pageSize, "invoiceDateUtc", "desc")
-  const linkMutation = useLinkEventInvoice(invoiceUniqueId)
+  const linkMutation = useLinkCustomInvoice(invoiceUniqueId)
 
   // The list endpoint is shared with the main screen, so the invoice being linked is dropped here rather than
   // offered as a target the server would refuse.

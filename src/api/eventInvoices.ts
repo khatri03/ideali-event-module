@@ -179,15 +179,6 @@ const lineItemSchema = z.object({
   tickets: z.array(ticketSchema).nullable().optional(),
 })
 
-const customLineItemSchema = z.object({
-  InvoiceItemUniqueId: dual(z.string()),
-  invoiceItemUniqueId: dual(z.string()),
-  Description: dual(z.string()),
-  description: dual(z.string()),
-  Amount: dual(money()),
-  amount: dual(money()),
-})
-
 export const paymentAttemptSchema = z.object({
   PaymentMethod: dual(z.string()),
   paymentMethod: dual(z.string()),
@@ -239,18 +230,7 @@ const chargeSchema = z.object({
   displayOrder: dual(integer()),
 })
 
-const linkedInvoiceSchema = z.object({
-  InvoiceUniqueId: dual(z.string()),
-  invoiceUniqueId: dual(z.string()),
-  InvoiceNo: dual(z.string()),
-  invoiceNo: dual(z.string()),
-  InvoiceStatusLabel: dual(z.string()),
-  invoiceStatusLabel: dual(z.string()),
-})
-
 const detailSchema = z.object({
-  LinkedInvoice: linkedInvoiceSchema.nullable().optional(),
-  linkedInvoice: linkedInvoiceSchema.nullable().optional(),
   InvoiceUniqueId: dual(z.string()),
   invoiceUniqueId: dual(z.string()),
   InvoiceNo: dual(z.string()),
@@ -293,8 +273,6 @@ const detailSchema = z.object({
   charges: z.array(chargeSchema).nullable().optional(),
   LineItems: z.array(lineItemSchema).nullable().optional(),
   lineItems: z.array(lineItemSchema).nullable().optional(),
-  CustomLineItems: z.array(customLineItemSchema).nullable().optional(),
-  customLineItems: z.array(customLineItemSchema).nullable().optional(),
   Notes: z.array(invoiceNoteSchema).nullable().optional(),
   notes: z.array(invoiceNoteSchema).nullable().optional(),
   Payments: z.array(paymentAttemptSchema).nullable().optional(),
@@ -303,22 +281,6 @@ const detailSchema = z.object({
   invoiceType: dual(z.string()),
   InvoiceTypeLabel: dual(z.string()),
   invoiceTypeLabel: dual(z.string()),
-  CategoryName: dual(z.string().nullable()),
-  categoryName: dual(z.string().nullable()),
-  DueDateUtc: dual(z.string().nullable()),
-  dueDateUtc: dual(z.string().nullable()),
-  IsOverdue: dual(z.boolean()),
-  isOverdue: dual(z.boolean()),
-  SpecialNotes: dual(z.string().nullable()),
-  specialNotes: dual(z.string().nullable()),
-  CompanyName: dual(z.string().nullable()),
-  companyName: dual(z.string().nullable()),
-  BuyerFirstName: dual(z.string().nullable()),
-  buyerFirstName: dual(z.string().nullable()),
-  BuyerMiddleName: dual(z.string().nullable()),
-  buyerMiddleName: dual(z.string().nullable()),
-  BuyerLastName: dual(z.string().nullable()),
-  buyerLastName: dual(z.string().nullable()),
   CanMarkAsPaid: dual(z.boolean()),
   canMarkAsPaid: dual(z.boolean()),
   CanCancel: dual(z.boolean()),
@@ -327,10 +289,6 @@ const detailSchema = z.object({
   canResendTickets: dual(z.boolean()),
   CanEditBuyer: dual(z.boolean()),
   canEditBuyer: dual(z.boolean()),
-  CanEdit: dual(z.boolean()),
-  canEdit: dual(z.boolean()),
-  CanPayOnline: dual(z.boolean()),
-  canPayOnline: dual(z.boolean()),
 })
 
 const pageSchema = <T extends z.ZodTypeAny>(item: T) =>
@@ -413,13 +371,6 @@ export interface EventInvoiceLineItem {
   tickets: EventInvoiceTicket[]
 }
 
-export interface EventInvoiceCustomLineItem {
-  invoiceItemUniqueId: string
-  description: string
-  /** Decimal text as the server wrote it - sum with `sumMoney`, format with `formatCurrency`, never float. */
-  amount: string
-}
-
 export interface EventInvoicePaymentAttempt {
   paymentMethod: string
   paymentStatus: string
@@ -451,13 +402,6 @@ export interface EventInvoiceNote {
   createdOnUtc: string
 }
 
-/** The other half of a reciprocal link - enough to name the linked invoice and open it. */
-export interface EventInvoiceLinkedReference {
-  invoiceUniqueId: string
-  invoiceNo: string
-  invoiceStatusLabel: string
-}
-
 export interface EventInvoiceDetail {
   invoiceUniqueId: string
   invoiceNo: string
@@ -481,38 +425,17 @@ export interface EventInvoiceDetail {
   buyerPhone: string | null
   charges: EventInvoiceCharge[]
   lineItems: EventInvoiceLineItem[]
-  /** The Description/Amount lines of a custom invoice; empty on a ticket invoice. */
-  customLineItems: EventInvoiceCustomLineItem[]
   notes: EventInvoiceNote[]
   payments: EventInvoicePaymentAttempt[]
-  /** "Custom" or "Regular" - the detail page picks its body variant from this. */
+  /** "Regular" for a ticket order; custom invoices are served by the custom-invoices route. */
   invoiceType: string
   /** Human-readable form of invoiceType. */
   invoiceTypeLabel: string
-  /** The sponsorship category a custom invoice is billed under, or null when none. */
-  categoryName: string | null
-  /** When a custom invoice's payment is due, or null on a ticket invoice. */
-  dueDateUtc: string | null
-  /** The server's verdict that this invoice is unpaid and past due - rendered as-is, never re-derived here. */
-  isOverdue: boolean
-  /** Free-form notes captured on a custom invoice at authoring time, or null when none. */
-  specialNotes: string | null
-  /** The billed company on a custom invoice, or null when the invoice names only a person. */
-  companyName: string | null
-  buyerFirstName: string | null
-  buyerMiddleName: string | null
-  buyerLastName: string | null
   /** The server decides which manual actions the order still admits - never inferred from the role. */
   canMarkAsPaid: boolean
   canCancel: boolean
   canResendTickets: boolean
   canEditBuyer: boolean
-  /** True only for a Custom invoice still awaiting its first payment; ticket invoices are never editable here. */
-  canEdit: boolean
-  /** The server's verdict that this invoice can take an online card payment - the 04-09 payable link reads it. */
-  canPayOnline: boolean
-  /** The invoice this one is linked to, or null when it stands alone. */
-  linkedInvoice: EventInvoiceLinkedReference | null
 }
 
 export interface EventInvoiceFilterOption {
@@ -655,14 +578,6 @@ function normalizeLineItem(raw: z.infer<typeof lineItemSchema>): EventInvoiceLin
   }
 }
 
-function normalizeCustomLineItem(raw: z.infer<typeof customLineItemSchema>): EventInvoiceCustomLineItem {
-  return {
-    invoiceItemUniqueId: raw.InvoiceItemUniqueId ?? raw.invoiceItemUniqueId ?? "",
-    description: raw.Description ?? raw.description ?? "",
-    amount: raw.Amount ?? raw.amount ?? "0",
-  }
-}
-
 export function normalizePaymentAttempt(raw: z.infer<typeof paymentAttemptSchema>): EventInvoicePaymentAttempt {
   const paymentStatus = raw.PaymentStatus ?? raw.paymentStatus ?? ""
 
@@ -701,18 +616,6 @@ export function normalizeInvoiceNote(raw: z.infer<typeof invoiceNoteSchema>): Ev
   }
 }
 
-function normalizeLinkedInvoice(raw: z.infer<typeof linkedInvoiceSchema> | null | undefined): EventInvoiceLinkedReference | null {
-  const invoiceUniqueId = raw?.InvoiceUniqueId ?? raw?.invoiceUniqueId
-  if (!raw || !invoiceUniqueId) {
-    return null
-  }
-  return {
-    invoiceUniqueId,
-    invoiceNo: raw.InvoiceNo ?? raw.invoiceNo ?? "",
-    invoiceStatusLabel: raw.InvoiceStatusLabel ?? raw.invoiceStatusLabel ?? "",
-  }
-}
-
 function normalizeDetail(raw: z.infer<typeof detailSchema>): EventInvoiceDetail {
   const invoiceStatus = raw.InvoiceStatus ?? raw.invoiceStatus ?? ""
   const invoiceType = raw.InvoiceType ?? raw.invoiceType ?? "Regular"
@@ -740,19 +643,10 @@ function normalizeDetail(raw: z.infer<typeof detailSchema>): EventInvoiceDetail 
     buyerPhone: raw.BuyerPhone ?? raw.buyerPhone ?? null,
     charges: (raw.Charges ?? raw.charges ?? []).map(normalizeCharge),
     lineItems: (raw.LineItems ?? raw.lineItems ?? []).map(normalizeLineItem),
-    customLineItems: (raw.CustomLineItems ?? raw.customLineItems ?? []).map(normalizeCustomLineItem),
     notes: (raw.Notes ?? raw.notes ?? []).map(normalizeInvoiceNote),
     payments: (raw.Payments ?? raw.payments ?? []).map(normalizePaymentAttempt),
     invoiceType,
     invoiceTypeLabel: statusLabelOr(raw.InvoiceTypeLabel ?? raw.invoiceTypeLabel, invoiceType),
-    categoryName: raw.CategoryName ?? raw.categoryName ?? null,
-    dueDateUtc: raw.DueDateUtc ?? raw.dueDateUtc ?? null,
-    isOverdue: raw.IsOverdue ?? raw.isOverdue ?? false,
-    specialNotes: raw.SpecialNotes ?? raw.specialNotes ?? null,
-    companyName: raw.CompanyName ?? raw.companyName ?? null,
-    buyerFirstName: raw.BuyerFirstName ?? raw.buyerFirstName ?? null,
-    buyerMiddleName: raw.BuyerMiddleName ?? raw.buyerMiddleName ?? null,
-    buyerLastName: raw.BuyerLastName ?? raw.buyerLastName ?? null,
     canMarkAsPaid: actionAllowance(raw.CanMarkAsPaid ?? raw.canMarkAsPaid, isAwaitingPayment),
     canCancel: actionAllowance(raw.CanCancel ?? raw.canCancel, isAwaitingPayment),
     canResendTickets: actionAllowance(raw.CanResendTickets ?? raw.canResendTickets, invoiceStatus !== "Cancelled"),
@@ -760,12 +654,6 @@ function normalizeDetail(raw: z.infer<typeof detailSchema>): EventInvoiceDetail 
       raw.CanEditBuyer ?? raw.canEditBuyer,
       BUYER_EDITABLE_STATUSES.includes(invoiceStatus),
     ),
-    canEdit: actionAllowance(raw.CanEdit ?? raw.canEdit, invoiceType === "Custom" && invoiceStatus === "PendingPayment"),
-    canPayOnline: actionAllowance(
-      raw.CanPayOnline ?? raw.canPayOnline,
-      invoiceType === "Custom" && invoiceStatus === "PendingPayment",
-    ),
-    linkedInvoice: normalizeLinkedInvoice(raw.LinkedInvoice ?? raw.linkedInvoice),
   }
 }
 

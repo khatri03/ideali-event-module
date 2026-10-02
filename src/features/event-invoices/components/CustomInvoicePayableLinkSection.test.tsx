@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { ChakraProvider } from "@chakra-ui/react"
 import { system } from "@/theme"
-import { EventInvoicePayableLinkSection } from "./EventInvoicePayableLinkSection"
+import { CustomInvoicePayableLinkSection } from "./CustomInvoicePayableLinkSection"
 
 const { toastMock } = vi.hoisted(() => ({ toastMock: vi.fn() }))
 
@@ -21,7 +21,7 @@ interface SectionState {
 function renderSection({ canPayOnline = true, invoiceStatus = "PendingPayment", invoiceStatusLabel = "Pending Payment" }: SectionState = {}) {
   return render(
     <ChakraProvider value={system}>
-      <EventInvoicePayableLinkSection
+      <CustomInvoicePayableLinkSection
         payPageUrl={PAY_PAGE_URL}
         canPayOnline={canPayOnline}
         invoiceStatus={invoiceStatus}
@@ -31,7 +31,7 @@ function renderSection({ canPayOnline = true, invoiceStatus = "PendingPayment", 
   )
 }
 
-describe("EventInvoicePayableLinkSection", () => {
+describe("CustomInvoicePayableLinkSection", () => {
   beforeEach(() => {
     toastMock.mockReset()
   })

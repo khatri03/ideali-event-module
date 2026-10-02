@@ -4,7 +4,7 @@ import { Copy, ExternalLink } from "lucide-react"
 import { toaster } from "@/lib/toaster"
 import { InvoiceDetailPanel, InvoiceMutedLine } from "./InvoiceDetailPanel"
 
-interface EventInvoicePayableLinkSectionProps {
+interface CustomInvoicePayableLinkSectionProps {
   /** Absolute buyer pay page URL, built from validated build-time config. */
   payPageUrl: string
   /** Server-decided; the section never re-derives payability from the status. */
@@ -74,12 +74,12 @@ function PayableLinkActions({ payPageUrl, isEnabled, onCopy }: PayableLinkAction
  * is started by the buyer's page, so no client secret reaches the organizer UI. It makes no request of its own,
  * so while the invoice loads the detail page's skeleton stands in for it.
  */
-export function EventInvoicePayableLinkSection({
+export function CustomInvoicePayableLinkSection({
   payPageUrl,
   canPayOnline,
   invoiceStatus,
   invoiceStatusLabel,
-}: EventInvoicePayableLinkSectionProps) {
+}: CustomInvoicePayableLinkSectionProps) {
   const [hasCopyFailed, setHasCopyFailed] = useState(false)
 
   const handleCopy = async () => {

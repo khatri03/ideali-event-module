@@ -3,26 +3,26 @@ import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { MemoryRouter } from "react-router-dom"
 import { ChakraProvider } from "@chakra-ui/react"
-import type { EventInvoiceLinkedReference } from "@/api/eventInvoices"
+import type { LinkedInvoiceReference } from "@/api/customInvoices"
 import { system } from "@/theme"
 import { LinkedInvoicePanel } from "./LinkedInvoicePanel"
 
-const { useUnlinkEventInvoiceMock, unlinkMock } = vi.hoisted(() => ({
-  useUnlinkEventInvoiceMock: vi.fn(),
+const { useUnlinkCustomInvoiceMock, unlinkMock } = vi.hoisted(() => ({
+  useUnlinkCustomInvoiceMock: vi.fn(),
   unlinkMock: vi.fn(),
 }))
 
-vi.mock("../hooks/useEventInvoices", () => ({
-  useUnlinkEventInvoice: useUnlinkEventInvoiceMock,
+vi.mock("../hooks/useCustomInvoices", () => ({
+  useUnlinkCustomInvoice: useUnlinkCustomInvoiceMock,
 }))
 
-const LINKED: EventInvoiceLinkedReference = {
+const LINKED: LinkedInvoiceReference = {
   invoiceUniqueId: "invoice-2",
   invoiceNo: "INV-2002",
   invoiceStatusLabel: "Pending Payment",
 }
 
-function panel(linkedInvoice: EventInvoiceLinkedReference | null, canLink: boolean) {
+function panel(linkedInvoice: LinkedInvoiceReference | null, canLink: boolean) {
   return (
     <ChakraProvider value={system}>
       <MemoryRouter>
@@ -32,12 +32,12 @@ function panel(linkedInvoice: EventInvoiceLinkedReference | null, canLink: boole
   )
 }
 
-function renderPanel(linkedInvoice: EventInvoiceLinkedReference | null = LINKED, canLink = true) {
+function renderPanel(linkedInvoice: LinkedInvoiceReference | null = LINKED, canLink = true) {
   return render(panel(linkedInvoice, canLink))
 }
 
 function mockUnlinkState(state: { isPending?: boolean; error?: unknown } = {}) {
-  useUnlinkEventInvoiceMock.mockReturnValue({
+  useUnlinkCustomInvoiceMock.mockReturnValue({
     mutateAsync: unlinkMock,
     reset: vi.fn(),
     isPending: state.isPending ?? false,
@@ -48,7 +48,7 @@ function mockUnlinkState(state: { isPending?: boolean; error?: unknown } = {}) {
 describe("LinkedInvoicePanel", () => {
   beforeEach(() => {
     unlinkMock.mockReset().mockResolvedValue(undefined)
-    useUnlinkEventInvoiceMock.mockReset()
+    useUnlinkCustomInvoiceMock.mockReset()
     mockUnlinkState()
   })
 
@@ -114,7 +114,7 @@ describe("LinkedInvoicePanel", () => {
     await user.click(within(dialog).getByRole("button", { name: "Remove link" }))
 
     await waitFor(() => expect(unlinkMock).toHaveBeenCalledTimes(1))
-    expect(useUnlinkEventInvoiceMock).toHaveBeenCalledWith("invoice-1", "invoice-2")
+    expect(useUnlinkCustomInvoiceMock).toHaveBeenCalledWith("invoice-1", "invoice-2")
   })
 
   /** A refused unlink keeps the dialog open with the reason, so the organizer never reads a failure as done. */

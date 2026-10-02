@@ -1,6 +1,6 @@
 import { SimpleGrid, Text } from "@chakra-ui/react"
 import { formatUtcDate } from "@/utils/utcDates"
-import { EventInvoicePayableLinkSection } from "./EventInvoicePayableLinkSection"
+import { CustomInvoicePayableLinkSection } from "./CustomInvoicePayableLinkSection"
 import { InvoiceDetailPanel, InvoiceMutedLine } from "./InvoiceDetailPanel"
 
 interface CustomInvoiceDetailPanelsProps {
@@ -65,7 +65,7 @@ export function CustomInvoiceDetailPanels({
         )}
       </InvoiceDetailPanel>
 
-      <EventInvoicePayableLinkSection
+      <CustomInvoicePayableLinkSection
         payPageUrl={payPageUrl}
         canPayOnline={canPayOnline}
         invoiceStatus={invoiceStatus}

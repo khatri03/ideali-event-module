@@ -1,9 +1,9 @@
 import { Box, Heading, Table, Text } from "@chakra-ui/react"
-import type { EventInvoiceCustomLineItem } from "@/api/eventInvoices"
+import type { CustomInvoiceLineItem } from "@/api/customInvoices"
 import { formatCurrency, sumMoney } from "@/utils/format"
 
 interface CustomInvoiceLineItemsTableProps {
-  lineItems: EventInvoiceCustomLineItem[]
+  lineItems: CustomInvoiceLineItem[]
   currencySymbol: string
 }
 

@@ -57,7 +57,12 @@ import {
   LegacyCustomInvoicePayRedirect,
 } from "./features/events"
 import { SessionListPage, SessionWizardLayout, SessionWizardStepPage } from "./features/sessions"
-import { CustomInvoiceFormPage, EventInvoiceDetailPage, EventInvoicesPage } from "./features/event-invoices"
+import {
+  CustomInvoiceDetailPage,
+  CustomInvoiceFormPage,
+  EventInvoiceDetailPage,
+  EventInvoicesPage,
+} from "./features/event-invoices"
 import { InvoiceCategoriesPage } from "./features/invoice-categories"
 import { APP_ROUTES } from "@/utils/routes"
 
@@ -177,6 +182,7 @@ export default function App() {
           <Route path={APP_ROUTES.eventInvoices.list} element={<EventInvoicesPage />} />
           <Route path={APP_ROUTES.customInvoices.new} element={<CustomInvoiceFormPage />} />
           <Route path={APP_ROUTES.customInvoices.editRoute} element={<CustomInvoiceFormPage />} />
+          <Route path={APP_ROUTES.customInvoices.detailRoute} element={<CustomInvoiceDetailPage />} />
           <Route path={APP_ROUTES.eventInvoices.detailRoute} element={<EventInvoiceDetailPage />} />
           <Route path={APP_ROUTES.memberDocuments.list} element={<MemberDocumentsPage />} />
           <Route path={APP_ROUTES.memberDocuments.detailRoute} element={<MemberDocumentCategoryPage />} />

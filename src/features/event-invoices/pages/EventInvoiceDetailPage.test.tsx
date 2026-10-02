@@ -1,6 +1,6 @@
 import { AxiosError } from "axios"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { fireEvent, render, screen, within } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
 import { ChakraProvider } from "@chakra-ui/react"
@@ -66,46 +66,14 @@ const INVOICE: EventInvoiceDetail = {
       tickets: [],
     },
   ],
-  customLineItems: [],
   notes: [],
   payments: [],
   invoiceType: "Regular",
   invoiceTypeLabel: "Regular",
-  categoryName: null,
-  dueDateUtc: null,
-  isOverdue: false,
-  specialNotes: null,
-  companyName: null,
-  buyerFirstName: null,
-  buyerMiddleName: null,
-  buyerLastName: null,
   canMarkAsPaid: true,
   canCancel: true,
   canResendTickets: true,
   canEditBuyer: true,
-  canEdit: false,
-  canPayOnline: false,
-  linkedInvoice: null,
-}
-
-const CUSTOM_INVOICE: Partial<EventInvoiceDetail> = {
-  invoiceType: "Custom",
-  invoiceTypeLabel: "Custom",
-  categoryName: "Gold Sponsor",
-  dueDateUtc: "2026-01-01T00:00:00Z",
-  isOverdue: true,
-  specialNotes: "Bill to head office.",
-  companyName: "Northwind Traders",
-  buyerFirstName: "Ada",
-  buyerMiddleName: "K",
-  buyerLastName: "Lovelace",
-  canEdit: true,
-  canPayOnline: true,
-  lineItems: [],
-  customLineItems: [
-    { invoiceItemUniqueId: "cline-1", description: "Headline sponsorship", amount: "1500.50" },
-    { invoiceItemUniqueId: "cline-2", description: "Booth space", amount: "300.25" },
-  ],
 }
 
 function CurrentPath() {
@@ -176,6 +144,7 @@ describe("EventInvoiceDetailPage", () => {
     addNoteMock.mockResolvedValue(undefined)
   })
 
+  /** The settle decision sits above the order totals it applies to, so it is made before reading past it. */
   it("InvoiceLoaded_PutsTheSettlementDecisionAboveTheMoneyItAppliesTo", () => {
     loaded()
     const { container } = renderPage()
@@ -187,6 +156,7 @@ describe("EventInvoiceDetailPage", () => {
     expect(markPaid.compareDocumentPosition(subtotal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
+  /** Ticket delivery and payments come before internal notes, the order an organizer works through them. */
   it("InvoiceLoaded_OrdersOperationalSectionsAheadOfInternalNotes", () => {
     loaded()
     renderPage()
@@ -199,6 +169,7 @@ describe("EventInvoiceDetailPage", () => {
     expect(paymentAttempts.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
+  /** A ticket line is listed once, never repeated between the totals and the line items. */
   it("TicketLines_AppearExactlyOnceOnThePage", () => {
     loaded()
     renderPage()
@@ -206,6 +177,7 @@ describe("EventInvoiceDetailPage", () => {
     expect(screen.getAllByText("Aga Khan")).toHaveLength(1)
   })
 
+  /** A settled order offers no settlement action the server would refuse. */
   it("OrderAlreadySettled_ShowsNoSettlementButtons", () => {
     loaded({ canMarkAsPaid: false, canCancel: false, invoiceStatus: "Paid", invoiceStatusLabel: "Paid" })
     renderPage()
@@ -215,6 +187,7 @@ describe("EventInvoiceDetailPage", () => {
     expect(screen.getByText("Paid")).toBeInTheDocument()
   })
 
+  /** Back returns to the filtered list the order was opened from, not a reset one. */
   it("OpenedFromAFilteredList_ReturnsToThatSameList", async () => {
     loaded()
     const user = userEvent.setup()
@@ -227,6 +200,7 @@ describe("EventInvoiceDetailPage", () => {
     )
   })
 
+  /** Opened from a bookmark, back lands on the plain Event Invoices list. */
   it("OpenedDirectlyByUrl_FallsBackToThePlainList", async () => {
     loaded()
     const user = userEvent.setup()
@@ -237,6 +211,7 @@ describe("EventInvoiceDetailPage", () => {
     expect(screen.getByTestId("current-path")).toHaveTextContent(APP_ROUTES.eventInvoices.list)
   })
 
+  /** A history state pointing off-site is refused, so back can never become an open redirect. */
   it("ReturnPathPointingOffSite_IsRefusedInFavourOfTheList", async () => {
     loaded()
     const user = userEvent.setup()
@@ -247,6 +222,7 @@ describe("EventInvoiceDetailPage", () => {
     expect(screen.getByTestId("current-path")).toHaveTextContent(APP_ROUTES.eventInvoices.list)
   })
 
+  /** A failed load explains itself and still offers the way back. */
   it("DetailRequestFailed_ShowsTheErrorAndKeepsAWayBack", () => {
     failedWith(new Error("boom"))
     renderPage()
@@ -255,6 +231,7 @@ describe("EventInvoiceDetailPage", () => {
     expect(screen.getByRole("button", { name: /back to invoices/i })).toBeInTheDocument()
   })
 
+  /** A transient failure can be retried in place. */
   it("TransientFailure_OffersARetryThatRefetches", async () => {
     const refetch = vi.fn()
     failedWith(new Error("boom"), { refetch })
@@ -266,6 +243,7 @@ describe("EventInvoiceDetailPage", () => {
     expect(refetch).toHaveBeenCalledTimes(1)
   })
 
+  /** An order that is gone or not the organizer's says so and offers no retry that cannot succeed. */
   it("InvoiceGoneOrNotTheirs_SaysSoAndOffersNoPointlessRetry", () => {
     failedWith(notFound())
     renderPage()
@@ -274,6 +252,7 @@ describe("EventInvoiceDetailPage", () => {
     expect(screen.queryByRole("button", { name: /try again/i })).not.toBeInTheDocument()
   })
 
+  /** A retry in flight shows as busy so it is not pressed twice. */
   it("RetryAlreadyInFlight_ShowsTheButtonBusyRatherThanIdle", () => {
     failedWith(new Error("boom"), { isFetching: true })
     renderPage()
@@ -281,6 +260,7 @@ describe("EventInvoiceDetailPage", () => {
     expect(screen.getByRole("button", { name: /retrying/i })).toBeDisabled()
   })
 
+  /** Print hands the order to the browser print dialog. */
   it("Print_HandsTheInvoiceToTheBrowserPrintDialog", async () => {
     loaded()
     const print = vi.fn()
@@ -294,6 +274,7 @@ describe("EventInvoiceDetailPage", () => {
     vi.unstubAllGlobals()
   })
 
+  /** Only the order prints; its controls are marked as chrome and dropped. */
   it("Print_MarksTheInvoiceAsThePrintableRegionAndTheControlsAsChrome", () => {
     loaded()
     const { container } = renderPage()
@@ -304,123 +285,34 @@ describe("EventInvoiceDetailPage", () => {
     expect(screen.getByRole("button", { name: /add note/i })).toHaveAttribute("data-print-hide")
   })
 
-  /**
-   * A custom invoice renders its own body - billed company, structured buyer, category, free-text lines and
-   * the overdue due date - and never the ticket-delivery body it has no tickets for.
-   */
-  it("CustomInvoice_RendersTheCustomBodyWithLinesCategoryAndOverdueDueDate", () => {
-    loaded(CUSTOM_INVOICE)
-    renderPage()
-
-    expect(screen.getByText("Northwind Traders")).toBeInTheDocument()
-    expect(screen.getByText("Ada K Lovelace")).toBeInTheDocument()
-    expect(screen.getByText("Gold Sponsor")).toBeInTheDocument()
-    expect(screen.getByText("Headline sponsorship")).toBeInTheDocument()
-    expect(screen.getByText("Grand total")).toBeInTheDocument()
-    expect(screen.getByText(/Overdue/)).toBeInTheDocument()
-    // The ticket-centric body must not render for a custom invoice.
-    expect(screen.queryByRole("heading", { name: /ticket delivery/i })).not.toBeInTheDocument()
-  })
-
-  /** A ticket invoice keeps the ticket body it shipped with; the custom branch must not replace it. */
-  it("TicketInvoice_StillRendersTheTicketBodyNotTheCustomOne", () => {
+  /** The header names the event the order belongs to and opens it, so the organizer can reach the event in one click. */
+  it("TicketOrder_HeaderLinksToTheEventItBelongsTo", () => {
     loaded()
     renderPage()
 
-    expect(screen.getByRole("heading", { name: /ticket delivery/i })).toBeInTheDocument()
-    expect(screen.queryByText("Grand total")).not.toBeInTheDocument()
+    expect(screen.getByRole("link", { name: /annual convention/i })).toHaveAttribute(
+      "href",
+      APP_ROUTES.eventWizard.edit("event-1"),
+    )
   })
 
-  /**
-   * The link the organizer shares must land on this invoice's buyer pay page at the configured buyer origin;
-   * a link built from the organizer's own address or another invoice's id sends the sponsor nowhere useful.
-   */
-  it("CustomInvoicePayable_ShowsThePayPageUrlForThisInvoiceAtTheBuyerOrigin", () => {
-    loaded(CUSTOM_INVOICE)
+  /** A ticket order is never edited through the custom-invoice form, so its detail offers no Edit. */
+  it("TicketOrder_OffersNoEdit", () => {
+    loaded()
     renderPage()
 
-    expect(screen.getByText("https://pay.example.test/custom-invoices/invoice-1/pay")).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: /^edit$/i })).not.toBeInTheDocument()
   })
 
-  /** A paid custom invoice has nothing left to collect, so the panel says why instead of handing out a pay link. */
-  it("CustomInvoicePaid_OffersNoPayLinkAndSaysWhy", () => {
-    loaded({ ...CUSTOM_INVOICE, invoiceStatus: "Paid", invoiceStatusLabel: "Paid", isOverdue: false, canPayOnline: false })
-    renderPage()
-
-    expect(screen.getByText("This invoice is Paid, so it can't be paid online.")).toBeInTheDocument()
-    expect(screen.queryByText(/\/events\/invoices\/invoice-1\/pay/)).not.toBeInTheDocument()
-  })
-
-  /** Notes still work on a custom invoice through the shipped dialog, so the custom branch does not drop the note trail. */
-  it("AddNoteAfterCreation_SavesTheNoteAndKeepsTheShippedDialog", async () => {
-    loaded(CUSTOM_INVOICE)
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.click(screen.getByRole("button", { name: /add note/i }))
-    const dialog = await screen.findByRole("dialog")
-    fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "Chased head office." } })
-    await user.click(within(dialog).getByRole("button", { name: /save note/i }))
-
-    expect(addNoteMock).toHaveBeenCalledWith("Chased head office.")
-  })
-
-  /** A link is reciprocal: the ticket invoice a custom invoice points at must show the reference back. */
-  it("TicketInvoiceThatIsLinked_ShowsTheReferenceBackToTheCustomInvoice", () => {
-    loaded({ linkedInvoice: { invoiceUniqueId: "invoice-9", invoiceNo: "INV-9009", invoiceStatusLabel: "Pending Payment" } })
-    renderPage()
-
-    expect(screen.getByText("Linked invoice")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "INV-9009" })).toHaveAttribute("href", "/organizer/events/invoices/invoice-9")
-  })
-
-  /** An unlinked ticket invoice is never a link source, so it carries no empty link panel to clutter the page. */
-  it("TicketInvoiceNotLinked_ShowsNoLinkedInvoicePanel", () => {
+  /** Links exist only between custom invoices now, so a ticket order carries no linked-invoice panel at all. */
+  it("TicketOrder_ShowsNoLinkedInvoicePanel", () => {
     loaded()
     renderPage()
 
     expect(screen.queryByText("Linked invoice")).not.toBeInTheDocument()
   })
 
-  /** A standalone custom invoice still shows the panel, so the organizer knows it can be linked. */
-  it("CustomInvoiceNotLinked_ShowsTheNotLinkedSentence", () => {
-    loaded(CUSTOM_INVOICE)
-    renderPage()
-
-    expect(screen.getByText("Not linked to another invoice.")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Link invoice" })).toBeInTheDocument()
-  })
-
-  /** The server refuses a link from a cancelled invoice, so its detail does not offer one. */
-  it("CustomInvoiceCancelled_OffersNoLinkInvoiceAction", () => {
-    loaded({ ...CUSTOM_INVOICE, invoiceStatus: "Cancelled", invoiceStatusLabel: "Cancelled" })
-    renderPage()
-
-    expect(screen.queryByRole("button", { name: "Link invoice" })).not.toBeInTheDocument()
-  })
-
-  /**
-   * An editable custom invoice offers Edit from its own detail, so the organizer who lands here after
-   * creating it can correct a mistake without going back to the list.
-   */
-  it("CustomInvoiceEditable_OffersEditThatOpensItsForm", () => {
-    loaded(CUSTOM_INVOICE)
-    renderPage()
-
-    expect(screen.getByRole("link", { name: /^edit$/i })).toHaveAttribute(
-      "href",
-      APP_ROUTES.customInvoices.edit(INVOICE.invoiceUniqueId),
-    )
-  })
-
-  /** Once the server says an invoice is no longer editable - paid, part-paid or cancelled - its detail offers no Edit. */
-  it("CustomInvoiceNotEditable_OffersNoEdit", () => {
-    loaded({ ...CUSTOM_INVOICE, canEdit: false, invoiceStatus: "Paid", invoiceStatusLabel: "Paid", isOverdue: false })
-    renderPage()
-
-    expect(screen.queryByRole("link", { name: /^edit$/i })).not.toBeInTheDocument()
-  })
-
+  /** While loading, the page shows its skeleton rather than an empty area. */
   it("StillLoading_ShowsTheSkeletonRatherThanAnEmptyPage", () => {
     useEventInvoiceDetailMock.mockReturnValue({
       data: undefined,
