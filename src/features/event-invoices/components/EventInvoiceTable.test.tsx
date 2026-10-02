@@ -1,6 +1,7 @@
 import { ChakraProvider } from "@chakra-ui/react"
 import { render, screen } from "@testing-library/react"
-import { MemoryRouter } from "react-router-dom"
+import userEvent from "@testing-library/user-event"
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
 import type { EventInvoiceListItem } from "@/api/eventInvoices"
 import { system } from "@/theme"
@@ -44,35 +45,68 @@ const CUSTOM_OVERDUE_INVOICE: EventInvoiceListItem = {
   isOverdue: true,
 }
 
+function TableFor({ invoices }: { invoices: EventInvoiceListItem[] }) {
+  return (
+    <EventInvoiceTable
+      invoices={invoices}
+      sortBy="invoiceDateUtc"
+      sortOrder="desc"
+      isFetching={false}
+      onSortChange={vi.fn()}
+      onOpenDetail={vi.fn()}
+      onEdit={vi.fn()}
+      onMarkPaid={vi.fn()}
+      onCancel={vi.fn()}
+      onSend={vi.fn()}
+    />
+  )
+}
+
 function renderTable(invoices: EventInvoiceListItem[] = [INVOICE]) {
   return render(
     <ChakraProvider value={system}>
       <MemoryRouter>
-        <EventInvoiceTable
-          invoices={invoices}
-          sortBy="invoiceDateUtc"
-          sortOrder="desc"
-          isFetching={false}
-          onSortChange={vi.fn()}
-          onOpenDetail={vi.fn()}
-          onEdit={vi.fn()}
-          onMarkPaid={vi.fn()}
-          onCancel={vi.fn()}
-          onSend={vi.fn()}
-        />
+        <TableFor invoices={invoices} />
       </MemoryRouter>
     </ChakraProvider>,
   )
 }
 
 describe("EventInvoiceTable", () => {
-  /** The invoice number is a real link to its detail, so it can be opened in a new tab or reached by keyboard. */
-  it("InvoiceNumber_RendersAsAnchorToInvoiceDetail", () => {
+  /** A ticket order's number is a real link to the Event invoice detail, so it opens in a new tab or by keyboard. */
+  it("ListRow_TicketOrderNumber_OpensTheEventInvoiceDetailRoute", () => {
     renderTable()
 
-    const link = screen.getByRole("link", { name: "INV-1001" })
+    expect(screen.getByRole("link", { name: "INV-1001" })).toHaveAttribute("href", "/organizer/events/invoices/invoice-1")
+  })
 
-    expect(link).toHaveAttribute("href", "/organizer/events/invoices/invoice-1")
+  /** A custom row's number opens the custom invoice's own page, the only route that still serves it. */
+  it("ListRow_CustomInvoiceNumber_OpensTheCustomInvoiceDetailRoute", () => {
+    renderTable([CUSTOM_OVERDUE_INVOICE])
+
+    expect(screen.getByRole("link", { name: "INV-2002" })).toHaveAttribute("href", "/organizer/custom-invoices/invoice-2")
+  })
+
+  /** Opening a custom row carries the list URL along, so back from its detail returns to the same filtered list. */
+  it("ListRow_CustomInvoiceNumber_KeepsTheListReturnState", async () => {
+    function DetailProbe() {
+      const location = useLocation()
+      return <div data-testid="return-to">{(location.state as { returnTo?: string } | null)?.returnTo}</div>
+    }
+    render(
+      <ChakraProvider value={system}>
+        <MemoryRouter initialEntries={["/organizer/events/invoices?statuses=PendingPayment"]}>
+          <Routes>
+            <Route path="/organizer/events/invoices" element={<TableFor invoices={[CUSTOM_OVERDUE_INVOICE]} />} />
+            <Route path="/organizer/custom-invoices/:invoiceUniqueId" element={<DetailProbe />} />
+          </Routes>
+        </MemoryRouter>
+      </ChakraProvider>,
+    )
+
+    await userEvent.click(screen.getByRole("link", { name: "INV-2002" }))
+
+    expect(screen.getByTestId("return-to")).toHaveTextContent("/organizer/events/invoices?statuses=PendingPayment")
   })
 
   /** Only a custom invoice carries the Custom marker, so ticket orders are never mistaken for sponsor billing. */

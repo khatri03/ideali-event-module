@@ -3,7 +3,6 @@ import { AlertTriangle } from "lucide-react"
 import { Link as RouterLink } from "react-router-dom"
 import type { EventInvoiceListItem, EventInvoiceSortBy, EventInvoiceSortOrder } from "@/api/eventInvoices"
 import { TextPill } from "@/components/common"
-import { APP_ROUTES } from "@/utils/routes"
 import { EMPTY_VALUE, formatCurrency } from "@/utils/format"
 import { formatUtcDate } from "@/utils/utcDates"
 import { useInvoiceListReturnState } from "../hooks/useInvoiceListReturnState"
@@ -14,6 +13,7 @@ import { PaymentPills } from "./PaymentPills"
 import { SortableColumnHeader } from "./SortableColumnHeader"
 import { TableBodySkeleton } from "./TableBodySkeleton"
 import { STICKY_HEADER_CSS, TABLE_MAX_HEIGHT } from "../constants"
+import { invoiceDetailPath } from "../invoiceRoutes"
 
 interface EventInvoiceTableProps {
   invoices: EventInvoiceListItem[]
@@ -170,7 +170,7 @@ export function EventInvoiceTable({
                       alignItems="center"
                       _hover={{ textDecoration: "underline" }}
                     >
-                      <RouterLink to={APP_ROUTES.eventInvoices.detail(invoice.invoiceUniqueId)} state={returnState}>
+                      <RouterLink to={invoiceDetailPath(invoice)} state={returnState}>
                         {invoice.invoiceNo}
                       </RouterLink>
                     </Link>

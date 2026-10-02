@@ -56,7 +56,7 @@ function LinkedInvoiceReference({ invoiceUniqueId, invoiceNo, linkedInvoice }: L
           alignItems="center"
           _hover={{ textDecoration: "underline" }}
         >
-          <RouterLink to={APP_ROUTES.eventInvoices.detail(linkedInvoice.invoiceUniqueId)}>{linkedInvoice.invoiceNo}</RouterLink>
+          <RouterLink to={APP_ROUTES.customInvoices.detail(linkedInvoice.invoiceUniqueId)}>{linkedInvoice.invoiceNo}</RouterLink>
         </Link>
         {linkedInvoice.invoiceStatusLabel ? (
           <Text fontSize="sm" color="text.secondary">

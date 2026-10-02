@@ -20,12 +20,13 @@ interface LinkInvoicePickerProps {
   onClose: () => void
 }
 
-const UNFILTERED: Omit<EventInvoiceFilters, "searchTerm"> = {
+// Links run between custom invoices only, so the picker never offers a ticket order the server would refuse.
+const CUSTOM_INVOICES_ONLY: Omit<EventInvoiceFilters, "searchTerm"> = {
   eventUniqueIds: [],
   sessionUniqueIds: [],
   statuses: [],
   paymentMethods: [],
-  invoiceTypes: [],
+  invoiceTypes: ["Custom"],
   overdueOnly: false,
   invoiceDateFrom: null,
   invoiceDateTo: null,
@@ -37,7 +38,7 @@ function LinkInvoicePicker({ invoiceUniqueId, onClose }: LinkInvoicePickerProps)
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE)
   const [selectedInvoiceUniqueId, setSelectedInvoiceUniqueId] = useState<string | null>(null)
   const searchTerm = useDebounce(searchInput, 300)
-  const invoicesQuery = useEventInvoices({ ...UNFILTERED, searchTerm }, page, pageSize, "invoiceDateUtc", "desc")
+  const invoicesQuery = useEventInvoices({ ...CUSTOM_INVOICES_ONLY, searchTerm }, page, pageSize, "invoiceDateUtc", "desc")
   const linkMutation = useLinkCustomInvoice(invoiceUniqueId)
 
   // The list endpoint is shared with the main screen, so the invoice being linked is dropped here rather than

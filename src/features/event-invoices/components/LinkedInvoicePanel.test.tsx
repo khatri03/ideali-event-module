@@ -52,11 +52,11 @@ describe("LinkedInvoicePanel", () => {
     mockUnlinkState()
   })
 
-  /** The reference is only useful if the organizer can reach the other invoice from it in one click. */
-  it("Linked_ShowsTheLinkedInvoiceNoAsALinkToItsDetailWithItsStatus", () => {
+  /** The linked invoice is always a custom invoice, so its number opens the custom invoice's own page with its status beside it. */
+  it("LinkedPanel_LinkedInvoiceNumber_OpensTheCustomInvoiceDetailRoute", () => {
     renderPanel()
 
-    expect(screen.getByRole("link", { name: "INV-2002" })).toHaveAttribute("href", "/organizer/events/invoices/invoice-2")
+    expect(screen.getByRole("link", { name: "INV-2002" })).toHaveAttribute("href", "/organizer/custom-invoices/invoice-2")
     expect(screen.getByText("Pending Payment")).toBeInTheDocument()
   })
 
@@ -104,8 +104,8 @@ describe("LinkedInvoicePanel", () => {
     expect(unlinkMock).not.toHaveBeenCalled()
   })
 
-  /** Confirming is what removes the link, and it is wired to the invoice pair shown on screen. */
-  it("RemoveLinkConfirmed_CallsUnlinkForThisInvoiceAndItsLinkedInvoice", async () => {
+  /** Confirming removes the link through the custom-invoice unlink mutation, wired to the pair shown on screen. */
+  it("LinkedPanel_Unlink_RemovesThroughTheCustomInvoiceUnlinkMutation", async () => {
     const user = userEvent.setup()
     renderPanel()
 

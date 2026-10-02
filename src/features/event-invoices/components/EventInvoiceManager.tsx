@@ -13,6 +13,7 @@ import {
 } from "../hooks/useEventInvoices"
 import { useInvoiceListReturnState } from "../hooks/useInvoiceListReturnState"
 import { DEFAULT_PAGE_SIZE } from "../constants"
+import { invoiceDetailPath } from "../invoiceRoutes"
 import { CancelInvoiceDialog } from "./CancelInvoiceDialog"
 import { EventInvoiceFilterBar, type EventInvoiceDraftFilters } from "./EventInvoiceFilterBar"
 import { EventInvoiceTable } from "./EventInvoiceTable"
@@ -132,7 +133,7 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
   }
 
   function handleOpenDetail(invoice: EventInvoiceListItem) {
-    navigate(APP_ROUTES.eventInvoices.detail(invoice.invoiceUniqueId), { state: returnState })
+    navigate(invoiceDetailPath(invoice), { state: returnState })
   }
 
   function handleEdit(invoice: EventInvoiceListItem) {

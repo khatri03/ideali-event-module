@@ -180,6 +180,27 @@ describe("LinkInvoiceDialog", () => {
     expect(await screen.findByRole("button", { name: "Link invoice" })).toBeDisabled()
   })
 
+  /** Only a custom invoice can be a link target, so the picker asks the server for custom invoices alone. */
+  it("LinkPicker_RequestsCustomInvoicesOnly", async () => {
+    render(dialog())
+    await screen.findByText("INV-2002")
+
+    const filters = useEventInvoicesMock.mock.calls.at(-1)?.[0]
+    expect(filters).toMatchObject({ invoiceTypes: ["Custom"], statuses: [], eventUniqueIds: [], overdueOnly: false })
+  })
+
+  /** The link is written through the custom-invoice link mutation for the invoice being linked. */
+  it("LinkPicker_Confirm_LinksThroughTheCustomInvoiceLinkMutation", async () => {
+    const user = userEvent.setup()
+    render(dialog())
+
+    await user.click(await screen.findByText("INV-2002"))
+    await user.click(screen.getByRole("button", { name: "Link invoice" }))
+
+    await waitFor(() => expect(linkMock).toHaveBeenCalledWith("invoice-2"))
+    expect(useLinkCustomInvoiceMock).toHaveBeenCalledWith("invoice-1")
+  })
+
   /** Confirming links exactly the chosen invoice and closes the dialog once the server has accepted it. */
   it("SelectedAndConfirmed_LinksTheChosenInvoiceAndCloses", async () => {
     const onClose = vi.fn()
