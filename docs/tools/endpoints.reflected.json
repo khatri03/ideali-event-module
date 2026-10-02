@@ -1,5 +1,5 @@
 {
-  "Total": 580,
+  "Total": 705,
   "Controllers": [
     {
       "Area": "Admin",
@@ -624,18 +624,18 @@
       "Area": "Admin",
       "Name": "ListItemController",
       "BaseRoute": "/api/admin/list-items",
-      "Anonymous": false,
+      "Anonymous": true,
       "Roles": "",
-      "Policy": "AdminModuleAccess, AdminModuleAccess",
+      "Policy": "AdminModuleAccess",
       "Actions": [
         {
           "Verb": "GET",
           "Path": "/api/admin/list-items/address-types",
           "Name": "GetAddressTypes",
-          "Anonymous": false,
+          "Anonymous": true,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "AdminModuleAccess, AdminModuleAccess",
+          "Policy": "AdminModuleAccess",
           "Flags": [],
           "Parameters": []
         },
@@ -643,10 +643,10 @@
           "Verb": "GET",
           "Path": "/api/admin/list-items/contact-prefixes",
           "Name": "GetContactPrefixes",
-          "Anonymous": false,
+          "Anonymous": true,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "AdminModuleAccess, AdminModuleAccess",
+          "Policy": "AdminModuleAccess",
           "Flags": [],
           "Parameters": []
         },
@@ -654,10 +654,10 @@
           "Verb": "GET",
           "Path": "/api/admin/list-items/date-formats",
           "Name": "GetDateFormats",
-          "Anonymous": false,
+          "Anonymous": true,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "AdminModuleAccess, AdminModuleAccess",
+          "Policy": "AdminModuleAccess",
           "Flags": [],
           "Parameters": []
         },
@@ -665,10 +665,10 @@
           "Verb": "GET",
           "Path": "/api/admin/list-items/genders",
           "Name": "GetContactGenders",
-          "Anonymous": false,
+          "Anonymous": true,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "AdminModuleAccess, AdminModuleAccess",
+          "Policy": "AdminModuleAccess",
           "Flags": [],
           "Parameters": []
         },
@@ -676,10 +676,10 @@
           "Verb": "GET",
           "Path": "/api/admin/list-items/marital-status",
           "Name": "GetMaritalStatusList",
-          "Anonymous": false,
+          "Anonymous": true,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "AdminModuleAccess, AdminModuleAccess",
+          "Policy": "AdminModuleAccess",
           "Flags": [],
           "Parameters": []
         },
@@ -687,10 +687,10 @@
           "Verb": "GET",
           "Path": "/api/admin/list-items/membership-tenures",
           "Name": "GetMembershipTenures",
-          "Anonymous": false,
+          "Anonymous": true,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "AdminModuleAccess, AdminModuleAccess",
+          "Policy": "AdminModuleAccess",
           "Flags": [],
           "Parameters": []
         },
@@ -698,10 +698,10 @@
           "Verb": "GET",
           "Path": "/api/admin/list-items/modules",
           "Name": "GetModules",
-          "Anonymous": false,
+          "Anonymous": true,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "AdminModuleAccess, AdminModuleAccess",
+          "Policy": "AdminModuleAccess",
           "Flags": [],
           "Parameters": []
         },
@@ -709,10 +709,10 @@
           "Verb": "GET",
           "Path": "/api/admin/list-items/organizer-categories",
           "Name": "GetOrganizerCategories",
-          "Anonymous": false,
+          "Anonymous": true,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "AdminModuleAccess, AdminModuleAccess",
+          "Policy": "AdminModuleAccess",
           "Flags": [],
           "Parameters": []
         },
@@ -720,10 +720,10 @@
           "Verb": "GET",
           "Path": "/api/admin/list-items/organizer-status",
           "Name": "OrganizerStatus",
-          "Anonymous": false,
+          "Anonymous": true,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "AdminModuleAccess, AdminModuleAccess",
+          "Policy": "AdminModuleAccess",
           "Flags": [],
           "Parameters": []
         },
@@ -731,10 +731,10 @@
           "Verb": "GET",
           "Path": "/api/admin/list-items/payment-currencies",
           "Name": "GetPaymentCurrencies",
-          "Anonymous": false,
+          "Anonymous": true,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "AdminModuleAccess, AdminModuleAccess",
+          "Policy": "AdminModuleAccess",
           "Flags": [],
           "Parameters": []
         },
@@ -742,10 +742,10 @@
           "Verb": "GET",
           "Path": "/api/admin/list-items/payment-merchants",
           "Name": "GetPaymentMerchants",
-          "Anonymous": false,
+          "Anonymous": true,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "AdminModuleAccess, AdminModuleAccess",
+          "Policy": "AdminModuleAccess",
           "Flags": [],
           "Parameters": []
         },
@@ -753,10 +753,10 @@
           "Verb": "GET",
           "Path": "/api/admin/list-items/payment-methods",
           "Name": "GetPaymentMethods",
-          "Anonymous": false,
+          "Anonymous": true,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "AdminModuleAccess, AdminModuleAccess",
+          "Policy": "AdminModuleAccess",
           "Flags": [],
           "Parameters": []
         },
@@ -764,10 +764,10 @@
           "Verb": "GET",
           "Path": "/api/admin/list-items/revenue-plan-scopes",
           "Name": "GetRevenuePlanScopes",
-          "Anonymous": false,
+          "Anonymous": true,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "AdminModuleAccess, AdminModuleAccess",
+          "Policy": "AdminModuleAccess",
           "Flags": [],
           "Parameters": []
         },
@@ -775,10 +775,10 @@
           "Verb": "GET",
           "Path": "/api/admin/list-items/time-zones",
           "Name": "GetTimeZones",
-          "Anonymous": false,
+          "Anonymous": true,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "AdminModuleAccess, AdminModuleAccess",
+          "Policy": "AdminModuleAccess",
           "Flags": [],
           "Parameters": []
         }
@@ -1145,6 +1145,43 @@
         },
         {
           "Verb": "GET",
+          "Path": "/api/admin/organizer/list/{exportFormat}/export",
+          "Name": "ExportOrganizerList",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "admin:organizer:list:export",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Query",
+              "Type": "String",
+              "Name": "searchTerm"
+            },
+            {
+              "Source": "Query",
+              "Type": "EnumOrganizerStatus?",
+              "Name": "status"
+            },
+            {
+              "Source": "Query",
+              "Type": "Int32",
+              "Name": "pageIndex"
+            },
+            {
+              "Source": "Query",
+              "Type": "Int32",
+              "Name": "pageSize"
+            },
+            {
+              "Source": "",
+              "Type": "EnumExportFormat",
+              "Name": "exportFormat"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
           "Path": "/api/admin/organizer/list/{status?}",
           "Name": "GetOrganizersList",
           "Anonymous": false,
@@ -1348,6 +1385,207 @@
     },
     {
       "Area": "Donation",
+      "Name": "CampaignTeamController",
+      "BaseRoute": "/api/donation/~/api/campaigns/{campaignSlug}/teams",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "",
+      "Actions": [
+        {
+          "Verb": "GET",
+          "Path": "/api/donation/~/api/campaigns/{campaignSlug}/teams",
+          "Name": "GetTeams",
+          "Anonymous": true,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "campaignSlug"
+            },
+            {
+              "Source": "Query",
+              "Type": "String",
+              "Name": "search"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/donation/~/api/campaigns/{campaignSlug}/teams",
+          "Name": "CreateTeam",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "campaignSlug"
+            },
+            {
+              "Source": "Body",
+              "Type": "CampaignTeamSaveDto",
+              "Name": "model"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/donation/~/api/campaigns/{campaignSlug}/teams/{teamSlug}",
+          "Name": "GetTeamPage",
+          "Anonymous": true,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "campaignSlug"
+            },
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "teamSlug"
+            }
+          ]
+        },
+        {
+          "Verb": "PUT",
+          "Path": "/api/donation/~/api/campaigns/{campaignSlug}/teams/{teamSlug}",
+          "Name": "UpdateTeam",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "campaignSlug"
+            },
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "teamSlug"
+            },
+            {
+              "Source": "Body",
+              "Type": "CampaignTeamSaveDto",
+              "Name": "model"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/donation/~/api/campaigns/{campaignSlug}/teams/{teamSlug}/captain/{memberUniqueId:guid}",
+          "Name": "HandOverCaptaincy",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "campaignSlug"
+            },
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "teamSlug"
+            },
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "memberUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/donation/~/api/campaigns/{campaignSlug}/teams/{teamSlug}/members",
+          "Name": "JoinTeam",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "campaignSlug"
+            },
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "teamSlug"
+            }
+          ]
+        },
+        {
+          "Verb": "DELETE",
+          "Path": "/api/donation/~/api/campaigns/{campaignSlug}/teams/{teamSlug}/members/{memberUniqueId:guid}",
+          "Name": "RemoveMember",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "campaignSlug"
+            },
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "teamSlug"
+            },
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "memberUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "DELETE",
+          "Path": "/api/donation/~/api/campaigns/{campaignSlug}/teams/{teamSlug}/members/me",
+          "Name": "LeaveTeam",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "campaignSlug"
+            },
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "teamSlug"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Donation",
       "Name": "DonateController",
       "BaseRoute": "/api/donation",
       "Anonymous": false,
@@ -1413,6 +1651,23 @@
           ]
         },
         {
+          "Verb": "GET",
+          "Path": "/api/donation/{campaignUniqueId:guid}/projects/dropdown",
+          "Name": "GetCampaignProjectsDropdown",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            }
+          ]
+        },
+        {
           "Verb": "POST",
           "Path": "/api/donation/{campaignUniqueId:guid}/stripe/create-intent",
           "Name": "CreateDonationPaymentIntent",
@@ -1431,6 +1686,23 @@
               "Source": "Body",
               "Type": "PaymentIntentDto",
               "Name": "intentInfo"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/donation/mobile/{campaignUniqueId:guid}/donate",
+          "Name": "GetMobileCampaignForDonation",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
             }
           ]
         },
@@ -1763,6 +2035,55 @@
               "Source": "",
               "Type": "Int32",
               "Name": "pageSize"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/projects",
+          "Name": "AddProject",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "DonationModuleSubscription",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "DonationCampaignProjectRequestDto",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "PUT",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/projects/{projectUniqueId:guid}",
+          "Name": "UpdateProject",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "DonationModuleSubscription",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "projectUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "DonationCampaignProjectRequestDto",
+              "Name": "request"
             }
           ]
         },
@@ -2591,6 +2912,266 @@
     },
     {
       "Area": "Donation",
+      "Name": "EmailVerificationController",
+      "BaseRoute": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer",
+      "Anonymous": true,
+      "Roles": "",
+      "Policy": "",
+      "Actions": [
+        {
+          "Verb": "POST",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/resend-verification",
+          "Name": "Resend",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "ResendVerificationDto",
+              "Name": "model"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/verify-email",
+          "Name": "Verify",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "EmailVerificationDto",
+              "Name": "model"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Donation",
+      "Name": "FundraiserInvitationController",
+      "BaseRoute": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/invitations",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "DonationModuleSubscription",
+      "Actions": [
+        {
+          "Verb": "GET",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/invitations",
+          "Name": "GetInvitations",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "donation:campaign:view-detail",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "Query",
+              "Type": "FundraiserInvitationQueryDto",
+              "Name": "query"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/invitations",
+          "Name": "Send",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "donation:campaign:edit",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "FundraiserInvitationSendRequestDto",
+              "Name": "model"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/invitations/preview",
+          "Name": "Preview",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "donation:campaign:view-detail",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "FundraiserInvitationSendRequestDto",
+              "Name": "model"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/invitations/supporters",
+          "Name": "GetSupporterCandidates",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "donation:campaign:view-detail",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "Query",
+              "Type": "String",
+              "Name": "search"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Donation",
+      "Name": "FundraiserInvitationLinkController",
+      "BaseRoute": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/invitation",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "",
+      "Actions": [
+        {
+          "Verb": "GET",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/invitation",
+          "Name": "Open",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "Query",
+              "Type": "String",
+              "Name": "token"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/invitation/accept",
+          "Name": "Accept",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "FundraiserInvitationAcceptDto",
+              "Name": "model"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/invitation/unsubscribe",
+          "Name": "Unsubscribe",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "Query",
+              "Type": "String",
+              "Name": "token"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Donation",
+      "Name": "FundraiserPageController",
+      "BaseRoute": "/api/donation/~/api/campaigns/{campaignSlug}",
+      "Anonymous": true,
+      "Roles": "",
+      "Policy": "",
+      "Actions": [
+        {
+          "Verb": "GET",
+          "Path": "/api/donation/~/api/campaigns/{campaignSlug}/{fundraiserSlug}",
+          "Name": "GetPublicPage",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "campaignSlug"
+            },
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "fundraiserSlug"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Donation",
       "Name": "InvoiceViewController",
       "BaseRoute": "/api/invoice",
       "Anonymous": true,
@@ -2625,6 +3206,55 @@
       "Policy": "",
       "Actions": [
         {
+          "Verb": "POST",
+          "Path": "/api/tap-to-pay/campaign/{resourceUniqueId:guid}/mobile-payment-intent",
+          "Name": "CreateMobilePaymentIntent",
+          "Anonymous": true,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "resourceUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "MobilePaymentIntentRequestDto",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/tap-to-pay/campaign/{resourceUniqueId:guid}/mobile-payment-status/{paymentIntentId}",
+          "Name": "GetMobilePaymentStatus",
+          "Anonymous": true,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "resourceUniqueId"
+            },
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "paymentIntentId"
+            },
+            {
+              "Source": "Query",
+              "Type": "EnumModule",
+              "Name": "module"
+            }
+          ]
+        },
+        {
           "Verb": "GET",
           "Path": "/api/tap-to-pay/campaign/list",
           "Name": "GetCampaignList",
@@ -2648,6 +3278,453 @@
               "Source": "Query",
               "Type": "Int32",
               "Name": "pageSize"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Donation",
+      "Name": "MyFundraisingController",
+      "BaseRoute": "/api/donation/~/api/member/my-fundraising",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "",
+      "Actions": [
+        {
+          "Verb": "GET",
+          "Path": "/api/donation/~/api/member/my-fundraising",
+          "Name": "GetMyPages",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": []
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/donation/~/api/member/my-fundraising/{fundraiserUniqueId:guid}",
+          "Name": "GetMyPage",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "fundraiserUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "PUT",
+          "Path": "/api/donation/~/api/member/my-fundraising/{fundraiserUniqueId:guid}",
+          "Name": "UpdateMyPage",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "fundraiserUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "FundraiserPageUpdateDto",
+              "Name": "model"
+            }
+          ]
+        },
+        {
+          "Verb": "DELETE",
+          "Path": "/api/donation/~/api/member/my-fundraising/{fundraiserUniqueId:guid}/photo",
+          "Name": "RemovePhoto",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "fundraiserUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/donation/~/api/member/my-fundraising/{fundraiserUniqueId:guid}/photo",
+          "Name": "SetPhoto",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "fundraiserUniqueId"
+            },
+            {
+              "Source": "Form",
+              "Type": "FundraiserPhotoRequest",
+              "Name": "model"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Donation",
+      "Name": "PeerToPeerEmailTemplateController",
+      "BaseRoute": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/email-templates",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "DonationModuleSubscription",
+      "Actions": [
+        {
+          "Verb": "GET",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/email-templates",
+          "Name": "GetTemplates",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "donation:campaign:view-detail",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "PUT",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/email-templates",
+          "Name": "UpdateTemplate",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "donation:campaign:edit",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "PeerToPeerEmailTemplateUpdateDto",
+              "Name": "model"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/email-templates/test",
+          "Name": "SendTest",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "donation:campaign:edit",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "PeerToPeerEmailTemplateTestDto",
+              "Name": "model"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Donation",
+      "Name": "PeerToPeerJoinController",
+      "BaseRoute": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "",
+      "Actions": [
+        {
+          "Verb": "GET",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/join",
+          "Name": "GetJoinContext",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/join",
+          "Name": "Join",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "FundraiserJoinDto",
+              "Name": "model"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Donation",
+      "Name": "PeerToPeerLeaderboardController",
+      "BaseRoute": "/api/donation/~/api/campaigns/{campaignSlug}/leaderboard",
+      "Anonymous": true,
+      "Roles": "",
+      "Policy": "",
+      "Actions": [
+        {
+          "Verb": "GET",
+          "Path": "/api/donation/~/api/campaigns/{campaignSlug}/leaderboard",
+          "Name": "GetLeaderboard",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "campaignSlug"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Donation",
+      "Name": "PeerToPeerModerationController",
+      "BaseRoute": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "DonationModuleSubscription",
+      "Actions": [
+        {
+          "Verb": "GET",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/fundraisers",
+          "Name": "GetFundraisers",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "donation:campaign:view-detail",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "Query",
+              "Type": "PeerToPeerModerationQueryDto",
+              "Name": "query"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/fundraisers/{fundraiserUniqueId:guid}",
+          "Name": "GetFundraiser",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "donation:campaign:view-detail",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "fundraiserUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/fundraisers/{fundraiserUniqueId:guid}/moderate",
+          "Name": "ModerateFundraiser",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "donation:campaign:edit",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "fundraiserUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "PeerToPeerModerationRequestDto",
+              "Name": "model"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/teams",
+          "Name": "GetTeams",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "donation:campaign:view-detail",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "Query",
+              "Type": "PeerToPeerModerationQueryDto",
+              "Name": "query"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/teams/{teamUniqueId:guid}",
+          "Name": "GetTeam",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "donation:campaign:view-detail",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "teamUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/teams/{teamUniqueId:guid}/moderate",
+          "Name": "ModerateTeam",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "donation:campaign:edit",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "teamUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "PeerToPeerModerationRequestDto",
+              "Name": "model"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Donation",
+      "Name": "PeerToPeerSettingsController",
+      "BaseRoute": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "DonationModuleSubscription",
+      "Actions": [
+        {
+          "Verb": "GET",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/settings",
+          "Name": "GetSettings",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "donation:campaign:view-detail",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/settings",
+          "Name": "UpdateSettings",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "donation:campaign:edit",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "PeerToPeerSettingsDto",
+              "Name": "model"
             }
           ]
         }
@@ -2829,6 +3906,161 @@
       ]
     },
     {
+      "Area": "Donation",
+      "Name": "SupporterSignUpController",
+      "BaseRoute": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer",
+      "Anonymous": true,
+      "Roles": "",
+      "Policy": "",
+      "Actions": [
+        {
+          "Verb": "POST",
+          "Path": "/api/donation/campaign/{campaignUniqueId:guid}/peer-to-peer/supporter-sign-up",
+          "Name": "SignUp",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "SupporterSignUpDto",
+              "Name": "model"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Donor",
+      "Name": "DonationController",
+      "BaseRoute": "/api/participant/donation",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "",
+      "Actions": [
+        {
+          "Verb": "POST",
+          "Path": "/api/participant/donation/{campaignId}/donate",
+          "Name": "Donate",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignId"
+            },
+            {
+              "Source": "Body",
+              "Type": "CampaignDonationDto",
+              "Name": "model"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/participant/donation/{campaignUniqueId:guid}",
+          "Name": "GetCampaignForDonation",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "campaignUniqueId"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Donor",
+      "Name": "MembershipController",
+      "BaseRoute": "/api/participant/memberportal",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "",
+      "Actions": [
+        {
+          "Verb": "GET",
+          "Path": "/api/participant/memberportal/{memberUniqueId:guid}/available-upgrades",
+          "Name": "GetAvailableMembershipUpgradesAsync",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "memberUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/participant/memberportal/{memberUniqueId:guid}/upgrade",
+          "Name": "GetUpgradeMembershipDetail",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "memberUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/participant/memberportal/{memberUniqueId:guid}/upgrade/{toMembershipTypeUniqueId:guid}",
+          "Name": "UpgradeMembership",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [
+            "Consumes",
+            "RequestSizeLimit"
+          ],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "memberUniqueId"
+            },
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "toMembershipTypeUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "MembershipUpgradeMemberDetailDto",
+              "Name": "request"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "Area": "Donor",
       "Name": "ParticipantDonorController",
       "BaseRoute": "/api/participant/donation",
@@ -2838,6 +4070,28 @@
       "Actions": [
         {
           "Verb": "GET",
+          "Path": "/api/participant/donation/{organizerUniqueId:guid}/recent-history",
+          "Name": "GetRecentHistory",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "organizerUniqueId"
+            },
+            {
+              "Source": "Query",
+              "Type": "EnumDisplayModuleRespose",
+              "Name": "type"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
           "Path": "/api/participant/donation/dashboard-summary",
           "Name": "GetDashboardSummary",
           "Anonymous": false,
@@ -2845,12 +4099,40 @@
           "Roles": "",
           "Policy": "",
           "Flags": [],
-          "Parameters": []
+          "Parameters": [
+            {
+              "Source": "Query",
+              "Type": "Guid",
+              "Name": "organizerUniqueId"
+            }
+          ]
         },
         {
           "Verb": "GET",
           "Path": "/api/participant/donation/donation-history",
           "Name": "GetDonationHistory",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Query",
+              "Type": "Guid",
+              "Name": "organizerUniqueId"
+            },
+            {
+              "Source": "Query",
+              "Type": "DonorDonationHistoryRequestDto",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/participant/donation/donation-history/detail",
+          "Name": "GetDonationHistoryDetail",
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
@@ -2878,6 +4160,11 @@
               "Source": "",
               "Type": "Guid",
               "Name": "invoiceUniqueId"
+            },
+            {
+              "Source": "Query",
+              "Type": "Guid",
+              "Name": "organizerUniqueId"
             }
           ]
         },
@@ -2895,6 +4182,33 @@
               "Source": "",
               "Type": "Guid",
               "Name": "invoiceUniqueId"
+            },
+            {
+              "Source": "Query",
+              "Type": "Guid",
+              "Name": "organizerUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/participant/donation/invoice/{invoiceUniqueId:guid}/detail",
+          "Name": "GetDonationInvoiceDetail",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "invoiceUniqueId"
+            },
+            {
+              "Source": "Query",
+              "Type": "Guid",
+              "Name": "organizerUniqueId"
             }
           ]
         },
@@ -2907,7 +4221,13 @@
           "Roles": "",
           "Policy": "",
           "Flags": [],
-          "Parameters": []
+          "Parameters": [
+            {
+              "Source": "Query",
+              "Type": "Guid",
+              "Name": "organizerUniqueId"
+            }
+          ]
         },
         {
           "Verb": "GET",
@@ -2918,22 +4238,11 @@
           "Roles": "",
           "Policy": "",
           "Flags": [],
-          "Parameters": []
-        },
-        {
-          "Verb": "GET",
-          "Path": "/api/participant/donation/organizer-other-campaigns/{organizerId:Guid}",
-          "Name": "GetOrganizerOtherCampaigns",
-          "Anonymous": false,
-          "RequiresAuth": true,
-          "Roles": "",
-          "Policy": "",
-          "Flags": [],
           "Parameters": [
             {
-              "Source": "",
+              "Source": "Query",
               "Type": "Guid",
-              "Name": "organizerId"
+              "Name": "organizerUniqueId"
             }
           ]
         },
@@ -2977,6 +4286,11 @@
           "Parameters": [
             {
               "Source": "Query",
+              "Type": "Guid",
+              "Name": "organizerUniqueId"
+            },
+            {
+              "Source": "Query",
               "Type": "Int32",
               "Name": "pageNo"
             },
@@ -3011,6 +4325,28 @@
               "Source": "Route",
               "Type": "Guid",
               "Name": "invoiceId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/participant/membership/{invoiceId:guid}/send-email",
+          "Name": "SendMembershipInvoiceEmail",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "invoiceId"
+            },
+            {
+              "Source": "Body",
+              "Type": "MembershipInvoiceEmailRequest",
+              "Name": "request"
             }
           ]
         },
@@ -3054,6 +4390,28 @@
           ]
         },
         {
+          "Verb": "POST",
+          "Path": "/api/participant/membership/{memberUniqueId:guid}/google-wallet",
+          "Name": "IssueGoogleWalletCard",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "memberUniqueId"
+            },
+            {
+              "Source": "Query",
+              "Type": "Guid",
+              "Name": "organizerUniqueId"
+            }
+          ]
+        },
+        {
           "Verb": "GET",
           "Path": "/api/participant/membership/member/organizers",
           "Name": "GetMemberOrganizers",
@@ -3062,7 +4420,13 @@
           "Roles": "",
           "Policy": "",
           "Flags": [],
-          "Parameters": []
+          "Parameters": [
+            {
+              "Source": "Query",
+              "Type": "Guid",
+              "Name": "organizerUniqueId"
+            }
+          ]
         },
         {
           "Verb": "GET",
@@ -3074,6 +4438,11 @@
           "Policy": "",
           "Flags": [],
           "Parameters": [
+            {
+              "Source": "Query",
+              "Type": "Guid",
+              "Name": "organizerUniqueId"
+            },
             {
               "Source": "Query",
               "Type": "MembershipHistoryListRequest",
@@ -3097,6 +4466,27 @@
               "Name": "snippetId"
             }
           ]
+        }
+      ]
+    },
+    {
+      "Area": "Donor",
+      "Name": "UserPortalController",
+      "BaseRoute": "/api/participant/userportal",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "",
+      "Actions": [
+        {
+          "Verb": "GET",
+          "Path": "/api/participant/userportal/module-access",
+          "Name": "GetModuleAccess",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": []
         }
       ]
     },
@@ -3315,6 +4705,79 @@
               "Name": "request"
             }
           ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/events/cart/{cartUniqueId:guid}/seating/{sessionUniqueId:guid}",
+          "Name": "GetSeating",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "cartUniqueId"
+            },
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "sessionUniqueId"
+            },
+            {
+              "Source": "Query",
+              "Type": "String",
+              "Name": "holdToken"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/events/cart/{cartUniqueId:guid}/seats",
+          "Name": "HoldSeat",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [
+            "BotMitigation"
+          ],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "cartUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "HoldEventSeatRequest",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/events/cart/{cartUniqueId:guid}/seats/release",
+          "Name": "ReleaseSeat",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "cartUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "ReleaseEventSeatRequest",
+              "Name": "request"
+            }
+          ]
         }
       ]
     },
@@ -3362,6 +4825,11 @@
               "Source": "Route",
               "Type": "Guid",
               "Name": "cartUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "ConfirmEventCheckoutRequest",
+              "Name": "request"
             }
           ]
         },
@@ -3611,6 +5079,28 @@
           ]
         },
         {
+          "Verb": "POST",
+          "Path": "/api/events/{eventUniqueId:guid}/register/hold-token/extend",
+          "Name": "ExtendEventRegistrationHoldToken",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "eventUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "SessionHoldTokenRequest",
+              "Name": "request"
+            }
+          ]
+        },
+        {
           "Verb": "GET",
           "Path": "/api/events/{eventUniqueId:guid}/register/payment",
           "Name": "GetEventRegistrationPayment",
@@ -3663,6 +5153,82 @@
               "Source": "Route",
               "Type": "Guid",
               "Name": "eventUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/events/{eventUniqueId:guid}/register/sessions/{sessionUniqueId:guid}/hold-token",
+          "Name": "IssueEventRegistrationSessionHoldToken",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "eventUniqueId"
+            },
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "sessionUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "SessionHoldTokenRequest",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/events/{eventUniqueId:guid}/register/sessions/{sessionUniqueId:guid}/seating",
+          "Name": "GetEventRegistrationSessionSeating",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "eventUniqueId"
+            },
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "sessionUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/events/{eventUniqueId:guid}/register/sessions/{sessionUniqueId:guid}/seats/release",
+          "Name": "ReleaseEventRegistrationSessionSeats",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "eventUniqueId"
+            },
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "sessionUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "ReleaseSessionSeatsRequest",
+              "Name": "request"
             }
           ]
         }
@@ -5095,6 +6661,23 @@
               "Name": "model"
             }
           ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/identity/account/user-authenticate",
+          "Name": "PortalLogin",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Body",
+              "Type": "OrganizerPortalLoginDto",
+              "Name": "dto"
+            }
+          ]
         }
       ]
     },
@@ -5284,6 +6867,52 @@
     },
     {
       "Area": "Invoice",
+      "Name": "CustomInvoicePayController",
+      "BaseRoute": "/api/custom-invoices",
+      "Anonymous": true,
+      "Roles": "",
+      "Policy": "",
+      "Actions": [
+        {
+          "Verb": "GET",
+          "Path": "/api/custom-invoices/{invoiceUniqueId:guid}/pay",
+          "Name": "GetPaySummary",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "invoiceUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/custom-invoices/{invoiceUniqueId:guid}/pay",
+          "Name": "StartPayment",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [
+            "BotMitigation"
+          ],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "invoiceUniqueId"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Invoice",
       "Name": "DonationInvoiceController",
       "BaseRoute": "/api/invoice/donation",
       "Anonymous": false,
@@ -5314,6 +6943,11 @@
               "Source": "Query",
               "Type": "String",
               "Name": "searchTerm"
+            },
+            {
+              "Source": "",
+              "Type": "EnumDonationMemberFilter",
+              "Name": "memberFilter"
             },
             {
               "Source": "",
@@ -5444,6 +7078,11 @@
               "Source": "Query",
               "Type": "String",
               "Name": "searchTerm"
+            },
+            {
+              "Source": "",
+              "Type": "EnumDonationMemberFilter",
+              "Name": "memberFilter"
             },
             {
               "Source": "",
@@ -6134,7 +7773,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "membership:custom-list:create",
+          "Policy": "membership:custom-list:new-custom-list",
           "Flags": [],
           "Parameters": [
             {
@@ -6168,7 +7807,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "membership:custom-list:view-detail",
+          "Policy": "membership:custom-list:view",
           "Flags": [],
           "Parameters": [
             {
@@ -6229,7 +7868,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "membership:custom-list:view-detail",
+          "Policy": "membership:custom-list:view",
           "Flags": [],
           "Parameters": [
             {
@@ -6387,7 +8026,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "membership:custom-list:view",
+          "Policy": "MembershipModuleSubscription",
           "Flags": [],
           "Parameters": []
         },
@@ -6398,7 +8037,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "membership:custom-list:view",
+          "Policy": "MembershipModuleSubscription",
           "Flags": [],
           "Parameters": []
         }
@@ -6453,7 +8092,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "membership:document-category:view-detail",
+          "Policy": "MembershipModuleSubscription",
           "Flags": [],
           "Parameters": [
             {
@@ -6538,7 +8177,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "membership:document-category:view-detail",
+          "Policy": "MembershipModuleSubscription",
           "Flags": [],
           "Parameters": [
             {
@@ -6555,7 +8194,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "membership:document-category:view-detail",
+          "Policy": "MembershipModuleSubscription",
           "Flags": [],
           "Parameters": [
             {
@@ -6697,6 +8336,33 @@
     },
     {
       "Area": "Membership",
+      "Name": "MembershipGoogleWalletController",
+      "BaseRoute": "/api/organizer/membership/google-wallet",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "MembershipModuleSubscription",
+      "Actions": [
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/membership/google-wallet/{memberUniqueId:guid}",
+          "Name": "IssueWalletCard",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "MembershipModuleSubscription",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "memberUniqueId"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Membership",
       "Name": "MembershipRegistrationController",
       "BaseRoute": "/api/membership",
       "Anonymous": true,
@@ -6786,6 +8452,28 @@
               "Source": "Body",
               "Type": "ValidateCouponRequest",
               "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/membership/check-existing",
+          "Name": "CheckExistingMembership",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Query",
+              "Type": "String",
+              "Name": "email"
+            },
+            {
+              "Source": "Query",
+              "Type": "Guid",
+              "Name": "membershipTypeUniqueId"
             }
           ]
         }
@@ -6962,7 +8650,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "membership:membershiptype:members-view",
+          "Policy": "membership:member:view",
           "Flags": [],
           "Parameters": [
             {
@@ -7035,7 +8723,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "membership:custom-forms:view",
+          "Policy": "customform:view",
           "Flags": [],
           "Parameters": [
             {
@@ -7130,7 +8818,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "membership:member:download-file",
+          "Policy": "membership:member:export",
           "Flags": [],
           "Parameters": [
             {
@@ -7225,6 +8913,23 @@
         },
         {
           "Verb": "GET",
+          "Path": "/api/organizer/membership/type/public/{organizerId:guid}/list",
+          "Name": "GetPublicMembershipTypeList",
+          "Anonymous": true,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "MembershipModuleSubscription",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "organizerId"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
           "Path": "/api/organizer/membership/type/status-options",
           "Name": "GetMembershipStatusOptions",
           "Anonymous": false,
@@ -7242,7 +8947,7 @@
       "BaseRoute": "/api/organizer/membership/type/email-template",
       "Anonymous": false,
       "Roles": "",
-      "Policy": "OrganizerModuleAccess, MembershipModuleSubscription",
+      "Policy": "MembershipModuleSubscription",
       "Actions": [
         {
           "Verb": "GET",
@@ -7251,7 +8956,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "OrganizerModuleAccess, MembershipModuleSubscription",
+          "Policy": "MembershipModuleSubscription",
           "Flags": [],
           "Parameters": []
         },
@@ -7279,7 +8984,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "membership:email-snippet:edit",
+          "Policy": "membership:email-snippet:view",
           "Flags": [],
           "Parameters": [
             {
@@ -8238,7 +9943,7 @@
       "BaseRoute": "/api/organizer/custom-form",
       "Anonymous": false,
       "Roles": "",
-      "Policy": "OrganizerModuleAccess, MembershipModuleSubscription",
+      "Policy": "MembershipModuleSubscription",
       "Actions": [
         {
           "Verb": "GET",
@@ -8247,7 +9952,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "OrganizerModuleAccess, MembershipModuleSubscription",
+          "Policy": "customform:edit",
           "Flags": [],
           "Parameters": [
             {
@@ -8264,7 +9969,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "OrganizerModuleAccess, MembershipModuleSubscription",
+          "Policy": "MembershipModuleSubscription",
           "Flags": [],
           "Parameters": [
             {
@@ -8286,7 +9991,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "OrganizerModuleAccess, MembershipModuleSubscription",
+          "Policy": "MembershipModuleSubscription",
           "Flags": [],
           "Parameters": []
         },
@@ -8297,7 +10002,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "OrganizerModuleAccess, MembershipModuleSubscription",
+          "Policy": "customform:create",
           "Flags": [],
           "Parameters": [
             {
@@ -8314,7 +10019,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "OrganizerModuleAccess, MembershipModuleSubscription",
+          "Policy": "customform:view",
           "Flags": [],
           "Parameters": [
             {
@@ -8341,9 +10046,459 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "OrganizerModuleAccess, MembershipModuleSubscription",
+          "Policy": "MembershipModuleSubscription",
           "Flags": [],
           "Parameters": []
+        }
+      ]
+    },
+    {
+      "Area": "Organizer",
+      "Name": "CustomFormReportController",
+      "BaseRoute": "/api/organizer/custom-form-report",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "OrganizerModuleAccess",
+      "Actions": [
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/custom-form-report/forms/{formUniqueId:guid}/columns",
+          "Name": "GetFormColumns",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "OrganizerModuleAccess",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "formUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/custom-form-report/modules",
+          "Name": "GetReportModules",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "OrganizerModuleAccess",
+          "Flags": [],
+          "Parameters": []
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/custom-form-report/modules/{moduleId:int:min(1):max(255)}/entities",
+          "Name": "GetModuleEntities",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "OrganizerModuleAccess",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Byte",
+              "Name": "moduleId"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/custom-form-report/modules/{moduleId:int:min(1):max(255)}/entities/{entityUniqueId:guid}/forms",
+          "Name": "GetEntityForms",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "OrganizerModuleAccess",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Byte",
+              "Name": "moduleId"
+            },
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "entityUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/custom-form-report/modules/{moduleId:int:min(1):max(255)}/forms/{formUniqueId:guid}/templates",
+          "Name": "GetTemplateListItems",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "report-template:view",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Byte",
+              "Name": "moduleId"
+            },
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "formUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/custom-form-report/run",
+          "Name": "RunReport",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "report:view",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Body",
+              "Type": "CustomFormReportRequestDto",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/custom-form-report/run/export",
+          "Name": "ExportReport",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "report:export",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Body",
+              "Type": "CustomFormReportExportRequestDto",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/custom-form-report/templates",
+          "Name": "GetTemplates",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "report-template:view",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Query",
+              "Type": "String",
+              "Name": "searchTerm"
+            },
+            {
+              "Source": "Query",
+              "Type": "Int32",
+              "Name": "page"
+            },
+            {
+              "Source": "Query",
+              "Type": "Int32",
+              "Name": "pageSize"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/custom-form-report/templates",
+          "Name": "CreateTemplate",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "report-template:create",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Body",
+              "Type": "CustomFormReportTemplateRequestDto",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "DELETE",
+          "Path": "/api/organizer/custom-form-report/templates/{templateUniqueId:guid}",
+          "Name": "DeleteTemplate",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "report-template:delete",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "templateUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/custom-form-report/templates/{templateUniqueId:guid}",
+          "Name": "GetTemplate",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "report-template:view",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "templateUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "PUT",
+          "Path": "/api/organizer/custom-form-report/templates/{templateUniqueId:guid}",
+          "Name": "UpdateTemplate",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "report-template:edit",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "templateUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "CustomFormReportTemplateRequestDto",
+              "Name": "request"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Organizer",
+      "Name": "CustomInvoiceController",
+      "BaseRoute": "/api/organizer/custom-invoices",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "OrganizerModuleAccess",
+      "Actions": [
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/custom-invoices",
+          "Name": "Create",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "custom-invoice:create",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Body",
+              "Type": "CreateCustomInvoiceRequest",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/custom-invoices/{invoiceUniqueId:guid}",
+          "Name": "GetDetail",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "custom-invoice:view-detail",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "invoiceUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "PUT",
+          "Path": "/api/organizer/custom-invoices/{invoiceUniqueId:guid}",
+          "Name": "Update",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "custom-invoice:edit",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "invoiceUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "UpdateCustomInvoiceRequest",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/custom-invoices/{invoiceUniqueId:guid}/add-note",
+          "Name": "AddNote",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "custom-invoice:add-note",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "invoiceUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "InvoiceNoteDto",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/custom-invoices/{invoiceUniqueId:guid}/cancel",
+          "Name": "Cancel",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "custom-invoice:cancel",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "invoiceUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "InvoiceNoteDto",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/custom-invoices/{invoiceUniqueId:guid}/edit",
+          "Name": "GetForEdit",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "custom-invoice:edit",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "invoiceUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "DELETE",
+          "Path": "/api/organizer/custom-invoices/{invoiceUniqueId:guid}/link",
+          "Name": "Unlink",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "custom-invoice:link",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "invoiceUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/custom-invoices/{invoiceUniqueId:guid}/link",
+          "Name": "Link",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "custom-invoice:link",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "invoiceUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "LinkCustomInvoiceRequest",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/custom-invoices/{invoiceUniqueId:guid}/mark-paid",
+          "Name": "MarkPaid",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "custom-invoice:mark-paid",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "invoiceUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/custom-invoices/{invoiceUniqueId:guid}/payment-link",
+          "Name": "CreatePaymentLink",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "custom-invoice:payment-link",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "invoiceUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/custom-invoices/{invoiceUniqueId:guid}/send",
+          "Name": "Send",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "custom-invoice:send",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "invoiceUniqueId"
+            }
+          ]
         }
       ]
     },
@@ -8567,6 +10722,58 @@
     },
     {
       "Area": "Organizer",
+      "Name": "EventAttendeeRosterController",
+      "BaseRoute": "/api/organizer/events/{eventUniqueId:guid}/sessions/{sessionUniqueId:guid}",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "OrganizerModuleAccess",
+      "Actions": [
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/events/{eventUniqueId:guid}/sessions/{sessionUniqueId:guid}/attendees",
+          "Name": "GetRoster",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "event:attendees:view",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "eventUniqueId"
+            },
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "sessionUniqueId"
+            },
+            {
+              "Source": "Query",
+              "Type": "String",
+              "Name": "search"
+            },
+            {
+              "Source": "Query",
+              "Type": "EventAttendeeRosterScope",
+              "Name": "scope"
+            },
+            {
+              "Source": "Query",
+              "Type": "Int32",
+              "Name": "pageNo"
+            },
+            {
+              "Source": "Query",
+              "Type": "Int32",
+              "Name": "pageSize"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Organizer",
       "Name": "EventInvoiceController",
       "BaseRoute": "/api/organizer/events/invoices",
       "Anonymous": false,
@@ -8580,7 +10787,122 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "OrganizerModuleAccess",
+          "Policy": "event:invoice:view-detail",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "invoiceUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/events/invoices/{invoiceUniqueId:guid}/add-note",
+          "Name": "AddInvoiceNote",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "event:invoice:add-note",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "invoiceUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "InvoiceNoteDto",
+              "Name": "dto"
+            }
+          ]
+        },
+        {
+          "Verb": "PUT",
+          "Path": "/api/organizer/events/invoices/{invoiceUniqueId:guid}/buyer",
+          "Name": "UpdateInvoiceBuyer",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "event:invoice:edit-buyer",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "invoiceUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "EventInvoiceBuyerDto",
+              "Name": "dto"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/events/invoices/{invoiceUniqueId:guid}/cancel",
+          "Name": "CancelInvoice",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "event:invoice:cancel",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "invoiceUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "InvoiceNoteDto",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "PUT",
+          "Path": "/api/organizer/events/invoices/{invoiceUniqueId:guid}/line-items/{lineItemUniqueId:guid}/attendees/{slotIndex:int}",
+          "Name": "UpdateLineItemAttendee",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "event:invoice:edit-buyer",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "invoiceUniqueId"
+            },
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "lineItemUniqueId"
+            },
+            {
+              "Source": "",
+              "Type": "Int32",
+              "Name": "slotIndex"
+            },
+            {
+              "Source": "Body",
+              "Type": "UpdateEventInvoiceAttendeeRequest",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/events/invoices/{invoiceUniqueId:guid}/mark-paid",
+          "Name": "MarkInvoiceAsPaid",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "event:invoice:mark-paid",
           "Flags": [],
           "Parameters": [
             {
@@ -8597,7 +10919,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "OrganizerModuleAccess",
+          "Policy": "event:invoice:send",
           "Flags": [],
           "Parameters": [
             {
@@ -8614,7 +10936,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "OrganizerModuleAccess",
+          "Policy": "event:invoice:send",
           "Flags": [],
           "Parameters": [
             {
@@ -8636,7 +10958,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "OrganizerModuleAccess",
+          "Policy": "event:invoice:view",
           "Flags": [],
           "Parameters": []
         },
@@ -8647,7 +10969,7 @@
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "OrganizerModuleAccess",
+          "Policy": "event:invoice:view",
           "Flags": [],
           "Parameters": [
             {
@@ -8662,24 +10984,61 @@
     {
       "Area": "Organizer",
       "Name": "EventTicketCheckInController",
-      "BaseRoute": "/api/organizer/events/tickets",
+      "BaseRoute": "/api/organizer/events/{eventUniqueId:guid}/sessions/{sessionUniqueId:guid}",
       "Anonymous": false,
       "Roles": "",
       "Policy": "OrganizerModuleAccess",
       "Actions": [
         {
           "Verb": "POST",
-          "Path": "/api/organizer/events/tickets/check-in",
+          "Path": "/api/organizer/events/{eventUniqueId:guid}/sessions/{sessionUniqueId:guid}/check-in",
           "Name": "CheckIn",
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
-          "Policy": "OrganizerModuleAccess",
+          "Policy": "event:check-in:scan",
           "Flags": [],
           "Parameters": [
             {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "eventUniqueId"
+            },
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "sessionUniqueId"
+            },
+            {
               "Source": "Body",
               "Type": "TicketCheckInRequest",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/events/{eventUniqueId:guid}/sessions/{sessionUniqueId:guid}/check-in/undo",
+          "Name": "UndoCheckIn",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "event:check-in:undo",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "eventUniqueId"
+            },
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "sessionUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "TicketCheckInUndoRequest",
               "Name": "request"
             }
           ]
@@ -8708,6 +11067,89 @@
               "Source": "",
               "Type": "IFormFile",
               "Name": "file"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Organizer",
+      "Name": "InvoiceCategoryController",
+      "BaseRoute": "/api/organizer/custom-invoices/categories",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "OrganizerModuleAccess",
+      "Actions": [
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/custom-invoices/categories",
+          "Name": "Create",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "custom-invoice:category:create",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Body",
+              "Type": "InvoiceCategorySaveRequest",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "DELETE",
+          "Path": "/api/organizer/custom-invoices/categories/{uniqueId:guid}",
+          "Name": "Delete",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "custom-invoice:category:delete",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "uniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "PUT",
+          "Path": "/api/organizer/custom-invoices/categories/{uniqueId:guid}",
+          "Name": "Update",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "custom-invoice:category:edit",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "uniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "InvoiceCategorySaveRequest",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/custom-invoices/categories/list",
+          "Name": "GetList",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "custom-invoice:category:view",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Query",
+              "Type": "InvoiceCategoryListRequest",
+              "Name": "request"
             }
           ]
         }
@@ -9335,6 +11777,57 @@
         },
         {
           "Verb": "POST",
+          "Path": "/api/organizer/payment-account/stripe/embedded/manage-session/{paymentAccountUniqueId:guid}",
+          "Name": "CreateStripeManageSession",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "PaymentAccountModuleSubscription",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "paymentAccountUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/payment-account/stripe/embedded/onboarding-session",
+          "Name": "CreateStripeEmbeddedOnboardingSession",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "PaymentAccountModuleSubscription",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Body",
+              "Type": "StripeEmbeddedOnboardingRequest",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/payment-account/stripe/embedded/status/{stripeAccountId}",
+          "Name": "GetStripeEmbeddedAccountStatus",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "PaymentAccountModuleSubscription",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "stripeAccountId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
           "Path": "/api/organizer/payment-account/stripe/exchange-token",
           "Name": "ExchangeToken",
           "Anonymous": false,
@@ -9707,6 +12200,44 @@
     },
     {
       "Area": "Organizer",
+      "Name": "PortalUrlController",
+      "BaseRoute": "/api/organizer/PortalUrl",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "OrganizerModuleAccess, OrganizerCoreModuleSubscription",
+      "Actions": [
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/PortalUrl/create-portal-link",
+          "Name": "CreateOrganizerPortalLink",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Body",
+              "Type": "CreateOrganizerSlugDto",
+              "Name": "dto"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/PortalUrl/portal-link",
+          "Name": "GetOrganizerPortalLink",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": []
+        }
+      ]
+    },
+    {
+      "Area": "Organizer",
       "Name": "ProfileController",
       "BaseRoute": "/api/organizer/profile",
       "Anonymous": false,
@@ -9786,6 +12317,23 @@
       "Roles": "",
       "Policy": "QuickBooksModuleSubscription",
       "Actions": [
+        {
+          "Verb": "DELETE",
+          "Path": "/quickbooks/integration/{integrationUniqueId:guid}",
+          "Name": "Disconnect",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "integration:create",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "Guid",
+              "Name": "integrationUniqueId"
+            }
+          ]
+        },
         {
           "Verb": "GET",
           "Path": "/quickbooks/integration/callback",
@@ -9877,7 +12425,7 @@
         {
           "Verb": "POST",
           "Path": "/quickbooks/integration/qb-invoice-sync",
-          "Name": "SyncInvoices",
+          "Name": "SyncTransactions",
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
@@ -9886,7 +12434,7 @@
           "Parameters": [
             {
               "Source": "Body",
-              "Type": "QuickBooksInvoiceSyncDto",
+              "Type": "QuickBooksTransactionSyncDto",
               "Name": "dto"
             }
           ]
@@ -9929,6 +12477,157 @@
       "Roles": "",
       "Policy": "OrganizerModuleAccess, SharedOrganizerModuleSubscription",
       "Actions": [
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/seatsio/events/{eventUniqueId:guid}/for-sale/mark-as-for-sale",
+          "Name": "MarkEventObjectsForSale",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "OrganizerModuleAccess, SharedOrganizerModuleSubscription",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "eventUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "SeatsIoForSaleSelectionModel",
+              "Name": "selection"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/seatsio/events/{eventUniqueId:guid}/for-sale/mark-as-not-for-sale",
+          "Name": "MarkEventObjectsNotForSale",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "OrganizerModuleAccess, SharedOrganizerModuleSubscription",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "eventUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "SeatsIoForSaleSelectionModel",
+              "Name": "selection"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/seatsio/events/{eventUniqueId:guid}/for-sale/mark-everything-for-sale",
+          "Name": "MarkEverythingForSale",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "OrganizerModuleAccess, SharedOrganizerModuleSubscription",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "eventUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/seatsio/events/{eventUniqueId:guid}/render-context",
+          "Name": "GetEventRenderContext",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "OrganizerModuleAccess, SharedOrganizerModuleSubscription",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "eventUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/seatsio/events/{eventUniqueId:guid}/reports/for-sale",
+          "Name": "GetEventForSaleReport",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "OrganizerModuleAccess, SharedOrganizerModuleSubscription",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "eventUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/seatsio/events/{eventUniqueId:guid}/reports/status-changes",
+          "Name": "GetEventStatusChangesReport",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "OrganizerModuleAccess, SharedOrganizerModuleSubscription",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "eventUniqueId"
+            },
+            {
+              "Source": "Query",
+              "Type": "SeatsIoStatusChangeQueryModel",
+              "Name": "query"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/seatsio/events/{eventUniqueId:guid}/reports/statuses",
+          "Name": "GetEventStatusesReport",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "OrganizerModuleAccess, SharedOrganizerModuleSubscription",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "eventUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/seatsio/events/{eventUniqueId:guid}/reports/summary",
+          "Name": "GetEventSummaryReport",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "OrganizerModuleAccess, SharedOrganizerModuleSubscription",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "eventUniqueId"
+            }
+          ]
+        },
         {
           "Verb": "GET",
           "Path": "/api/organizer/seatsio/seating-layouts",
@@ -10092,8 +12791,42 @@
         },
         {
           "Verb": "GET",
+          "Path": "/api/organizer/seatsio/seating-layouts/{chartUniqueId:guid}/categories/capacity",
+          "Name": "GetChartCategoryCapacity",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "OrganizerModuleAccess, SharedOrganizerModuleSubscription",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "chartUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
           "Path": "/api/organizer/seatsio/seating-layouts/{chartUniqueId:guid}/events",
           "Name": "GetChartEvents",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "OrganizerModuleAccess, SharedOrganizerModuleSubscription",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "chartUniqueId"
+            }
+          ]
+        },
+        {
+          "Verb": "POST",
+          "Path": "/api/organizer/seatsio/seating-layouts/{chartUniqueId:guid}/thumbnail",
+          "Name": "RefreshSeatingLayoutThumbnail",
           "Anonymous": false,
           "RequiresAuth": true,
           "Roles": "",
@@ -11109,6 +13842,33 @@
           ]
         },
         {
+          "Verb": "PATCH",
+          "Path": "/api/organizer/sessions/{sessionUniqueId:guid}/ticket/{ticketUniqueId:guid}/remaining-visibility",
+          "Name": "UpdateSessionTicketRemainingVisibility",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "OrganizerModuleAccess, SharedOrganizerModuleSubscription",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "sessionUniqueId"
+            },
+            {
+              "Source": "Route",
+              "Type": "Guid",
+              "Name": "ticketUniqueId"
+            },
+            {
+              "Source": "Body",
+              "Type": "SessionTicketRemainingVisibilityRequest",
+              "Name": "model"
+            }
+          ]
+        },
+        {
           "Verb": "POST",
           "Path": "/api/organizer/sessions/{sessionUniqueId:guid}/ticket/display-order",
           "Name": "UpdateSessionTicketDisplayOrder",
@@ -11213,6 +13973,74 @@
       "Policy": "",
       "Actions": [
         {
+          "Verb": "GET",
+          "Path": "/api/organizer/public/by-slug/{slugName}",
+          "Name": "GetOrganizerBySlug",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "String",
+              "Name": "slugName"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/public/check-isorganizer-email",
+          "Name": "CheckIsOrganizerEmail",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Query",
+              "Type": "String",
+              "Name": "email"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/public/check-organizer-email",
+          "Name": "CheckOrganizerEmail",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Query",
+              "Type": "String",
+              "Name": "email"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/public/email-availability",
+          "Name": "CheckEmailAvailability",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Query",
+              "Type": "String",
+              "Name": "email"
+            }
+          ]
+        },
+        {
           "Verb": "POST",
           "Path": "/api/organizer/public/external-signup",
           "Name": "ExternalSignup",
@@ -11230,6 +14058,23 @@
           ]
         },
         {
+          "Verb": "GET",
+          "Path": "/api/organizer/public/shortname-availability",
+          "Name": "CheckShortnameAvailability",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Query",
+              "Type": "String",
+              "Name": "shortName"
+            }
+          ]
+        },
+        {
           "Verb": "POST",
           "Path": "/api/organizer/public/sign-up",
           "Name": "SignUp",
@@ -11243,6 +14088,23 @@
               "Source": "Body",
               "Type": "OrganizerSignupDto",
               "Name": "organizerSignupDto"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/public/slug-availability",
+          "Name": "CheckSlugAvailability",
+          "Anonymous": true,
+          "RequiresAuth": false,
+          "Roles": "",
+          "Policy": "",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Query",
+              "Type": "String",
+              "Name": "slugName"
             }
           ]
         }

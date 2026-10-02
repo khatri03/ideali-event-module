@@ -2,9 +2,11 @@ import { expect, test, type Locator, type Page, type Request } from "@playwright
 import { findHorizontalPageOverflow, findUndersizedTargets, MIN_TOUCH_TARGET_PX } from "./responsiveChecks"
 
 /**
- * Phase 03 and 04 UAT for custom event invoices, driven against mocked API responses because the check is about
+ * Phase 03 and 04 UAT for custom invoices, driven against mocked API responses because the check is about
  * what the organizer sees and sends, not about the server. Every width in the project's responsive range is
- * walked, since the organizer works these screens from a phone as often as from a desk.
+ * walked, since the organizer works these screens from a phone as often as from a desk. The list still lives
+ * under Event Invoices, which carries custom rows beside ticket orders; everything past the list runs on the
+ * custom-invoice routes.
  */
 
 const WIDTHS = [320, 375, 768, 1024, 1440, 1920] as const
@@ -19,8 +21,9 @@ const TICKET_ID = "70000000-0000-4000-8000-000000000200"
 
 const LIST_URL = "/organizer/events/invoices"
 const LIST_API = "**/api/organizer/events/invoices/list**"
-const detailApi = (invoiceUniqueId: string) => `**/api/organizer/events/invoices/${invoiceUniqueId}`
-const linkApi = (invoiceUniqueId: string) => `**/api/organizer/events/invoices/custom/${invoiceUniqueId}/link`
+const detailPath = (invoiceUniqueId: string) => `/organizer/custom-invoices/${invoiceUniqueId}`
+const detailApi = (invoiceUniqueId: string) => `**/api/organizer/custom-invoices/${invoiceUniqueId}`
+const linkPath = (invoiceUniqueId: string) => `/api/organizer/custom-invoices/${invoiceUniqueId}/link`
 
 type Json = Record<string, unknown>
 
@@ -108,8 +111,8 @@ function listPage(rows: Json[]) {
 }
 
 /**
- * A custom invoice detail carrying every section UAT 3 names. Defaults are an unpaid, editable, unlinked
- * invoice; a test overrides only the state its rule is about.
+ * A custom invoice detail in the custom-invoices endpoint's shape, carrying every section UAT 3 names. Defaults
+ * are an unpaid, editable, unlinked invoice billed to an Event; a test overrides only the state its rule is about.
  */
 function customDetail(overrides: Json = {}): Json {
   return {
@@ -118,23 +121,17 @@ function customDetail(overrides: Json = {}): Json {
     invoiceStatus: "PendingPayment",
     invoiceStatusLabel: "Pending Payment",
     invoiceDateUtc: "2026-09-01T12:00:00Z",
+    moduleType: "Event",
+    entityUniqueId: "event-1",
+    entityName: "Annual Convention",
     subTotal: "1750.50",
-    discountAmount: null,
-    discountCouponCode: null,
-    taxAmount: null,
-    platformCharges: null,
-    serviceCharges: null,
     totalAmount: "1750.50",
     balanceAmount: "1750.50",
     currencySymbol: "$",
-    eventUniqueId: "event-1",
-    eventName: "Annual Convention",
     buyerName: "Jane Doe",
     buyerEmail: "jane@northwind.example",
     buyerPhone: "555-0100",
-    charges: [],
-    lineItems: [],
-    customLineItems: [
+    lineItems: [
       { invoiceItemUniqueId: "line-1", description: "Booth rental", amount: "1500.00" },
       { invoiceItemUniqueId: "line-2", description: "Logo placement", amount: "250.50" },
     ],
@@ -150,8 +147,6 @@ function customDetail(overrides: Json = {}): Json {
         paymentDateUtc: "2026-09-03T12:00:00Z",
       },
     ],
-    invoiceType: "Custom",
-    invoiceTypeLabel: "Custom",
     categoryName: "Gold Sponsorship",
     dueDateUtc: "2026-09-10T12:00:00Z",
     isOverdue: true,
@@ -162,32 +157,23 @@ function customDetail(overrides: Json = {}): Json {
     buyerLastName: "Doe",
     canMarkAsPaid: true,
     canCancel: true,
-    canResendTickets: false,
-    canEditBuyer: false,
+    canPayOnline: false,
+    canSend: true,
     canEdit: true,
     linkedInvoice: null,
     ...overrides,
   }
 }
 
-/** The ticket invoice a custom invoice gets linked to; only ever the target of a link. */
-function ticketDetail(overrides: Json = {}): Json {
+/** The second custom invoice a custom invoice gets linked to; links run between custom invoices only. */
+function linkTargetDetail(overrides: Json = {}): Json {
   return customDetail({
-    invoiceUniqueId: TICKET_ID,
-    invoiceNo: "INV-T-200",
-    invoiceStatus: "Paid",
-    invoiceStatusLabel: "Paid",
-    invoiceType: "Regular",
-    invoiceTypeLabel: "Regular",
-    customLineItems: [],
-    categoryName: null,
-    dueDateUtc: null,
+    invoiceUniqueId: CUSTOM_DUE_TODAY_ID,
+    invoiceNo: "INV-C-101",
+    companyName: "Contoso Ltd",
+    buyerName: "Sam Lee",
+    dueDateUtc: "2026-09-29T12:00:00Z",
     isOverdue: false,
-    specialNotes: null,
-    companyName: null,
-    canMarkAsPaid: false,
-    canCancel: false,
-    canEdit: false,
     ...overrides,
   })
 }
@@ -237,7 +223,7 @@ async function openList(page: Page, width: number) {
 /** Opens a detail at a width and waits for its header, so assertions never race the first fetch. */
 async function openDetail(page: Page, invoiceUniqueId: string, invoiceNo: string, width = 1440) {
   await page.setViewportSize({ width, height: VIEWPORT_HEIGHT })
-  await page.goto(`/organizer/events/invoices/${invoiceUniqueId}`)
+  await page.goto(detailPath(invoiceUniqueId))
   await expect(page.getByText(invoiceNo, { exact: true }).first()).toBeVisible({ timeout: 30_000 })
 }
 
@@ -267,6 +253,9 @@ for (const width of WIDTHS) {
 
     await expect(rowFor(page, "INV-C-101").getByText("Overdue, due")).toHaveCount(0)
     await expect(rowFor(page, "INV-T-200").getByText("Custom", { exact: true })).toHaveCount(0)
+
+    await expect(page.getByRole("link", { name: "INV-C-100" })).toHaveAttribute("href", detailPath(CUSTOM_ID))
+    await expect(page.getByRole("link", { name: "INV-T-200" })).toHaveAttribute("href", `/organizer/events/invoices/${TICKET_ID}`)
 
     if (SCREENSHOT_WIDTHS.includes(width)) {
       await page.screenshot({ path: `${SCREENSHOT_DIR}/list-${width}.png`, fullPage: true })
@@ -319,9 +308,9 @@ for (const width of WIDTHS) {
 }
 
 /**
- * UAT 4. Linking ties a sponsorship bill to the ticket order it pays for. The request must name the target
- * the organizer picked, the pending state must stop a double submit, and after the refetch both invoices
- * must point at each other - otherwise the other side keeps showing a stale "not linked".
+ * UAT 4. Linking ties one sponsorship bill to another. The picker must offer custom invoices only, the request
+ * must name the target the organizer picked, the pending state must stop a double submit, and after the refetch
+ * both invoices must point at each other - otherwise the other side keeps showing a stale "not linked".
  */
 test("UAT 4: linking a custom invoice sends the picked target and both details show the link", async ({ page }) => {
   let isLinked = false
@@ -331,16 +320,19 @@ test("UAT 4: linking a custom invoice sends the picked target and both details s
 
   await mockShell(page)
   await mockList(page, (url) => {
-    const search = url.searchParams.get("searchTerm")
-    return search ? [TICKET_ROW].filter((row) => String(row.invoiceNo).includes(search)) : [OVERDUE_CUSTOM_ROW, DUE_TODAY_CUSTOM_ROW, TICKET_ROW]
+    const search = url.searchParams.get("searchTerm") ?? ""
+    const types = url.searchParams.getAll("invoiceTypes")
+    return [OVERDUE_CUSTOM_ROW, DUE_TODAY_CUSTOM_ROW, TICKET_ROW]
+      .filter((row) => types.length === 0 || types.includes(String(row.invoiceType)))
+      .filter((row) => String(row.invoiceNo).includes(search))
   })
   await mockDetail(page, CUSTOM_ID, () =>
-    customDetail({ linkedInvoice: isLinked ? { invoiceUniqueId: TICKET_ID, invoiceNo: "INV-T-200", invoiceStatusLabel: "Paid" } : null }),
+    customDetail({ linkedInvoice: isLinked ? { invoiceUniqueId: CUSTOM_DUE_TODAY_ID, invoiceNo: "INV-C-101", invoiceStatusLabel: "Pending Payment" } : null }),
   )
-  await mockDetail(page, TICKET_ID, () =>
-    ticketDetail({ linkedInvoice: isLinked ? { invoiceUniqueId: CUSTOM_ID, invoiceNo: "INV-C-100", invoiceStatusLabel: "Pending Payment" } : null }),
+  await mockDetail(page, CUSTOM_DUE_TODAY_ID, () =>
+    linkTargetDetail({ linkedInvoice: isLinked ? { invoiceUniqueId: CUSTOM_ID, invoiceNo: "INV-C-100", invoiceStatusLabel: "Pending Payment" } : null }),
   )
-  await page.route(linkApi(CUSTOM_ID), async (route) => {
+  await page.route(`**${linkPath(CUSTOM_ID)}`, async (route) => {
     linkRequests.push(route.request())
     await linkReleased
     isLinked = true
@@ -359,12 +351,13 @@ test("UAT 4: linking a custom invoice sends the picked target and both details s
   expect(dialogBox!.height, "the link dialog is not full height on a phone").toBeGreaterThanOrEqual(VIEWPORT_HEIGHT - 1)
   expect(await findHorizontalPageOverflow(page), "the open link dialog makes the page scroll sideways").toEqual([])
 
-  const searchRequest = page.waitForRequest((request) => new URL(request.url()).searchParams.get("searchTerm") === "INV-T")
-  await dialog.getByLabel("Search invoices").fill("INV-T")
-  await searchRequest
-  await expect(dialog.getByText("INV-C-101")).toHaveCount(0)
+  const searchRequest = page.waitForRequest((request) => new URL(request.url()).searchParams.get("searchTerm") === "INV-C-101")
+  await dialog.getByLabel("Search invoices").fill("INV-C-101")
+  const searchParams = new URL((await searchRequest).url()).searchParams
+  expect(searchParams.getAll("invoiceTypes"), "the link picker asked for more than custom invoices").toEqual(["Custom"])
+  await expect(dialog.getByText("INV-T-200")).toHaveCount(0)
 
-  await dialog.getByRole("radio", { name: "Select invoice INV-T-200" }).check()
+  await dialog.getByRole("radio", { name: "Select invoice INV-C-101" }).check()
 
   const undersized = await findUndersizedTargets(dialog, false)
   expect.soft(undersized, `controls under ${MIN_TOUCH_TARGET_PX}px in the link dialog at 375px`).toEqual([])
@@ -378,15 +371,15 @@ test("UAT 4: linking a custom invoice sends the picked target and both details s
 
   expect(linkRequests).toHaveLength(1)
   expect(linkRequests[0].method()).toBe("POST")
-  expect(new URL(linkRequests[0].url()).pathname).toBe(`/api/organizer/events/invoices/custom/${CUSTOM_ID}/link`)
-  expect(linkRequests[0].postDataJSON()).toEqual({ targetInvoiceUniqueId: TICKET_ID })
+  expect(new URL(linkRequests[0].url()).pathname).toBe(linkPath(CUSTOM_ID))
+  expect(linkRequests[0].postDataJSON()).toEqual({ targetInvoiceUniqueId: CUSTOM_DUE_TODAY_ID })
 
-  const linkedToTicket = page.getByRole("link", { name: "INV-T-200" })
-  await expect(linkedToTicket).toHaveAttribute("href", `/organizer/events/invoices/${TICKET_ID}`)
-  await linkedToTicket.click()
+  const linkedToTarget = page.getByRole("link", { name: "INV-C-101" })
+  await expect(linkedToTarget).toHaveAttribute("href", detailPath(CUSTOM_DUE_TODAY_ID))
+  await linkedToTarget.click()
 
-  await expect(page).toHaveURL(`/organizer/events/invoices/${TICKET_ID}`)
-  await expect(page.getByRole("link", { name: "INV-C-100" })).toHaveAttribute("href", `/organizer/events/invoices/${CUSTOM_ID}`)
+  await expect(page).toHaveURL(detailPath(CUSTOM_DUE_TODAY_ID))
+  await expect(page.getByRole("link", { name: "INV-C-100" })).toHaveAttribute("href", detailPath(CUSTOM_ID))
 })
 
 /**
@@ -399,9 +392,9 @@ test("UAT 5: removing a link names the consequence, sends DELETE and brings back
 
   await mockShell(page)
   await mockDetail(page, CUSTOM_ID, () =>
-    customDetail({ linkedInvoice: isLinked ? { invoiceUniqueId: TICKET_ID, invoiceNo: "INV-T-200", invoiceStatusLabel: "Paid" } : null }),
+    customDetail({ linkedInvoice: isLinked ? { invoiceUniqueId: CUSTOM_DUE_TODAY_ID, invoiceNo: "INV-C-101", invoiceStatusLabel: "Pending Payment" } : null }),
   )
-  await page.route(linkApi(CUSTOM_ID), async (route) => {
+  await page.route(`**${linkPath(CUSTOM_ID)}`, async (route) => {
     unlinkRequests.push(route.request())
     isLinked = false
     await route.fulfill({ json: envelope(true) })
@@ -412,7 +405,7 @@ test("UAT 5: removing a link names the consequence, sends DELETE and brings back
 
   const confirm = page.getByRole("alertdialog")
   await expect(confirm.getByText("Remove link?")).toBeVisible()
-  await expect(confirm).toContainText("Unlink invoice INV-C-100 from INV-T-200?")
+  await expect(confirm).toContainText("Unlink invoice INV-C-100 from INV-C-101?")
   await expect(confirm).toContainText("only the reference between them is removed")
   await settle(confirm)
   const undersized = await findUndersizedTargets(confirm, false)
@@ -424,9 +417,9 @@ test("UAT 5: removing a link names the consequence, sends DELETE and brings back
   await expect(confirm).toBeHidden()
   expect(unlinkRequests).toHaveLength(1)
   expect(unlinkRequests[0].method()).toBe("DELETE")
-  expect(new URL(unlinkRequests[0].url()).pathname).toBe(`/api/organizer/events/invoices/custom/${CUSTOM_ID}/link`)
+  expect(new URL(unlinkRequests[0].url()).pathname).toBe(linkPath(CUSTOM_ID))
 
-  await expect(page.getByRole("link", { name: "INV-T-200" })).toHaveCount(0)
+  await expect(page.getByRole("link", { name: "INV-C-101" })).toHaveCount(0)
   await expect(page.getByText("Not linked to another invoice.")).toBeVisible()
   await expect(page.getByRole("button", { name: "Link invoice" })).toBeVisible()
 })
@@ -474,9 +467,9 @@ test("UAT 7: an editable custom invoice offers Edit, which opens its edit form",
   await openDetail(page, CUSTOM_ID, "INV-C-100")
 
   const edit = page.getByRole("link", { name: "Edit" })
-  await expect(edit).toHaveAttribute("href", `/organizer/events/invoices/custom/${CUSTOM_ID}/edit`)
+  await expect(edit).toHaveAttribute("href", `${detailPath(CUSTOM_ID)}/edit`)
   await edit.click()
-  await expect(page).toHaveURL(`/organizer/events/invoices/custom/${CUSTOM_ID}/edit`)
+  await expect(page).toHaveURL(`${detailPath(CUSTOM_ID)}/edit`)
 })
 
 /**
@@ -537,7 +530,7 @@ test("UAT 8: tapping the Overdue only text toggles the filter and the list follo
 
 const PHASE_04_SCREENSHOT_DIR = "test-results/uat-04"
 const settlementApi = (invoiceUniqueId: string, action: "cancel" | "mark-paid") =>
-  `**/api/organizer/events/invoices/${invoiceUniqueId}/${action}`
+  `**/api/organizer/custom-invoices/${invoiceUniqueId}/${action}`
 const CANCELLATION_REASON = "Sponsor withdrew from the event."
 
 for (const width of WIDTHS) {
@@ -594,7 +587,7 @@ for (const width of WIDTHS) {
   })
 }
 
-const PAY_PAGE_URL = new RegExp(`^https?://[^\\s]+/events/invoices/${CUSTOM_ID}/pay$`)
+const PAY_PAGE_URL = new RegExp(`^https?://[^\\s]+/custom-invoices/${CUSTOM_ID}/pay$`)
 
 /** The "Payable link" panel, found by its title so the checks stay scoped to the section under test. */
 const payableLinkPanel = (page: Page) => page.getByText("Payable link", { exact: true }).locator("xpath=ancestor::div[2]")
@@ -665,7 +658,7 @@ for (const width of SCREENSHOT_WIDTHS) {
 
     const panel = payableLinkPanel(page)
     await expect(panel.getByText("This invoice is Paid, so it can't be paid online.")).toBeVisible()
-    await expect(panel.getByText(/\/events\/invoices\/.+\/pay/)).toHaveCount(0)
+    await expect(panel.getByText(/\/custom-invoices\/.+\/pay/)).toHaveCount(0)
     for (const name of ["Open payment page", "Copy link"]) {
       const action = panel.getByRole("button", { name })
       await expect(action).toBeDisabled()

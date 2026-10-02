@@ -21,6 +21,7 @@ const REGISTRATION_CONTROLLERS = [
   { name: "EventRevenuePlanController", stage: "3. Payment", note: "The platform's charges for an organizer, readable before a cart exists." },
   { name: "EventOrderController", stage: "4. After the sale", note: "The buyer's confirmation page, polled while a bank payment settles." },
   { name: "EventTicketViewController", stage: "4. After the sale", note: "One issued ticket, rendered for its attendee." },
+  { name: "CustomInvoicePayController", stage: "4. After the sale", note: "The buyer's pay page for a custom invoice the organizer raised outside the cart. Links emailed under <code>/events/invoices/{id}/pay</code> are redirected by the frontend." },
   { name: "EventInvoiceController", stage: "4. After the sale", note: "The organizer's view of orders, and the resend paths used when an email did not arrive." },
   { name: "EventTicketCheckInController", stage: "4. After the sale", note: "Scanning a ticket at the door." },
 ]

@@ -34,30 +34,22 @@ const customInvoiceDetail = {
     invoiceStatus: "PendingPayment",
     invoiceStatusLabel: "Pending Payment",
     invoiceDateUtc: "2026-08-01T10:00:00Z",
+    moduleType: "Event",
+    entityUniqueId: "event-1",
+    entityName: "Annual Convention",
     subTotal: 1800.75,
-    discountAmount: null,
-    discountCouponCode: null,
-    taxAmount: null,
-    platformCharges: null,
-    serviceCharges: null,
     totalAmount: 1800.75,
     balanceAmount: 1800.75,
     currencySymbol: "$",
-    eventUniqueId: "event-1",
-    eventName: "Annual Convention",
     buyerName: "Ada Lovelace",
     buyerEmail: "ada@example.com",
     buyerPhone: null,
-    charges: [],
-    lineItems: [],
-    customLineItems: [
+    lineItems: [
       { invoiceItemUniqueId: "cline-1", description: "Headline sponsorship", amount: 1500.5 },
       { invoiceItemUniqueId: "cline-2", description: "Booth space", amount: 300.25 },
     ],
     notes: [],
     payments: [],
-    invoiceType: "Custom",
-    invoiceTypeLabel: "Custom",
     categoryName: "Gold Sponsor",
     dueDateUtc: "2026-11-15T00:00:00Z",
     isOverdue: false,
@@ -68,10 +60,9 @@ const customInvoiceDetail = {
     buyerLastName: "Lovelace",
     canMarkAsPaid: true,
     canCancel: true,
-    canResendTickets: false,
-    canEditBuyer: false,
     canEdit: true,
     canPayOnline: true,
+    canSend: true,
     linkedInvoice: null,
   },
 }
@@ -81,7 +72,7 @@ async function mockCustomInvoice(page: Page) {
   await page.route("**/api/alert-inbox/**", (route) =>
     route.fulfill({ json: { success: true, data: null, message: null, timestamp: "2026-08-11T10:00:00Z" } }),
   )
-  await page.route(`**/api/organizer/events/invoices/${INVOICE_ID}`, (route) =>
+  await page.route(`**/api/organizer/custom-invoices/${INVOICE_ID}`, (route) =>
     route.request().method() === "GET" ? route.fulfill({ json: customInvoiceDetail }) : route.fallback(),
   )
 }
@@ -92,11 +83,15 @@ const WIDTHS = [
 ]
 
 for (const { label, width, height } of WIDTHS) {
+  /**
+   * The printed custom invoice is the paper a sponsor's accounts team pays from: it must keep the billed lines,
+   * total and pay URL, and drop the organizer's action buttons, which mean nothing on paper.
+   */
   test(`custom invoice prints the invoice and hides the pay/email controls at ${label}`, async ({ page }) => {
     await page.setViewportSize({ width, height })
     await mockCustomInvoice(page)
 
-    await page.goto(`/organizer/events/invoices/${INVOICE_ID}`)
+    await page.goto(`/organizer/custom-invoices/${INVOICE_ID}`)
     await expect(page.getByText("CINV-3001", { exact: true })).toBeVisible()
 
     await page.emulateMedia({ media: "print" })
@@ -105,7 +100,7 @@ for (const { label, width, height } of WIDTHS) {
     await expect(page.getByText("Northwind Traders")).toBeVisible()
     await expect(page.getByText("Headline sponsorship")).toBeVisible()
     await expect(page.getByText("$1,800.75")).toBeVisible()
-    await expect(page.getByText(/\/events\/invoices\/.+\/pay$/)).toBeVisible()
+    await expect(page.getByText(/\/custom-invoices\/.+\/pay$/)).toBeVisible()
 
     await expect(page.getByRole("button", { name: /email invoice to buyer/i })).toBeHidden()
     await expect(page.getByRole("link", { name: /open payment page/i })).toBeHidden()

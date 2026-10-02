@@ -549,7 +549,7 @@
         </p>
         <p>
           The organizer gets that link from the <em>Payable link</em> panel on the invoice detail, which offers
-          Open and Copy only when the detail's <code>canPayOnline</code> is true (<code>EventInvoiceDetailDto.CanPayOnline</code>,
+          Open and Copy only when the detail's <code>canPayOnline</code> is true (<code>CustomInvoiceDetailDto.CanPayOnline</code>,
           the same rule that decides <code>payState</code>). The panel builds the URL from
           <code>VITE_BUYER_APP_BASE_URL</code> and never calls the pay endpoints, so no client secret reaches the
           organizer's screen. That variable is required at build time: <code>vite build</code> and <code>vite dev</code>
@@ -1362,7 +1362,7 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
           Stripe provider and card fields. The Payment Element mounts from the invoice's
           <code>paymentAccountUniqueId</code>, <code>outstandingAmount</code> and <code>currencyCode</code>
           before any intent exists. On <strong>Pay</strong> the page calls <code>elements.submit()</code>,
-          then <code>POST /api/events/invoices/{id}/pay</code>, then <code>stripe.confirmPayment</code>
+          then <code>POST /api/custom-invoices/{invoiceUniqueId}/pay</code>, then <code>stripe.confirmPayment</code>
           with <code>redirect: "if_required"</code> and the cardholder name as billing details.
         </p>
         <ul>
@@ -1593,13 +1593,13 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
             </tbody>
           </table>
         </div>
-        <h4><code>EventInvoicePaySummaryDto</code> — from <code>GET /api/events/invoices/{id}/pay</code></h4>
+        <h4><code>CustomInvoicePaySummaryDto</code> — from <code>GET /api/custom-invoices/{invoiceUniqueId}/pay</code></h4>
         <div class="table-responsive">
           <table class="table table-sm table-bordered">
             <thead class="table-light"><tr><th style="width:14rem">Property</th><th style="width:8rem">Type</th><th>Meaning</th></tr></thead>
             <tbody>
               <tr><td><code>invoiceNo</code></td><td>string</td><td>The invoice number the buyer was sent.</td></tr>
-              <tr><td><code>eventName</code></td><td>string</td><td>The event the invoice was raised for.</td></tr>
+              <tr><td><code>entityName</code></td><td>string</td><td>The name of the record the invoice bills (for an Event-bound invoice, the event). Empty when that record no longer exists.</td></tr>
               <tr><td><code>payState</code></td><td>string</td><td><code>Payable</code>, <code>Paid</code>, <code>Cancelled</code> or <code>Unavailable</code>. Decided by the server; the page renders from it and never infers it from amounts.</td></tr>
               <tr><td><code>currencyCode</code></td><td>string?</td><td>The event Stripe account's currency as Stripe writes it, lower-case ISO (<code>usd</code>, <code>cad</code>). Null when the event has no usable Stripe account.</td></tr>
               <tr><td><code>outstandingAmount</code></td><td>decimal</td><td>What is still owed; <code>0</code> once the invoice is <code>Paid</code> or <code>Cancelled</code>. Sizes the Payment Element only; the charged amount is always the server's.</td></tr>
@@ -1609,7 +1609,7 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
           </table>
         </div>
 
-        <h4>Payment start — from <code>POST /api/events/invoices/{id}/pay</code></h4>
+        <h4>Payment start — from <code>POST /api/custom-invoices/{invoiceUniqueId}/pay</code></h4>
         <div class="table-responsive">
           <table class="table table-sm table-bordered">
             <thead class="table-light"><tr><th style="width:14rem">Property</th><th style="width:8rem">Type</th><th>Meaning</th></tr></thead>
@@ -1647,7 +1647,7 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
               <tr><td><strong>Raising the confirm button's busy guard only when payment starts</strong></td><td>Preparing the purchase submits the attendees and the answers first. A second click reruns that leg — Stripe's idempotency key absorbs the duplicate charge, the duplicate attendees it never covered. Guard before the first <code>await</code>.</td></tr>
               <tr><td><strong>Reading <code>403 cart_capability_required</code> as "cart not found"</strong></td><td>It says nothing about existence, deliberately. Send the buyer back to the event page to start again; do not retry.</td></tr>
               <tr><td><strong>Treating the invoice pay link as a login</strong></td><td>The invoice id is the only credential. Anyone holding the link sees the invoice and can pay it, which is the point; it grants nothing else.</td></tr>
-              <tr><td><strong>Calling the invoice pay start without the bot challenge</strong></td><td><code>POST /api/events/invoices/{id}/pay</code> carries <code>BotMitigation</code> and is limited to 10 per minute per IP; the summary read is limited to 30. A missing Turnstile token is refused before Stripe is reached.</td></tr>
+              <tr><td><strong>Calling the invoice pay start without the bot challenge</strong></td><td><code>POST /api/custom-invoices/{invoiceUniqueId}/pay</code> carries <code>BotMitigation</code> and is limited to 10 per minute per IP; the summary read is limited to 30. A missing Turnstile token is refused before Stripe is reached.</td></tr>
               <tr><td><strong>Showing a card form for a settled or void invoice</strong></td><td>Only <code>Payable</code> gets a form. <code>Paid</code>, <code>Cancelled</code>, <code>Unavailable</code> and a 404 each show their own message and no card fields.</td></tr>
             </tbody>
           </table>
@@ -2091,15 +2091,15 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
             </div>
           </div>
         </article>
-        <article id="ep-eventinvoicepaycontroller" class="card mb-4 endpoint">
+        <article id="ep-custominvoicepaycontroller" class="card mb-4 endpoint">
           <div class="card-header endpoint-head">
-            <span class="fw-semibold">EventInvoicePayController</span>
-            <code class="path text-body-secondary">/api/events/invoices</code>
+            <span class="fw-semibold">CustomInvoicePayController</span>
+            <code class="path text-body-secondary">/api/custom-invoices</code>
             <span class="badge text-bg-secondary ms-auto">2 endpoints</span>
           </div>
           <div class="card-body">
-            <p class="mb-3">The buyer paying an organizer's custom invoice from the shared link.</p>
-            <div class="plain">Anonymous and guarded only by the unguessable invoice id, matching the order confirmation page. Both actions are rate limited per client address; the start also carries the bot challenge because each permit can reach Stripe.</div>
+            <p class="mb-3">The buyer's pay page for a custom invoice the organizer raised outside the cart. Links emailed under <code>/events/invoices/{id}/pay</code> are redirected by the frontend.</p>
+            <div class="plain">The buyer's pay page for a custom invoice, whatever module it bills. Anonymous: the unguessable invoice id in the link the organizer sends is the only credential, matching the order status and ticket view pages. Every action is rate limited per address because nothing else identifies the caller. Derives from ControllerBase rather than InvoiceBaseController, whose route prefix would move the path away from the one emailed links point at.</div>
             <div class="table-responsive">
               <table class="table table-sm table-bordered align-middle mb-0">
                 <thead class="table-light">
@@ -2114,14 +2114,14 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
                 <tbody>
               <tr>
                 <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
-                <td><code class="path">/api/events/invoices/{invoiceUniqueId:guid}/pay</code></td>
+                <td><code class="path">/api/custom-invoices/{invoiceUniqueId:guid}/pay</code><div class="action-doc">What the buyer's pay page shows: the invoice number, the billed record's name, billed lines, balance and whether it can be paid online now. Carries nothing about who is billed. The invoice id carried by the buyer's pay link. Cancels the request. The pay summary, or not found alike for an unknown id, a ticket order and a custom invoice of a module that cannot be collected online.</div></td>
                 <td>Get Pay Summary</td>
                 <td><span class="badge text-bg-light border access-anon">Public</span></td>
                 <td class="small"><span class="param-source">route</span> <code>invoiceUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
               </tr>
               <tr>
                 <td class="text-nowrap"><span class="badge badge-method text-bg-success">POST</span></td>
-                <td><code class="path">/api/events/invoices/{invoiceUniqueId:guid}/pay</code></td>
+                <td><code class="path">/api/custom-invoices/{invoiceUniqueId:guid}/pay</code> <span class="badge text-bg-light border flag">BotMitigation</span><div class="action-doc">Starts, or hands back, the card payment for the invoice's outstanding balance. Reaches Stripe on an anonymous caller's behalf, so it is bot-challenged like the cart checkout intent. The invoice id carried by the buyer's pay link. Cancels the request. The intent's client secret and id, or a plain failure message.</div></td>
                 <td>Start Payment</td>
                 <td><span class="badge text-bg-light border access-anon">Public</span></td>
                 <td class="small"><span class="param-source">route</span> <code>invoiceUniqueId</code><span class="text-body-secondary"> : Guid</span></td>
@@ -2131,8 +2131,6 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
             </div>
           </div>
         </article>
-        <h3 id="ap-4-after-the-sale">4. After the sale <span class="badge text-bg-secondary align-middle fs-6">8</span></h3>
-        
         <article id="ep-eventordercontroller" class="card mb-4 endpoint">
           <div class="card-header endpoint-head">
             <span class="fw-semibold">EventOrderController</span>
