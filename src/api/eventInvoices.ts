@@ -922,22 +922,6 @@ export interface CreateEventCustomInvoicePayload {
   lineItems: { description: string; amount: string }[]
 }
 
-const createResultSchema = z.object({
-  InvoiceUniqueId: dual(z.string()),
-  invoiceUniqueId: dual(z.string()),
-})
-
-export async function createEventCustomInvoice(payload: CreateEventCustomInvoicePayload): Promise<string> {
-  const response = await client.post<unknown>(API_ROUTES.eventInvoiceCustomCreate, payload)
-  const data = parseServicePayload(response.data)
-  // A bare Guid string, or an object carrying it in either casing, depending on how the endpoint wraps it.
-  if (typeof data === "string") {
-    return data
-  }
-  const parsed = createResultSchema.parse(data ?? {})
-  return parsed.InvoiceUniqueId ?? parsed.invoiceUniqueId ?? ""
-}
-
 /** An update carries the same shape as a create; the invoice it targets is named in the URL. */
 export type UpdateEventCustomInvoicePayload = CreateEventCustomInvoicePayload
 

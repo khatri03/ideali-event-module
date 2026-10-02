@@ -393,7 +393,7 @@ export const API_ROUTES = {
   eventInvoiceCategories: "/api/organizer/events/invoices/categories/list",
   eventInvoiceCategoryCreate: "/api/organizer/events/invoices/categories",
   eventInvoiceCategoryDetail: (uniqueId: string) => `/api/organizer/events/invoices/categories/${uniqueId}`,
-  eventInvoiceCustomCreate: "/api/organizer/events/invoices/custom",
+  customInvoiceCreate: "/api/organizer/custom-invoices",
   eventInvoiceCustomUpdate: (invoiceUniqueId: string) =>
     `/api/organizer/events/invoices/custom/${invoiceUniqueId}`,
   eventInvoiceCustomForEdit: (invoiceUniqueId: string) =>

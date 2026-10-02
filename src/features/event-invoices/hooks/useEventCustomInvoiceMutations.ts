@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { createCustomInvoice } from "@/api/customInvoices"
 import {
-  createEventCustomInvoice,
   fetchActiveEventInvoiceCategoryOptions,
   updateEventCustomInvoice,
   type CreateEventCustomInvoicePayload,
@@ -40,7 +40,8 @@ export function useEventInvoiceBuyerMemberOptions(searchTerm: string) {
 export function useCreateEventCustomInvoice() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (payload: CreateEventCustomInvoicePayload) => createEventCustomInvoice(payload),
+    mutationFn: ({ eventUniqueId, ...rest }: CreateEventCustomInvoicePayload) =>
+      createCustomInvoice({ ...rest, moduleType: "Event", entityUniqueId: eventUniqueId }),
     onSuccess: () => toaster.create({ type: "success", title: "Custom invoice created." }),
     onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["event-invoices"] }),

@@ -145,7 +145,7 @@ describe("EventCustomInvoiceFormPage", () => {
     http.put.mockResolvedValue({ data: { success: true, Data: null } })
   })
 
-  /** A fully filled create form posts to the custom-create endpoint, then navigates away. */
+  /** A fully filled create form posts to the module-agnostic create endpoint bound to the picked event, then navigates away. */
   it("Submit_ValidForm_PostsAndNavigates", async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 })
     renderPage()
@@ -155,9 +155,11 @@ describe("EventCustomInvoiceFormPage", () => {
 
     await waitFor(() => expect(http.post).toHaveBeenCalledTimes(1))
     const [url, body] = http.post.mock.calls[0]
-    expect(url).toBe(API_ROUTES.eventInvoiceCustomCreate)
+    expect(url).toBe(API_ROUTES.customInvoiceCreate)
+    expect(body).not.toHaveProperty("eventUniqueId")
     expect(body).toMatchObject({
-      eventUniqueId: "evt-1",
+      moduleType: "Event",
+      entityUniqueId: "evt-1",
       categoryUniqueId: "cat-active",
       companyName: "Acme Corp",
       lastName: "Doe",
