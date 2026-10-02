@@ -9,7 +9,7 @@ const { toastMock } = vi.hoisted(() => ({ toastMock: vi.fn() }))
 
 vi.mock("@/lib/toaster", () => ({ toaster: { create: toastMock } }))
 
-const PAY_PAGE_URL = "https://pay.example.test/events/invoices/c0000000-0000-4000-8000-000000000100/pay"
+const PAY_PAGE_URL = "https://pay.example.test/custom-invoices/c0000000-0000-4000-8000-000000000100/pay"
 
 interface SectionState {
   canPayOnline?: boolean

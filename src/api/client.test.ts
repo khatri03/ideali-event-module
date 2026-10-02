@@ -64,13 +64,13 @@ describe("api client bot challenge", () => {
   })
 
   it("Challenge_StartingAnInvoicePayment_SendsAFreshTurnstileToken", async () => {
-    await client.post(`/api/events/invoices/${INVOICE_ID}/pay`, {})
+    await client.post(`/api/custom-invoices/${INVOICE_ID}/pay`, {})
 
     expect(sentHeader()).toBe("0.minted-token")
   })
 
   it("Challenge_ReadingAnInvoicePaySummary_SendsNoToken", async () => {
-    await client.get(`/api/events/invoices/${INVOICE_ID}/pay`)
+    await client.get(`/api/custom-invoices/${INVOICE_ID}/pay`)
 
     expect(sentHeader()).toBeNull()
     expect(turnstileMocks.requestTurnstileToken).not.toHaveBeenCalled()

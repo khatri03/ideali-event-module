@@ -12,8 +12,8 @@ const WIDTHS = [320, 375, 768, 1024, 1440, 1920] as const
 const VIEWPORT_HEIGHT = 900
 
 const INVOICE_ID = "c0000000-0000-4000-8000-000000000300"
-const payPath = (invoiceUniqueId: string) => `/events/invoices/${invoiceUniqueId}/pay`
-const PAY_API = `**/api/events/invoices/${INVOICE_ID}/pay`
+const payPath = (invoiceUniqueId: string) => `/custom-invoices/${invoiceUniqueId}/pay`
+const PAY_API = `**/api/custom-invoices/${INVOICE_ID}/pay`
 const CREDENTIALS_API = "**/api/public/stripe/*/credentials"
 
 type Json = Record<string, unknown>
@@ -27,7 +27,7 @@ function envelope(data: unknown) {
 function paySummary(overrides: Json = {}): Json {
   return {
     invoiceNo: "INV-C-300",
-    eventName: "Annual Convention 2026",
+    entityName: "Annual Convention 2026",
     payState: "Payable",
     currencyCode: "USD",
     outstandingAmount: 1750.5,

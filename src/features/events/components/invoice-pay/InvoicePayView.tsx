@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Box, Stack } from "@chakra-ui/react"
 import { RegistrationStripeProvider } from "@/features/events/components/registration/RegistrationStripeProvider"
 import { useStripeCredentials } from "@/features/events/hooks/useStripeCredentials"
-import type { EventInvoicePaySummary } from "@/features/events/schemas/eventInvoicePay.schemas"
+import type { CustomInvoicePaySummary } from "@/features/events/schemas/customInvoicePay.schemas"
 import { formatAmount } from "@/features/events/utils/registrationFormat"
 import { InvoicePayForm } from "./InvoicePayForm"
 import { InvoicePayPrintableInvoice } from "./InvoicePayPrintableInvoice"
@@ -14,7 +14,7 @@ type StartPayment = () => Promise<{ clientSecret: string }>
 interface InvoicePayViewProps {
   invoiceUniqueId: string
   /** Null once loaded means the invoice does not exist, or is not one a buyer can pay through a link. */
-  summary: EventInvoicePaySummary | null | undefined
+  summary: CustomInvoicePaySummary | null | undefined
   isLoading: boolean
   isError: boolean
   isRetrying: boolean
@@ -79,15 +79,15 @@ export function InvoicePayView({ invoiceUniqueId, summary, isLoading, isError, i
   )
 }
 
-function TerminalInvoiceCard({ summary }: { summary: EventInvoicePaySummary }) {
-  const { invoiceNo, eventName } = summary
+function TerminalInvoiceCard({ summary }: { summary: CustomInvoicePaySummary }) {
+  const { invoiceNo, entityName } = summary
 
   const statusCard =
     summary.payState === "Paid" ? (
       <InvoicePayStatusCard
         tone="success"
         title="This invoice is paid"
-        description={`Invoice ${invoiceNo} for ${eventName} has been paid. There is nothing left to pay.`}
+        description={`Invoice ${invoiceNo} for ${entityName} has been paid. There is nothing left to pay.`}
       />
     ) : summary.payState === "Cancelled" ? (
       <InvoicePayStatusCard
@@ -113,7 +113,7 @@ function TerminalInvoiceCard({ summary }: { summary: EventInvoicePaySummary }) {
 }
 
 interface PayableInvoiceProps {
-  summary: EventInvoicePaySummary
+  summary: CustomInvoicePaySummary
   paymentAccountUniqueId: string
   invoiceUniqueId: string
   onStartPayment: StartPayment

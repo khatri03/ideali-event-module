@@ -5,7 +5,7 @@ import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { CONTROL_BUTTON_PRIMARY } from "@/components/common/controlStyles"
 import { StripePaymentFields } from "@/features/events/components/registration/StripePaymentFields"
-import { invoicePayFormSchema, type InvoicePayFormValues } from "@/features/events/schemas/eventInvoicePay.schemas"
+import { invoicePayFormSchema, type InvoicePayFormValues } from "@/features/events/schemas/customInvoicePay.schemas"
 import { formatAmount } from "@/features/events/utils/registrationFormat"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
@@ -67,7 +67,7 @@ export function InvoicePayForm({ amount, currencyCode, invoiceUniqueId, onStartP
         elements,
         clientSecret,
         confirmParams: {
-          return_url: `${window.location.origin}${APP_ROUTES.eventInvoicePay(invoiceUniqueId)}`,
+          return_url: `${window.location.origin}${APP_ROUTES.customInvoicePay(invoiceUniqueId)}`,
           payment_method_data: { billing_details: { name: cardHolderName } },
         },
         redirect: "if_required",

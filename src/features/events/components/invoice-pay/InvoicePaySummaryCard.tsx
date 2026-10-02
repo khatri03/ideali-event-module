@@ -1,10 +1,10 @@
 import { Box, Flex, Heading, Stack, Text } from "@chakra-ui/react"
-import type { EventInvoicePaySummary } from "@/features/events/schemas/eventInvoicePay.schemas"
+import type { CustomInvoicePaySummary } from "@/features/events/schemas/customInvoicePay.schemas"
 import { formatAmount } from "@/features/events/utils/registrationFormat"
 
 type InvoicePaySummaryCardProps = Pick<
-  EventInvoicePaySummary,
-  "invoiceNo" | "eventName" | "lineItems" | "outstandingAmount" | "currencyCode"
+  CustomInvoicePaySummary,
+  "invoiceNo" | "entityName" | "lineItems" | "outstandingAmount" | "currencyCode"
 >
 
 const CAPTION_STYLE = {
@@ -18,7 +18,7 @@ const CAPTION_STYLE = {
 /** What the buyer is being asked to pay for, laid out like the order receipt they get after registering. */
 export function InvoicePaySummaryCard({
   invoiceNo,
-  eventName,
+  entityName,
   lineItems,
   outstandingAmount,
   currencyCode,
@@ -43,7 +43,7 @@ export function InvoicePaySummaryCard({
 
         <Box borderTopWidth="1px" borderTopColor="gray.200" pt={5}>
           <Heading as="h2" fontSize={{ base: "sm", md: "md" }} color="gray.900" mb={3} overflowWrap="anywhere">
-            {eventName}
+            {entityName}
           </Heading>
           <Stack as="ul" gap={3} listStyleType="none" m={0}>
             {lineItems.map((lineItem, index) => (

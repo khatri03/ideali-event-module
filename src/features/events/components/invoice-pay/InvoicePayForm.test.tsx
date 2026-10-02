@@ -71,7 +71,7 @@ describe("InvoicePayForm", () => {
       elements: elementsMock,
       clientSecret: "pi_1_secret_2",
       confirmParams: {
-        return_url: `${window.location.origin}/events/invoices/${INVOICE_UNIQUE_ID}/pay`,
+        return_url: `${window.location.origin}/custom-invoices/${INVOICE_UNIQUE_ID}/pay`,
         payment_method_data: { billing_details: { name: "Aisha Khan" } },
       },
       redirect: "if_required",

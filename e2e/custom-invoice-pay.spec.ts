@@ -15,8 +15,8 @@ const VIEWPORT_HEIGHT = 900
 const SCREENSHOT_DIR = ".planning/phases/04-collect-payment-settle/screenshots"
 
 const INVOICE_ID = "c0000000-0000-4000-8000-000000000300"
-const payPath = (invoiceUniqueId: string) => `/events/invoices/${invoiceUniqueId}/pay`
-const PAY_API = `**/api/events/invoices/${INVOICE_ID}/pay`
+const payPath = (invoiceUniqueId: string) => `/custom-invoices/${invoiceUniqueId}/pay`
+const PAY_API = `**/api/custom-invoices/${INVOICE_ID}/pay`
 const CREDENTIALS_API = "**/api/public/stripe/*/credentials"
 
 type Json = Record<string, unknown>
@@ -30,7 +30,7 @@ function envelope(data: unknown) {
 function paySummary(overrides: Json = {}): Json {
   return {
     invoiceNo: "INV-C-300",
-    eventName: "Annual Convention 2026",
+    entityName: "Annual Convention 2026",
     payState: "Payable",
     currencyCode: "USD",
     outstandingAmount: 1750.5,
@@ -125,6 +125,19 @@ for (const width of TERMINAL_STATE_WIDTHS) {
     }
   })
 }
+
+/**
+ * D-06: pay links emailed before the rename point at /events/invoices/{id}/pay. Opening one must land on
+ * the same invoice's pay page under /custom-invoices, or a buyer holding an old email cannot pay.
+ */
+test("an already-sent /events/invoices pay link lands on the renamed pay page for the same invoice", async ({ page }) => {
+  await mockPayPage(page, paySummary())
+  await page.setViewportSize({ width: 375, height: VIEWPORT_HEIGHT })
+  await page.goto(`/events/invoices/${INVOICE_ID}/pay`)
+
+  await expect(page).toHaveURL(new RegExp(`/custom-invoices/${INVOICE_ID}/pay$`))
+  await expect(page.getByText("INV-C-300")).toBeVisible({ timeout: 30_000 })
+})
 
 const LIVE_INVOICE_ID = process.env.E2E_PAYABLE_INVOICE_ID ?? ""
 

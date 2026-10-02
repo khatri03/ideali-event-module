@@ -135,7 +135,7 @@ describe("EventInvoiceDetailPage print contract", () => {
     const { container } = renderPage()
     const region = within(printRegion(container))
 
-    expect(region.getByText(/\/events\/invoices\/invoice-1\/pay$/)).toBeInTheDocument()
+    expect(region.getByText(/\/custom-invoices\/invoice-1\/pay$/)).toBeInTheDocument()
   })
 
   /** Interactive controls mean nothing on paper, so the pay and email actions are dropped from the printout. */

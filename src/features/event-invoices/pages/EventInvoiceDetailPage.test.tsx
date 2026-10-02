@@ -339,7 +339,7 @@ describe("EventInvoiceDetailPage", () => {
     loaded(CUSTOM_INVOICE)
     renderPage()
 
-    expect(screen.getByText("https://pay.example.test/events/invoices/invoice-1/pay")).toBeInTheDocument()
+    expect(screen.getByText("https://pay.example.test/custom-invoices/invoice-1/pay")).toBeInTheDocument()
   })
 
   /** A paid custom invoice has nothing left to collect, so the panel says why instead of handing out a pay link. */

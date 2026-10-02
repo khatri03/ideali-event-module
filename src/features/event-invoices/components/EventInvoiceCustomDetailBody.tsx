@@ -40,7 +40,7 @@ export function EventInvoiceCustomDetailBody({ invoice }: EventInvoiceCustomDeta
           specialNotes={invoice.specialNotes}
           invoiceStatus={invoice.invoiceStatus}
           invoiceStatusLabel={invoice.invoiceStatusLabel}
-          payPageUrl={buildBuyerAppUrl(APP_ROUTES.eventInvoicePay(invoice.invoiceUniqueId))}
+          payPageUrl={buildBuyerAppUrl(APP_ROUTES.customInvoicePay(invoice.invoiceUniqueId))}
           canPayOnline={invoice.canPayOnline}
         />
 

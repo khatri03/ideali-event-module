@@ -1,10 +1,10 @@
 import { AxiosError, AxiosHeaders } from "axios"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
-  fetchEventInvoicePaySummary,
+  fetchCustomInvoicePaySummary,
   PAYMENT_START_FAILED_MESSAGE,
-  startEventInvoicePayment,
-} from "./eventInvoicePayment"
+  startCustomInvoicePayment,
+} from "./customInvoicePayment"
 import { extractApiError } from "@/utils/errors"
 
 const { getMock, postMock } = vi.hoisted(() => ({ getMock: vi.fn(), postMock: vi.fn() }))
@@ -15,7 +15,7 @@ const INVOICE_ID = "invoice-1"
 
 const PAYABLE_CAMEL = {
   invoiceNo: "INV-1",
-  eventName: "Annual Summit",
+  entityName: "Annual Summit",
   payState: "Payable",
   currencyCode: "USD",
   outstandingAmount: 250,
@@ -25,7 +25,7 @@ const PAYABLE_CAMEL = {
 
 const PAYABLE_PASCAL = {
   InvoiceNo: "INV-1",
-  EventName: "Annual Summit",
+  EntityName: "Annual Summit",
   PayState: "Payable",
   CurrencyCode: "USD",
   OutstandingAmount: 250,
@@ -48,7 +48,7 @@ beforeEach(() => {
   postMock.mockReset()
 })
 
-describe("fetchEventInvoicePaySummary", () => {
+describe("fetchCustomInvoicePaySummary", () => {
   /** Both serialisation casings the API has shipped normalise to the same buyer-facing summary. */
   it.each([
     ["camelCase", PAYABLE_CAMEL],
@@ -56,12 +56,12 @@ describe("fetchEventInvoicePaySummary", () => {
   ])("PayableInvoiceSentIn%s_ReturnsNormalisedSummary", async (_casing, data) => {
     getMock.mockResolvedValue({ data: { success: true, data } })
 
-    const summary = await fetchEventInvoicePaySummary(INVOICE_ID)
+    const summary = await fetchCustomInvoicePaySummary(INVOICE_ID)
 
-    expect(getMock).toHaveBeenCalledWith("/api/events/invoices/invoice-1/pay")
+    expect(getMock).toHaveBeenCalledWith("/api/custom-invoices/invoice-1/pay")
     expect(summary).toEqual({
       invoiceNo: "INV-1",
-      eventName: "Annual Summit",
+      entityName: "Annual Summit",
       payState: "Payable",
       currencyCode: "USD",
       outstandingAmount: 250,
@@ -74,7 +74,7 @@ describe("fetchEventInvoicePaySummary", () => {
   it("UnknownInvoice_ResolvesNull", async () => {
     getMock.mockRejectedValue(httpError(404))
 
-    const summary = await fetchEventInvoicePaySummary(INVOICE_ID)
+    const summary = await fetchCustomInvoicePaySummary(INVOICE_ID)
 
     expect(summary).toBeNull()
   })
@@ -83,7 +83,7 @@ describe("fetchEventInvoicePaySummary", () => {
   it("ServerError_Rejects", async () => {
     getMock.mockRejectedValue(httpError(500))
 
-    const failure = await fetchEventInvoicePaySummary(INVOICE_ID).catch((error: unknown) => error)
+    const failure = await fetchCustomInvoicePaySummary(INVOICE_ID).catch((error: unknown) => error)
 
     expect(failure).toBeInstanceOf(AxiosError)
   })
@@ -92,20 +92,20 @@ describe("fetchEventInvoicePaySummary", () => {
   it("MalformedPayload_Rejects", async () => {
     getMock.mockResolvedValue({ data: { success: true, data: { ...PAYABLE_CAMEL, payState: "Bogus" } } })
 
-    const failure = await fetchEventInvoicePaySummary(INVOICE_ID).catch((error: unknown) => error)
+    const failure = await fetchCustomInvoicePaySummary(INVOICE_ID).catch((error: unknown) => error)
 
     expect(failure).toBeInstanceOf(Error)
   })
 })
 
-describe("startEventInvoicePayment", () => {
+describe("startCustomInvoicePayment", () => {
   /** The start is a POST on the invoice's pay resource with no body; it returns the intent's secret and id. */
   it("PostsWithoutABodyAndReturnsTheSecret", async () => {
     postMock.mockResolvedValue({ data: { success: true, data: { clientSecret: "pi_1_secret", paymentIntentId: "pi_1" } } })
 
-    const started = await startEventInvoicePayment(INVOICE_ID)
+    const started = await startCustomInvoicePayment(INVOICE_ID)
 
-    expect(postMock).toHaveBeenCalledWith("/api/events/invoices/invoice-1/pay")
+    expect(postMock).toHaveBeenCalledWith("/api/custom-invoices/invoice-1/pay")
     expect(started).toEqual({ clientSecret: "pi_1_secret", paymentIntentId: "pi_1" })
   })
 
@@ -116,7 +116,7 @@ describe("startEventInvoicePayment", () => {
   it("NonObjectBody_ReportsThePlainFailureMessage", async () => {
     postMock.mockResolvedValue({ data: "<html>Service unavailable</html>" })
 
-    const failure = await startEventInvoicePayment(INVOICE_ID).catch((error: unknown) => error)
+    const failure = await startCustomInvoicePayment(INVOICE_ID).catch((error: unknown) => error)
 
     expect(extractApiError(failure)).toBe(PAYMENT_START_FAILED_MESSAGE)
   })
@@ -125,7 +125,7 @@ describe("startEventInvoicePayment", () => {
   it("SelfReportedFailure_ReportsTheServerReason", async () => {
     postMock.mockResolvedValue({ data: { success: false, message: "This invoice has nothing left to pay.", data: null } })
 
-    const failure = await startEventInvoicePayment(INVOICE_ID).catch((error: unknown) => error)
+    const failure = await startCustomInvoicePayment(INVOICE_ID).catch((error: unknown) => error)
 
     expect(extractApiError(failure)).toBe("This invoice has nothing left to pay.")
   })
@@ -138,7 +138,7 @@ describe("startEventInvoicePayment", () => {
   ])("ResponseWith%s_IsRejectedWithThePlainMessage", async (_case, data) => {
     postMock.mockResolvedValue({ data: { success: true, data } })
 
-    const failure = await startEventInvoicePayment(INVOICE_ID).catch((error: unknown) => error)
+    const failure = await startCustomInvoicePayment(INVOICE_ID).catch((error: unknown) => error)
 
     expect(extractApiError(failure)).toBe(PAYMENT_START_FAILED_MESSAGE)
   })

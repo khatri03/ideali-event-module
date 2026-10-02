@@ -38,7 +38,7 @@ import {
   EventDescriptionStepPage,
   EventDiscountCouponStepPage,
   EventDateTimeStepPage,
-  EventInvoicePayPage,
+  CustomInvoicePayPage,
   EventNameStepPage,
   EventOrderConfirmationPage,
   EventPaymentAccountStepPage,
@@ -54,6 +54,7 @@ import {
   EventTimeZoneStepPage,
   EventTermsConditionsStepPage,
   EventWizardLayout,
+  LegacyCustomInvoicePayRedirect,
 } from "./features/events"
 import { SessionListPage, SessionWizardLayout, SessionWizardStepPage } from "./features/sessions"
 import { EventCustomInvoiceFormPage, EventInvoiceDetailPage, EventInvoicesPage } from "./features/event-invoices"
@@ -135,7 +136,9 @@ export default function App() {
         <Route path={APP_ROUTES.eventOrderRoute} element={<EventOrderConfirmationPage />} />
 
         {/* Public: the invoice link is the buyer's only credential, so paying needs no sign-in. */}
-        <Route path={APP_ROUTES.eventInvoicePayRoute} element={<EventInvoicePayPage />} />
+        <Route path={APP_ROUTES.customInvoicePayRoute} element={<CustomInvoicePayPage />} />
+        {/* Pay links emailed before the custom-invoices rename still point here. */}
+        <Route path={APP_ROUTES.legacyCustomInvoicePayRoute} element={<LegacyCustomInvoicePayRedirect />} />
 
         {/* Public and deliberately outside AppLayout: its fixed-height shell would clip the PDF. */}
         <Route path={APP_ROUTES.eventTicketViewRoute} element={<EventTicketViewPage />} />

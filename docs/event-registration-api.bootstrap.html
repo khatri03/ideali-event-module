@@ -543,8 +543,9 @@
         <h4>Paying a custom invoice from the buyer's link</h4>
         <p>
           A custom invoice is raised by the organizer rather than bought through a cart. The organizer
-          shares <code>/events/invoices/{invoiceUniqueId}/pay</code>, and these two anonymous calls are
-          everything that page needs.
+          shares <code>/custom-invoices/{invoiceUniqueId}/pay</code>, and these two anonymous calls are
+          everything that page needs. Links sent before the rename, under <code>/events/invoices/{invoiceUniqueId}/pay</code>,
+          redirect to the same invoice on that page.
         </p>
         <p>
           The organizer gets that link from the <em>Payable link</em> panel on the invoice detail, which offers
@@ -560,13 +561,13 @@
             <thead class="table-light"><tr><th style="width:26rem">Endpoint</th><th style="width:20rem">Service method</th><th>Purpose</th></tr></thead>
             <tbody>
               <tr>
-                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/events/invoices/{invoiceUniqueId}/pay</code> <span class="badge text-bg-light border flag">event-invoice-pay-view</span></td>
-                <td><code>EventInvoicePaymentLinkService.GetBuyerPaySummaryAsync</code></td>
-                <td>The buyer's view of one custom invoice: number, event, billed lines, amount due and a server-decided <code>payState</code>. A 404 for an unknown id and for a ticket order alike, so the link cannot be used to probe which invoices exist. Rate limited to 30 per minute per IP.</td>
+                <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/custom-invoices/{invoiceUniqueId}/pay</code> <span class="badge text-bg-light border flag">event-invoice-pay-view</span></td>
+                <td><code>CustomInvoicePaymentLinkService.GetBuyerPaySummaryAsync</code></td>
+                <td>The buyer's view of one custom invoice: number, billed record name (<code>entityName</code>), billed lines, amount due and a server-decided <code>payState</code>. A 404 for an unknown id and for a ticket order alike, so the link cannot be used to probe which invoices exist. Rate limited to 30 per minute per IP.</td>
               </tr>
               <tr>
-                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/events/invoices/{invoiceUniqueId}/pay</code> <span class="badge text-bg-light border flag">BotMitigation · event-invoice-pay-start</span></td>
-                <td><code>EventInvoicePaymentLinkService.StartBuyerPaymentAsync</code></td>
+                <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/custom-invoices/{invoiceUniqueId}/pay</code> <span class="badge text-bg-light border flag">BotMitigation · event-invoice-pay-start</span></td>
+                <td><code>CustomInvoicePaymentLinkService.StartBuyerPaymentAsync</code></td>
                 <td>Opens or reuses the invoice's Stripe PaymentIntent through the same collect path the organizer's own payment link uses, and returns <code>clientSecret</code> and <code>paymentIntentId</code>. The body is empty: the amount is always the invoice's outstanding balance, never a figure the browser sends. Refused with a plain message when the invoice is not payable. Rate limited to 10 per minute per IP.</td>
               </tr>
             </tbody>

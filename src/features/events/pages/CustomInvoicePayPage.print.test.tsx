@@ -6,9 +6,9 @@ import { ChakraProvider } from "@chakra-ui/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { system } from "@/theme"
-import type { EventInvoicePaySummary } from "@/features/events/schemas/eventInvoicePay.schemas"
+import type { CustomInvoicePaySummary } from "@/features/events/schemas/customInvoicePay.schemas"
 import { APP_ROUTES } from "@/utils/routes"
-import { EventInvoicePayPage } from "./EventInvoicePayPage"
+import { CustomInvoicePayPage } from "./CustomInvoicePayPage"
 
 /**
  * The buyer print contract. A buyer who only holds the shared link must be able to keep a clean paper copy of
@@ -18,13 +18,13 @@ import { EventInvoicePayPage } from "./EventInvoicePayPage"
  */
 
 const { payApiMocks, fetchStripePublicCredentialsMock, stripeMock, elementsMock } = vi.hoisted(() => ({
-  payApiMocks: { fetchEventInvoicePaySummary: vi.fn(), startEventInvoicePayment: vi.fn() },
+  payApiMocks: { fetchCustomInvoicePaySummary: vi.fn(), startCustomInvoicePayment: vi.fn() },
   fetchStripePublicCredentialsMock: vi.fn(),
   stripeMock: { confirmPayment: vi.fn() },
   elementsMock: { submit: vi.fn() },
 }))
 
-vi.mock("@/api/eventInvoicePayment", () => payApiMocks)
+vi.mock("@/api/customInvoicePayment", () => payApiMocks)
 vi.mock("@/api/stripe", () => ({ fetchStripePublicCredentials: fetchStripePublicCredentialsMock }))
 vi.mock("@stripe/stripe-js", () => ({ loadStripe: vi.fn(() => Promise.resolve(null)) }))
 vi.mock("@stripe/react-stripe-js", () => ({
@@ -36,10 +36,10 @@ vi.mock("@stripe/react-stripe-js", () => ({
 
 const INVOICE_UNIQUE_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7"
 
-function buildSummary(overrides: Partial<EventInvoicePaySummary> = {}): EventInvoicePaySummary {
+function buildSummary(overrides: Partial<CustomInvoicePaySummary> = {}): CustomInvoicePaySummary {
   return {
     invoiceNo: "INV-2041",
-    eventName: "Golden Jubilee Gala",
+    entityName: "Golden Jubilee Gala",
     payState: "Payable",
     currencyCode: "USD",
     outstandingAmount: 1250,
@@ -58,9 +58,9 @@ function renderPage() {
   return render(
     <ChakraProvider value={system}>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[APP_ROUTES.eventInvoicePay(INVOICE_UNIQUE_ID)]}>
+        <MemoryRouter initialEntries={[APP_ROUTES.customInvoicePay(INVOICE_UNIQUE_ID)]}>
           <Routes>
-            <Route path={APP_ROUTES.eventInvoicePayRoute} element={<EventInvoicePayPage />} />
+            <Route path={APP_ROUTES.customInvoicePayRoute} element={<CustomInvoicePayPage />} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -76,10 +76,10 @@ function printRegion(container: HTMLElement): HTMLElement {
 
 const cardHolderField = () => screen.queryByRole("textbox", { name: "Name on card" })
 
-describe("EventInvoicePayPage print contract", () => {
+describe("CustomInvoicePayPage print contract", () => {
   beforeEach(() => {
-    payApiMocks.fetchEventInvoicePaySummary.mockReset().mockResolvedValue(buildSummary())
-    payApiMocks.startEventInvoicePayment.mockReset().mockResolvedValue({ clientSecret: "pi_1_secret_2", paymentIntentId: "pi_1" })
+    payApiMocks.fetchCustomInvoicePaySummary.mockReset().mockResolvedValue(buildSummary())
+    payApiMocks.startCustomInvoicePayment.mockReset().mockResolvedValue({ clientSecret: "pi_1_secret_2", paymentIntentId: "pi_1" })
     fetchStripePublicCredentialsMock.mockReset().mockResolvedValue({ publishableKey: "pk_test_1", stripeAccount: "acct_1" })
     stripeMock.confirmPayment.mockReset().mockResolvedValue({})
     elementsMock.submit.mockReset().mockResolvedValue({})
@@ -114,7 +114,7 @@ describe("EventInvoicePayPage print contract", () => {
 
   /** A paid invoice still prints the invoice, but its on-screen status banner is dropped from the sheet. */
   it("prints the invoice and hides the status banner on a terminal (Paid) invoice", async () => {
-    payApiMocks.fetchEventInvoicePaySummary.mockResolvedValue(buildSummary({ payState: "Paid", paymentAccountUniqueId: null }))
+    payApiMocks.fetchCustomInvoicePaySummary.mockResolvedValue(buildSummary({ payState: "Paid", paymentAccountUniqueId: null }))
     const { container } = renderPage()
 
     const banner = await screen.findByRole("heading", { name: "This invoice is paid" })
@@ -139,7 +139,7 @@ describe("EventInvoicePayPage print contract", () => {
 
   /** With no summary (a wrong link) there is nothing to print, so neither the region nor the Print control renders. */
   it("renders no print region and no Print control when the invoice is not found", async () => {
-    payApiMocks.fetchEventInvoicePaySummary.mockResolvedValue(null)
+    payApiMocks.fetchCustomInvoicePaySummary.mockResolvedValue(null)
     const { container } = renderPage()
 
     await screen.findByRole("heading", { name: "We couldn't find this invoice" })

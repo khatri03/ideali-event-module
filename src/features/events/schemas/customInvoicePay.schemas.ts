@@ -1,8 +1,8 @@
 import { z } from "zod"
 
-export const EVENT_INVOICE_PAY_STATES = ["Payable", "Paid", "Cancelled", "Unavailable"] as const
+export const CUSTOM_INVOICE_PAY_STATES = ["Payable", "Paid", "Cancelled", "Unavailable"] as const
 
-export type EventInvoicePayState = (typeof EVENT_INVOICE_PAY_STATES)[number]
+export type CustomInvoicePayState = (typeof CUSTOM_INVOICE_PAY_STATES)[number]
 
 const payLineItemSchema = z.object({
   description: z.string(),
@@ -14,10 +14,10 @@ const payLineItemSchema = z.object({
  * it reaches here, so this schema carries a single spelling. Amounts stay numbers and are formatted by
  * the page with `Intl.NumberFormat`.
  */
-export const eventInvoicePaySummarySchema = z.object({
+export const customInvoicePaySummarySchema = z.object({
   invoiceNo: z.string(),
-  eventName: z.string(),
-  payState: z.enum(EVENT_INVOICE_PAY_STATES),
+  entityName: z.string(),
+  payState: z.enum(CUSTOM_INVOICE_PAY_STATES),
   currencyCode: z.string().nullable(),
   outstandingAmount: z.number(),
   /** Non-null only when the invoice is Payable - the account the anonymous start call charges against. */
@@ -25,10 +25,10 @@ export const eventInvoicePaySummarySchema = z.object({
   lineItems: z.array(payLineItemSchema),
 })
 
-export type EventInvoicePaySummary = z.infer<typeof eventInvoicePaySummarySchema>
+export type CustomInvoicePaySummary = z.infer<typeof customInvoicePaySummarySchema>
 
-export function normalizeEventInvoicePaySummary(payload: unknown): EventInvoicePaySummary {
-  return eventInvoicePaySummarySchema.parse(payload)
+export function normalizeCustomInvoicePaySummary(payload: unknown): CustomInvoicePaySummary {
+  return customInvoicePaySummarySchema.parse(payload)
 }
 
 /** The only field the pay form owns: every card field lives in Stripe's Payment Element. */

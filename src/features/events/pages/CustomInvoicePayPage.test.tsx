@@ -6,18 +6,18 @@ import { ChakraProvider } from "@chakra-ui/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { system } from "@/theme"
-import type { EventInvoicePaySummary } from "@/features/events/schemas/eventInvoicePay.schemas"
+import type { CustomInvoicePaySummary } from "@/features/events/schemas/customInvoicePay.schemas"
 import { APP_ROUTES } from "@/utils/routes"
-import { EventInvoicePayPage } from "./EventInvoicePayPage"
+import { CustomInvoicePayPage } from "./CustomInvoicePayPage"
 
 const { payApiMocks, fetchStripePublicCredentialsMock, stripeMock, elementsMock } = vi.hoisted(() => ({
-  payApiMocks: { fetchEventInvoicePaySummary: vi.fn(), startEventInvoicePayment: vi.fn() },
+  payApiMocks: { fetchCustomInvoicePaySummary: vi.fn(), startCustomInvoicePayment: vi.fn() },
   fetchStripePublicCredentialsMock: vi.fn(),
   stripeMock: { confirmPayment: vi.fn() },
   elementsMock: { submit: vi.fn() },
 }))
 
-vi.mock("@/api/eventInvoicePayment", () => payApiMocks)
+vi.mock("@/api/customInvoicePayment", () => payApiMocks)
 vi.mock("@/api/stripe", () => ({ fetchStripePublicCredentials: fetchStripePublicCredentialsMock }))
 vi.mock("@stripe/stripe-js", () => ({ loadStripe: vi.fn(() => Promise.resolve(null)) }))
 vi.mock("@stripe/react-stripe-js", () => ({
@@ -31,10 +31,10 @@ const INVOICE_UNIQUE_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7"
 const LONG_DESCRIPTION =
   "Gold sponsorship package including stage branding, twelve reserved seats and a full-page programme advert"
 
-function buildSummary(overrides: Partial<EventInvoicePaySummary> = {}): EventInvoicePaySummary {
+function buildSummary(overrides: Partial<CustomInvoicePaySummary> = {}): CustomInvoicePaySummary {
   return {
     invoiceNo: "INV-2041",
-    eventName: "Golden Jubilee Gala",
+    entityName: "Golden Jubilee Gala",
     payState: "Payable",
     currencyCode: "USD",
     outstandingAmount: 1250,
@@ -53,9 +53,9 @@ function renderPage() {
   render(
     <ChakraProvider value={system}>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[APP_ROUTES.eventInvoicePay(INVOICE_UNIQUE_ID)]}>
+        <MemoryRouter initialEntries={[APP_ROUTES.customInvoicePay(INVOICE_UNIQUE_ID)]}>
           <Routes>
-            <Route path={APP_ROUTES.eventInvoicePayRoute} element={<EventInvoicePayPage />} />
+            <Route path={APP_ROUTES.customInvoicePayRoute} element={<CustomInvoicePayPage />} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -65,10 +65,10 @@ function renderPage() {
 
 const cardHolderField = () => screen.queryByRole("textbox", { name: "Name on card" })
 
-describe("EventInvoicePayPage", () => {
+describe("CustomInvoicePayPage", () => {
   beforeEach(() => {
-    payApiMocks.fetchEventInvoicePaySummary.mockReset().mockResolvedValue(buildSummary())
-    payApiMocks.startEventInvoicePayment.mockReset().mockResolvedValue({ clientSecret: "pi_1_secret_2", paymentIntentId: "pi_1" })
+    payApiMocks.fetchCustomInvoicePaySummary.mockReset().mockResolvedValue(buildSummary())
+    payApiMocks.startCustomInvoicePayment.mockReset().mockResolvedValue({ clientSecret: "pi_1_secret_2", paymentIntentId: "pi_1" })
     fetchStripePublicCredentialsMock.mockReset().mockResolvedValue({ publishableKey: "pk_test_1", stripeAccount: "acct_1" })
     stripeMock.confirmPayment.mockReset().mockResolvedValue({})
     elementsMock.submit.mockReset().mockResolvedValue({})
@@ -76,7 +76,7 @@ describe("EventInvoicePayPage", () => {
 
   /** A blank area while the invoice loads reads as a broken link; the buyer sees the summary's outline instead. */
   it("PayPage_WhileLoading_ShowsTheSummarySkeleton", () => {
-    payApiMocks.fetchEventInvoicePaySummary.mockReturnValue(new Promise(() => {}))
+    payApiMocks.fetchCustomInvoicePaySummary.mockReturnValue(new Promise(() => {}))
 
     renderPage()
 
@@ -86,7 +86,7 @@ describe("EventInvoicePayPage", () => {
 
   /** A wrong or non-custom invoice id must never lead to a card form, only to advice on getting the right link. */
   it("PayPage_UnknownInvoice_ShowsNotFoundAndNoCardForm", async () => {
-    payApiMocks.fetchEventInvoicePaySummary.mockResolvedValue(null)
+    payApiMocks.fetchCustomInvoicePaySummary.mockResolvedValue(null)
 
     renderPage()
 
@@ -96,7 +96,7 @@ describe("EventInvoicePayPage", () => {
 
   /** A settled invoice cannot be charged twice from the page the buyer already paid through. */
   it("PayPage_PaidInvoice_ShowsPaidAndNoCardForm", async () => {
-    payApiMocks.fetchEventInvoicePaySummary.mockResolvedValue(buildSummary({ payState: "Paid", paymentAccountUniqueId: null }))
+    payApiMocks.fetchCustomInvoicePaySummary.mockResolvedValue(buildSummary({ payState: "Paid", paymentAccountUniqueId: null }))
 
     renderPage()
 
@@ -107,7 +107,7 @@ describe("EventInvoicePayPage", () => {
 
   /** An invoice the organizer cancelled is void; offering to take money for it would be a false charge. */
   it("PayPage_CancelledInvoice_ShowsCancelledAndNoCardForm", async () => {
-    payApiMocks.fetchEventInvoicePaySummary.mockResolvedValue(buildSummary({ payState: "Cancelled", paymentAccountUniqueId: null }))
+    payApiMocks.fetchCustomInvoicePaySummary.mockResolvedValue(buildSummary({ payState: "Cancelled", paymentAccountUniqueId: null }))
 
     renderPage()
 
@@ -117,7 +117,7 @@ describe("EventInvoicePayPage", () => {
 
   /** With no working payment account the charge cannot land, so the buyer is sent to the organizer instead. */
   it("PayPage_UnavailableInvoice_ShowsContactTheOrganizerAndNoCardForm", async () => {
-    payApiMocks.fetchEventInvoicePaySummary.mockResolvedValue(buildSummary({ payState: "Unavailable", paymentAccountUniqueId: null }))
+    payApiMocks.fetchCustomInvoicePaySummary.mockResolvedValue(buildSummary({ payState: "Unavailable", paymentAccountUniqueId: null }))
 
     renderPage()
 
@@ -128,7 +128,7 @@ describe("EventInvoicePayPage", () => {
 
   /** A failed load may be a blip; the buyer must be able to ask again without hunting for the link. */
   it("PayPage_LoadFailure_OffersTryAgainWhichRefetches", async () => {
-    payApiMocks.fetchEventInvoicePaySummary.mockRejectedValueOnce(new Error("Network Error"))
+    payApiMocks.fetchCustomInvoicePaySummary.mockRejectedValueOnce(new Error("Network Error"))
 
     renderPage()
 
@@ -136,7 +136,7 @@ describe("EventInvoicePayPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Try again" }))
 
     expect(await screen.findByText("INV-2041")).toBeInTheDocument()
-    expect(payApiMocks.fetchEventInvoicePaySummary).toHaveBeenCalledTimes(2)
+    expect(payApiMocks.fetchCustomInvoicePaySummary).toHaveBeenCalledTimes(2)
   })
 
   /** The buyer must see exactly what they are paying for before the card form asks for money. */

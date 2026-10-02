@@ -1,10 +1,10 @@
 import { Box, Flex, Stack } from "@chakra-ui/react"
 import { PrintInvoiceButton } from "@/components/common"
-import type { EventInvoicePaySummary } from "@/features/events/schemas/eventInvoicePay.schemas"
+import type { CustomInvoicePaySummary } from "@/features/events/schemas/customInvoicePay.schemas"
 import { InvoicePaySummaryCard } from "./InvoicePaySummaryCard"
 
 interface InvoicePayPrintableInvoiceProps {
-  summary: EventInvoicePaySummary
+  summary: CustomInvoicePaySummary
 }
 
 /**
