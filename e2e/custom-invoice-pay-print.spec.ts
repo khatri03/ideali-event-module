@@ -79,7 +79,7 @@ for (const width of WIDTHS) {
 
     await expect(page.getByText("INV-C-300")).toBeVisible()
     await expect(page.getByText("Exhibitor table")).toBeVisible()
-    await expect(page.getByText("USD$1,750.50")).toBeVisible()
+    await expect(page.getByText("USD$1,750.50", { exact: true })).toBeVisible()
     await expect(cardHolderField(page)).toBeHidden()
     await expect(printButton(page)).toBeHidden()
   })
