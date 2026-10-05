@@ -137,19 +137,34 @@ describe("CustomInvoiceDetailPage", () => {
   it("CustomDetail_EventBound_HeaderLinksToTheEvent", async () => {
     renderPage()
 
-    expect(await screen.findByRole("link", { name: /annual convention/i })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: "Event: Annual Convention" })).toHaveAttribute(
       "href",
       APP_ROUTES.eventWizard.edit("event-1"),
     )
   })
 
-  /** A record from another module has no event screen, so its name shows as text and never as a broken event link. */
-  it("CustomDetail_NotEventBound_ShowsTheRecordNameWithoutAnEventLink", async () => {
-    http.get.mockResolvedValue(detailResponse({ moduleType: "Membership", entityUniqueId: "type-1", entityName: "Gold Membership" }))
+  /**
+   * A record from another module has no event screen, so it is named with its module label as text and never
+   * as a broken event link.
+   */
+  it.each([
+    ["Membership", "Gold Membership", "Membership: Gold Membership"],
+    ["Donation", "Winter Appeal", "Campaign: Winter Appeal"],
+  ] as const)("CustomDetail_%sBound_ShowsTheLabelledRecordNameWithoutALink", async (moduleType, entityName, label) => {
+    http.get.mockResolvedValue(detailResponse({ moduleType, entityUniqueId: "record-1", entityName }))
     renderPage()
 
-    expect(await screen.findByText("Gold Membership")).toBeInTheDocument()
-    expect(screen.queryByRole("link", { name: /gold membership/i })).not.toBeInTheDocument()
+    expect(await screen.findByText(label)).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: new RegExp(entityName, "i") })).not.toBeInTheDocument()
+  })
+
+  /** A deleted record has no name; the header drops the line rather than print a dangling "Membership:". */
+  it("CustomDetail_EntityNameMissing_ShowsNoEntityLine", async () => {
+    http.get.mockResolvedValue(detailResponse({ moduleType: "Membership", entityUniqueId: "record-1", entityName: null }))
+    renderPage()
+
+    expect(await screen.findByText("Northwind Traders")).toBeInTheDocument()
+    expect(screen.queryByText(/Membership:/)).not.toBeInTheDocument()
   })
 
   /** An invoice that is gone or not the organizer's says so and offers no retry that cannot succeed. */

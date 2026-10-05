@@ -24,6 +24,8 @@ const sessionResponse = {
   },
 }
 
+const MODULE_SCREENSHOT_DIR = ".planning/phases/07-collect-and-deliver-for-any-module/screenshots"
+
 const customInvoiceDetail = {
   success: true,
   message: null,
@@ -67,13 +69,23 @@ const customInvoiceDetail = {
   },
 }
 
-async function mockCustomInvoice(page: Page) {
+const MODULE_DETAILS = [
+  { moduleType: "Membership", entityUniqueId: "membership-type-1", entityName: "Gold Membership", label: "Membership: Gold Membership" },
+  { moduleType: "Donation", entityUniqueId: "campaign-1", entityName: "Winter Appeal", label: "Campaign: Winter Appeal" },
+] as const
+
+/** The Event fixture rebound to another module's record, as the API returns a Membership or Donation invoice. */
+function moduleInvoiceDetail({ moduleType, entityUniqueId, entityName }: (typeof MODULE_DETAILS)[number]) {
+  return { ...customInvoiceDetail, data: { ...customInvoiceDetail.data, moduleType, entityUniqueId, entityName } }
+}
+
+async function mockCustomInvoice(page: Page, detail: unknown = customInvoiceDetail) {
   await page.route("**/api/identity/account/session", (route) => route.fulfill({ json: sessionResponse }))
   await page.route("**/api/alert-inbox/**", (route) =>
     route.fulfill({ json: { success: true, data: null, message: null, timestamp: "2026-08-11T10:00:00Z" } }),
   )
   await page.route(`**/api/organizer/custom-invoices/${INVOICE_ID}`, (route) =>
-    route.request().method() === "GET" ? route.fulfill({ json: customInvoiceDetail }) : route.fallback(),
+    route.request().method() === "GET" ? route.fulfill({ json: detail }) : route.fallback(),
   )
 }
 
@@ -106,4 +118,33 @@ for (const { label, width, height } of WIDTHS) {
     await expect(page.getByRole("link", { name: /open payment page/i })).toBeHidden()
     await expect(page.getByRole("button", { name: /mark as paid/i })).toBeHidden()
   })
+}
+
+const MODULE_WIDTHS = [375, 1440] as const
+
+for (const width of MODULE_WIDTHS) {
+  for (const moduleDetail of MODULE_DETAILS) {
+    /**
+     * D-09: a printed Membership or Donation invoice must name the membership type or campaign it bills,
+     * labelled by module where an Event invoice names its event, with the organizer's controls still dropped.
+     */
+    test(`a ${moduleDetail.moduleType} custom invoice prints its labelled entity at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 })
+      await mockCustomInvoice(page, moduleInvoiceDetail(moduleDetail))
+
+      await page.goto(`/organizer/custom-invoices/${INVOICE_ID}`)
+      await expect(page.getByText(moduleDetail.label, { exact: true })).toBeVisible()
+      await page.screenshot({
+        path: `${MODULE_SCREENSHOT_DIR}/detail-${moduleDetail.moduleType.toLowerCase()}-${width}-after.png`,
+        fullPage: true,
+      })
+
+      await page.emulateMedia({ media: "print" })
+
+      await expect(page.getByText(moduleDetail.label, { exact: true })).toBeVisible()
+      await expect(page.getByRole("button", { name: /email invoice to buyer/i })).toBeHidden()
+      await expect(page.getByRole("link", { name: /open payment page/i })).toBeHidden()
+      await expect(page.getByRole("button", { name: /mark as paid/i })).toBeHidden()
+    })
+  }
 }

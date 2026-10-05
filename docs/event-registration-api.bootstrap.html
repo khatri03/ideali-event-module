@@ -563,7 +563,7 @@
               <tr>
                 <td><span class="badge badge-method text-bg-primary">GET</span> <code>/api/custom-invoices/{invoiceUniqueId}/pay</code> <span class="badge text-bg-light border flag">event-invoice-pay-view</span></td>
                 <td><code>CustomInvoicePaymentLinkService.GetBuyerPaySummaryAsync</code></td>
-                <td>The buyer's view of one custom invoice: number, billed record name (<code>entityName</code>), billed lines, amount due and a server-decided <code>payState</code>. A 404 for an unknown id and for a ticket order alike, so the link cannot be used to probe which invoices exist. Rate limited to 30 per minute per IP.</td>
+                <td>The buyer's view of one custom invoice: number, the billed record's module (<code>moduleType</code>) and name (<code>entityName</code>), billed lines, amount due and a server-decided <code>payState</code>. A 404 for an unknown id and for a ticket order alike, so the link cannot be used to probe which invoices exist. Rate limited to 30 per minute per IP.</td>
               </tr>
               <tr>
                 <td><span class="badge badge-method text-bg-success">POST</span> <code>/api/custom-invoices/{invoiceUniqueId}/pay</code> <span class="badge text-bg-light border flag">BotMitigation · event-invoice-pay-start</span></td>
@@ -1599,7 +1599,8 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
             <thead class="table-light"><tr><th style="width:14rem">Property</th><th style="width:8rem">Type</th><th>Meaning</th></tr></thead>
             <tbody>
               <tr><td><code>invoiceNo</code></td><td>string</td><td>The invoice number the buyer was sent.</td></tr>
-              <tr><td><code>entityName</code></td><td>string</td><td>The name of the record the invoice bills (for an Event-bound invoice, the event). Empty when that record no longer exists.</td></tr>
+              <tr><td><code>moduleType</code></td><td>string: <code>Event</code>, <code>Membership</code> or <code>Donation</code></td><td>Which module the billed record belongs to, so the page labels it Event, Membership or Campaign.</td></tr>
+              <tr><td><code>entityName</code></td><td>string</td><td>The name of the record the invoice bills: an event, a membership type or a donation campaign, per <code>moduleType</code>. Empty when that record no longer exists.</td></tr>
               <tr><td><code>payState</code></td><td>string</td><td><code>Payable</code>, <code>Paid</code>, <code>Cancelled</code> or <code>Unavailable</code>. Decided by the server; the page renders from it and never infers it from amounts.</td></tr>
               <tr><td><code>currencyCode</code></td><td>string?</td><td>The event Stripe account's currency as Stripe writes it, lower-case ISO (<code>usd</code>, <code>cad</code>). Null when the event has no usable Stripe account.</td></tr>
               <tr><td><code>outstandingAmount</code></td><td>decimal</td><td>What is still owed; <code>0</code> once the invoice is <code>Paid</code> or <code>Cancelled</code>. Sizes the Payment Element only; the charged amount is always the server's.</td></tr>
@@ -2114,7 +2115,7 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
                 <tbody>
               <tr>
                 <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
-                <td><code class="path">/api/custom-invoices/{invoiceUniqueId:guid}/pay</code><div class="action-doc">What the buyer's pay page shows: the invoice number, the billed record's name, billed lines, balance and whether it can be paid online now. Carries nothing about who is billed. The invoice id carried by the buyer's pay link. Cancels the request. The pay summary, or not found alike for an unknown id, a ticket order and a custom invoice of a module that cannot be collected online.</div></td>
+                <td><code class="path">/api/custom-invoices/{invoiceUniqueId:guid}/pay</code><div class="action-doc">What the buyer's pay page shows: the invoice number, the billed record's module and name, billed lines, balance and whether it can be paid online now. Carries nothing about who is billed. The invoice id carried by the buyer's pay link. Cancels the request. The pay summary, or not found alike for an unknown id, a ticket order and a custom invoice of a module that cannot be collected online.</div></td>
                 <td>Get Pay Summary</td>
                 <td><span class="badge text-bg-light border access-anon">Public</span></td>
                 <td class="small"><span class="param-source">route</span> <code>invoiceUniqueId</code><span class="text-body-secondary"> : Guid</span></td>

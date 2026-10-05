@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom"
 import { Stack } from "@chakra-ui/react"
+import { formatBilledEntity } from "@/utils/customInvoiceEntity"
 import { isNotFoundError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 import { useCustomInvoiceDetail, useCustomInvoiceDetailActions } from "../hooks/useCustomInvoices"
@@ -12,7 +13,10 @@ import { InvoiceNotesSection } from "../components/InvoiceNotesSection"
 import { InvoiceSettlementActions } from "../components/InvoiceSettlementActions"
 import "@/styles/print.css"
 
-/** A custom invoice's detail, whatever module it bills; only an Event-bound invoice links to its record. */
+/**
+ * A custom invoice's detail, whatever module it bills. The billed record is named with its module label
+ * ("Membership: Gold"), and only an Event-bound invoice links to its record.
+ */
 export default function CustomInvoiceDetailPage() {
   const { invoiceUniqueId = "" } = useParams()
   const handleBack = useBackToInvoiceList()
@@ -37,6 +41,7 @@ export default function CustomInvoiceDetailPage() {
     <Stack gap={5} data-print-region>
       <EventInvoiceDetailHeader
         {...invoice}
+        entityName={formatBilledEntity(invoice.moduleType, invoice.entityName) || null}
         entityHref={invoice.moduleType === "Event" && entityUniqueId ? APP_ROUTES.eventWizard.edit(entityUniqueId) : undefined}
         editHref={invoice.canEdit ? APP_ROUTES.customInvoices.edit(invoice.invoiceUniqueId) : undefined}
         onBack={handleBack}

@@ -162,4 +162,11 @@ describe("CustomInvoiceDetailPage print contract", () => {
     expect(region.getByText("Billed line 14")).toBeInTheDocument()
     expect(container.querySelector("[data-print-allow-break]")).not.toBeNull()
   })
+
+  /** A printed Membership invoice names the membership type with its module label, where an Event invoice names its event. */
+  it("keeps the labelled Membership entity inside the print region", () => {
+    const { container } = renderPage({ moduleType: "Membership", entityUniqueId: "type-1", entityName: "Gold Membership" })
+
+    expect(within(printRegion(container)).getByText("Membership: Gold Membership")).toBeInTheDocument()
+  })
 })
