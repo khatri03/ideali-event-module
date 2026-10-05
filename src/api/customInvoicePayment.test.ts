@@ -15,6 +15,7 @@ const INVOICE_ID = "invoice-1"
 
 const PAYABLE_CAMEL = {
   invoiceNo: "INV-1",
+  moduleType: "Event",
   entityName: "Annual Summit",
   payState: "Payable",
   currencyCode: "USD",
@@ -25,6 +26,7 @@ const PAYABLE_CAMEL = {
 
 const PAYABLE_PASCAL = {
   InvoiceNo: "INV-1",
+  ModuleType: "Event",
   EntityName: "Annual Summit",
   PayState: "Payable",
   CurrencyCode: "USD",
@@ -61,6 +63,7 @@ describe("fetchCustomInvoicePaySummary", () => {
     expect(getMock).toHaveBeenCalledWith("/api/custom-invoices/invoice-1/pay")
     expect(summary).toEqual({
       invoiceNo: "INV-1",
+      moduleType: "Event",
       entityName: "Annual Summit",
       payState: "Payable",
       currencyCode: "USD",
@@ -95,6 +98,27 @@ describe("fetchCustomInvoicePaySummary", () => {
     const failure = await fetchCustomInvoicePaySummary(INVOICE_ID).catch((error: unknown) => error)
 
     expect(failure).toBeInstanceOf(Error)
+  })
+
+  /** Without a known module the page cannot say what is being billed, so the summary is refused rather than guessed. */
+  it.each([
+    ["Missing", undefined],
+    ["Unknown", "Auction"],
+  ])("%sModuleType_Rejects", async (_case, moduleType) => {
+    getMock.mockResolvedValue({ data: { success: true, data: { ...PAYABLE_CAMEL, moduleType } } })
+
+    const failure = await fetchCustomInvoicePaySummary(INVOICE_ID).catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(Error)
+  })
+
+  /** Every module a custom invoice can bill is payable through the same summary. */
+  it.each(["Event", "Membership", "Donation"])("%sModuleType_IsAccepted", async (moduleType) => {
+    getMock.mockResolvedValue({ data: { success: true, data: { ...PAYABLE_CAMEL, moduleType } } })
+
+    const summary = await fetchCustomInvoicePaySummary(INVOICE_ID)
+
+    expect(summary?.moduleType).toBe(moduleType)
   })
 })
 

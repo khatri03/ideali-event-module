@@ -4,6 +4,7 @@ import { RegistrationStripeProvider } from "@/features/events/components/registr
 import { useStripeCredentials } from "@/features/events/hooks/useStripeCredentials"
 import type { CustomInvoicePaySummary } from "@/features/events/schemas/customInvoicePay.schemas"
 import { formatAmount } from "@/features/events/utils/registrationFormat"
+import { formatBilledEntity } from "@/utils/customInvoiceEntity"
 import { InvoicePayForm } from "./InvoicePayForm"
 import { InvoicePayPrintableInvoice } from "./InvoicePayPrintableInvoice"
 import { InvoicePayStatusCard } from "./InvoicePayStatusCard"
@@ -80,14 +81,16 @@ export function InvoicePayView({ invoiceUniqueId, summary, isLoading, isError, i
 }
 
 function TerminalInvoiceCard({ summary }: { summary: CustomInvoicePaySummary }) {
-  const { invoiceNo, entityName } = summary
+  const { invoiceNo } = summary
+  const billedEntity = formatBilledEntity(summary.moduleType, summary.entityName)
+  const paidInvoice = billedEntity ? `Invoice ${invoiceNo} for ${billedEntity}` : `Invoice ${invoiceNo}`
 
   const statusCard =
     summary.payState === "Paid" ? (
       <InvoicePayStatusCard
         tone="success"
         title="This invoice is paid"
-        description={`Invoice ${invoiceNo} for ${entityName} has been paid. There is nothing left to pay.`}
+        description={`${paidInvoice} has been paid. There is nothing left to pay.`}
       />
     ) : summary.payState === "Cancelled" ? (
       <InvoicePayStatusCard

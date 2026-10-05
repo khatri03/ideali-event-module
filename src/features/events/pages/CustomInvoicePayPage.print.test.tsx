@@ -39,6 +39,7 @@ const INVOICE_UNIQUE_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7"
 function buildSummary(overrides: Partial<CustomInvoicePaySummary> = {}): CustomInvoicePaySummary {
   return {
     invoiceNo: "INV-2041",
+    moduleType: "Event",
     entityName: "Golden Jubilee Gala",
     payState: "Payable",
     currencyCode: "USD",
@@ -97,7 +98,7 @@ describe("CustomInvoicePayPage print contract", () => {
     const region = within(printRegion(container))
 
     expect(region.getByText("INV-2041")).toBeInTheDocument()
-    expect(region.getByText("Golden Jubilee Gala")).toBeInTheDocument()
+    expect(region.getByText("Event: Golden Jubilee Gala")).toBeInTheDocument()
     expect(region.getByText("Gold sponsorship package")).toBeInTheDocument()
     expect(region.getByText("Exhibitor table")).toBeInTheDocument()
     expect(region.getByText("USD$1,250.00")).toBeInTheDocument()
@@ -122,7 +123,7 @@ describe("CustomInvoicePayPage print contract", () => {
 
     const region = within(printRegion(container))
     expect(region.getByText("INV-2041")).toBeInTheDocument()
-    expect(region.getByText("Golden Jubilee Gala")).toBeInTheDocument()
+    expect(region.getByText("Event: Golden Jubilee Gala")).toBeInTheDocument()
     expect(region.getByText("Gold sponsorship package")).toBeInTheDocument()
   })
 
@@ -147,5 +148,18 @@ describe("CustomInvoicePayPage print contract", () => {
     expect(container.querySelector("[data-print-region]")).toBeNull()
     expect(screen.queryByRole("button", { name: /print/i })).not.toBeInTheDocument()
     expect(cardHolderField()).not.toBeInTheDocument()
+  })
+
+  /** A Membership or Donation buyer's paper copy names the membership type or campaign with its module label. */
+  it.each([
+    ["Membership", "Gold Membership", "Membership: Gold Membership"],
+    ["Donation", "Winter Appeal", "Campaign: Winter Appeal"],
+  ] as const)("keeps the labelled %s entity inside the print region", async (moduleType, entityName, label) => {
+    payApiMocks.fetchCustomInvoicePaySummary.mockResolvedValue(buildSummary({ moduleType, entityName }))
+    const { container } = renderPage()
+
+    await screen.findByText("INV-2041")
+
+    expect(within(printRegion(container)).getByRole("heading", { name: label })).toBeInTheDocument()
   })
 })

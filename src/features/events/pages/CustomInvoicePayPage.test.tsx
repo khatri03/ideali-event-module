@@ -34,6 +34,7 @@ const LONG_DESCRIPTION =
 function buildSummary(overrides: Partial<CustomInvoicePaySummary> = {}): CustomInvoicePaySummary {
   return {
     invoiceNo: "INV-2041",
+    moduleType: "Event",
     entityName: "Golden Jubilee Gala",
     payState: "Payable",
     currencyCode: "USD",
@@ -101,7 +102,7 @@ describe("CustomInvoicePayPage", () => {
     renderPage()
 
     expect(await screen.findByRole("heading", { name: "This invoice is paid" })).toBeInTheDocument()
-    expect(screen.getByText(/Invoice INV-2041 for Golden Jubilee Gala has been paid/)).toBeInTheDocument()
+    expect(screen.getByText(/Invoice INV-2041 for Event: Golden Jubilee Gala has been paid/)).toBeInTheDocument()
     expect(cardHolderField()).not.toBeInTheDocument()
   })
 
@@ -171,5 +172,44 @@ describe("CustomInvoicePayPage", () => {
     expect(await screen.findByRole("heading", { name: "Payment received" })).toBeInTheDocument()
     expect(screen.getByText("Thank you. Your payment of USD$1,250.00 for invoice INV-2041 went through.")).toBeInTheDocument()
     await waitFor(() => expect(cardHolderField()).not.toBeInTheDocument())
+  })
+
+  /** The buyer must see which kind of record they are paying for, named the way the organizer picked it. */
+  it.each([
+    ["Event", "Golden Jubilee Gala", "Event: Golden Jubilee Gala"],
+    ["Membership", "Gold Membership", "Membership: Gold Membership"],
+    ["Donation", "Winter Appeal", "Campaign: Winter Appeal"],
+  ] as const)("PayPage_%sInvoice_HeadsTheSummaryWithTheModuleLabel", async (moduleType, entityName, heading) => {
+    payApiMocks.fetchCustomInvoicePaySummary.mockResolvedValue(buildSummary({ moduleType, entityName }))
+
+    renderPage()
+
+    expect(await screen.findByRole("heading", { name: heading })).toBeInTheDocument()
+  })
+
+  /** A paid campaign invoice names the campaign in the confirmation, not a bare "Donation". */
+  it("PayPage_PaidDonationInvoice_NamesTheCampaignInThePaidNotice", async () => {
+    payApiMocks.fetchCustomInvoicePaySummary.mockResolvedValue(
+      buildSummary({ invoiceNo: "INV-1", moduleType: "Donation", entityName: "Winter Appeal", payState: "Paid", paymentAccountUniqueId: null }),
+    )
+
+    renderPage()
+
+    expect(
+      await screen.findByText("Invoice INV-1 for Campaign: Winter Appeal has been paid. There is nothing left to pay."),
+    ).toBeInTheDocument()
+  })
+
+  /** A deleted record leaves a blank name; the page drops the line rather than show a dangling "Membership:". */
+  it("PayPage_BlankEntityName_ShowsNoEntityHeadingAndAPlainPaidNotice", async () => {
+    payApiMocks.fetchCustomInvoicePaySummary.mockResolvedValue(
+      buildSummary({ moduleType: "Membership", entityName: "", payState: "Paid", paymentAccountUniqueId: null }),
+    )
+
+    renderPage()
+
+    expect(await screen.findByText("Invoice INV-2041 has been paid. There is nothing left to pay.")).toBeInTheDocument()
+    expect(screen.getAllByRole("heading").map((heading) => heading.textContent)).toEqual(["This invoice is paid"])
+    expect(screen.queryByText(/Membership:/)).not.toBeInTheDocument()
   })
 })

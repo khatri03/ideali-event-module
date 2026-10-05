@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { CUSTOM_INVOICE_MODULES } from "@/api/customInvoices"
 
 export const CUSTOM_INVOICE_PAY_STATES = ["Payable", "Paid", "Cancelled", "Unavailable"] as const
 
@@ -16,6 +17,8 @@ const payLineItemSchema = z.object({
  */
 export const customInvoicePaySummarySchema = z.object({
   invoiceNo: z.string(),
+  /** Which module the billed record belongs to, so the page can label it "Event", "Membership" or "Campaign". */
+  moduleType: z.enum(CUSTOM_INVOICE_MODULES),
   entityName: z.string(),
   payState: z.enum(CUSTOM_INVOICE_PAY_STATES),
   currencyCode: z.string().nullable(),

@@ -13,6 +13,7 @@ const TERMINAL_STATE_WIDTHS = [375, 1440] as const
 const SCREENSHOT_WIDTHS: readonly number[] = [375, 1440]
 const VIEWPORT_HEIGHT = 900
 const SCREENSHOT_DIR = ".planning/phases/04-collect-payment-settle/screenshots"
+const MODULE_SCREENSHOT_DIR = ".planning/phases/07-collect-and-deliver-for-any-module/screenshots"
 
 const INVOICE_ID = "c0000000-0000-4000-8000-000000000300"
 const payPath = (invoiceUniqueId: string) => `/custom-invoices/${invoiceUniqueId}/pay`
@@ -30,6 +31,7 @@ function envelope(data: unknown) {
 function paySummary(overrides: Json = {}): Json {
   return {
     invoiceNo: "INV-C-300",
+    moduleType: "Event",
     entityName: "Annual Convention 2026",
     payState: "Payable",
     currencyCode: "USD",
@@ -138,6 +140,32 @@ test("an already-sent /events/invoices pay link lands on the renamed pay page fo
   await expect(page).toHaveURL(new RegExp(`/custom-invoices/${INVOICE_ID}/pay$`))
   await expect(page.getByText("INV-C-300")).toBeVisible({ timeout: 30_000 })
 })
+
+const MODULE_CASES = [
+  { moduleType: "Membership", entityName: "Gold Membership", label: "Membership: Gold Membership" },
+  { moduleType: "Donation", entityName: "Winter Appeal", label: "Campaign: Winter Appeal" },
+] as const
+
+for (const width of SCREENSHOT_WIDTHS) {
+  for (const moduleCase of MODULE_CASES) {
+    /**
+     * D-09: a buyer paying a Membership or Donation invoice must see which membership type or campaign they
+     * are paying for, labelled by module, above the lines and without the page sliding sideways.
+     */
+    test(`a payable ${moduleCase.moduleType} invoice names its entity by module at ${width}px`, async ({ page }) => {
+      await mockPayPage(page, paySummary({ moduleType: moduleCase.moduleType, entityName: moduleCase.entityName }))
+      await openPayPage(page, width)
+
+      await expect(page.getByRole("heading", { name: moduleCase.label })).toBeVisible({ timeout: 30_000 })
+      expect.soft(await findHorizontalPageOverflow(page), "the pay page scrolls sideways").toEqual([])
+
+      await page.screenshot({
+        path: `${MODULE_SCREENSHOT_DIR}/pay-${moduleCase.moduleType.toLowerCase()}-${width}-after.png`,
+        fullPage: true,
+      })
+    })
+  }
+}
 
 const LIVE_INVOICE_ID = process.env.E2E_PAYABLE_INVOICE_ID ?? ""
 

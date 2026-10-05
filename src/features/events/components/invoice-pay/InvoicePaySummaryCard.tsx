@@ -1,10 +1,11 @@
 import { Box, Flex, Heading, Stack, Text } from "@chakra-ui/react"
 import type { CustomInvoicePaySummary } from "@/features/events/schemas/customInvoicePay.schemas"
 import { formatAmount } from "@/features/events/utils/registrationFormat"
+import { formatBilledEntity } from "@/utils/customInvoiceEntity"
 
 type InvoicePaySummaryCardProps = Pick<
   CustomInvoicePaySummary,
-  "invoiceNo" | "entityName" | "lineItems" | "outstandingAmount" | "currencyCode"
+  "invoiceNo" | "moduleType" | "entityName" | "lineItems" | "outstandingAmount" | "currencyCode"
 >
 
 const CAPTION_STYLE = {
@@ -18,11 +19,14 @@ const CAPTION_STYLE = {
 /** What the buyer is being asked to pay for, laid out like the order receipt they get after registering. */
 export function InvoicePaySummaryCard({
   invoiceNo,
+  moduleType,
   entityName,
   lineItems,
   outstandingAmount,
   currencyCode,
 }: InvoicePaySummaryCardProps) {
+  const billedEntity = formatBilledEntity(moduleType, entityName)
+
   return (
     <Box data-print-allow-break borderWidth="1px" borderColor="gray.200" borderRadius="24px" bg="white" p={{ base: 5, md: 6 }} boxShadow="0 16px 40px rgba(15, 23, 42, 0.06)">
       <Stack gap={5}>
@@ -42,9 +46,11 @@ export function InvoicePaySummaryCard({
         </Flex>
 
         <Box borderTopWidth="1px" borderTopColor="gray.200" pt={5}>
-          <Heading as="h2" fontSize={{ base: "sm", md: "md" }} color="gray.900" mb={3} overflowWrap="anywhere">
-            {entityName}
-          </Heading>
+          {billedEntity && (
+            <Heading as="h2" fontSize={{ base: "sm", md: "md" }} color="gray.900" mb={3} overflowWrap="anywhere">
+              {billedEntity}
+            </Heading>
+          )}
           <Stack as="ul" gap={3} listStyleType="none" m={0}>
             {lineItems.map((lineItem, index) => (
               <Flex as="li" key={index} justify="space-between" align="start" gap={4}>

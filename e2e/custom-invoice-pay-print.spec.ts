@@ -27,6 +27,7 @@ function envelope(data: unknown) {
 function paySummary(overrides: Json = {}): Json {
   return {
     invoiceNo: "INV-C-300",
+    moduleType: "Event",
     entityName: "Annual Convention 2026",
     payState: "Payable",
     currencyCode: "USD",
@@ -83,4 +84,29 @@ for (const width of WIDTHS) {
     await expect(cardHolderField(page)).toBeHidden()
     await expect(printButton(page)).toBeHidden()
   })
+}
+
+const MODULE_CASES = [
+  { moduleType: "Membership", entityName: "Gold Membership", label: "Membership: Gold Membership" },
+  { moduleType: "Donation", entityName: "Winter Appeal", label: "Campaign: Winter Appeal" },
+] as const
+
+for (const width of WIDTHS) {
+  for (const moduleCase of MODULE_CASES) {
+    /**
+     * D-09: a Membership or Donation buyer's paper copy must say which membership type or campaign was billed,
+     * labelled by module, and the labelled line must still fit the page at every width.
+     */
+    test(`a ${moduleCase.moduleType} invoice prints its labelled entity at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: VIEWPORT_HEIGHT })
+      await mockPayPage(page, paySummary({ moduleType: moduleCase.moduleType, entityName: moduleCase.entityName }))
+      await page.goto(payPath(INVOICE_ID))
+
+      await expect(page.getByText("INV-C-300")).toBeVisible({ timeout: 30_000 })
+      await page.emulateMedia({ media: "print" })
+
+      await expect(page.getByRole("heading", { name: moduleCase.label })).toBeVisible()
+      expect.soft(await findHorizontalPageOverflow(page), "the printed pay page scrolls sideways").toEqual([])
+    })
+  }
 }

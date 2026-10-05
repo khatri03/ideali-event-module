@@ -11,7 +11,7 @@ import {
 import { parseServicePayload } from "@/api/serviceResponse"
 import { API_ROUTES } from "@/utils/routes"
 
-const CUSTOM_INVOICE_MODULES = ["Event", "Membership", "Donation"] as const
+export const CUSTOM_INVOICE_MODULES = ["Event", "Membership", "Donation"] as const
 
 /** The modules a custom invoice can bill a record of. */
 export type CustomInvoiceModule = (typeof CUSTOM_INVOICE_MODULES)[number]
