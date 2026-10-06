@@ -401,6 +401,8 @@ export const API_ROUTES = {
   invoiceCategoryCreate: "/api/organizer/custom-invoices/categories",
   invoiceCategoryDetail: (uniqueId: string) => `/api/organizer/custom-invoices/categories/${uniqueId}`,
   customInvoiceCreate: "/api/organizer/custom-invoices",
+  customInvoiceEnabledModules: "/api/organizer/custom-invoices/enabled-modules",
+  customInvoiceEntityOptions: "/api/organizer/custom-invoices/entity-options",
   customInvoiceUpdate: (invoiceUniqueId: string) => `/api/organizer/custom-invoices/${invoiceUniqueId}`,
   customInvoiceForEdit: (invoiceUniqueId: string) => `/api/organizer/custom-invoices/${invoiceUniqueId}/edit`,
   customInvoiceDetail: (invoiceUniqueId: string) => `/api/organizer/custom-invoices/${invoiceUniqueId}`,

@@ -22,12 +22,37 @@ vi.mock("react-router-dom", async (importOriginal) => {
 
 const EDIT_ID = "inv-99"
 
-function filterOptionsResponse() {
-  return {
-    data: {
-      success: true,
-      Data: { Events: [{ Text: "Annual Convention", Value: "evt-1" }], Sessions: [] },
-    },
+function envelope(data: unknown) {
+  return { data: { success: true, Data: data } }
+}
+
+const ENTITIES: Record<string, { UniqueId: string; Name: string }[]> = {
+  Event: [{ UniqueId: "evt-1", Name: "Annual Convention" }],
+  Membership: [
+    { UniqueId: "mem-gold", Name: "Gold" },
+    { UniqueId: "mem-silver", Name: "Silver" },
+  ],
+}
+
+function entityOptionsResponse(params: URLSearchParams) {
+  const term = (params.get("searchTerm") ?? "").toLowerCase()
+  const rows = (ENTITIES[params.get("moduleType") ?? ""] ?? []).filter((row) => row.Name.toLowerCase().includes(term))
+  return envelope({ PageNo: 1, PageSize: 20, PageCount: 1, TotalRecordsCount: rows.length, PageData: rows })
+}
+
+interface ServerSetup {
+  enabledModules?: string[]
+  edit?: () => Promise<unknown>
+}
+
+/** Answers every GET the editor makes, with the enabled modules and the edit load swappable per test. */
+function serverGet({ enabledModules = ["Event", "Membership"], edit }: ServerSetup = {}) {
+  return (url: string, config?: { params?: URLSearchParams }) => {
+    if (url === API_ROUTES.customInvoiceEnabledModules) return Promise.resolve(envelope(enabledModules))
+    if (url === API_ROUTES.customInvoiceEntityOptions) return Promise.resolve(entityOptionsResponse(config?.params ?? new URLSearchParams()))
+    if (url === API_ROUTES.invoiceCategories) return Promise.resolve(categoriesResponse())
+    if (url === API_ROUTES.customInvoiceForEdit(EDIT_ID)) return edit ? edit() : Promise.resolve(editResponse("PendingPayment", true))
+    return Promise.resolve(envelope(null))
   }
 }
 
@@ -110,8 +135,17 @@ function renderPage(options?: { invoiceUniqueId?: string }) {
   )
 }
 
-async function pickOption(user: ReturnType<typeof userEvent.setup>, triggerName: string, optionName: string) {
+type User = ReturnType<typeof userEvent.setup>
+
+async function pickOption(user: User, triggerName: string, optionName: string) {
   await user.click(screen.getByRole("combobox", { name: triggerName }))
+  fireEvent.click(await screen.findByRole("option", { name: optionName }))
+}
+
+async function pickEntity(user: User, fieldName: string, searchText: string, optionName: string) {
+  const input = await screen.findByRole("combobox", { name: fieldName })
+  await waitFor(() => expect(input).toBeEnabled())
+  await user.type(input, searchText)
   fireEvent.click(await screen.findByRole("option", { name: optionName }))
 }
 
@@ -119,15 +153,24 @@ function setValue(labelText: string, value: string) {
   fireEvent.change(screen.getByLabelText(new RegExp(labelText, "i")), { target: { value } })
 }
 
-async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
-  await pickOption(user, "Event", "Annual Convention")
-  await pickOption(user, "Sponsorship type", "Gold Sponsor")
+function fillBuyerAndCharges() {
   setValue("Payment due date", "2026-12-31")
   setValue("Company name", "Acme Corp")
   setValue("Last name", "Doe")
   setValue("Email address", "buyer@acme.test")
   setValue("Description for line 1", "Gold sponsorship")
   setValue("Amount for line 1", "1500.00")
+}
+
+async function fillValidMembershipForm(user: User) {
+  await pickOption(user, "Module", "Membership")
+  await pickEntity(user, "Membership", "Gol", "Gold")
+  await pickOption(user, "Sponsorship type", "Gold Sponsor")
+  fillBuyerAndCharges()
+}
+
+async function waitForEditLoaded() {
+  await waitFor(() => expect(screen.getByLabelText(/Company name/i)).toHaveValue("Acme Corp"))
 }
 
 describe("CustomInvoiceFormPage", () => {
@@ -137,52 +180,47 @@ describe("CustomInvoiceFormPage", () => {
     http.put.mockReset()
     navigateMock.mockReset()
 
-    http.get.mockImplementation((url: string) => {
-      if (url === API_ROUTES.eventInvoiceFilterOptions) return Promise.resolve(filterOptionsResponse())
-      if (url === API_ROUTES.invoiceCategories) return Promise.resolve(categoriesResponse())
-      if (url === API_ROUTES.customInvoiceForEdit(EDIT_ID)) return Promise.resolve(editResponse("PendingPayment", true))
-      return Promise.resolve({ data: { success: true, Data: null } })
-    })
-    http.post.mockResolvedValue({ data: { success: true, Data: "new-invoice-id" } })
-    http.put.mockResolvedValue({ data: { success: true, Data: null } })
+    http.get.mockImplementation(serverGet())
+    http.post.mockResolvedValue(envelope("new-invoice-id"))
+    http.put.mockResolvedValue(envelope(null))
   })
 
-  /** A fully filled create form posts to the custom-invoices route bound to the picked event, then opens the new invoice. */
-  it("CreateForm_Submits_ToTheCustomInvoicesRoute_WithModuleEventAndThePickedEventAsEntity", async () => {
+  /**
+   * An organizer picks a module, then a record found by server search, and the create posts exactly that
+   * binding before opening the new invoice; a wrong module or record would bill the wrong thing.
+   */
+  it("CustomInvoiceFormPage_CreateMembershipInvoice_PostsModuleAndEntityAndOpensDetail", async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 })
     renderPage()
-    await fillValidForm(user)
+    await fillValidMembershipForm(user)
 
-    await user.click(screen.getByRole("button", { name: "Save invoice" }))
+    await user.click(screen.getByRole("button", { name: "Create invoice" }))
 
     await waitFor(() => expect(http.post).toHaveBeenCalledTimes(1))
     const [url, body] = http.post.mock.calls[0]
     expect(url).toBe(API_ROUTES.customInvoiceCreate)
-    expect(body).not.toHaveProperty("eventUniqueId")
     expect(body).toMatchObject({
-      moduleType: "Event",
-      entityUniqueId: "evt-1",
+      moduleType: "Membership",
+      entityUniqueId: "mem-gold",
       categoryUniqueId: "cat-active",
       companyName: "Acme Corp",
       lastName: "Doe",
       email: "buyer@acme.test",
       lineItems: [{ description: "Gold sponsorship", amount: "1500.00" }],
     })
-    await waitFor(() =>
-      expect(navigateMock).toHaveBeenCalledWith(APP_ROUTES.customInvoices.detail("new-invoice-id")),
-    )
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(APP_ROUTES.customInvoices.detail("new-invoice-id")))
   })
 
-  /** Submitting an empty create form blocks with inline errors and never calls the endpoint. */
+  /** Submitting an empty create form blocks with inline errors naming the module and billed record, and never posts. */
   it("Submit_MissingRequiredFields_ShowsErrorsAndDoesNotPost", async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 })
     renderPage()
 
-    await user.click(screen.getByRole("button", { name: "Save invoice" }))
+    await user.click(await screen.findByRole("button", { name: "Create invoice" }))
 
-    expect(await screen.findByText("Select an event.")).toBeInTheDocument()
+    expect(await screen.findByText("Choose the module this invoice bills.")).toBeInTheDocument()
+    expect(screen.getByText("Choose what this invoice bills.")).toBeInTheDocument()
     expect(screen.getByText("Company name is required.")).toBeInTheDocument()
-    expect(screen.getByText("Last name is required.")).toBeInTheDocument()
     expect(http.post).not.toHaveBeenCalled()
   })
 
@@ -207,53 +245,52 @@ describe("CustomInvoiceFormPage", () => {
     expect(screen.getByText("5/2000 characters")).toBeInTheDocument()
   })
 
-  /** A server rejection on create keeps the entered values on screen and surfaces the reason in the banner. */
-  it("Submit_ServerError_KeepsValuesAndShowsBanner", async () => {
-    http.post.mockRejectedValue(conflictError("This event is not accepting invoices."))
+  /** A server refusal on create is shown in the page banner and every typed value stays, so nothing is retyped. */
+  it("CustomInvoiceFormPage_ServerRefusal_ShowsBannerAndKeepsValues", async () => {
+    http.post.mockRejectedValue(conflictError("Custom invoicing is not turned on for this module."))
     const user = userEvent.setup({ pointerEventsCheck: 0 })
     renderPage()
-    await fillValidForm(user)
+    await fillValidMembershipForm(user)
 
-    await user.click(screen.getByRole("button", { name: "Save invoice" }))
+    await user.click(screen.getByRole("button", { name: "Create invoice" }))
 
-    expect(await screen.findByText("This event is not accepting invoices.")).toBeInTheDocument()
+    expect(await screen.findByText("Custom invoicing is not turned on for this module.")).toBeInTheDocument()
     expect(screen.getByLabelText(/Company name/i)).toHaveValue("Acme Corp")
+    expect(screen.getByLabelText("Amount for line 1")).toHaveValue("1500.00")
     expect(navigateMock).not.toHaveBeenCalled()
   })
 
-  /** Edit mode prefills from the custom-invoices edit route, including the event the invoice is bound to. */
-  it("EditForm_LoadsFromTheCustomInvoicesEditRoute_AndPrefillsTheEventFromEntityUniqueId", async () => {
+  /** Edit mode prefills the buyer and charges from the custom-invoices edit route. */
+  it("EditForm_LoadsFromTheCustomInvoicesEditRoute_AndPrefillsTheValues", async () => {
     renderPage({ invoiceUniqueId: EDIT_ID })
 
-    await waitFor(() => expect(screen.getByLabelText(/Company name/i)).toHaveValue("Acme Corp"))
+    await waitForEditLoaded()
     expect(http.get).toHaveBeenCalledWith(API_ROUTES.customInvoiceForEdit(EDIT_ID))
     expect(screen.getByLabelText(/Last name/i)).toHaveValue("Doe")
     expect(screen.getByLabelText("Amount for line 1")).toHaveValue("1500.00")
-    expect(await screen.findByRole("combobox", { name: "Event" })).toHaveTextContent("Annual Convention")
   })
 
   /** What an invoice bills never changes after creation, so the update repeats the stored module and record. */
   it("EditForm_Submits_PutToTheCustomInvoicesRoute_RepeatingTheStoredModuleAndEntity", async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 })
     renderPage({ invoiceUniqueId: EDIT_ID })
-    await waitFor(() => expect(screen.getByLabelText(/Company name/i)).toHaveValue("Acme Corp"))
+    await waitForEditLoaded()
 
-    await user.click(screen.getByRole("button", { name: "Save invoice" }))
+    await user.click(screen.getByRole("button", { name: "Save changes" }))
 
     await waitFor(() => expect(http.put).toHaveBeenCalledTimes(1))
     const [url, body] = http.put.mock.calls[0]
     expect(url).toBe(API_ROUTES.customInvoiceUpdate(EDIT_ID))
     expect(body).toMatchObject({ moduleType: "Event", entityUniqueId: "evt-1" })
-    expect(body).not.toHaveProperty("eventUniqueId")
   })
 
   /** A saved edit returns the organizer to the invoice they edited, on its custom-invoice detail route. */
   it("SaveSucceeds_NavigatesToTheCustomInvoiceDetailRoute", async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 })
     renderPage({ invoiceUniqueId: EDIT_ID })
-    await waitFor(() => expect(screen.getByLabelText(/Company name/i)).toHaveValue("Acme Corp"))
+    await waitForEditLoaded()
 
-    await user.click(screen.getByRole("button", { name: "Save invoice" }))
+    await user.click(screen.getByRole("button", { name: "Save changes" }))
 
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(APP_ROUTES.customInvoices.detail(EDIT_ID)))
   })
@@ -268,52 +305,40 @@ describe("CustomInvoiceFormPage", () => {
     expect(navigateMock).toHaveBeenCalledWith(APP_ROUTES.eventInvoices.list)
   })
 
+  /** Leaving with typed but unsaved changes asks first, so a stray click does not throw the work away. */
+  it("Cancel_WithUnsavedChanges_AsksBeforeDiscarding", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    renderPage()
+    await user.type(screen.getByLabelText(/Company name/i), "Acme")
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }))
+
+    expect(await screen.findByText("Discard unsaved changes?")).toBeInTheDocument()
+    expect(navigateMock).not.toHaveBeenCalled()
+  })
+
   /** A Paid invoice is fully read-only: the locked banner shows, controls are disabled, and Save is gone. */
   it("Edit_PaidInvoice_LocksTheForm", async () => {
-    http.get.mockImplementation((url: string) => {
-      if (url === API_ROUTES.eventInvoiceFilterOptions) return Promise.resolve(filterOptionsResponse())
-      if (url === API_ROUTES.invoiceCategories) return Promise.resolve(categoriesResponse())
-      if (url === API_ROUTES.customInvoiceForEdit(EDIT_ID)) return Promise.resolve(editResponse("Paid", false))
-      return Promise.resolve({ data: { success: true, Data: null } })
-    })
+    http.get.mockImplementation(serverGet({ edit: () => Promise.resolve(editResponse("Paid", false)) }))
     renderPage({ invoiceUniqueId: EDIT_ID })
 
     expect(await screen.findByText("This invoice can no longer be edited.")).toBeInTheDocument()
     expect(screen.getByLabelText(/Company name/i)).toBeDisabled()
-    expect(screen.queryByRole("button", { name: "Save invoice" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Save changes" })).not.toBeInTheDocument()
   })
 
   /** A PartiallyPaid invoice locks the same way as a Paid one. */
   it("Edit_PartiallyPaidInvoice_LocksTheForm", async () => {
-    http.get.mockImplementation((url: string) => {
-      if (url === API_ROUTES.eventInvoiceFilterOptions) return Promise.resolve(filterOptionsResponse())
-      if (url === API_ROUTES.invoiceCategories) return Promise.resolve(categoriesResponse())
-      if (url === API_ROUTES.customInvoiceForEdit(EDIT_ID)) return Promise.resolve(editResponse("PartiallyPaid", false))
-      return Promise.resolve({ data: { success: true, Data: null } })
-    })
+    http.get.mockImplementation(serverGet({ edit: () => Promise.resolve(editResponse("PartiallyPaid", false)) }))
     renderPage({ invoiceUniqueId: EDIT_ID })
 
     expect(await screen.findByText("This invoice can no longer be edited.")).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Save invoice" })).not.toBeInTheDocument()
-  })
-
-  /**
-   * The event a custom invoice bills against is fixed once created, and the server ignores any change to it
-   * on update, so the Event selector is disabled in edit mode - never a live control that silently no-ops.
-   */
-  it("EditForm_EventPickerIsReadOnly", async () => {
-    renderPage({ invoiceUniqueId: EDIT_ID })
-
-    await waitFor(() => expect(screen.getByLabelText(/Company name/i)).toHaveValue("Acme Corp"))
-    expect(screen.getByRole("combobox", { name: "Event" })).toBeDisabled()
+    expect(screen.queryByRole("button", { name: "Save changes" })).not.toBeInTheDocument()
   })
 
   /** A failed edit load offers a retryable error state rather than a blank or broken form. */
   it("Edit_LoadFailure_ShowsErrorStateWithRetry", async () => {
-    http.get.mockImplementation((url: string) => {
-      if (url === API_ROUTES.customInvoiceForEdit(EDIT_ID)) return Promise.reject(conflictError("Load failed"))
-      return Promise.resolve({ data: { success: true, Data: null } })
-    })
+    http.get.mockImplementation(serverGet({ edit: () => Promise.reject(conflictError("Load failed")) }))
     renderPage({ invoiceUniqueId: EDIT_ID })
 
     expect(await screen.findByText("This invoice could not be loaded")).toBeInTheDocument()
@@ -322,13 +347,10 @@ describe("CustomInvoiceFormPage", () => {
 
   /** While the edit load is in flight the page shows its skeleton, not an empty or half-built form. */
   it("Edit_FirstLoad_ShowsSkeleton", () => {
-    http.get.mockImplementation((url: string) => {
-      if (url === API_ROUTES.customInvoiceForEdit(EDIT_ID)) return new Promise(() => undefined)
-      return Promise.resolve({ data: { success: true, Data: null } })
-    })
+    http.get.mockImplementation(serverGet({ edit: () => new Promise(() => undefined) }))
     renderPage({ invoiceUniqueId: EDIT_ID })
 
     expect(screen.getByTestId("custom-invoice-form-skeleton")).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Save invoice" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Save changes" })).not.toBeInTheDocument()
   })
 })

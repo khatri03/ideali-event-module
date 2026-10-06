@@ -2,9 +2,7 @@ import { Box, Field, Flex, IconButton, Input, Separator, Stack, Text, chakra } f
 import { Plus, Trash2 } from "lucide-react"
 import { useFieldArray, useWatch, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form"
 import { formatCurrency, sumMoney } from "@/utils/format"
-import type { CustomInvoiceFormValues } from "../schemas/customInvoice.schemas"
-
-const AMOUNT_PATTERN = /^\d+(\.\d{1,2})?$/
+import { LINE_AMOUNT_PATTERN, type CustomInvoiceFormValues } from "../schemas/customInvoice.schemas"
 
 interface CustomInvoiceLineItemsProps {
   control: Control<CustomInvoiceFormValues>
@@ -47,7 +45,7 @@ export function CustomInvoiceLineItems({
 
   const amounts = watchedLines.map((line) => {
     const amount = (line?.amount ?? "").trim()
-    return AMOUNT_PATTERN.test(amount) ? amount : "0"
+    return LINE_AMOUNT_PATTERN.test(amount) ? amount : "0"
   })
   const subtotal = sumMoney(amounts)
   const canRemove = fields.length > 1 && !disabled

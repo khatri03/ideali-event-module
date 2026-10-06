@@ -18,7 +18,8 @@ function Harness({ disabled = false }: { disabled?: boolean }) {
   } = useForm<CustomInvoiceFormValues>({
     resolver: zodResolver(customInvoiceSchema),
     defaultValues: {
-      eventUniqueId: "evt-1",
+      moduleType: "Event",
+      entityUniqueId: "evt-1",
       categoryUniqueId: "cat-1",
       dueDate: "2026-12-31",
       companyName: "Acme",

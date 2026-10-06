@@ -1,4 +1,8 @@
 import { z } from "zod"
+import { CUSTOM_INVOICE_MODULES } from "@/api/customInvoices"
+
+/** Positive decimal text with at most two places - the only amount shape a line may carry. */
+export const LINE_AMOUNT_PATTERN = /^\d+(\.\d{1,2})?$/
 
 /**
  * A single billed line. Amount stays decimal text - money never becomes a float in this app - and is held
@@ -9,7 +13,7 @@ export const customInvoiceLineSchema = z.object({
   amount: z
     .string()
     .trim()
-    .regex(/^\d+(\.\d{1,2})?$/, "Enter an amount greater than zero.")
+    .regex(LINE_AMOUNT_PATTERN, "Enter an amount greater than zero.")
     .refine((value) => Number(value) > 0, "Enter an amount greater than zero."),
 })
 
@@ -18,7 +22,8 @@ export const customInvoiceLineSchema = z.object({
  * same whether it is caught in the browser or returned by the API.
  */
 export const customInvoiceSchema = z.object({
-  eventUniqueId: z.string().min(1, "Select an event."),
+  moduleType: z.enum(CUSTOM_INVOICE_MODULES, { error: "Choose the module this invoice bills." }),
+  entityUniqueId: z.string().min(1, "Choose what this invoice bills."),
   categoryUniqueId: z.string().min(1, "Select a sponsorship type."),
   /**
    * Set when the buyer was chosen from the member picker, cleared for a free-typed buyer. It rides along
@@ -35,6 +40,12 @@ export const customInvoiceSchema = z.object({
   specialNotes: z.string().trim().max(2000, "Keep notes under 2000 characters.").optional(),
   lineItems: z.array(customInvoiceLineSchema).min(1, "Add at least one line item to bill for."),
 })
+
+/**
+ * The edit form. What an invoice bills is fixed at creation and the server keeps it, so a record deleted
+ * since then must not block saving the rest of the invoice.
+ */
+export const customInvoiceEditSchema = customInvoiceSchema.extend({ entityUniqueId: z.string() })
 
 export type CustomInvoiceLineValues = z.infer<typeof customInvoiceLineSchema>
 export type CustomInvoiceFormValues = z.infer<typeof customInvoiceSchema>

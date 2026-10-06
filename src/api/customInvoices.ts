@@ -121,6 +121,29 @@ export interface InvoiceCategoryOption {
   name: string
 }
 
+/** One server page per request; the entity dropdown never asks for the whole set. */
+export const ENTITY_OPTIONS_PAGE_SIZE = 20
+
+/** A record of the chosen module the organizer owns and can bill. */
+export interface CustomInvoiceEntityOption {
+  uniqueId: string
+  name: string
+}
+
+export interface CustomInvoiceEntityOptionsPage {
+  items: CustomInvoiceEntityOption[]
+  pageNo: number
+  pageCount: number
+  total: number
+}
+
+export interface CustomInvoiceEntityOptionsQuery {
+  moduleType: CustomInvoiceModule
+  searchTerm: string
+  pageNo: number
+  pageSize?: number
+}
+
 const money = () => z.coerce.string()
 const flag = () => z.boolean().nullish().transform((value) => value ?? false)
 const text = () => z.string().nullish().transform((value) => value ?? "")
@@ -206,6 +229,15 @@ const categoryOptionsPageSchema = z.object({
     .transform((rows) => rows ?? []),
 })
 
+const enabledModulesSchema = z.array(z.enum(CUSTOM_INVOICE_MODULES))
+
+const entityOptionsPageSchema = z.object({
+  pageNo: z.number().int(),
+  pageCount: z.number().int(),
+  totalRecordsCount: z.number().int(),
+  pageData: z.array(z.object({ uniqueId: z.string().min(1), name: z.string() })),
+})
+
 export async function createCustomInvoice(payload: CustomInvoiceWritePayload): Promise<string> {
   const response = await client.post<unknown>(API_ROUTES.customInvoiceCreate, payload)
   return createdInvoiceIdSchema.parse(parseServicePayload(response.data))
@@ -249,6 +281,30 @@ export async function sendCustomInvoice(invoiceUniqueId: string): Promise<void> 
 
 export async function addCustomInvoiceNote(invoiceUniqueId: string, note: string): Promise<void> {
   await client.post(API_ROUTES.customInvoiceAddNote(invoiceUniqueId), { note: note.trim() })
+}
+
+/** The modules the platform admin has turned custom invoicing on for, in module order. */
+export async function fetchEnabledCustomInvoiceModules(): Promise<CustomInvoiceModule[]> {
+  const response = await client.get<unknown>(API_ROUTES.customInvoiceEnabledModules)
+  return enabledModulesSchema.parse(parseServicePayload(response.data))
+}
+
+/** One page of the organizer's own records in a module, narrowed by name on the server. */
+export async function fetchCustomInvoiceEntityOptions({
+  moduleType,
+  searchTerm,
+  pageNo,
+  pageSize = ENTITY_OPTIONS_PAGE_SIZE,
+}: CustomInvoiceEntityOptionsQuery): Promise<CustomInvoiceEntityOptionsPage> {
+  const params = new URLSearchParams({
+    moduleType,
+    searchTerm: searchTerm.trim(),
+    pageNo: String(pageNo),
+    pageSize: String(pageSize),
+  })
+  const response = await client.get<unknown>(API_ROUTES.customInvoiceEntityOptions, { params })
+  const page = entityOptionsPageSchema.parse(parseServicePayload(response.data))
+  return { items: page.pageData, pageNo: page.pageNo, pageCount: page.pageCount, total: page.totalRecordsCount }
 }
 
 /**

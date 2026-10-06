@@ -3,7 +3,10 @@ import {
   addCustomInvoiceNote,
   cancelCustomInvoice,
   createCustomInvoice,
+  ENTITY_OPTIONS_PAGE_SIZE,
   fetchActiveInvoiceCategoryOptions,
+  fetchCustomInvoiceEntityOptions,
+  fetchEnabledCustomInvoiceModules,
   fetchCustomInvoiceDetail,
   fetchCustomInvoiceForEdit,
   linkCustomInvoice,
@@ -300,5 +303,53 @@ describe("fetchActiveInvoiceCategoryOptions", () => {
 
     expect(getMock.mock.calls[0][0]).toBe(API_ROUTES.invoiceCategories)
     expect(options).toEqual([{ uniqueId: "cat-1", name: "Gold Sponsor" }])
+  })
+})
+
+describe("fetchEnabledCustomInvoiceModules", () => {
+  /** The module control offers exactly the modules the admin turned on, in the server's order. */
+  it("fetchEnabledCustomInvoiceModules_ParsesModuleList", async () => {
+    getMock.mockResolvedValue(envelope(["Event", "Donation"]))
+
+    const modules = await fetchEnabledCustomInvoiceModules()
+
+    expect(getMock.mock.calls[0][0]).toBe(API_ROUTES.customInvoiceEnabledModules)
+    expect(modules).toEqual(["Event", "Donation"])
+  })
+
+  /** A module name the app does not know must fail loudly rather than reach the picker as a blank option. */
+  it("fetchEnabledCustomInvoiceModules_UnknownModule_Throws", async () => {
+    getMock.mockResolvedValue(envelope(["Event", "Parking"]))
+
+    await expect(fetchEnabledCustomInvoiceModules()).rejects.toThrow()
+  })
+})
+
+describe("fetchCustomInvoiceEntityOptions", () => {
+  /** Search and paging travel to the server in one request so the dropdown never pulls the full set. */
+  it("fetchCustomInvoiceEntityOptions_SendsModuleTermAndPagingAsQueryParams", async () => {
+    getMock.mockResolvedValue(
+      envelope({ PageNo: 2, PageSize: 20, PageCount: 3, TotalRecordsCount: 45, PageData: [{ UniqueId: "m-1", Name: "Gold" }] }),
+    )
+
+    const page = await fetchCustomInvoiceEntityOptions({ moduleType: "Membership", searchTerm: " gol ", pageNo: 2 })
+
+    const [url, config] = getMock.mock.calls[0]
+    expect(url).toBe(API_ROUTES.customInvoiceEntityOptions)
+    const params = config.params as URLSearchParams
+    expect(params.get("moduleType")).toBe("Membership")
+    expect(params.get("searchTerm")).toBe("gol")
+    expect(params.get("pageNo")).toBe("2")
+    expect(params.get("pageSize")).toBe(String(ENTITY_OPTIONS_PAGE_SIZE))
+    expect(page).toEqual({ items: [{ uniqueId: "m-1", name: "Gold" }], pageNo: 2, pageCount: 3, total: 45 })
+  })
+
+  /** A page missing its rows is refused at the boundary instead of rendering an empty dropdown as if nothing matched. */
+  it("fetchCustomInvoiceEntityOptions_MalformedPage_Throws", async () => {
+    getMock.mockResolvedValue(envelope({ PageNo: 1, PageCount: 1, TotalRecordsCount: 1 }))
+
+    await expect(
+      fetchCustomInvoiceEntityOptions({ moduleType: "Event", searchTerm: "", pageNo: 1 }),
+    ).rejects.toThrow()
   })
 })

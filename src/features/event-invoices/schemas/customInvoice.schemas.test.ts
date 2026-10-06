@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest"
 import { customInvoiceLineSchema, customInvoiceSchema } from "./customInvoice.schemas"
 
 const VALID = {
-  eventUniqueId: "evt-1",
+  moduleType: "Event",
+  entityUniqueId: "evt-1",
   categoryUniqueId: "cat-1",
   dueDate: "2026-12-31",
   companyName: "Acme Corp",
@@ -22,9 +23,19 @@ describe("customInvoiceSchema", () => {
     expect(customInvoiceSchema.safeParse(VALID).success).toBe(true)
   })
 
-  /** No event picked is blocked with the exact backend wording. */
-  it("MissingEvent_RejectedWithSelectMessage", () => {
-    expect(firstError({ ...VALID, eventUniqueId: "" })).toBe("Select an event.")
+  /** No module picked is blocked with the server's own wording, so the rule reads the same on both sides. */
+  it("customInvoiceSchema_MissingModule_ReportsChooseModule", () => {
+    expect(firstError({ ...VALID, moduleType: undefined })).toBe("Choose the module this invoice bills.")
+  })
+
+  /** A module the invoice cannot bill is refused rather than posted for the server to reject. */
+  it("customInvoiceSchema_UnknownModule_ReportsChooseModule", () => {
+    expect(firstError({ ...VALID, moduleType: "Parking" })).toBe("Choose the module this invoice bills.")
+  })
+
+  /** No record picked is blocked: an invoice must bill something within its module. */
+  it("customInvoiceSchema_MissingEntity_ReportsChooseWhatItBills", () => {
+    expect(firstError({ ...VALID, entityUniqueId: "" })).toBe("Choose what this invoice bills.")
   })
 
   /** No sponsorship type picked is blocked. */
