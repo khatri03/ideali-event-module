@@ -8,7 +8,7 @@ import type { CustomInvoiceForEdit, CustomInvoiceModule } from "@/api/customInvo
 import { billedEntityLabel } from "@/utils/customInvoiceEntity"
 import { useActiveInvoiceCategoryOptions } from "../hooks/useCustomInvoiceMutations"
 import { useEnabledCustomInvoiceModules } from "../hooks/useCustomInvoiceAuthoringOptions"
-import type { CustomInvoiceFormValues } from "../schemas/customInvoice.schemas"
+import { clearInvoiceLink, type CustomInvoiceFormValues } from "../schemas/customInvoice.schemas"
 import { CustomInvoiceEntityPicker } from "./CustomInvoiceEntityPicker"
 
 interface CustomInvoiceAboutSectionProps {
@@ -80,6 +80,8 @@ export function CustomInvoiceAboutSection({ control, register, errors, setValue,
     if (next === moduleType) return
     setValue("moduleType", next as CustomInvoiceModule, { shouldDirty: true, shouldValidate: true })
     setValue("entityUniqueId", "", { shouldDirty: true })
+    // Link candidates belong to one module, so a picked invoice from the old module cannot stay linked.
+    clearInvoiceLink(setValue)
   }
 
   return (

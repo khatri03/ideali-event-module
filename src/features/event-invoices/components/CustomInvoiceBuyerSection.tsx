@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Box, Field, Flex, HStack, Input, SimpleGrid, SkeletonText, Stack, Text, chakra } from "@chakra-ui/react"
-import { Search } from "lucide-react"
+import { Lock, Search } from "lucide-react"
 import { type FieldErrors, type UseFormRegister, type UseFormSetValue } from "react-hook-form"
 import { RequiredFieldLabel } from "@/features/custom-lists"
 import { useDebounce } from "@/hooks/useDebounce"
@@ -15,9 +15,13 @@ interface CustomInvoiceBuyerSectionProps {
   errors: FieldErrors<CustomInvoiceFormValues>
   setValue: UseFormSetValue<CustomInvoiceFormValues>
   disabled?: boolean
+  /** Name and email were copied from a linked invoice and must not drift from it (D-12). */
+  isNameAndEmailLocked?: boolean
 }
 
 const FIELD_LABEL_PROPS = { fontSize: "sm", fontWeight: "700", color: "text.primary" } as const
+
+const LOCKED_INPUT_PROPS = { readOnly: true, cursor: "not-allowed", bg: "app.bg" } as const
 
 /** First token is the given name, the rest the family name. A single token is treated as the last name,
  * since that is the field the invoice requires. */
@@ -72,14 +76,18 @@ function SourceButton({
  * The buyer block: pick an existing member or free-type the details. A member pick prefills the structured
  * fields but leaves every one editable (LD-9, BUYER-02), and switching back to manual drops the member link
  * without clearing what was typed. Company, Last name and a routable Email are required to issue (BUYER-03).
- * A disabled flag - a paid invoice being read - makes the toggle, search and every field inert.
+ * A disabled flag - a paid invoice being read - makes the toggle, search and every field inert. While the
+ * invoice is linked, name and email are read-only and the member picker is off; company and phone stay open.
  */
 export function CustomInvoiceBuyerSection({
   register,
   errors,
   setValue,
   disabled = false,
+  isNameAndEmailLocked = false,
 }: CustomInvoiceBuyerSectionProps) {
+  const isSourceLocked = disabled || isNameAndEmailLocked
+  const lockedProps = isNameAndEmailLocked ? LOCKED_INPUT_PROPS : {}
   const [source, setSource] = useState<BuyerSource>("manual")
   const [searchTerm, setSearchTerm] = useState("")
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
@@ -108,19 +116,19 @@ export function CustomInvoiceBuyerSection({
       <HStack role="tablist" aria-label="Buyer source" gap={3} w={{ base: "full", md: "auto" }}>
         <SourceButton
           isActive={source === "manual"}
-          disabled={disabled}
+          disabled={isSourceLocked}
           label="Enter manually"
           onClick={() => handleSourceChange("manual")}
         />
         <SourceButton
           isActive={source === "member"}
-          disabled={disabled}
+          disabled={isSourceLocked}
           label="Existing member"
           onClick={() => handleSourceChange("member")}
         />
       </HStack>
 
-      {source === "member" && !disabled ? (
+      {source === "member" && !isSourceLocked ? (
         <Stack gap={3}>
           <Flex position="relative" align="center" w="full">
             <Box position="absolute" left={3} color="gray.400" pointerEvents="none" display="flex">
@@ -181,6 +189,13 @@ export function CustomInvoiceBuyerSection({
         </Stack>
       ) : null}
 
+      {isNameAndEmailLocked ? (
+        <Flex align="center" gap={2} color="text.secondary">
+          <Lock size={14} aria-hidden="true" />
+          <Text fontSize="sm">Locked while this invoice is linked.</Text>
+        </Flex>
+      ) : null}
+
       <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
         <Field.Root invalid={Boolean(errors.companyName)}>
           <RequiredFieldLabel>Company name</RequiredFieldLabel>
@@ -190,25 +205,25 @@ export function CustomInvoiceBuyerSection({
 
         <Field.Root invalid={Boolean(errors.email)}>
           <RequiredFieldLabel>Email address</RequiredFieldLabel>
-          <Input minH="11" borderRadius="12px" inputMode="email" autoComplete="off" disabled={disabled} {...register("email")} />
+          <Input minH="11" borderRadius="12px" inputMode="email" autoComplete="off" disabled={disabled} {...lockedProps} {...register("email")} />
           <Field.ErrorText>{errors.email?.message}</Field.ErrorText>
         </Field.Root>
 
         <Field.Root invalid={Boolean(errors.firstName)}>
           <Field.Label {...FIELD_LABEL_PROPS}>First name</Field.Label>
-          <Input minH="11" borderRadius="12px" autoComplete="off" disabled={disabled} {...register("firstName")} />
+          <Input minH="11" borderRadius="12px" autoComplete="off" disabled={disabled} {...lockedProps} {...register("firstName")} />
           <Field.ErrorText>{errors.firstName?.message}</Field.ErrorText>
         </Field.Root>
 
         <Field.Root invalid={Boolean(errors.middleName)}>
           <Field.Label {...FIELD_LABEL_PROPS}>Middle name</Field.Label>
-          <Input minH="11" borderRadius="12px" autoComplete="off" disabled={disabled} {...register("middleName")} />
+          <Input minH="11" borderRadius="12px" autoComplete="off" disabled={disabled} {...lockedProps} {...register("middleName")} />
           <Field.ErrorText>{errors.middleName?.message}</Field.ErrorText>
         </Field.Root>
 
         <Field.Root invalid={Boolean(errors.lastName)}>
           <RequiredFieldLabel>Last name</RequiredFieldLabel>
-          <Input minH="11" borderRadius="12px" autoComplete="off" disabled={disabled} {...register("lastName")} />
+          <Input minH="11" borderRadius="12px" autoComplete="off" disabled={disabled} {...lockedProps} {...register("lastName")} />
           <Field.ErrorText>{errors.lastName?.message}</Field.ErrorText>
         </Field.Root>
 

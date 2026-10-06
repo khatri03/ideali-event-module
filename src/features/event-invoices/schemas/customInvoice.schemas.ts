@@ -1,4 +1,5 @@
 import { z } from "zod"
+import type { UseFormSetValue } from "react-hook-form"
 import { CUSTOM_INVOICE_MODULES } from "@/api/customInvoices"
 
 /** Positive decimal text with at most two places - the only amount shape a line may carry. */
@@ -71,3 +72,13 @@ export const customInvoiceEditSchema = customInvoiceFields
 
 export type CustomInvoiceLineValues = z.infer<typeof customInvoiceLineSchema>
 export type CustomInvoiceFormValues = z.infer<typeof customInvoiceSchema>
+
+/**
+ * Turns "Link to an existing invoice" off and forgets the picked invoice. The buyer values copied from it
+ * stay in the form, now editable (D-12).
+ */
+export function clearInvoiceLink(setValue: UseFormSetValue<CustomInvoiceFormValues>) {
+  setValue("linkToExisting", false, { shouldDirty: true })
+  setValue("linkedInvoiceUniqueId", undefined, { shouldDirty: true })
+  setValue("linkedInvoiceNo", undefined, { shouldDirty: true })
+}

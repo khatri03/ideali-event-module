@@ -76,6 +76,8 @@ const LINK_CANDIDATE = {
   InvoiceStatusLabel: "Paid",
 }
 
+const LINKED_REFERENCE = { InvoiceUniqueId: "inv-linked", InvoiceNo: "CI-2002", InvoiceStatusLabel: "Pending Payment" }
+
 function linkCandidatesResponse() {
   return envelope({ PageNo: 1, PageSize: 10, PageCount: 1, TotalRecordsCount: 1, PageData: [LINK_CANDIDATE] })
 }
@@ -434,6 +436,47 @@ describe("CustomInvoiceFormPage", () => {
     expect(navigateMock).not.toHaveBeenCalled()
   })
 
+  /** Candidates belong to one module, so changing the module turns the link off and releases the locked buyer fields. */
+  it("AboutSection_ModuleChange_TurnsLinkOffAndUnlocks", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    renderPage()
+    await pickOption(user, "Module", "Membership")
+    await linkToCandidate(user)
+    expect(await screen.findByText("Buyer copied from INV-0042")).toBeInTheDocument()
+
+    await pickOption(user, "Module", "Event")
+
+    expect(screen.getByRole("checkbox", { name: "Link to an existing invoice" })).not.toBeChecked()
+    expect(screen.queryByText("Buyer copied from INV-0042")).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/Email address/i)).not.toHaveAttribute("readonly")
+    expect(screen.getByLabelText(/Email address/i)).toHaveValue("sam@northwind.test")
+  })
+
+  /** An invoice that is already linked opens with the switch on and the banner naming the linked invoice. */
+  it("FormPage_EditLinkedInvoice_OpensWithSwitchOnAndBanner", async () => {
+    http.get.mockImplementation(serverGet({ detail: () => Promise.resolve(detailResponse({ LinkedInvoice: LINKED_REFERENCE })) }))
+    renderPage({ invoiceUniqueId: EDIT_ID })
+    await waitForEditLoaded()
+
+    expect(screen.getByRole("checkbox", { name: "Link to an existing invoice" })).toBeChecked()
+    expect(screen.getByText("Buyer copied from CI-2002")).toBeInTheDocument()
+    expect(screen.getByLabelText(/Last name/i)).toHaveAttribute("readonly")
+  })
+
+  /** Switching the link off on an existing invoice and saving sends a null link, which removes it on the server. */
+  it("FormPage_EditUnlinkSave_PutsNullLink", async () => {
+    http.get.mockImplementation(serverGet({ detail: () => Promise.resolve(detailResponse({ LinkedInvoice: LINKED_REFERENCE })) }))
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    renderPage({ invoiceUniqueId: EDIT_ID })
+    await waitForEditLoaded()
+
+    await user.click(screen.getByRole("checkbox", { name: "Link to an existing invoice" }))
+    await user.click(screen.getByRole("button", { name: "Save changes" }))
+
+    await waitFor(() => expect(http.put).toHaveBeenCalledTimes(1))
+    expect(http.put.mock.calls[0][1]).toMatchObject({ linkedInvoiceUniqueId: null, lastName: "Doe" })
+  })
+
   /** Edit mode prefills the buyer and charges from the custom-invoices edit route. */
   it("EditForm_LoadsFromTheCustomInvoicesEditRoute_AndPrefillsTheValues", async () => {
     renderPage({ invoiceUniqueId: EDIT_ID })
@@ -623,7 +666,7 @@ describe("CustomInvoiceFormPage", () => {
    * or null when it has none - and a link made on the detail page is never dropped by an unrelated edit.
    */
   it.each([
-    ["linked", { InvoiceUniqueId: "inv-linked", InvoiceNo: "CI-2002", InvoiceStatusLabel: "Pending Payment" }, "inv-linked"],
+    ["linked", LINKED_REFERENCE, "inv-linked"],
     ["unlinked", null, null],
   ])("FormPage_EditSave_RepeatsCurrentLinkAndOpensDetail_%s", async (_case, linkedInvoice, expectedLink) => {
     http.get.mockImplementation(serverGet({ detail: () => Promise.resolve(detailResponse({ LinkedInvoice: linkedInvoice })) }))

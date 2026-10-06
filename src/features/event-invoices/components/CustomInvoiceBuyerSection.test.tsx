@@ -47,7 +47,12 @@ function emptyMemberOptionsResponse() {
   }
 }
 
-function Harness({ disabled = false }: { disabled?: boolean }) {
+interface HarnessProps {
+  disabled?: boolean
+  isNameAndEmailLocked?: boolean
+}
+
+function Harness({ disabled = false, isNameAndEmailLocked = false }: HarnessProps) {
   const {
     register,
     setValue,
@@ -73,13 +78,19 @@ function Harness({ disabled = false }: { disabled?: boolean }) {
 
   return (
     <form onSubmit={handleSubmit(() => undefined)}>
-      <CustomInvoiceBuyerSection register={register} errors={errors} setValue={setValue} disabled={disabled} />
+      <CustomInvoiceBuyerSection
+        register={register}
+        errors={errors}
+        setValue={setValue}
+        disabled={disabled}
+        isNameAndEmailLocked={isNameAndEmailLocked}
+      />
       <button type="submit">Save</button>
     </form>
   )
 }
 
-function renderHarness(props?: { disabled?: boolean }) {
+function renderHarness(props: HarnessProps = {}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   function Wrapper({ children }: { children: ReactNode }) {
     return (
@@ -88,7 +99,7 @@ function renderHarness(props?: { disabled?: boolean }) {
       </ChakraProvider>
     )
   }
-  return render(<Harness disabled={props?.disabled} />, { wrapper: Wrapper })
+  return render(<Harness {...props} />, { wrapper: Wrapper })
 }
 
 describe("CustomInvoiceBuyerSection", () => {
@@ -173,5 +184,22 @@ describe("CustomInvoiceBuyerSection", () => {
     expect(screen.getByRole("tab", { name: "Existing member" })).toBeDisabled()
     expect(screen.getByLabelText(/Company name/i)).toBeDisabled()
     expect(screen.queryByLabelText("Search members")).not.toBeInTheDocument()
+  })
+
+  /**
+   * While linked, the buyer's name and email must match the linked invoice, so those four fields are
+   * read-only and the member picker is off; company and phone stay editable (D-12).
+   */
+  it("BuyerSection_Locked_NameAndEmailReadOnlyCompanyAndPhoneEditable", () => {
+    renderHarness({ isNameAndEmailLocked: true })
+
+    for (const label of [/First name/i, /Middle name/i, /Last name/i, /Email address/i]) {
+      expect(screen.getByLabelText(label)).toHaveAttribute("readonly")
+    }
+    expect(screen.getByLabelText(/Company name/i)).not.toHaveAttribute("readonly")
+    expect(screen.getByLabelText(/Company name/i)).toBeEnabled()
+    expect(screen.getByLabelText(/Cell phone/i)).not.toHaveAttribute("readonly")
+    expect(screen.getByRole("tab", { name: "Existing member" })).toBeDisabled()
+    expect(screen.getByText("Locked while this invoice is linked.")).toBeInTheDocument()
   })
 })

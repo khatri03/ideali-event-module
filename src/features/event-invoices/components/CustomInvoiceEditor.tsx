@@ -172,6 +172,8 @@ export function CustomInvoiceEditor({ invoiceUniqueId, initial, detail }: Custom
   })
   const notes = useWatch({ control, name: "specialNotes" }) ?? ""
   const emailOnCreate = useWatch({ control, name: "emailOnCreate" })
+  const linkToExisting = useWatch({ control, name: "linkToExisting" })
+  const linkedInvoiceUniqueId = useWatch({ control, name: "linkedInvoiceUniqueId" })
 
   function leave() {
     navigate(invoiceUniqueId ? APP_ROUTES.customInvoices.detail(invoiceUniqueId) : APP_ROUTES.eventInvoices.list)
@@ -212,7 +214,13 @@ export function CustomInvoiceEditor({ invoiceUniqueId, initial, detail }: Custom
               invoiceUniqueId={invoiceUniqueId}
               disabled={isReadOnly}
             />
-            <CustomInvoiceBuyerSection register={register} errors={errors} setValue={setValue} disabled={isReadOnly} />
+            <CustomInvoiceBuyerSection
+              register={register}
+              errors={errors}
+              setValue={setValue}
+              disabled={isReadOnly}
+              isNameAndEmailLocked={linkToExisting && Boolean(linkedInvoiceUniqueId)}
+            />
           </EditorCard>
           <EditorCard title="Charges">
             <CustomInvoiceLineItems control={control} register={register} errors={errors} disabled={isReadOnly} />
