@@ -218,6 +218,42 @@ async function mockDetail(page: Page, invoiceUniqueId: string, resolve: () => Js
   )
 }
 
+/**
+ * Serves what the full-page editor loads for CUSTOM_ID beyond its detail: the editable values, the enabled
+ * modules and the active sponsorship types. The values mirror `customDetail()` so the form opens on the same invoice.
+ */
+async function mockEditForm(page: Page) {
+  await page.route(`${detailApi(CUSTOM_ID)}/edit`, (route) =>
+    route.fulfill({
+      json: envelope({
+        invoiceUniqueId: CUSTOM_ID,
+        moduleType: "Event",
+        entityUniqueId: "event-1",
+        entityName: "Annual Convention",
+        categoryUniqueId: "category-1",
+        dueDateUtc: "2026-09-10T12:00:00Z",
+        companyName: "Northwind Traders",
+        firstName: "Jane",
+        middleName: "Q",
+        lastName: "Doe",
+        cellPhone: "555-0100",
+        email: "jane@northwind.example",
+        specialNotes: "Net 30, PO 4471 required on remittance",
+        invoiceStatus: "PendingPayment",
+        canEdit: true,
+        lineItems: [
+          { description: "Booth rental", amount: "1500.00" },
+          { description: "Logo placement", amount: "250.50" },
+        ],
+      }),
+    }),
+  )
+  await page.route("**/api/organizer/custom-invoices/enabled-modules", (route) => route.fulfill({ json: envelope(["Event"]) }))
+  await page.route("**/api/organizer/custom-invoices/categories/list?**", (route) =>
+    route.fulfill({ json: envelope({ pageData: [{ uniqueId: "category-1", name: "Gold Sponsorship", isActive: true }] }) }),
+  )
+}
+
 /** Waits out a dialog's entrance animation so it is measured at the size it settles at, not mid-scale. */
 async function settle(target: Locator) {
   await expect
@@ -476,12 +512,22 @@ test("UAT 6: resend tickets is offered only on an invoice that has tickets", asy
 test("UAT 7: an editable custom invoice offers Edit, which opens its edit form", async ({ page }) => {
   await mockShell(page)
   await mockDetail(page, CUSTOM_ID, () => customDetail({ canEdit: true }))
+  await mockEditForm(page)
   await openDetail(page, CUSTOM_ID, "INV-C-100")
 
   const edit = page.getByRole("link", { name: "Edit" })
   await expect(edit).toHaveAttribute("href", `${detailPath(CUSTOM_ID)}/edit`)
   await edit.click()
   await expect(page).toHaveURL(`${detailPath(CUSTOM_ID)}/edit`)
+
+  await expect(page.getByText("Edit custom invoice", { exact: true })).toBeVisible()
+  const moduleSelect = page.getByRole("combobox", { name: "Module" })
+  await expect(moduleSelect).toBeDisabled()
+  await expect(moduleSelect).toContainText("Event")
+  const billedEvent = page.getByRole("textbox", { name: "Event", exact: true })
+  await expect(billedEvent).toHaveValue("Annual Convention")
+  await expect(billedEvent).not.toBeEditable()
+  await expect(page.getByRole("button", { name: "Save changes" })).toBeVisible()
 })
 
 /**
