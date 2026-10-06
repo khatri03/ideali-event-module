@@ -39,6 +39,7 @@ const EMPTY_VALUES: DefaultValues<CustomInvoiceFormValues> = {
   email: "",
   specialNotes: "",
   lineItems: [{ description: "", amount: "" }],
+  emailOnCreate: true,
 }
 
 function toDateInputValue(dueDateUtc: string): string {
@@ -64,12 +65,18 @@ function toFormValues(initial: CustomInvoiceForEdit): CustomInvoiceFormValues {
       initial.lineItems.length > 0
         ? initial.lineItems.map((line) => ({ description: line.description, amount: line.amount }))
         : [{ description: "", amount: "" }],
+    emailOnCreate: false,
   }
 }
 
 function statusLabelFor(initial: CustomInvoiceForEdit | undefined): string {
   if (!initial) return "Not saved yet"
   return EVENT_INVOICE_STATUS_OPTIONS.find((option) => option.value === initial.invoiceStatus)?.label ?? initial.invoiceStatus
+}
+
+function submitLabelFor(isEditMode: boolean, emailOnCreate: boolean): string {
+  if (isEditMode) return "Save changes"
+  return emailOnCreate ? "Create and email invoice" : "Create invoice"
 }
 
 function EditorCard({ title, children }: { title: string; children: ReactNode }) {
@@ -162,6 +169,7 @@ export function CustomInvoiceEditor({ invoiceUniqueId, initial }: CustomInvoiceE
     defaultValues: initial ? toFormValues(initial) : EMPTY_VALUES,
   })
   const notes = useWatch({ control, name: "specialNotes" }) ?? ""
+  const emailOnCreate = useWatch({ control, name: "emailOnCreate" })
 
   function leave() {
     navigate(invoiceUniqueId ? APP_ROUTES.customInvoices.detail(invoiceUniqueId) : APP_ROUTES.eventInvoices.list)
@@ -212,8 +220,9 @@ export function CustomInvoiceEditor({ invoiceUniqueId, initial }: CustomInvoiceE
 
         <CustomInvoiceSummaryPanel
           control={control}
+          isNewInvoice={!isEditMode}
           statusLabel={statusLabelFor(initial)}
-          submitLabel={isEditMode ? "Save changes" : "Create invoice"}
+          submitLabel={submitLabelFor(isEditMode, emailOnCreate)}
           isPending={isPending}
           canSubmit={!isReadOnly && !hasNoEnabledModules}
           cancelLabel={isReadOnly ? "Back to invoices" : "Cancel"}

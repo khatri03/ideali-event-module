@@ -3,10 +3,12 @@ import { useWatch, type Control } from "react-hook-form"
 import { format, parseISO } from "date-fns"
 import { formatCurrency, sumMoney } from "@/utils/format"
 import { LINE_AMOUNT_PATTERN, type CustomInvoiceFormValues } from "../schemas/customInvoice.schemas"
+import { CustomInvoiceDeliverySection } from "./CustomInvoiceDeliverySection"
 
 interface CustomInvoiceSummaryPanelProps {
   control: Control<CustomInvoiceFormValues>
   currencySymbol?: string
+  isNewInvoice: boolean
   /** Where the invoice stands: "Not saved yet" before the first save, otherwise its saved status. */
   statusLabel: string
   submitLabel: string
@@ -38,7 +40,7 @@ function formatDueDate(dueDate: string | undefined): string {
  * Total due sums only amounts that are already valid money, so a half-typed figure never shows NaN; the
  * sum stays decimal text and never passes through a float.
  */
-export function CustomInvoiceSummaryPanel({ control, currencySymbol = "$", statusLabel, submitLabel, isPending, canSubmit, cancelLabel, onCancel }: CustomInvoiceSummaryPanelProps) {
+export function CustomInvoiceSummaryPanel({ control, currencySymbol = "$", isNewInvoice, statusLabel, submitLabel, isPending, canSubmit, cancelLabel, onCancel }: CustomInvoiceSummaryPanelProps) {
   const lineItems = useWatch({ control, name: "lineItems" }) ?? []
   const dueDate = useWatch({ control, name: "dueDate" })
 
@@ -71,6 +73,7 @@ export function CustomInvoiceSummaryPanel({ control, currencySymbol = "$", statu
           </Text>
         </Stack>
         <SummaryRow label="Due date" value={formatDueDate(dueDate)} />
+        {isNewInvoice ? <CustomInvoiceDeliverySection control={control} disabled={isPending} /> : null}
         {canSubmit ? (
           <Button
             type="submit"

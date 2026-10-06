@@ -10,6 +10,7 @@ const VALID = {
   lastName: "Doe",
   email: "buyer@acme.test",
   lineItems: [{ description: "Gold sponsorship", amount: "100.00" }],
+  emailOnCreate: true,
 }
 
 function firstError(input: Record<string, unknown>): string | undefined {
@@ -21,6 +22,18 @@ describe("customInvoiceSchema", () => {
   /** A fully filled form with one line is the happy path and must parse. */
   it("ValidForm_Accepted", () => {
     expect(customInvoiceSchema.safeParse(VALID).success).toBe(true)
+  })
+
+  /** Turning off the email-on-create choice is kept as the organizer set it, so no link is sent against their wish. */
+  it("customInvoiceSchema_EmailOnCreateOff_IsKeptAsFalse", () => {
+    const result = customInvoiceSchema.safeParse({ ...VALID, emailOnCreate: false })
+
+    expect(result.success && result.data.emailOnCreate).toBe(false)
+  })
+
+  /** The email-on-create choice must be a yes or no; an unset flag cannot decide whether the buyer is emailed. */
+  it("customInvoiceSchema_EmailOnCreateMissing_Rejected", () => {
+    expect(customInvoiceSchema.safeParse({ ...VALID, emailOnCreate: undefined }).success).toBe(false)
   })
 
   /** No module picked is blocked with the server's own wording, so the rule reads the same on both sides. */

@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClie
 import {
   createCustomInvoice,
   fetchActiveInvoiceCategoryOptions,
+  sendCustomInvoice,
   updateCustomInvoice,
   type CustomInvoiceWritePayload,
 } from "@/api/customInvoices"
@@ -51,6 +52,25 @@ export function useCreateCustomInvoice() {
     onSuccess: () => toaster.create({ type: "success", title: "Custom invoice created." }),
     onError: (error) => toaster.create({ type: "error", title: extractApiError(error) }),
     onSettled: (createdInvoiceUniqueId) => refreshAfterWrite(queryClient, createdInvoiceUniqueId),
+  })
+}
+
+/**
+ * Emails a just-created invoice's payable link to its buyer. The invoice already exists when this runs, so a
+ * failure says the invoice is saved and only the email is missing; the organizer retries with Email link.
+ */
+export function useSendCustomInvoiceAfterCreate() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: sendCustomInvoice,
+    onSuccess: () => toaster.create({ type: "success", title: "Invoice emailed to the buyer." }),
+    onError: (error) =>
+      toaster.create({
+        type: "error",
+        title: "The invoice was saved, but the email was not sent.",
+        description: extractApiError(error),
+      }),
+    onSettled: (_result, _error, invoiceUniqueId) => refreshAfterWrite(queryClient, invoiceUniqueId),
   })
 }
 

@@ -12,7 +12,8 @@ import { CustomInvoiceFormPage } from "./CustomInvoiceFormPage"
 
 const http = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() }))
 vi.mock("@/api/client", () => ({ client: http }))
-vi.mock("@/lib/toaster", () => ({ toaster: { create: vi.fn() } }))
+const toasterCreate = vi.hoisted(() => vi.fn())
+vi.mock("@/lib/toaster", () => ({ toaster: { create: toasterCreate } }))
 
 const navigateMock = vi.hoisted(() => vi.fn())
 vi.mock("react-router-dom", async (importOriginal) => {
@@ -21,6 +22,8 @@ vi.mock("react-router-dom", async (importOriginal) => {
 })
 
 const EDIT_ID = "inv-99"
+const NEW_ID = "new-invoice-id"
+const CREATE_ACTION = /^Create( and email)? invoice$/
 
 function envelope(data: unknown) {
   return { data: { success: true, Data: data } }
@@ -179,9 +182,10 @@ describe("CustomInvoiceFormPage", () => {
     http.post.mockReset()
     http.put.mockReset()
     navigateMock.mockReset()
+    toasterCreate.mockReset()
 
     http.get.mockImplementation(serverGet())
-    http.post.mockResolvedValue(envelope("new-invoice-id"))
+    http.post.mockResolvedValue(envelope(NEW_ID))
     http.put.mockResolvedValue(envelope(null))
   })
 
@@ -194,9 +198,9 @@ describe("CustomInvoiceFormPage", () => {
     renderPage()
     await fillValidMembershipForm(user)
 
-    await user.click(screen.getByRole("button", { name: "Create invoice" }))
+    await user.click(screen.getByRole("button", { name: CREATE_ACTION }))
 
-    await waitFor(() => expect(http.post).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(APP_ROUTES.customInvoices.detail(NEW_ID)))
     const [url, body] = http.post.mock.calls[0]
     expect(url).toBe(API_ROUTES.customInvoiceCreate)
     expect(body).toMatchObject({
@@ -208,7 +212,77 @@ describe("CustomInvoiceFormPage", () => {
       email: "buyer@acme.test",
       lineItems: [{ description: "Gold sponsorship", amount: "1500.00" }],
     })
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(APP_ROUTES.customInvoices.detail("new-invoice-id")))
+  })
+
+  /** By default a new invoice is emailed to its buyer: the create posts, then the send fires for that invoice, then its detail opens (D-13). */
+  it("FormPage_CreateWithEmailOn_CreatesThenSendsThenOpensDetail", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    renderPage()
+    await fillValidMembershipForm(user)
+
+    await user.click(screen.getByRole("button", { name: "Create and email invoice" }))
+
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(APP_ROUTES.customInvoices.detail(NEW_ID)))
+    expect(http.post.mock.calls.map(([url]) => url)).toEqual([API_ROUTES.customInvoiceCreate, API_ROUTES.customInvoiceSend(NEW_ID)])
+    expect(http.post.mock.calls[0][1]).not.toHaveProperty("emailOnCreate")
+  })
+
+  /** Unticking the email choice creates the invoice without emailing anyone, so the organizer can review it first. */
+  it("FormPage_CreateWithEmailOff_CreatesWithoutSending", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    renderPage()
+    await fillValidMembershipForm(user)
+    await user.click(screen.getByRole("checkbox", { name: /Email payable link to buyer now/ }))
+
+    await user.click(screen.getByRole("button", { name: "Create invoice" }))
+
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(APP_ROUTES.customInvoices.detail(NEW_ID)))
+    expect(http.post).toHaveBeenCalledTimes(1)
+    expect(http.post).toHaveBeenCalledWith(API_ROUTES.customInvoiceCreate, expect.anything())
+  })
+
+  /**
+   * A send that fails after the create must not lose the invoice: the organizer lands on its edit page, told
+   * the invoice was saved but not emailed, where Email link retries (D-14).
+   */
+  it("FormPage_SendFailsAfterCreate_KeepsInvoiceAndOpensEditPageWithErrorToast", async () => {
+    http.post.mockImplementation((url: string) =>
+      url === API_ROUTES.customInvoiceSend(NEW_ID) ? Promise.reject(conflictError("Mail server unavailable.")) : Promise.resolve(envelope(NEW_ID)),
+    )
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    renderPage()
+    await fillValidMembershipForm(user)
+
+    await user.click(screen.getByRole("button", { name: "Create and email invoice" }))
+
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(APP_ROUTES.customInvoices.edit(NEW_ID)))
+    expect(navigateMock).not.toHaveBeenCalledWith(APP_ROUTES.customInvoices.detail(NEW_ID))
+    expect(toasterCreate).toHaveBeenCalledWith({
+      type: "error",
+      title: "The invoice was saved, but the email was not sent.",
+      description: "Mail server unavailable.",
+    })
+  })
+
+  /** A refused create emails nobody and keeps the organizer on the page, because there is no invoice to send. */
+  it("FormPage_CreateFails_NoSendAndStaysOnPage", async () => {
+    http.post.mockRejectedValue(conflictError("Due date is in the past."))
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    renderPage()
+    await fillValidMembershipForm(user)
+
+    await user.click(screen.getByRole("button", { name: "Create and email invoice" }))
+
+    expect(await screen.findByText("Due date is in the past.")).toBeInTheDocument()
+    expect(http.post).toHaveBeenCalledTimes(1)
+    expect(navigateMock).not.toHaveBeenCalled()
+  })
+
+  /** The email choice starts ticked, so a new invoice reaches its buyer unless the organizer opts out. */
+  it("DeliverySection_NewInvoice_EmailCheckboxCheckedByDefault", () => {
+    renderPage()
+
+    expect(screen.getByRole("checkbox", { name: /Email payable link to buyer now/ })).toBeChecked()
   })
 
   /** Submitting an empty create form blocks with inline errors naming the module and billed record, and never posts. */
@@ -216,7 +290,7 @@ describe("CustomInvoiceFormPage", () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 })
     renderPage()
 
-    await user.click(await screen.findByRole("button", { name: "Create invoice" }))
+    await user.click(await screen.findByRole("button", { name: CREATE_ACTION }))
 
     expect(await screen.findByText("Choose the module this invoice bills.")).toBeInTheDocument()
     expect(screen.getByText("Choose what this invoice bills.")).toBeInTheDocument()
@@ -252,7 +326,7 @@ describe("CustomInvoiceFormPage", () => {
     renderPage()
     await fillValidMembershipForm(user)
 
-    await user.click(screen.getByRole("button", { name: "Create invoice" }))
+    await user.click(screen.getByRole("button", { name: CREATE_ACTION }))
 
     expect(await screen.findByText("Custom invoicing is not turned on for this module.")).toBeInTheDocument()
     expect(screen.getByLabelText(/Company name/i)).toHaveValue("Acme Corp")
@@ -372,7 +446,7 @@ describe("CustomInvoiceFormPage", () => {
     expect(screen.queryByText("Discard unsaved changes?")).not.toBeInTheDocument()
     expect(screen.getByLabelText(/Company name/i)).toHaveValue("Acme Corp")
     expect(screen.getByLabelText("Amount for line 1")).toHaveValue("1500.00")
-    await user.click(screen.getByRole("button", { name: "Create invoice" }))
+    await user.click(screen.getByRole("button", { name: CREATE_ACTION }))
     expect(await screen.findByText("Choose what this invoice bills.")).toBeInTheDocument()
     expect(http.post).not.toHaveBeenCalled()
   })
@@ -385,7 +459,7 @@ describe("CustomInvoiceFormPage", () => {
     expect(
       await screen.findByText("Custom invoicing is not turned on for any module. Ask your platform admin to turn it on."),
     ).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Create invoice" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: CREATE_ACTION })).not.toBeInTheDocument()
   })
 
   /**

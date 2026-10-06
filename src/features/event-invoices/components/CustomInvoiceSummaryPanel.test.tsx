@@ -31,6 +31,7 @@ function SummaryHarness({ isPending = false, statusLabel = "Not saved yet", dueD
       <input aria-label="Due" {...register("dueDate")} />
       <CustomInvoiceSummaryPanel
         control={control}
+        isNewInvoice={false}
         statusLabel={statusLabel}
         submitLabel="Create invoice"
         isPending={isPending}
