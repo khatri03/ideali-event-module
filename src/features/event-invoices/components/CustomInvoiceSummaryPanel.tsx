@@ -1,16 +1,19 @@
 import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react"
 import { useWatch, type Control } from "react-hook-form"
 import { format, parseISO } from "date-fns"
+import type { CustomInvoiceDetail } from "@/api/customInvoices"
+import { buildBuyerAppUrl } from "@/lib/appConfig"
 import { formatCurrency, sumMoney } from "@/utils/format"
+import { APP_ROUTES } from "@/utils/routes"
 import { LINE_AMOUNT_PATTERN, type CustomInvoiceFormValues } from "../schemas/customInvoice.schemas"
 import { CustomInvoiceDeliverySection } from "./CustomInvoiceDeliverySection"
+import { CustomInvoicePayableLinkSection } from "./CustomInvoicePayableLinkSection"
+import { EventInvoiceStatusBadge } from "./EventInvoiceStatusBadge"
 
 interface CustomInvoiceSummaryPanelProps {
   control: Control<CustomInvoiceFormValues>
-  currencySymbol?: string
-  isNewInvoice: boolean
-  /** Where the invoice stands: "Not saved yet" before the first save, otherwise its saved status. */
-  statusLabel: string
+  /** The saved invoice as the server reports it; absent before the first save. */
+  detail?: CustomInvoiceDetail
   submitLabel: string
   isPending: boolean
   canSubmit: boolean
@@ -18,16 +21,62 @@ interface CustomInvoiceSummaryPanelProps {
   onCancel: () => void
 }
 
+const NEW_INVOICE_CURRENCY_SYMBOL = "$"
+
+function RowLabel({ children }: { children: string }) {
+  return (
+    <Text fontSize="sm" fontWeight="600" color="text.secondary">
+      {children}
+    </Text>
+  )
+}
+
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
     <Flex justify="space-between" gap={4}>
-      <Text fontSize="sm" fontWeight="600" color="text.secondary">
-        {label}
-      </Text>
+      <RowLabel>{label}</RowLabel>
       <Text fontSize="sm" fontWeight="700" color="text.primary" textAlign="right">
         {value}
       </Text>
     </Flex>
+  )
+}
+
+function StatusRow({ detail }: { detail?: CustomInvoiceDetail }) {
+  if (!detail) return <SummaryRow label="Status" value="Not saved yet" />
+  return (
+    <Flex justify="space-between" align="center" gap={4} wrap="wrap">
+      <RowLabel>Status</RowLabel>
+      <Flex align="center" gap={2}>
+        <EventInvoiceStatusBadge status={detail.invoiceStatus} label={detail.invoiceStatusLabel} size="sm" />
+        {detail.isOverdue ? (
+          <Text fontSize="sm" fontWeight="800" color="status.warning.fg">
+            Overdue
+          </Text>
+        ) : null}
+      </Flex>
+    </Flex>
+  )
+}
+
+function PayableLinkRow({ detail }: { detail?: CustomInvoiceDetail }) {
+  if (!detail) {
+    return (
+      <Stack gap={1}>
+        <RowLabel>Payable link</RowLabel>
+        <Text fontSize="sm" color="text.secondary">
+          Link appears after you save
+        </Text>
+      </Stack>
+    )
+  }
+  return (
+    <CustomInvoicePayableLinkSection
+      payPageUrl={buildBuyerAppUrl(APP_ROUTES.customInvoicePay(detail.invoiceUniqueId))}
+      canPayOnline={detail.canPayOnline}
+      invoiceStatus={detail.invoiceStatus}
+      invoiceStatusLabel={detail.invoiceStatusLabel}
+    />
   )
 }
 
@@ -36,11 +85,11 @@ function formatDueDate(dueDate: string | undefined): string {
 }
 
 /**
- * The invoice at a glance while it is written: status, what the buyer will owe, when, and the save action.
- * Total due sums only amounts that are already valid money, so a half-typed figure never shows NaN; the
- * sum stays decimal text and never passes through a float.
+ * The invoice at a glance while it is written: status, what the buyer will owe, when, how they can pay, how
+ * it reaches them, and the save action. Total due sums only amounts that are already valid money, so a
+ * half-typed figure never shows NaN; the sum stays decimal text and never passes through a float.
  */
-export function CustomInvoiceSummaryPanel({ control, currencySymbol = "$", isNewInvoice, statusLabel, submitLabel, isPending, canSubmit, cancelLabel, onCancel }: CustomInvoiceSummaryPanelProps) {
+export function CustomInvoiceSummaryPanel({ control, detail, submitLabel, isPending, canSubmit, cancelLabel, onCancel }: CustomInvoiceSummaryPanelProps) {
   const lineItems = useWatch({ control, name: "lineItems" }) ?? []
   const dueDate = useWatch({ control, name: "dueDate" })
 
@@ -63,17 +112,16 @@ export function CustomInvoiceSummaryPanel({ control, currencySymbol = "$", isNew
         <Text fontSize="md" fontWeight="800" color="text.primary">
           Summary
         </Text>
-        <SummaryRow label="Status" value={statusLabel} />
+        <StatusRow detail={detail} />
         <Stack gap={1}>
-          <Text fontSize="sm" fontWeight="600" color="text.secondary">
-            Total due
-          </Text>
+          <RowLabel>Total due</RowLabel>
           <Text fontSize={{ base: "2xl", md: "3xl" }} fontWeight="900" color="text.primary" aria-live="polite" overflowWrap="anywhere">
-            {formatCurrency(sumMoney(amounts), currencySymbol)}
+            {formatCurrency(sumMoney(amounts), detail?.currencySymbol ?? NEW_INVOICE_CURRENCY_SYMBOL)}
           </Text>
         </Stack>
         <SummaryRow label="Due date" value={formatDueDate(dueDate)} />
-        {isNewInvoice ? <CustomInvoiceDeliverySection control={control} disabled={isPending} /> : null}
+        <PayableLinkRow detail={detail} />
+        <CustomInvoiceDeliverySection control={control} detail={detail} disabled={isPending} />
         {canSubmit ? (
           <Button
             type="submit"

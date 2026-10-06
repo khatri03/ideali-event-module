@@ -34,6 +34,8 @@ export interface CustomInvoiceWritePayload {
   specialNotes?: string
   /** Amounts stay decimal strings the whole way to the server - never float. */
   lineItems: { description: string; amount: string }[]
+  /** The same-module invoice this one is linked to. On update null clears an existing link. */
+  linkedInvoiceUniqueId?: string | null
 }
 
 export interface CustomInvoiceLineForEdit {
@@ -106,6 +108,8 @@ export interface CustomInvoiceDetail {
   currencySymbol: string
   lineItems: CustomInvoiceLineItem[]
   linkedInvoice: LinkedInvoiceReference | null
+  /** When the buyer was last emailed this invoice, or null when it has never been sent. */
+  lastSentAtUtc: string | null
   notes: EventInvoiceNote[]
   payments: EventInvoicePaymentAttempt[]
   /** Server-decided action gates; the page renders these, never inferring an action from the role. */
@@ -210,6 +214,7 @@ const detailSchema = z.object({
     .nullish()
     .transform((lines) => lines ?? []),
   linkedInvoice: linkedInvoiceSchema,
+  lastSentAtUtc: z.string().nullish().transform((value) => value || null),
   notes: z.array(invoiceNoteSchema).nullish().transform((notes) => (notes ?? []).map(normalizeInvoiceNote)),
   payments: z
     .array(paymentAttemptSchema)

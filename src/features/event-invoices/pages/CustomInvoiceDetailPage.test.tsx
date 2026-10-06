@@ -45,6 +45,7 @@ const INVOICE: CustomInvoiceDetail = {
     { invoiceItemUniqueId: "cline-2", description: "Booth space", amount: "300.25" },
   ],
   linkedInvoice: null,
+  lastSentAtUtc: null,
   notes: [{ note: "Sent to finance.", createdBy: "Org Admin", createdOnUtc: "2026-08-02T10:00:00Z" }],
   payments: [
     {

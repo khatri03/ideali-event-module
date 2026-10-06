@@ -9,8 +9,7 @@ import { ConfirmDialog } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 import { parseUtcDateTime } from "@/utils/utcDates"
-import type { CustomInvoiceForEdit } from "@/api/customInvoices"
-import { EVENT_INVOICE_STATUS_OPTIONS } from "@/api/eventInvoices"
+import type { CustomInvoiceDetail, CustomInvoiceForEdit } from "@/api/customInvoices"
 import { useCustomInvoiceSubmit } from "../hooks/useCustomInvoiceSubmit"
 import { useEnabledCustomInvoiceModules } from "../hooks/useCustomInvoiceAuthoringOptions"
 import {
@@ -67,11 +66,6 @@ function toFormValues(initial: CustomInvoiceForEdit): CustomInvoiceFormValues {
         : [{ description: "", amount: "" }],
     emailOnCreate: false,
   }
-}
-
-function statusLabelFor(initial: CustomInvoiceForEdit | undefined): string {
-  if (!initial) return "Not saved yet"
-  return EVENT_INVOICE_STATUS_OPTIONS.find((option) => option.value === initial.invoiceStatus)?.label ?? initial.invoiceStatus
 }
 
 function submitLabelFor(isEditMode: boolean, emailOnCreate: boolean): string {
@@ -141,6 +135,8 @@ function ErrorBanner({ error }: { error: unknown }) {
 interface CustomInvoiceEditorProps {
   invoiceUniqueId?: string
   initial?: CustomInvoiceForEdit
+  /** The saved invoice as its detail reports it, for the summary's status, link and delivery. Edit mode only. */
+  detail?: CustomInvoiceDetail
 }
 
 /**
@@ -149,11 +145,11 @@ interface CustomInvoiceEditorProps {
  * (`canEdit` false) every control is read-only behind a locked banner with no Save; the server enforces the
  * same lock.
  */
-export function CustomInvoiceEditor({ invoiceUniqueId, initial }: CustomInvoiceEditorProps) {
+export function CustomInvoiceEditor({ invoiceUniqueId, initial, detail }: CustomInvoiceEditorProps) {
   const navigate = useNavigate()
   const isEditMode = Boolean(invoiceUniqueId)
   const isReadOnly = initial?.canEdit === false
-  const { submit, isPending, error } = useCustomInvoiceSubmit({ invoiceUniqueId, initial })
+  const { submit, isPending, error } = useCustomInvoiceSubmit({ invoiceUniqueId, initial, detail })
   const modulesQuery = useEnabledCustomInvoiceModules()
   const hasNoEnabledModules = !isEditMode && modulesQuery.isSuccess && modulesQuery.data.length === 0
   const [isDiscardOpen, setIsDiscardOpen] = useState(false)
@@ -220,8 +216,7 @@ export function CustomInvoiceEditor({ invoiceUniqueId, initial }: CustomInvoiceE
 
         <CustomInvoiceSummaryPanel
           control={control}
-          isNewInvoice={!isEditMode}
-          statusLabel={statusLabelFor(initial)}
+          detail={detail}
           submitLabel={submitLabelFor(isEditMode, emailOnCreate)}
           isPending={isPending}
           canSubmit={!isReadOnly && !hasNoEnabledModules}

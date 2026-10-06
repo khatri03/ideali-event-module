@@ -46,15 +46,17 @@ function entityOptionsResponse(params: URLSearchParams) {
 interface ServerSetup {
   enabledModules?: string[]
   edit?: () => Promise<unknown>
+  detail?: () => Promise<unknown>
 }
 
 /** Answers every GET the editor makes, with the enabled modules and the edit load swappable per test. */
-function serverGet({ enabledModules = ["Event", "Membership"], edit }: ServerSetup = {}) {
+function serverGet({ enabledModules = ["Event", "Membership"], edit, detail }: ServerSetup = {}) {
   return (url: string, config?: { params?: URLSearchParams }) => {
     if (url === API_ROUTES.customInvoiceEnabledModules) return Promise.resolve(envelope(enabledModules))
     if (url === API_ROUTES.customInvoiceEntityOptions) return Promise.resolve(entityOptionsResponse(config?.params ?? new URLSearchParams()))
     if (url === API_ROUTES.invoiceCategories) return Promise.resolve(categoriesResponse())
     if (url === API_ROUTES.customInvoiceForEdit(EDIT_ID)) return edit ? edit() : Promise.resolve(editResponse("PendingPayment", true))
+    if (url === API_ROUTES.customInvoiceDetail(EDIT_ID)) return detail ? detail() : Promise.resolve(detailResponse())
     return Promise.resolve(envelope(null))
   }
 }
@@ -101,6 +103,27 @@ function editResponse(invoiceStatus: string, canEdit: boolean, entityName = "Ann
       },
     },
   }
+}
+
+/** The saved invoice's detail as the server sends it; tests override only the fields their rule reads. */
+function detailResponse(overrides: Record<string, unknown> = {}) {
+  return envelope({
+    InvoiceUniqueId: EDIT_ID,
+    InvoiceNo: "CI-1001",
+    InvoiceStatus: "PendingPayment",
+    InvoiceStatusLabel: "Pending Payment",
+    ModuleType: "Event",
+    TotalAmount: "1500.00",
+    SubTotal: "1500.00",
+    CurrencySymbol: "$",
+    BuyerEmail: "buyer@acme.test",
+    LinkedInvoice: null,
+    LastSentAtUtc: null,
+    CanEdit: true,
+    CanPayOnline: true,
+    CanSend: true,
+    ...overrides,
+  })
 }
 
 function conflictError(title: string): AxiosError {
@@ -507,6 +530,59 @@ describe("CustomInvoiceFormPage", () => {
 
     expect(screen.getByText("Pending Payment")).toBeInTheDocument()
     expect(screen.queryByText("Not saved yet")).not.toBeInTheDocument()
+  })
+
+  /** An edited invoice's total is shown in its own currency, read from its detail rather than assumed to be dollars. */
+  it("FormPage_EditLoadsDetail_UsesItsCurrencySymbolForTotalDue", async () => {
+    http.get.mockImplementation(serverGet({ detail: () => Promise.resolve(detailResponse({ CurrencySymbol: "€" })) }))
+    renderPage({ invoiceUniqueId: EDIT_ID })
+    await waitForEditLoaded()
+
+    expect(screen.getByText("Total due").nextElementSibling).toHaveTextContent("€1,500.00")
+  })
+
+  /**
+   * The server clears a link when an update omits it, so saving the form repeats the invoice's current link -
+   * or null when it has none - and a link made on the detail page is never dropped by an unrelated edit.
+   */
+  it.each([
+    ["linked", { InvoiceUniqueId: "inv-linked", InvoiceNo: "CI-2002", InvoiceStatusLabel: "Pending Payment" }, "inv-linked"],
+    ["unlinked", null, null],
+  ])("FormPage_EditSave_RepeatsCurrentLinkAndOpensDetail_%s", async (_case, linkedInvoice, expectedLink) => {
+    http.get.mockImplementation(serverGet({ detail: () => Promise.resolve(detailResponse({ LinkedInvoice: linkedInvoice })) }))
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    renderPage({ invoiceUniqueId: EDIT_ID })
+    await waitForEditLoaded()
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }))
+
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(APP_ROUTES.customInvoices.detail(EDIT_ID)))
+    expect(http.put.mock.calls[0][1]).toMatchObject({ linkedInvoiceUniqueId: expectedLink })
+  })
+
+  /** A failed detail load offers a retry instead of an editor whose summary would show nothing about the saved invoice. */
+  it("FormPage_EditDetailLoadFails_ShowsRetryableError", async () => {
+    http.get.mockImplementation(serverGet({ detail: () => Promise.reject(conflictError("Load failed")) }))
+    renderPage({ invoiceUniqueId: EDIT_ID })
+
+    expect(await screen.findByText("This invoice could not be loaded")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Try again/i })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Save changes" })).not.toBeInTheDocument()
+  })
+
+  /** An invoice that can no longer be edited still offers Email link to its buyer, while Save stays gone (D-16). */
+  it("FormPage_LockedInvoice_KeepsEmailLinkWithoutSave", async () => {
+    http.get.mockImplementation(
+      serverGet({
+        edit: () => Promise.resolve(editResponse("PartiallyPaid", false)),
+        detail: () => Promise.resolve(detailResponse({ InvoiceStatus: "PartiallyPaid", InvoiceStatusLabel: "Partially Paid", CanEdit: false })),
+      }),
+    )
+    renderPage({ invoiceUniqueId: EDIT_ID })
+
+    expect(await screen.findByText("This invoice can no longer be edited.")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Email link" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Save changes" })).not.toBeInTheDocument()
   })
 
   /** While the edit load is in flight the page shows its skeleton, not an empty or half-built form. */

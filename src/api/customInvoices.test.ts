@@ -64,6 +64,7 @@ const DETAIL = {
   CurrencySymbol: "$",
   LineItems: [{ InvoiceItemUniqueId: "line-1", Description: "Gold sponsorship", Amount: 1500.5 }],
   LinkedInvoice: { InvoiceUniqueId: "invoice-2", InvoiceNo: "CI-1002", InvoiceStatusLabel: "Paid" },
+  LastSentAtUtc: "2026-10-03T14:30:00Z",
   Notes: [{ Note: "Called finance", CreatedBy: "Org Admin", CreatedOnUtc: "2026-10-02T00:00:00Z" }],
   Payments: [],
   CanEdit: true,
@@ -123,6 +124,17 @@ describe("updateCustomInvoice", () => {
     await updateCustomInvoice("invoice-1", PAYLOAD)
 
     expect(putMock).toHaveBeenCalledWith("/api/organizer/custom-invoices/invoice-1", PAYLOAD)
+  })
+})
+
+describe("updateCustomInvoice link", () => {
+  /** An edit repeats the invoice's current link, so saving the form never silently drops a link made elsewhere. */
+  it("updateCustomInvoice_SendsLinkedInvoiceUniqueId", async () => {
+    const linked = { ...PAYLOAD, linkedInvoiceUniqueId: "invoice-2" }
+
+    await updateCustomInvoice("invoice-1", linked)
+
+    expect(putMock).toHaveBeenCalledWith("/api/organizer/custom-invoices/invoice-1", expect.objectContaining({ linkedInvoiceUniqueId: "invoice-2" }))
   })
 })
 
@@ -212,6 +224,27 @@ describe("fetchCustomInvoiceDetail", () => {
       canEdit: true,
       canSend: false,
     })
+  })
+
+  /** The last send time is read as the server wrote it, so the editor can say when the buyer was emailed. */
+  it("fetchCustomInvoiceDetail_ParsesLastSentAtUtc", async () => {
+    getMock.mockResolvedValue(envelope(DETAIL))
+
+    const detail = await fetchCustomInvoiceDetail("invoice-1")
+
+    expect(detail.lastSentAtUtc).toBe("2026-10-03T14:30:00Z")
+  })
+
+  /** An invoice never emailed, or a server that omits the field, reads as never sent rather than sent at an unknown time. */
+  it.each([
+    ["absent", undefined],
+    ["null", null],
+  ])("fetchCustomInvoiceDetail_LastSentAtUtc%s_IsNull", async (_case, lastSentAtUtc) => {
+    getMock.mockResolvedValue(envelope({ ...DETAIL, LastSentAtUtc: lastSentAtUtc }))
+
+    const detail = await fetchCustomInvoiceDetail("invoice-1")
+
+    expect(detail.lastSentAtUtc).toBeNull()
   })
 
   /** A standalone invoice, and one whose server omits action flags, reads as not linked and offers no action. */

@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom"
-import type { CustomInvoiceForEdit, CustomInvoiceWritePayload } from "@/api/customInvoices"
+import type { CustomInvoiceDetail, CustomInvoiceForEdit, CustomInvoiceWritePayload } from "@/api/customInvoices"
 import { APP_ROUTES } from "@/utils/routes"
 import { startOfLocalDayAsUtcIso } from "@/utils/utcDates"
 import type { CustomInvoiceFormValues } from "../schemas/customInvoice.schemas"
@@ -8,9 +8,14 @@ import { useCreateCustomInvoice, useSendCustomInvoiceAfterCreate, useUpdateCusto
 interface UseCustomInvoiceSubmitOptions {
   invoiceUniqueId?: string
   initial?: CustomInvoiceForEdit
+  detail?: CustomInvoiceDetail
 }
 
-function toWritePayload(values: CustomInvoiceFormValues, initial: CustomInvoiceForEdit | undefined): CustomInvoiceWritePayload {
+function toWritePayload(
+  values: CustomInvoiceFormValues,
+  initial: CustomInvoiceForEdit | undefined,
+  detail: CustomInvoiceDetail | undefined,
+): CustomInvoiceWritePayload {
   return {
     // What an invoice bills is fixed at creation, so an edit repeats the stored binding rather than the form.
     moduleType: initial ? initial.moduleType : values.moduleType,
@@ -26,6 +31,8 @@ function toWritePayload(values: CustomInvoiceFormValues, initial: CustomInvoiceF
     email: values.email,
     specialNotes: values.specialNotes,
     lineItems: values.lineItems.map((line) => ({ description: line.description, amount: line.amount })),
+    // The server treats null on update as "remove the link", so an edit repeats the current one to keep it.
+    linkedInvoiceUniqueId: detail?.linkedInvoice?.invoiceUniqueId ?? null,
   }
 }
 
@@ -36,7 +43,7 @@ function toWritePayload(values: CustomInvoiceFormValues, initial: CustomInvoiceF
  * refused save keeps the organizer on the page; the mutation has already toasted it and `error` feeds the
  * page banner.
  */
-export function useCustomInvoiceSubmit({ invoiceUniqueId, initial }: UseCustomInvoiceSubmitOptions) {
+export function useCustomInvoiceSubmit({ invoiceUniqueId, initial, detail }: UseCustomInvoiceSubmitOptions) {
   const navigate = useNavigate()
   const createMutation = useCreateCustomInvoice()
   const updateMutation = useUpdateCustomInvoice()
@@ -53,7 +60,7 @@ export function useCustomInvoiceSubmit({ invoiceUniqueId, initial }: UseCustomIn
   }
 
   async function submit(values: CustomInvoiceFormValues) {
-    const payload = toWritePayload(values, initial)
+    const payload = toWritePayload(values, initial, detail)
     try {
       if (invoiceUniqueId) {
         await updateMutation.mutateAsync({ invoiceUniqueId, payload })

@@ -3,21 +3,25 @@ import { fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useForm } from "react-hook-form"
 import { ChakraProvider } from "@chakra-ui/react"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import type { CustomInvoiceDetail } from "@/api/customInvoices"
+import { buildCustomInvoiceDetail } from "@/test/customInvoiceDetail.fixture"
 import { system } from "@/theme"
 import type { CustomInvoiceFormValues } from "../schemas/customInvoice.schemas"
 import { CustomInvoiceSummaryPanel } from "./CustomInvoiceSummaryPanel"
 
 interface HarnessProps {
   isPending?: boolean
-  statusLabel?: string
+  detail?: CustomInvoiceDetail
   dueDate?: string
 }
 
 /** A form with two amount inputs and a due date feeding the panel, the way the editor's Charges pane does. */
-function SummaryHarness({ isPending = false, statusLabel = "Not saved yet", dueDate = "" }: HarnessProps) {
+function SummaryHarness({ isPending = false, detail, dueDate = "" }: HarnessProps) {
   const { control, register } = useForm<CustomInvoiceFormValues>({
     defaultValues: {
       dueDate,
+      emailOnCreate: true,
       lineItems: [
         { description: "Booth", amount: "" },
         { description: "Banner", amount: "" },
@@ -31,8 +35,7 @@ function SummaryHarness({ isPending = false, statusLabel = "Not saved yet", dueD
       <input aria-label="Due" {...register("dueDate")} />
       <CustomInvoiceSummaryPanel
         control={control}
-        isNewInvoice={false}
-        statusLabel={statusLabel}
+        detail={detail}
         submitLabel="Create invoice"
         isPending={isPending}
         canSubmit
@@ -44,9 +47,12 @@ function SummaryHarness({ isPending = false, statusLabel = "Not saved yet", dueD
 }
 
 function renderSummary(props: HarnessProps = {}) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   return render(
     <ChakraProvider value={system}>
-      <SummaryHarness {...props} />
+      <QueryClientProvider client={queryClient}>
+        <SummaryHarness {...props} />
+      </QueryClientProvider>
     </ChakraProvider>,
   )
 }
@@ -102,5 +108,39 @@ describe("CustomInvoiceSummaryPanel", () => {
     const action = screen.getByRole("button", { name: /Saving/ })
     expect(action).toBeDisabled()
     expect(screen.queryByRole("button", { name: "Create invoice" })).not.toBeInTheDocument()
+  })
+
+  /** Before the first save there is no pay page yet, so the link row says when it will appear instead of a dead link (D-15). */
+  it("SummaryPanel_NewInvoice_ShowsLinkAppearsAfterYouSave", () => {
+    renderSummary()
+
+    expect(screen.getByText("Link appears after you save")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /Copy link/ })).not.toBeInTheDocument()
+  })
+
+  /** A saved invoice shows its server status as a badge and a payable link the organizer can copy (EDIT-02). */
+  it("SummaryPanel_ExistingInvoice_ShowsStatusBadgeAndPayableLinkWithCopy", () => {
+    renderSummary({ detail: buildCustomInvoiceDetail() })
+
+    expect(screen.getByText("Pending Payment")).toBeInTheDocument()
+    expect(screen.queryByText("Not saved yet")).not.toBeInTheDocument()
+    expect(screen.getByText(/\/custom-invoices\/invoice-1\/pay$/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Copy link/ })).toBeEnabled()
+  })
+
+  /** An overdue invoice is flagged next to its status, from the server's verdict, so it is chased first. */
+  it("SummaryPanel_OverdueInvoice_ShowsOverdueBesideStatus", () => {
+    renderSummary({ detail: buildCustomInvoiceDetail({ isOverdue: true }) })
+
+    expect(screen.getByText("Overdue")).toBeInTheDocument()
+  })
+
+  /** Total due is shown in the saved invoice's own currency, never a hard-coded dollar sign. */
+  it("SummaryPanel_ExistingInvoice_UsesItsCurrencySymbol", () => {
+    renderSummary({ detail: buildCustomInvoiceDetail({ currencySymbol: "€" }) })
+
+    fireEvent.change(screen.getByLabelText("Amount 1"), { target: { value: "12.50" } })
+
+    expect(totalDue()).toHaveTextContent("€12.50")
   })
 })
