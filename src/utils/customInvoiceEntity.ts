@@ -6,6 +6,22 @@ const BILLED_ENTITY_LABELS: Record<CustomInvoiceModule, string> = {
   Donation: "Campaign",
 }
 
+const BILLED_ENTITY_PLURALS: Record<CustomInvoiceModule, string> = {
+  Event: "events",
+  Membership: "memberships",
+  Donation: "campaigns",
+}
+
+/** What a record of the module is called on screen; a Donation invoice bills a campaign. */
+export function billedEntityLabel(moduleType: CustomInvoiceModule): string {
+  return BILLED_ENTITY_LABELS[moduleType]
+}
+
+/** The lower-case plural for sentences such as "You have no campaigns yet." */
+export function billedEntityPlural(moduleType: CustomInvoiceModule): string {
+  return BILLED_ENTITY_PLURALS[moduleType]
+}
+
 /**
  * Names the billed record the way the entity picker does, e.g. "Membership: Gold".
  * A blank name means the record was deleted, so it returns "" and the caller drops the line
@@ -13,5 +29,5 @@ const BILLED_ENTITY_LABELS: Record<CustomInvoiceModule, string> = {
  */
 export function formatBilledEntity(moduleType: CustomInvoiceModule, entityName: string | null): string {
   const name = entityName?.trim() ?? ""
-  return name ? `${BILLED_ENTITY_LABELS[moduleType]}: ${name}` : ""
+  return name ? `${billedEntityLabel(moduleType)}: ${name}` : ""
 }

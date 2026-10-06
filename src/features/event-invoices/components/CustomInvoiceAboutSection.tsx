@@ -1,4 +1,6 @@
-import { Field, Grid, Input } from "@chakra-ui/react"
+import { useEffect } from "react"
+import { Field, Flex, Grid, Input, Text } from "@chakra-ui/react"
+import { TriangleAlert } from "lucide-react"
 import { Controller, useWatch, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue } from "react-hook-form"
 import { StyledSelect } from "@/components/common"
 import { RequiredFieldLabel } from "@/features/custom-lists"
@@ -17,37 +19,64 @@ interface CustomInvoiceAboutSectionProps {
   isReadOnly: boolean
 }
 
+function NoModulesEnabledNotice() {
+  return (
+    <Flex role="alert" gap={3} align="flex-start" p={4} borderRadius="16px" bg="status.warning.bg" gridColumn="1 / -1">
+      <Flex color="status.warning.fg" flexShrink={0} mt={0.5}>
+        <TriangleAlert size={18} />
+      </Flex>
+      <Text fontSize="sm" fontWeight="700" color="status.warning.fg">
+        Custom invoicing is not turned on for any module. Ask your platform admin to turn it on.
+      </Text>
+    </Flex>
+  )
+}
+
 /** What the invoice bills and under which terms: module, billed record, sponsorship type and due date. */
 export function CustomInvoiceAboutSection({ control, register, errors, setValue, isEditMode, isReadOnly }: CustomInvoiceAboutSectionProps) {
   const modulesQuery = useEnabledCustomInvoiceModules()
   const categoriesQuery = useActiveInvoiceCategoryOptions()
   const moduleType = useWatch({ control, name: "moduleType" }) as CustomInvoiceModule | undefined
 
-  const moduleOptions = (modulesQuery.data ?? []).map((module) => ({ label: module, value: module }))
+  const enabledModules = modulesQuery.data ?? []
+  const moduleOptions = enabledModules.map((module) => ({ label: module, value: module }))
+  const onlyModule = !isEditMode && enabledModules.length === 1 ? enabledModules[0] : undefined
+  const hasNoEnabledModules = !isEditMode && modulesQuery.isSuccess && enabledModules.length === 0
+
+  // With a single enabled module there is no choice to make, so it is filled in rather than asked for.
+  useEffect(() => {
+    if (onlyModule && !moduleType) {
+      setValue("moduleType", onlyModule)
+    }
+  }, [onlyModule, moduleType, setValue])
+
   const categoryOptions = (categoriesQuery.data ?? []).map((category) => ({ label: category.name, value: category.uniqueId }))
   const hasNoActiveCategories = categoriesQuery.isSuccess && categoryOptions.length === 0
 
   function handleModuleChange(next: string) {
+    if (next === moduleType) return
     setValue("moduleType", next as CustomInvoiceModule, { shouldDirty: true, shouldValidate: true })
     setValue("entityUniqueId", "", { shouldDirty: true })
   }
 
   return (
     <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={4}>
+      {hasNoEnabledModules ? <NoModulesEnabledNotice /> : null}
       <Field.Root invalid={Boolean(errors.moduleType)}>
         <RequiredFieldLabel>Module</RequiredFieldLabel>
         <StyledSelect
           options={moduleOptions}
           value={moduleType ?? ""}
           onChange={handleModuleChange}
-          disabled={isEditMode || isReadOnly || modulesQuery.isLoading}
+          disabled={isEditMode || isReadOnly || modulesQuery.isLoading || Boolean(onlyModule) || hasNoEnabledModules}
           placeholder={modulesQuery.isLoading ? "Loading modules..." : "Select a module"}
           ariaLabel="Module"
         />
+        {onlyModule ? <Field.HelperText>{`Custom invoicing is only turned on for ${onlyModule}.`}</Field.HelperText> : null}
         <Field.ErrorText>{errors.moduleType?.message}</Field.ErrorText>
       </Field.Root>
 
-      <CustomInvoiceEntityPicker control={control} errors={errors} moduleType={moduleType} disabled={isEditMode || isReadOnly} />
+      <CustomInvoiceEntityPicker key={moduleType ?? "none"} control={control} errors={errors} moduleType={moduleType} disabled={isEditMode || isReadOnly} />
 
       <Field.Root invalid={Boolean(errors.categoryUniqueId)}>
         <RequiredFieldLabel>Sponsorship type</RequiredFieldLabel>

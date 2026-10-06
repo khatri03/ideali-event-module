@@ -345,6 +345,49 @@ describe("CustomInvoiceFormPage", () => {
     expect(screen.getByRole("button", { name: /Try again/i })).toBeInTheDocument()
   })
 
+  /** With one enabled module there is no choice: it is filled in, shown disabled, and the reason is stated (D-04). */
+  it("AboutSection_SingleEnabledModule_PreselectedAndDisabled", async () => {
+    http.get.mockImplementation(serverGet({ enabledModules: ["Membership"] }))
+    renderPage()
+
+    expect(await screen.findByText("Custom invoicing is only turned on for Membership.")).toBeInTheDocument()
+    const moduleControl = screen.getByRole("combobox", { name: "Module" })
+    expect(moduleControl).toBeDisabled()
+    expect(moduleControl).toHaveTextContent("Membership")
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Membership" })).toBeEnabled())
+  })
+
+  /** A record belongs to one module, so switching module drops the picked record but keeps the buyer and charges (D-05). */
+  it("AboutSection_ChangingModule_ClearsEntityKeepsBuyerAndLines", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    renderPage()
+    await pickOption(user, "Module", "Event")
+    await pickEntity(user, "Event", "Ann", "Annual Convention")
+    setValue("Company name", "Acme Corp")
+    setValue("Amount for line 1", "1500.00")
+
+    await pickOption(user, "Module", "Membership")
+
+    expect(await screen.findByRole("combobox", { name: "Membership" })).toHaveValue("")
+    expect(screen.queryByText("Discard unsaved changes?")).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/Company name/i)).toHaveValue("Acme Corp")
+    expect(screen.getByLabelText("Amount for line 1")).toHaveValue("1500.00")
+    await user.click(screen.getByRole("button", { name: "Create invoice" }))
+    expect(await screen.findByText("Choose what this invoice bills.")).toBeInTheDocument()
+    expect(http.post).not.toHaveBeenCalled()
+  })
+
+  /** With custom invoicing turned on for no module the page says so and offers no way to create an invoice. */
+  it("AboutSection_NoEnabledModules_ExplainsAndBlocksCreate", async () => {
+    http.get.mockImplementation(serverGet({ enabledModules: [] }))
+    renderPage()
+
+    expect(
+      await screen.findByText("Custom invoicing is not turned on for any module. Ask your platform admin to turn it on."),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Create invoice" })).not.toBeInTheDocument()
+  })
+
   /** While the edit load is in flight the page shows its skeleton, not an empty or half-built form. */
   it("Edit_FirstLoad_ShowsSkeleton", () => {
     http.get.mockImplementation(serverGet({ edit: () => new Promise(() => undefined) }))
