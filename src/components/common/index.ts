@@ -1,3 +1,4 @@
+export { AdminPageHeader } from "./AdminPageHeader"
 export { ColorModeToggle } from "./ColorModeToggle"
 export { ConfirmDialog } from "./ConfirmDialog"
 export { ErrorState } from "./ErrorState"

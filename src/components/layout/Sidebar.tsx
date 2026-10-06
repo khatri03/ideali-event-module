@@ -322,6 +322,51 @@ function SettingsSection({
   )
 }
 
+function AdminNavLink({
+  to,
+  label,
+  pathname,
+  onNavigate,
+}: {
+  to: string
+  label: string
+  pathname: string
+  onNavigate?: () => void
+}) {
+  const isActive = pathname === to
+
+  return (
+    <NavLink to={to} style={{ textDecoration: "none" }} onClick={onNavigate}>
+      <Flex
+        align="center"
+        gap={3}
+        pl={10}
+        pr={3}
+        py={2.5}
+        borderRadius="12px"
+        mx={2}
+        transition="all 0.18s ease"
+        bg={isActive ? "rgba(255,255,255,0.92)" : "transparent"}
+        cursor="pointer"
+        _hover={isActive ? {} : { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" }}
+        boxShadow={isActive ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
+      >
+        <Box w="6px" h="6px" borderRadius="full" bg={isActive ? "#7551FF" : "rgba(255,255,255,0.6)"} flexShrink={0} />
+        <Text
+          fontSize="sm"
+          fontWeight={isActive ? "700" : "500"}
+          color={isActive ? "#422AFB" : "rgba(255,255,255,0.85)"}
+          transition="color 0.18s"
+          flex={1}
+          letterSpacing={isActive ? "-0.01em" : "0"}
+        >
+          {label}
+        </Text>
+      </Flex>
+    </NavLink>
+  )
+}
+
 function AdminSection({
   isOpen,
   pathname,
@@ -377,75 +422,14 @@ function AdminSection({
 
       {isOpen ? (
         <VStack gap={0.5} align="stretch" mt={1.5}>
-          <NavLink to={APP_ROUTES.adminRevenuePlans} style={{ textDecoration: "none" }} onClick={onNavigate}>
-            <Flex
-              align="center"
-              gap={3}
-              pl={10}
-              pr={3}
-              py={2.5}
-              borderRadius="12px"
-              mx={2}
-              transition="all 0.18s ease"
-              bg={pathname === APP_ROUTES.adminRevenuePlans ? "rgba(255,255,255,0.92)" : "transparent"}
-              cursor="pointer"
-              _hover={pathname !== APP_ROUTES.adminRevenuePlans ? { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" } : {}}
-              boxShadow={pathname === APP_ROUTES.adminRevenuePlans ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
-            >
-              <Box
-                w="6px"
-                h="6px"
-                borderRadius="full"
-                bg={pathname === APP_ROUTES.adminRevenuePlans ? "#7551FF" : "rgba(255,255,255,0.6)"}
-                flexShrink={0}
-              />
-              <Text
-                fontSize="sm"
-                fontWeight={pathname === APP_ROUTES.adminRevenuePlans ? "700" : "500"}
-                color={pathname === APP_ROUTES.adminRevenuePlans ? "#422AFB" : "rgba(255,255,255,0.85)"}
-                transition="color 0.18s"
-                flex={1}
-                letterSpacing={pathname === APP_ROUTES.adminRevenuePlans ? "-0.01em" : "0"}
-              >
-                Revenue Plans
-              </Text>
-            </Flex>
-          </NavLink>
-
-          <NavLink to={APP_ROUTES.adminRateLimit} style={{ textDecoration: "none" }} onClick={onNavigate}>
-            <Flex
-              align="center"
-              gap={3}
-              pl={10}
-              pr={3}
-              py={2.5}
-              borderRadius="12px"
-              mx={2}
-              transition="all 0.18s ease"
-              bg={pathname === APP_ROUTES.adminRateLimit ? "rgba(255,255,255,0.92)" : "transparent"}
-              cursor="pointer"
-              _hover={pathname !== APP_ROUTES.adminRateLimit ? { bg: "rgba(255,255,255,0.12)", transform: "translateX(2px)" } : {}}
-              boxShadow={pathname === APP_ROUTES.adminRateLimit ? "0 4px 16px rgba(0,0,0,0.15)" : "none"}
-            >
-              <Box
-                w="6px"
-                h="6px"
-                borderRadius="full"
-                bg={pathname === APP_ROUTES.adminRateLimit ? "#7551FF" : "rgba(255,255,255,0.6)"}
-                flexShrink={0}
-              />
-              <Text
-                fontSize="sm"
-                fontWeight={pathname === APP_ROUTES.adminRateLimit ? "700" : "500"}
-                color={pathname === APP_ROUTES.adminRateLimit ? "#422AFB" : "rgba(255,255,255,0.85)"}
-                transition="color 0.18s"
-                flex={1}
-                letterSpacing={pathname === APP_ROUTES.adminRateLimit ? "-0.01em" : "0"}
-              >
-                Rate Limit Settings
-              </Text>
-            </Flex>
-          </NavLink>
+          <AdminNavLink to={APP_ROUTES.adminRevenuePlans} label="Revenue Plans" pathname={pathname} onNavigate={onNavigate} />
+          <AdminNavLink to={APP_ROUTES.adminRateLimit} label="Rate Limit Settings" pathname={pathname} onNavigate={onNavigate} />
+          <AdminNavLink
+            to={APP_ROUTES.adminCustomInvoicingModules}
+            label="Custom Invoicing Modules"
+            pathname={pathname}
+            onNavigate={onNavigate}
+          />
         </VStack>
       ) : null}
     </Box>
@@ -571,8 +555,12 @@ export function Sidebar({ currentUser, variant = "desktop", onNavigate }: Sideba
   const isSettingsRouteActive = pathname === APP_ROUTES.settings
   const isChargeRulesRouteActive = pathname === APP_ROUTES.chargeRules.list
   const isSettingsOpen = isSettingsManualOpen || isSettingsRouteActive || isChargeRulesRouteActive
-  const isAdminRouteActive =
-    pathname === APP_ROUTES.adminRevenuePlans || pathname === APP_ROUTES.adminRateLimit
+  const adminRoutes: string[] = [
+    APP_ROUTES.adminRevenuePlans,
+    APP_ROUTES.adminRateLimit,
+    APP_ROUTES.adminCustomInvoicingModules,
+  ]
+  const isAdminRouteActive = adminRoutes.includes(pathname)
   const isAdminOpen = isAdminManualOpen || isAdminRouteActive
   const isMemberRouteActive = [APP_ROUTES.member.dashboard, APP_ROUTES.memberDocuments.base].some(
     (path) => pathname === path || pathname.startsWith(`${path}/`),

@@ -1,12 +1,12 @@
 import { Navigate } from "react-router-dom"
 import { Stack } from "@chakra-ui/react"
-import { ShieldAlert } from "lucide-react"
+import { FileText } from "lucide-react"
 import { AdminPageHeader } from "@/components/common"
 import { useAdminAccess } from "@/hooks/useAdminAccess"
 import { APP_ROUTES } from "@/utils/routes"
-import { AdminRateLimitManager } from "../components/AdminRateLimitManager"
+import { CustomInvoicingModulesManager } from "../components/CustomInvoicingModulesManager"
 
-export function AdminRateLimitPage() {
+export function AdminCustomInvoicingModulesPage() {
   const { isResolved, isAdmin } = useAdminAccess()
 
   if (!isResolved) {
@@ -20,13 +20,12 @@ export function AdminRateLimitPage() {
   return (
     <Stack gap={6}>
       <AdminPageHeader
-        icon={<ShieldAlert size={28} color="white" />}
-        badgeLabel="Security"
-        title="Rate Limit Settings"
-        description="Controls brute-force protection on login, token refresh, and 2FA verification."
+        icon={<FileText size={28} color="white" />}
+        badgeLabel="Billing"
+        title="Custom Invoicing Modules"
+        description="Choose which modules organizers can create custom invoices for. Turning a module off stops new invoices only."
       />
-
-      <AdminRateLimitManager />
+      <CustomInvoicingModulesManager />
     </Stack>
   )
 }
