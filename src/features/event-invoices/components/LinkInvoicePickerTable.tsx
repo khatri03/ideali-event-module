@@ -1,6 +1,6 @@
 import { useId } from "react"
 import { Box, Table, Text, chakra } from "@chakra-ui/react"
-import type { EventInvoiceListItem } from "@/api/eventInvoices"
+import type { CustomInvoiceLinkCandidate } from "@/api/customInvoices"
 import { EMPTY_VALUE } from "@/utils/format"
 import { formatUtcDate } from "@/utils/utcDates"
 import { EventInvoiceStatusBadge } from "./EventInvoiceStatusBadge"
@@ -8,11 +8,11 @@ import { InvoiceBuyerCell } from "./InvoiceBuyerCell"
 import { TableBodySkeleton } from "./TableBodySkeleton"
 
 interface LinkInvoicePickerTableProps {
-  invoices: EventInvoiceListItem[]
+  invoices: CustomInvoiceLinkCandidate[]
   isFetching: boolean
   selectedInvoiceUniqueId: string | null
   emptyMessage: string
-  onSelect: (invoiceUniqueId: string) => void
+  onSelect: (invoice: CustomInvoiceLinkCandidate) => void
 }
 
 const COLUMN_COUNT = 5
@@ -79,7 +79,7 @@ export function LinkInvoicePickerTable({
                     cursor="pointer"
                     bg={isSelected ? "brand.50" : undefined}
                     _hover={{ bg: isSelected ? "brand.50" : "app.bg" }}
-                    onClick={() => onSelect(invoice.invoiceUniqueId)}
+                    onClick={() => onSelect(invoice)}
                   >
                     <Table.Cell px={1} py={0}>
                       <chakra.label display="flex" alignItems="center" justifyContent="center" minW="11" minH="11" cursor="pointer">
@@ -87,7 +87,7 @@ export function LinkInvoicePickerTable({
                           type="radio"
                           name={radioGroupName}
                           checked={isSelected}
-                          onChange={() => onSelect(invoice.invoiceUniqueId)}
+                          onChange={() => onSelect(invoice)}
                           aria-label={`Select invoice ${invoice.invoiceNo}`}
                           w="4"
                           h="4"

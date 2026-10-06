@@ -403,6 +403,7 @@ export const API_ROUTES = {
   customInvoiceCreate: "/api/organizer/custom-invoices",
   customInvoiceEnabledModules: "/api/organizer/custom-invoices/enabled-modules",
   customInvoiceEntityOptions: "/api/organizer/custom-invoices/entity-options",
+  customInvoiceLinkCandidates: "/api/organizer/custom-invoices/link-candidates",
   customInvoiceUpdate: (invoiceUniqueId: string) => `/api/organizer/custom-invoices/${invoiceUniqueId}`,
   customInvoiceForEdit: (invoiceUniqueId: string) => `/api/organizer/custom-invoices/${invoiceUniqueId}/edit`,
   customInvoiceDetail: (invoiceUniqueId: string) => `/api/organizer/custom-invoices/${invoiceUniqueId}`,

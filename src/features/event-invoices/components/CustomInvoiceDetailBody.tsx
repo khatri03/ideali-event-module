@@ -47,6 +47,7 @@ export function CustomInvoiceDetailBody({ invoice }: CustomInvoiceDetailBodyProp
         <LinkedInvoicePanel
           invoiceUniqueId={invoice.invoiceUniqueId}
           invoiceNo={invoice.invoiceNo}
+          moduleType={invoice.moduleType}
           linkedInvoice={invoice.linkedInvoice}
           canLink={invoice.invoiceStatus !== "Cancelled"}
         />

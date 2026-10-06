@@ -6,6 +6,7 @@ import {
   ENTITY_OPTIONS_PAGE_SIZE,
   fetchActiveInvoiceCategoryOptions,
   fetchCustomInvoiceEntityOptions,
+  fetchCustomInvoiceLinkCandidates,
   fetchEnabledCustomInvoiceModules,
   fetchCustomInvoiceDetail,
   fetchCustomInvoiceForEdit,
@@ -383,6 +384,70 @@ describe("fetchCustomInvoiceEntityOptions", () => {
 
     await expect(
       fetchCustomInvoiceEntityOptions({ moduleType: "Event", searchTerm: "", pageNo: 1 }),
+    ).rejects.toThrow()
+  })
+})
+
+describe("fetchCustomInvoiceLinkCandidates", () => {
+  const CANDIDATE_ROW = {
+    InvoiceUniqueId: "inv-42",
+    InvoiceNo: "INV-0042",
+    CompanyName: "Acme Corp",
+    BuyerFirstName: "Jane",
+    BuyerMiddleName: null,
+    BuyerLastName: "Doe",
+    BuyerName: "Jane Doe",
+    BuyerEmail: "jane@acme.test",
+    InvoiceDateUtc: "2026-09-01T00:00:00Z",
+    InvoiceStatus: "Paid",
+    InvoiceStatusLabel: "Paid",
+  }
+
+  /**
+   * The picker is searched and paged on the server for one module and leaves out the invoice being linked
+   * from, so the client never pulls the full list or offers a link the server would refuse.
+   */
+  it("fetchCustomInvoiceLinkCandidates_SendsModuleTermPagingAndExclude", async () => {
+    getMock.mockResolvedValue(envelope({ PageNo: 2, PageSize: 10, PageCount: 3, TotalRecordsCount: 25, PageData: [CANDIDATE_ROW] }))
+
+    const page = await fetchCustomInvoiceLinkCandidates({
+      moduleType: "Membership",
+      searchTerm: " acme ",
+      pageNo: 2,
+      pageSize: 10,
+      excludeInvoiceUniqueId: "inv-self",
+    })
+
+    const [url, config] = getMock.mock.calls[0]
+    expect(url).toBe(API_ROUTES.customInvoiceLinkCandidates)
+    const params = config.params as URLSearchParams
+    expect(Object.fromEntries(params)).toEqual({
+      moduleType: "Membership",
+      searchTerm: "acme",
+      pageNo: "2",
+      pageSize: "10",
+      excludeInvoiceUniqueId: "inv-self",
+    })
+    expect(page.total).toBe(25)
+    expect(page.totalPages).toBe(3)
+    expect(page.items[0]).toMatchObject({ invoiceUniqueId: "inv-42", invoiceNo: "INV-0042", buyerMiddleName: null, buyerEmail: "jane@acme.test" })
+  })
+
+  /** A new invoice has nothing to exclude, so the parameter is left off rather than sent empty. */
+  it("fetchCustomInvoiceLinkCandidates_NoExclude_OmitsTheParameter", async () => {
+    getMock.mockResolvedValue(envelope({ PageNo: 1, PageSize: 20, PageCount: 0, TotalRecordsCount: 0, PageData: [] }))
+
+    await fetchCustomInvoiceLinkCandidates({ moduleType: "Event", searchTerm: "", pageNo: 1, pageSize: 20 })
+
+    expect((getMock.mock.calls[0][1].params as URLSearchParams).has("excludeInvoiceUniqueId")).toBe(false)
+  })
+
+  /** A page missing its rows is refused at the boundary instead of rendering as "nothing to link to". */
+  it("fetchCustomInvoiceLinkCandidates_MalformedPage_Throws", async () => {
+    getMock.mockResolvedValue(envelope({ PageNo: 1, PageCount: 1, TotalRecordsCount: 1 }))
+
+    await expect(
+      fetchCustomInvoiceLinkCandidates({ moduleType: "Event", searchTerm: "", pageNo: 1, pageSize: 20 }),
     ).rejects.toThrow()
   })
 })

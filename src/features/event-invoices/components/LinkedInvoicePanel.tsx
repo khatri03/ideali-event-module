@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Button, Flex, Link, Text } from "@chakra-ui/react"
 import { Link2, Unlink } from "lucide-react"
 import { Link as RouterLink } from "react-router-dom"
-import type { LinkedInvoiceReference } from "@/api/customInvoices"
+import type { CustomInvoiceModule, LinkedInvoiceReference } from "@/api/customInvoices"
 import { ConfirmDialog } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
@@ -13,6 +13,7 @@ import { LinkInvoiceDialog } from "./LinkInvoiceDialog"
 interface LinkedInvoicePanelProps {
   invoiceUniqueId: string
   invoiceNo: string
+  moduleType: CustomInvoiceModule
   linkedInvoice: LinkedInvoiceReference | null
   /** Presentation only: whether to offer starting a link. The server refuses a disallowed link regardless. */
   canLink: boolean
@@ -101,7 +102,7 @@ function LinkedInvoiceReference({ invoiceUniqueId, invoiceNo, linkedInvoice }: L
   )
 }
 
-function LinkInvoiceAction({ invoiceUniqueId }: { invoiceUniqueId: string }) {
+function LinkInvoiceAction({ invoiceUniqueId, moduleType }: { invoiceUniqueId: string; moduleType: CustomInvoiceModule }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   return (
@@ -123,13 +124,13 @@ function LinkInvoiceAction({ invoiceUniqueId }: { invoiceUniqueId: string }) {
         <Link2 size={16} />
         Link invoice
       </Button>
-      <LinkInvoiceDialog open={isDialogOpen} invoiceUniqueId={invoiceUniqueId} onClose={() => setIsDialogOpen(false)} />
+      <LinkInvoiceDialog open={isDialogOpen} invoiceUniqueId={invoiceUniqueId} moduleType={moduleType} onClose={() => setIsDialogOpen(false)} />
     </>
   )
 }
 
 /** The reciprocal link reference on an invoice's detail: start a link, follow it, or remove it. */
-export function LinkedInvoicePanel({ invoiceUniqueId, invoiceNo, linkedInvoice, canLink }: LinkedInvoicePanelProps) {
+export function LinkedInvoicePanel({ invoiceUniqueId, invoiceNo, moduleType, linkedInvoice, canLink }: LinkedInvoicePanelProps) {
   return (
     <InvoiceDetailPanel title="Linked invoice" printHidden={!linkedInvoice}>
       {linkedInvoice ? (
@@ -137,7 +138,7 @@ export function LinkedInvoicePanel({ invoiceUniqueId, invoiceNo, linkedInvoice, 
       ) : (
         <>
           <InvoiceMutedLine>Not linked to another invoice.</InvoiceMutedLine>
-          {canLink ? <LinkInvoiceAction invoiceUniqueId={invoiceUniqueId} /> : null}
+          {canLink ? <LinkInvoiceAction invoiceUniqueId={invoiceUniqueId} moduleType={moduleType} /> : null}
         </>
       )}
     </InvoiceDetailPanel>

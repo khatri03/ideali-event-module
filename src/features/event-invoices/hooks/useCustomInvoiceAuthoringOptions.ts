@@ -1,7 +1,9 @@
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import {
   fetchCustomInvoiceEntityOptions,
+  fetchCustomInvoiceLinkCandidates,
   fetchEnabledCustomInvoiceModules,
+  type CustomInvoiceLinkCandidatesQuery,
   type CustomInvoiceModule,
 } from "@/api/customInvoices"
 
@@ -26,6 +28,20 @@ export function useCustomInvoiceEntityOptions(moduleType: CustomInvoiceModule | 
     initialPageParam: 1,
     getNextPageParam: (lastPage) => (lastPage.pageNo < lastPage.pageCount ? lastPage.pageNo + 1 : undefined),
     enabled: Boolean(moduleType),
+    placeholderData: keepPreviousData,
+  })
+}
+
+type LinkCandidatesParams = Omit<CustomInvoiceLinkCandidatesQuery, "moduleType"> & {
+  moduleType: CustomInvoiceModule | undefined
+}
+
+/** One server page of invoices of the module that may be linked to; idle until a module is chosen. */
+export function useCustomInvoiceLinkCandidates(params: LinkCandidatesParams) {
+  return useQuery({
+    queryKey: ["organizer", "custom-invoices", "link-candidates", params],
+    queryFn: () => fetchCustomInvoiceLinkCandidates({ ...params, moduleType: params.moduleType as CustomInvoiceModule }),
+    enabled: Boolean(params.moduleType),
     placeholderData: keepPreviousData,
   })
 }

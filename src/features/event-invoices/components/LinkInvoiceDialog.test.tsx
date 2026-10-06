@@ -2,62 +2,49 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { ChakraProvider } from "@chakra-ui/react"
-import type { EventInvoiceListItem, Page } from "@/api/eventInvoices"
+import type { CustomInvoiceLinkCandidate, CustomInvoiceLinkCandidatesPage } from "@/api/customInvoices"
 import { system } from "@/theme"
 import { LinkInvoiceDialog } from "./LinkInvoiceDialog"
 
-const { useEventInvoicesMock, useLinkCustomInvoiceMock, linkMock, refetchMock } = vi.hoisted(() => ({
-  useEventInvoicesMock: vi.fn(),
+const { useLinkCandidatesMock, useLinkCustomInvoiceMock, linkMock, refetchMock } = vi.hoisted(() => ({
+  useLinkCandidatesMock: vi.fn(),
   useLinkCustomInvoiceMock: vi.fn(),
   linkMock: vi.fn(),
   refetchMock: vi.fn(),
 }))
 
-vi.mock("../hooks/useEventInvoices", () => ({
-  useEventInvoices: useEventInvoicesMock,
+vi.mock("../hooks/useCustomInvoiceAuthoringOptions", () => ({
+  useCustomInvoiceLinkCandidates: useLinkCandidatesMock,
 }))
 
 vi.mock("../hooks/useCustomInvoices", () => ({
   useLinkCustomInvoice: useLinkCustomInvoiceMock,
 }))
 
-function listItem(invoiceUniqueId: string, invoiceNo: string, buyerName: string): EventInvoiceListItem {
+function candidate(invoiceUniqueId: string, invoiceNo: string, buyerName: string): CustomInvoiceLinkCandidate {
   return {
     invoiceUniqueId,
     invoiceNo,
-    eventUniqueId: "event-1",
-    eventName: "Annual Convention",
+    companyName: "",
+    buyerFirstName: null,
+    buyerMiddleName: null,
+    buyerLastName: buyerName,
     buyerName,
-    buyerEmail: null,
+    buyerEmail: "",
+    invoiceDateUtc: "2026-08-01T10:00:00Z",
     invoiceStatus: "PendingPayment",
     invoiceStatusLabel: "Pending Payment",
-    invoiceType: "Regular",
-    dueDateUtc: null,
-    companyName: null,
-    isOverdue: false,
-    canMarkAsPaid: true,
-    canCancel: true,
-    canSend: true,
-    canEdit: false,
-    invoiceDateUtc: "2026-08-01T10:00:00Z",
-    totalAmount: "100",
-    balanceAmount: "100",
-    paymentMethod: null,
-    paymentSource: null,
-    currencySymbol: "$",
-    ticketCount: 1,
   }
 }
 
-function pageOf(items: EventInvoiceListItem[]): Page<EventInvoiceListItem> {
-  return { items, total: items.length, page: 1, pageSize: 10, totalPages: 1 }
+function pageOf(items: CustomInvoiceLinkCandidate[]): CustomInvoiceLinkCandidatesPage {
+  return { items, total: items.length, totalPages: 1 }
 }
 
-const CURRENT = listItem("invoice-1", "INV-2001", "Northwind Traders")
-const OTHER = listItem("invoice-2", "INV-2002", "Jane Doe")
+const OTHER = candidate("invoice-2", "INV-2002", "Jane Doe")
 
-function mockQuery(state: { data?: Page<EventInvoiceListItem>; isFetching?: boolean; isError?: boolean; error?: unknown }) {
-  useEventInvoicesMock.mockReturnValue({
+function mockQuery(state: { data?: CustomInvoiceLinkCandidatesPage; isFetching?: boolean; isError?: boolean; error?: unknown }) {
+  useLinkCandidatesMock.mockReturnValue({
     data: state.data,
     isFetching: state.isFetching ?? false,
     isError: state.isError ?? false,
@@ -73,37 +60,39 @@ function mockLink(state: { isPending?: boolean; error?: unknown } = {}) {
 function dialog(onClose = vi.fn()) {
   return (
     <ChakraProvider value={system}>
-      <LinkInvoiceDialog open invoiceUniqueId="invoice-1" onClose={onClose} />
+      <LinkInvoiceDialog open invoiceUniqueId="invoice-1" moduleType="Membership" onClose={onClose} />
     </ChakraProvider>
   )
 }
 
-function lastRequestedSearchTerm() {
-  const calls = useEventInvoicesMock.mock.calls
-  return calls[calls.length - 1][0].searchTerm
+function lastRequest() {
+  return useLinkCandidatesMock.mock.calls.at(-1)?.[0]
 }
 
 describe("LinkInvoiceDialog", () => {
   beforeEach(() => {
-    useEventInvoicesMock.mockReset()
+    useLinkCandidatesMock.mockReset()
     useLinkCustomInvoiceMock.mockReset()
     linkMock.mockReset().mockResolvedValue(undefined)
     refetchMock.mockReset()
-    mockQuery({ data: pageOf([CURRENT, OTHER]) })
+    mockQuery({ data: pageOf([OTHER]) })
     mockLink()
   })
 
-  /** An invoice cannot be linked to itself, so the picker never offers the invoice being linked. */
-  it("Loaded_ListsOtherInvoicesButNeverTheCurrentOne", async () => {
+  /**
+   * Only invoices of the same module can be linked and never the invoice itself, so the request names the
+   * dialog's module and excludes its own invoice on the server (D-03).
+   */
+  it("LinkInvoiceDialog_RequestsCandidatesForItsModuleExcludingItself", async () => {
     render(dialog())
 
     expect(await screen.findByRole("radio", { name: "Select invoice INV-2002" })).toBeInTheDocument()
-    expect(screen.queryByRole("radio", { name: "Select invoice INV-2001" })).not.toBeInTheDocument()
+    expect(lastRequest()).toMatchObject({ moduleType: "Membership", excludeInvoiceUniqueId: "invoice-1", pageNo: 1 })
   })
 
   /** A candidate that bills a company is recognised by that company, with the contact person underneath. */
   it("CandidateWithCompany_ShowsTheCompanyAboveTheBuyer", async () => {
-    mockQuery({ data: pageOf([CURRENT, { ...OTHER, companyName: "Contoso Ltd" }]) })
+    mockQuery({ data: pageOf([{ ...OTHER, companyName: "Contoso Ltd" }]) })
     render(dialog())
 
     const row = (await screen.findByRole("radio", { name: "Select invoice INV-2002" })).closest("tr") as HTMLElement
@@ -127,9 +116,7 @@ describe("LinkInvoiceDialog", () => {
 
     await user.type(await screen.findByPlaceholderText("Search by invoice no, buyer name or email"), "jane")
 
-    await waitFor(() => expect(lastRequestedSearchTerm()).toBe("jane"))
-    const [, page] = useEventInvoicesMock.mock.calls[useEventInvoicesMock.mock.calls.length - 1]
-    expect(page).toBe(1)
+    await waitFor(() => expect(lastRequest()).toMatchObject({ searchTerm: "jane", pageNo: 1 }))
   })
 
   /** A search with no hits says so and tells the organizer what to try next, instead of an empty table. */
@@ -145,10 +132,10 @@ describe("LinkInvoiceDialog", () => {
 
   /** With nothing else to link to, the picker says so plainly rather than blaming a search nobody typed. */
   it("NoOtherInvoices_SaysThereIsNothingToLinkToYet", async () => {
-    mockQuery({ data: pageOf([CURRENT]) })
+    mockQuery({ data: pageOf([]) })
     render(dialog())
 
-    expect(await screen.findByText("There are no other invoices to link to yet.")).toBeInTheDocument()
+    expect(await screen.findByText("There are no other invoices of this module to link to yet.")).toBeInTheDocument()
   })
 
   /** While the page loads the table shows skeleton rows, never a blank body or a stale choice. */
@@ -178,15 +165,6 @@ describe("LinkInvoiceDialog", () => {
     render(dialog())
 
     expect(await screen.findByRole("button", { name: "Link invoice" })).toBeDisabled()
-  })
-
-  /** Only a custom invoice can be a link target, so the picker asks the server for custom invoices alone. */
-  it("LinkPicker_RequestsCustomInvoicesOnly", async () => {
-    render(dialog())
-    await screen.findByText("INV-2002")
-
-    const filters = useEventInvoicesMock.mock.calls.at(-1)?.[0]
-    expect(filters).toMatchObject({ invoiceTypes: ["Custom"], statuses: [], eventUniqueIds: [], overdueOnly: false })
   })
 
   /** The link is written through the custom-invoice link mutation for the invoice being linked. */

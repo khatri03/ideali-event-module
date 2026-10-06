@@ -21,6 +21,7 @@ import { BackToInvoicesButton } from "./BackToInvoicesButton"
 import { CustomInvoiceAboutSection } from "./CustomInvoiceAboutSection"
 import { CustomInvoiceBuyerSection } from "./CustomInvoiceBuyerSection"
 import { CustomInvoiceLineItems } from "./CustomInvoiceLineItems"
+import { CustomInvoiceLinkSection } from "./CustomInvoiceLinkSection"
 import { CustomInvoiceSummaryPanel } from "./CustomInvoiceSummaryPanel"
 
 const NOTES_MAX = 2000
@@ -39,6 +40,7 @@ const EMPTY_VALUES: DefaultValues<CustomInvoiceFormValues> = {
   specialNotes: "",
   lineItems: [{ description: "", amount: "" }],
   emailOnCreate: true,
+  linkToExisting: false,
 }
 
 function toDateInputValue(dueDateUtc: string): string {
@@ -46,7 +48,8 @@ function toDateInputValue(dueDateUtc: string): string {
   return parsed ? format(parsed, "yyyy-MM-dd") : ""
 }
 
-function toFormValues(initial: CustomInvoiceForEdit): CustomInvoiceFormValues {
+function toFormValues(initial: CustomInvoiceForEdit, detail: CustomInvoiceDetail | undefined): CustomInvoiceFormValues {
+  const linkedInvoice = detail?.linkedInvoice
   return {
     moduleType: initial.moduleType,
     entityUniqueId: initial.entityUniqueId,
@@ -65,6 +68,9 @@ function toFormValues(initial: CustomInvoiceForEdit): CustomInvoiceFormValues {
         ? initial.lineItems.map((line) => ({ description: line.description, amount: line.amount }))
         : [{ description: "", amount: "" }],
     emailOnCreate: false,
+    linkToExisting: Boolean(linkedInvoice),
+    linkedInvoiceUniqueId: linkedInvoice?.invoiceUniqueId,
+    linkedInvoiceNo: linkedInvoice?.invoiceNo,
   }
 }
 
@@ -149,7 +155,7 @@ export function CustomInvoiceEditor({ invoiceUniqueId, initial, detail }: Custom
   const navigate = useNavigate()
   const isEditMode = Boolean(invoiceUniqueId)
   const isReadOnly = initial?.canEdit === false
-  const { submit, isPending, error } = useCustomInvoiceSubmit({ invoiceUniqueId, initial, detail })
+  const { submit, isPending, error } = useCustomInvoiceSubmit({ invoiceUniqueId, initial })
   const modulesQuery = useEnabledCustomInvoiceModules()
   const hasNoEnabledModules = !isEditMode && modulesQuery.isSuccess && modulesQuery.data.length === 0
   const [isDiscardOpen, setIsDiscardOpen] = useState(false)
@@ -162,7 +168,7 @@ export function CustomInvoiceEditor({ invoiceUniqueId, initial, detail }: Custom
     formState: { errors, isDirty },
   } = useForm<CustomInvoiceFormValues>({
     resolver: zodResolver(initial ? customInvoiceEditSchema : customInvoiceSchema),
-    defaultValues: initial ? toFormValues(initial) : EMPTY_VALUES,
+    defaultValues: initial ? toFormValues(initial, detail) : EMPTY_VALUES,
   })
   const notes = useWatch({ control, name: "specialNotes" }) ?? ""
   const emailOnCreate = useWatch({ control, name: "emailOnCreate" })
@@ -199,6 +205,13 @@ export function CustomInvoiceEditor({ invoiceUniqueId, initial, detail }: Custom
             />
           </EditorCard>
           <EditorCard title="Bill to">
+            <CustomInvoiceLinkSection
+              control={control}
+              setValue={setValue}
+              errors={errors}
+              invoiceUniqueId={invoiceUniqueId}
+              disabled={isReadOnly}
+            />
             <CustomInvoiceBuyerSection register={register} errors={errors} setValue={setValue} disabled={isReadOnly} />
           </EditorCard>
           <EditorCard title="Charges">

@@ -1,49 +1,28 @@
 import { useState } from "react"
-import { Box, Button, CloseButton, Dialog, Field, Flex, Input, Portal, Stack, Text } from "@chakra-ui/react"
-import type { EventInvoiceFilters } from "@/api/eventInvoices"
-import { DEFAULT_PAGE_SIZE, ErrorState, TablePagination } from "@/components/common"
-import { useDebounce } from "@/hooks/useDebounce"
+import { Box, Button, CloseButton, Dialog, Flex, Portal, Stack, Text } from "@chakra-ui/react"
+import type { CustomInvoiceModule } from "@/api/customInvoices"
 import { useModalGuardRelease } from "@/hooks/useModalGuardRelease"
 import { extractApiError } from "@/utils/errors"
 import { useLinkCustomInvoice } from "../hooks/useCustomInvoices"
-import { useEventInvoices } from "../hooks/useEventInvoices"
-import { LinkInvoicePickerTable } from "./LinkInvoicePickerTable"
+import { LinkInvoicePicker } from "./LinkInvoicePicker"
 
 interface LinkInvoiceDialogProps {
   open: boolean
   invoiceUniqueId: string
+  /** The invoice's own module; only invoices of the same module can be linked. */
+  moduleType: CustomInvoiceModule
   onClose: () => void
 }
 
-interface LinkInvoicePickerProps {
+interface LinkInvoiceDialogBodyProps {
   invoiceUniqueId: string
+  moduleType: CustomInvoiceModule
   onClose: () => void
 }
 
-// Links run between custom invoices only, so the picker never offers a ticket order the server would refuse.
-const CUSTOM_INVOICES_ONLY: Omit<EventInvoiceFilters, "searchTerm"> = {
-  eventUniqueIds: [],
-  sessionUniqueIds: [],
-  statuses: [],
-  paymentMethods: [],
-  invoiceTypes: ["Custom"],
-  overdueOnly: false,
-  invoiceDateFrom: null,
-  invoiceDateTo: null,
-}
-
-function LinkInvoicePicker({ invoiceUniqueId, onClose }: LinkInvoicePickerProps) {
-  const [searchInput, setSearchInput] = useState("")
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE)
+function LinkInvoiceDialogBody({ invoiceUniqueId, moduleType, onClose }: LinkInvoiceDialogBodyProps) {
   const [selectedInvoiceUniqueId, setSelectedInvoiceUniqueId] = useState<string | null>(null)
-  const searchTerm = useDebounce(searchInput, 300)
-  const invoicesQuery = useEventInvoices({ ...CUSTOM_INVOICES_ONLY, searchTerm }, page, pageSize, "invoiceDateUtc", "desc")
   const linkMutation = useLinkCustomInvoice(invoiceUniqueId)
-
-  // The list endpoint is shared with the main screen, so the invoice being linked is dropped here rather than
-  // offered as a target the server would refuse.
-  const candidates = (invoicesQuery.data?.items ?? []).filter((invoice) => invoice.invoiceUniqueId !== invoiceUniqueId)
   const canConfirm = Boolean(selectedInvoiceUniqueId) && !linkMutation.isPending
 
   const handleLink = async () => {
@@ -59,55 +38,12 @@ function LinkInvoicePicker({ invoiceUniqueId, onClose }: LinkInvoicePickerProps)
   return (
     <Dialog.Body px={{ base: 5, md: 6 }} py={5}>
       <Stack gap={4}>
-        <Field.Root>
-          <Field.Label fontSize="sm" fontWeight="700" color="text.primary">
-            Search invoices
-          </Field.Label>
-          <Input
-            value={searchInput}
-            minH="11"
-            borderRadius="12px"
-            placeholder="Search by invoice no, buyer name or email"
-            onChange={(event) => {
-              setSearchInput(event.target.value)
-              setPage(1)
-            }}
-          />
-        </Field.Root>
-
-        {invoicesQuery.isError ? (
-          <ErrorState
-            title="Could not load invoices"
-            message={extractApiError(invoicesQuery.error)}
-            isRetrying={invoicesQuery.isFetching}
-            onRetry={() => void invoicesQuery.refetch()}
-          />
-        ) : (
-          <Box border="1px solid" borderColor="border.subtle" borderRadius="16px" overflow="hidden">
-            <LinkInvoicePickerTable
-              invoices={candidates}
-              isFetching={invoicesQuery.isFetching}
-              selectedInvoiceUniqueId={selectedInvoiceUniqueId}
-              emptyMessage={searchTerm.trim() ? "No invoices match. Try a different search." : "There are no other invoices to link to yet."}
-              onSelect={setSelectedInvoiceUniqueId}
-            />
-            {invoicesQuery.data ? (
-              <TablePagination
-                page={page}
-                pageSize={pageSize}
-                totalPages={invoicesQuery.data.totalPages}
-                total={invoicesQuery.data.total}
-                itemLabel="invoice"
-                size="sm"
-                onPageChange={setPage}
-                onPageSizeChange={(nextPageSize) => {
-                  setPageSize(nextPageSize)
-                  setPage(1)
-                }}
-              />
-            ) : null}
-          </Box>
-        )}
+        <LinkInvoicePicker
+          moduleType={moduleType}
+          excludeInvoiceUniqueId={invoiceUniqueId}
+          selectedInvoiceUniqueId={selectedInvoiceUniqueId}
+          onSelect={(invoice) => setSelectedInvoiceUniqueId(invoice.invoiceUniqueId)}
+        />
 
         {linkMutation.error ? (
           <Box role="alert" p={4} borderRadius="16px" bg="status.error.bg">
@@ -143,8 +79,8 @@ function LinkInvoicePicker({ invoiceUniqueId, onClose }: LinkInvoicePickerProps)
   )
 }
 
-/** Picks an existing invoice to link to, searched and paged by the server through the shipped list endpoint. */
-export function LinkInvoiceDialog({ open, invoiceUniqueId, onClose }: LinkInvoiceDialogProps) {
+/** Picks an invoice of the same module to link to, searched and paged by the server. */
+export function LinkInvoiceDialog({ open, invoiceUniqueId, moduleType, onClose }: LinkInvoiceDialogProps) {
   useModalGuardRelease(open)
 
   return (
@@ -179,7 +115,7 @@ export function LinkInvoiceDialog({ open, invoiceUniqueId, onClose }: LinkInvoic
                 </Dialog.CloseTrigger>
               </Flex>
             </Box>
-            <LinkInvoicePicker invoiceUniqueId={invoiceUniqueId} onClose={onClose} />
+            <LinkInvoiceDialogBody invoiceUniqueId={invoiceUniqueId} moduleType={moduleType} onClose={onClose} />
           </Dialog.Content>
         </Dialog.Positioner>
       </Portal>

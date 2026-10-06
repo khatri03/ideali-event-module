@@ -11,6 +11,7 @@ const VALID = {
   email: "buyer@acme.test",
   lineItems: [{ description: "Gold sponsorship", amount: "100.00" }],
   emailOnCreate: true,
+  linkToExisting: false,
 }
 
 function firstError(input: Record<string, unknown>): string | undefined {
@@ -100,6 +101,28 @@ describe("customInvoiceSchema", () => {
   /** A member-picked buyer carries its member id through the form without disturbing validation. */
   it("MemberUniqueId_IsAcceptedAlongsideAValidBuyer", () => {
     expect(customInvoiceSchema.safeParse({ ...VALID, memberUniqueId: "mem-1" }).success).toBe(true)
+  })
+})
+
+describe("customInvoiceSchema link to an existing invoice", () => {
+  /** With the link switched on, saving without a picked invoice is stopped in the form, on the picker's own field. */
+  it("schema_LinkOnWithoutPick_ReportsChooseTheInvoiceToLinkTo", () => {
+    const result = customInvoiceSchema.safeParse({ ...VALID, linkToExisting: true })
+
+    expect(result.success).toBe(false)
+    expect(result.error?.issues).toEqual([
+      expect.objectContaining({ path: ["linkedInvoiceUniqueId"], message: "Choose the invoice to link to." }),
+    ])
+  })
+
+  /** A link switched off is ignored even when an id from an earlier pick is still held, so it never blocks saving. */
+  it("schema_LinkOff_IgnoresLinkedId", () => {
+    expect(customInvoiceSchema.safeParse({ ...VALID, linkToExisting: false, linkedInvoiceUniqueId: "" }).success).toBe(true)
+  })
+
+  /** A link switched on with a picked invoice is valid. */
+  it("schema_LinkOnWithPick_Accepted", () => {
+    expect(customInvoiceSchema.safeParse({ ...VALID, linkToExisting: true, linkedInvoiceUniqueId: "inv-42" }).success).toBe(true)
   })
 })
 

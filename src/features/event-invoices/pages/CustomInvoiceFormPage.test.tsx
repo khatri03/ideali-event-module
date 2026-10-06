@@ -55,10 +55,29 @@ function serverGet({ enabledModules = ["Event", "Membership"], edit, detail }: S
     if (url === API_ROUTES.customInvoiceEnabledModules) return Promise.resolve(envelope(enabledModules))
     if (url === API_ROUTES.customInvoiceEntityOptions) return Promise.resolve(entityOptionsResponse(config?.params ?? new URLSearchParams()))
     if (url === API_ROUTES.invoiceCategories) return Promise.resolve(categoriesResponse())
+    if (url === API_ROUTES.customInvoiceLinkCandidates) return Promise.resolve(linkCandidatesResponse())
     if (url === API_ROUTES.customInvoiceForEdit(EDIT_ID)) return edit ? edit() : Promise.resolve(editResponse("PendingPayment", true))
     if (url === API_ROUTES.customInvoiceDetail(EDIT_ID)) return detail ? detail() : Promise.resolve(detailResponse())
     return Promise.resolve(envelope(null))
   }
+}
+
+const LINK_CANDIDATE = {
+  InvoiceUniqueId: "inv-42",
+  InvoiceNo: "INV-0042",
+  CompanyName: "Northwind Traders",
+  BuyerFirstName: "Sam",
+  BuyerMiddleName: null,
+  BuyerLastName: "Lee",
+  BuyerName: "Sam Lee",
+  BuyerEmail: "sam@northwind.test",
+  InvoiceDateUtc: "2026-09-01T00:00:00Z",
+  InvoiceStatus: "Paid",
+  InvoiceStatusLabel: "Paid",
+}
+
+function linkCandidatesResponse() {
+  return envelope({ PageNo: 1, PageSize: 10, PageCount: 1, TotalRecordsCount: 1, PageData: [LINK_CANDIDATE] })
 }
 
 function categoriesResponse() {
@@ -193,6 +212,11 @@ async function fillValidMembershipForm(user: User) {
   await pickEntity(user, "Membership", "Gol", "Gold")
   await pickOption(user, "Sponsorship type", "Gold Sponsor")
   fillBuyerAndCharges()
+}
+
+async function linkToCandidate(user: User) {
+  await user.click(screen.getByRole("checkbox", { name: "Link to an existing invoice" }))
+  await user.click(await screen.findByRole("radio", { name: "Select invoice INV-0042" }))
 }
 
 async function waitForEditLoaded() {
@@ -354,6 +378,59 @@ describe("CustomInvoiceFormPage", () => {
     expect(await screen.findByText("Custom invoicing is not turned on for this module.")).toBeInTheDocument()
     expect(screen.getByLabelText(/Company name/i)).toHaveValue("Acme Corp")
     expect(screen.getByLabelText("Amount for line 1")).toHaveValue("1500.00")
+    expect(navigateMock).not.toHaveBeenCalled()
+  })
+
+  /** Linking on create posts the picked invoice with the new one, so invoice and link are saved together (D-11). */
+  it("FormPage_CreateWithLink_PostsLinkedInvoiceUniqueId", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    renderPage()
+    await fillValidMembershipForm(user)
+    await linkToCandidate(user)
+
+    await user.click(screen.getByRole("button", { name: CREATE_ACTION }))
+
+    await waitFor(() => expect(http.post).toHaveBeenCalled())
+    expect(http.post.mock.calls[0][1]).toMatchObject({ linkedInvoiceUniqueId: "inv-42" })
+  })
+
+  /** The link is opt-in: a new invoice saved with the switch left off carries no link. */
+  it("FormPage_CreateWithLinkOff_PostsNullLink", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    renderPage()
+    await fillValidMembershipForm(user)
+
+    await user.click(screen.getByRole("button", { name: CREATE_ACTION }))
+
+    await waitFor(() => expect(http.post).toHaveBeenCalled())
+    expect(http.post.mock.calls[0][1]).toMatchObject({ linkedInvoiceUniqueId: null })
+  })
+
+  /** Switched on with nothing picked, the save is stopped in the form instead of creating an unlinked invoice. */
+  it("FormPage_LinkOnWithoutPick_RefusesSaveWithChooseTheInvoice", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    renderPage()
+    await fillValidMembershipForm(user)
+    await user.click(screen.getByRole("checkbox", { name: "Link to an existing invoice" }))
+
+    await user.click(screen.getByRole("button", { name: CREATE_ACTION }))
+
+    expect(await screen.findByText("Choose the invoice to link to.")).toBeInTheDocument()
+    expect(http.post).not.toHaveBeenCalled()
+  })
+
+  /** A link the server refuses is shown in the page banner, nothing is saved, and the typed values stay. */
+  it("FormPage_LinkRefusedByServer_ShowsBannerAndKeepsValues", async () => {
+    http.post.mockRejectedValue(conflictError("Only an invoice of the same module can be linked."))
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    renderPage()
+    await fillValidMembershipForm(user)
+    await linkToCandidate(user)
+
+    await user.click(screen.getByRole("button", { name: CREATE_ACTION }))
+
+    expect(await screen.findByText("Only an invoice of the same module can be linked.")).toBeInTheDocument()
+    expect(screen.getByLabelText(/Company name/i)).toHaveValue("Acme Corp")
     expect(navigateMock).not.toHaveBeenCalled()
   })
 

@@ -17,11 +17,7 @@ export const customInvoiceLineSchema = z.object({
     .refine((value) => Number(value) > 0, "Enter an amount greater than zero."),
 })
 
-/**
- * The custom-invoice create form. Messages are byte-identical to the C# service so the same rule reads the
- * same whether it is caught in the browser or returned by the API.
- */
-export const customInvoiceSchema = z.object({
+const customInvoiceFields = z.object({
   moduleType: z.enum(CUSTOM_INVOICE_MODULES, { error: "Choose the module this invoice bills." }),
   entityUniqueId: z.string().min(1, "Choose what this invoice bills."),
   categoryUniqueId: z.string().min(1, "Select a sponsorship type."),
@@ -44,13 +40,34 @@ export const customInvoiceSchema = z.object({
    * follow-up send request and never reaches the write payload.
    */
   emailOnCreate: z.boolean(),
+  /** The "Link to an existing invoice" switch. Off sends no link, whatever id is still held below. */
+  linkToExisting: z.boolean(),
+  linkedInvoiceUniqueId: z.string().optional(),
+  /** The picked invoice's number, kept only to name it in the "Buyer copied from" banner. */
+  linkedInvoiceNo: z.string().optional(),
 })
+
+type CustomInvoiceFieldValues = z.infer<typeof customInvoiceFields>
+
+function requirePickedLinkWhenOn(values: CustomInvoiceFieldValues, context: z.RefinementCtx) {
+  if (values.linkToExisting && !values.linkedInvoiceUniqueId) {
+    context.addIssue({ code: "custom", path: ["linkedInvoiceUniqueId"], message: "Choose the invoice to link to." })
+  }
+}
+
+/**
+ * The custom-invoice create form. Messages are byte-identical to the C# service so the same rule reads the
+ * same whether it is caught in the browser or returned by the API.
+ */
+export const customInvoiceSchema = customInvoiceFields.superRefine(requirePickedLinkWhenOn)
 
 /**
  * The edit form. What an invoice bills is fixed at creation and the server keeps it, so a record deleted
  * since then must not block saving the rest of the invoice.
  */
-export const customInvoiceEditSchema = customInvoiceSchema.extend({ entityUniqueId: z.string() })
+export const customInvoiceEditSchema = customInvoiceFields
+  .extend({ entityUniqueId: z.string() })
+  .superRefine(requirePickedLinkWhenOn)
 
 export type CustomInvoiceLineValues = z.infer<typeof customInvoiceLineSchema>
 export type CustomInvoiceFormValues = z.infer<typeof customInvoiceSchema>

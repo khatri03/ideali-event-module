@@ -148,6 +148,36 @@ export interface CustomInvoiceEntityOptionsQuery {
   pageSize?: number
 }
 
+/** A custom invoice of the same module the organizer may link to, with the buyer it would copy. */
+export interface CustomInvoiceLinkCandidate {
+  invoiceUniqueId: string
+  invoiceNo: string
+  companyName: string
+  buyerFirstName: string | null
+  buyerMiddleName: string | null
+  buyerLastName: string
+  buyerName: string
+  buyerEmail: string
+  invoiceDateUtc: string
+  invoiceStatus: string
+  invoiceStatusLabel: string
+}
+
+export interface CustomInvoiceLinkCandidatesPage {
+  items: CustomInvoiceLinkCandidate[]
+  total: number
+  totalPages: number
+}
+
+export interface CustomInvoiceLinkCandidatesQuery {
+  moduleType: CustomInvoiceModule
+  searchTerm: string
+  pageNo: number
+  pageSize: number
+  /** The invoice being linked from, which the server leaves out of its own candidates. */
+  excludeInvoiceUniqueId?: string
+}
+
 const money = () => z.coerce.string()
 const flag = () => z.boolean().nullish().transform((value) => value ?? false)
 const text = () => z.string().nullish().transform((value) => value ?? "")
@@ -243,6 +273,28 @@ const entityOptionsPageSchema = z.object({
   pageData: z.array(z.object({ uniqueId: z.string().min(1), name: z.string() })),
 })
 
+const nullableText = () => z.string().nullish().transform((value) => value ?? null)
+
+const linkCandidatesPageSchema = z.object({
+  pageCount: z.number().int(),
+  totalRecordsCount: z.number().int(),
+  pageData: z.array(
+    z.object({
+      invoiceUniqueId: z.string().min(1),
+      invoiceNo: z.string(),
+      companyName: text(),
+      buyerFirstName: nullableText(),
+      buyerMiddleName: nullableText(),
+      buyerLastName: text(),
+      buyerName: text(),
+      buyerEmail: text(),
+      invoiceDateUtc: text(),
+      invoiceStatus: z.string(),
+      invoiceStatusLabel: text(),
+    }),
+  ),
+})
+
 export async function createCustomInvoice(payload: CustomInvoiceWritePayload): Promise<string> {
   const response = await client.post<unknown>(API_ROUTES.customInvoiceCreate, payload)
   return createdInvoiceIdSchema.parse(parseServicePayload(response.data))
@@ -310,6 +362,30 @@ export async function fetchCustomInvoiceEntityOptions({
   const response = await client.get<unknown>(API_ROUTES.customInvoiceEntityOptions, { params })
   const page = entityOptionsPageSchema.parse(parseServicePayload(response.data))
   return { items: page.pageData, pageNo: page.pageNo, pageCount: page.pageCount, total: page.totalRecordsCount }
+}
+
+/** One page of the organizer's custom invoices in a module that an invoice may be linked to, searched on the server. */
+export async function fetchCustomInvoiceLinkCandidates({
+  moduleType,
+  searchTerm,
+  pageNo,
+  pageSize,
+  excludeInvoiceUniqueId,
+}: CustomInvoiceLinkCandidatesQuery): Promise<CustomInvoiceLinkCandidatesPage> {
+  const params = new URLSearchParams({
+    moduleType,
+    searchTerm: searchTerm.trim(),
+    pageNo: String(pageNo),
+    pageSize: String(pageSize),
+  })
+  if (excludeInvoiceUniqueId) params.set("excludeInvoiceUniqueId", excludeInvoiceUniqueId)
+  const response = await client.get<unknown>(API_ROUTES.customInvoiceLinkCandidates, { params })
+  const page = linkCandidatesPageSchema.parse(parseServicePayload(response.data))
+  return {
+    items: page.pageData.map((row) => ({ ...row, invoiceStatusLabel: row.invoiceStatusLabel || row.invoiceStatus })),
+    total: page.totalRecordsCount,
+    totalPages: page.pageCount,
+  }
 }
 
 /**

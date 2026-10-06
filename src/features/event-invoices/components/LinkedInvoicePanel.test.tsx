@@ -26,7 +26,7 @@ function panel(linkedInvoice: LinkedInvoiceReference | null, canLink: boolean) {
   return (
     <ChakraProvider value={system}>
       <MemoryRouter>
-        <LinkedInvoicePanel invoiceUniqueId="invoice-1" invoiceNo="INV-2001" linkedInvoice={linkedInvoice} canLink={canLink} />
+        <LinkedInvoicePanel invoiceUniqueId="invoice-1" invoiceNo="INV-2001" moduleType="Membership" linkedInvoice={linkedInvoice} canLink={canLink} />
       </MemoryRouter>
     </ChakraProvider>
   )
