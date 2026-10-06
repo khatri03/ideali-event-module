@@ -201,6 +201,8 @@ async function mockShell(page: Page) {
   await page.route((url) => url.pathname.startsWith("/api/"), (route) => route.fulfill({ status: 404, json: { title: "Not mocked", status: 404 } }))
   await page.route("**/api/identity/account/session", (route) => route.fulfill({ json: SESSION }))
   await page.route("**/api/alert-inbox/**", (route) => route.fulfill({ json: envelope(null) }))
+  // Stripe.js is not under test here; when its CDN stalls, the page load event never fires and goto times out.
+  await page.route("https://js.stripe.com/**", (route) => route.abort())
   await page.route("**/api/organizer/events/invoices/filter-options", (route) =>
     route.fulfill({ json: envelope({ events: [], sessions: [] }) }),
   )

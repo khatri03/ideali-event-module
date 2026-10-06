@@ -177,6 +177,8 @@ async function mockEditor(page: Page) {
   await page.route((url) => url.pathname.startsWith("/api/"), (route) => route.fulfill({ status: 404, json: { title: "Not mocked", status: 404 } }))
   await page.route("**/api/identity/account/session", (route) => route.fulfill({ json: SESSION }))
   await page.route("**/api/alert-inbox/**", (route) => route.fulfill({ json: envelope(null) }))
+  // Stripe.js is not under test here; when its CDN stalls, the page load event never fires and goto times out.
+  await page.route("https://js.stripe.com/**", (route) => route.abort())
   await page.route("**/api/organizer/custom-invoices/enabled-modules", (route) => route.fulfill({ json: envelope(["Event", "Membership"]) }))
   await page.route("**/api/organizer/custom-invoices/categories/list?**", (route) => route.fulfill({ json: CATEGORIES }))
   await page.route("**/api/organizer/custom-invoices/entity-options?**", (route) => {
@@ -221,12 +223,16 @@ async function boxOf(target: Locator) {
 /** Scrolls the routed page content to its end, returning how far it moved so a page that cannot scroll is visible. */
 async function scrollContentToEnd(anchor: Locator): Promise<number> {
   return await anchor.evaluate((start) => {
+    // An overflow:auto ancestor that is as tall as its content does not scroll; keep climbing to the one that does.
+    const scrolls = (element: Element) =>
+      ["auto", "scroll"].includes(getComputedStyle(element).overflowY) && element.scrollHeight > element.clientHeight
     let container: Element | null = start.parentElement
-    while (container && !["auto", "scroll"].includes(getComputedStyle(container).overflowY)) {
+    while (container && !scrolls(container)) {
       container = container.parentElement
     }
     const scroller = container ?? document.scrollingElement ?? document.documentElement
-    scroller.scrollTo(0, scroller.scrollHeight)
+    // index.css sets smooth scrolling on html, which would leave scrollTop at 0 when it is read straight after.
+    scroller.scrollTo({ top: scroller.scrollHeight, behavior: "instant" })
     return scroller.scrollTop
   })
 }
