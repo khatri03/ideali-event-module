@@ -570,8 +570,8 @@ describe("CustomInvoiceFormPage", () => {
     expect(screen.queryByRole("button", { name: "Save changes" })).not.toBeInTheDocument()
   })
 
-  /** An invoice that can no longer be edited still offers Email link to its buyer, while Save stays gone (D-16). */
-  it("FormPage_LockedInvoice_KeepsEmailLinkWithoutSave", async () => {
+  /** An invoice that can no longer be edited still offers Print and Email link, while Save stays gone (D-16). */
+  it("FormPage_LockedInvoice_KeepsPrintAndEmailLinkWithoutSave", async () => {
     http.get.mockImplementation(
       serverGet({
         edit: () => Promise.resolve(editResponse("PartiallyPaid", false)),
@@ -581,6 +581,7 @@ describe("CustomInvoiceFormPage", () => {
     renderPage({ invoiceUniqueId: EDIT_ID })
 
     expect(await screen.findByText("This invoice can no longer be edited.")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Print" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Email link" })).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Save changes" })).not.toBeInTheDocument()
   })

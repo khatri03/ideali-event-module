@@ -1,4 +1,5 @@
-import { useParams } from "react-router-dom"
+import { useEffect, useRef } from "react"
+import { useParams, useSearchParams } from "react-router-dom"
 import { Stack } from "@chakra-ui/react"
 import { formatBilledEntity } from "@/utils/customInvoiceEntity"
 import { isNotFoundError } from "@/utils/errors"
@@ -14,6 +15,23 @@ import { InvoiceSettlementActions } from "../components/InvoiceSettlementActions
 import "@/styles/print.css"
 
 /**
+ * Opens the browser print dialog once the invoice has rendered when the page was opened with `?print=1` - the
+ * editor's Print hands off here because this page owns the print layout. It fires at most once per visit, so
+ * a refetch after printing does not reopen the dialog.
+ */
+function usePrintOnceLoaded(isLoaded: boolean) {
+  const [searchParams] = useSearchParams()
+  const isPrintRequested = searchParams.get("print") === "1"
+  const hasPrintedRef = useRef(false)
+
+  useEffect(() => {
+    if (!isPrintRequested || !isLoaded || hasPrintedRef.current) return
+    hasPrintedRef.current = true
+    window.print()
+  }, [isPrintRequested, isLoaded])
+}
+
+/**
  * A custom invoice's detail, whatever module it bills. The billed record is named with its module label
  * ("Membership: Gold"), and only an Event-bound invoice links to its record.
  */
@@ -23,6 +41,7 @@ export default function CustomInvoiceDetailPage() {
   const detailQuery = useCustomInvoiceDetail(invoiceUniqueId)
   const { markPaid, cancel, emailInvoice, addNote } = useCustomInvoiceDetailActions(invoiceUniqueId)
   const invoice = detailQuery.data
+  usePrintOnceLoaded(Boolean(invoice))
 
   if (!invoiceUniqueId || detailQuery.isError || !invoice) {
     return (

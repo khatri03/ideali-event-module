@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type { CustomInvoiceDetail } from "@/api/customInvoices"
 import { buildCustomInvoiceDetail } from "@/test/customInvoiceDetail.fixture"
 import { system } from "@/theme"
-import { API_ROUTES } from "@/utils/routes"
+import { API_ROUTES, APP_ROUTES } from "@/utils/routes"
 import type { CustomInvoiceFormValues } from "../schemas/customInvoice.schemas"
 import { CustomInvoiceDeliverySection } from "./CustomInvoiceDeliverySection"
 
@@ -89,5 +89,25 @@ describe("CustomInvoiceDeliverySection", () => {
     renderDelivery(buildCustomInvoiceDetail({ canSend: false }))
 
     expect(screen.queryByRole("button", { name: "Email link" })).not.toBeInTheDocument()
+  })
+
+  /**
+   * Print opens the invoice's own print layout in a new tab with the print flag, leaving unsaved edits in the
+   * editor untouched, and the new tab gets no handle back to this one.
+   */
+  it("DeliverySection_Print_LinksToDetailWithPrintFlagInNewTab", () => {
+    renderDelivery(buildCustomInvoiceDetail())
+
+    const print = screen.getByRole("link", { name: "Print" })
+    expect(print).toHaveAttribute("href", `${APP_ROUTES.customInvoices.detail("invoice-1")}?print=1`)
+    expect(print).toHaveAttribute("target", "_blank")
+    expect(print).toHaveAttribute("rel", "noopener noreferrer")
+  })
+
+  /** A Paid invoice can still be printed for the buyer's records even though it can no longer be emailed. */
+  it("DeliverySection_PaidInvoice_StillOffersPrint", () => {
+    renderDelivery(buildCustomInvoiceDetail({ invoiceStatus: "Paid", invoiceStatusLabel: "Paid", canSend: false }))
+
+    expect(screen.getByRole("link", { name: "Print" })).toBeInTheDocument()
   })
 })

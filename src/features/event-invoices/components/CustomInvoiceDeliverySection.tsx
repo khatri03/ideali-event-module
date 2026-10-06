@@ -1,13 +1,15 @@
 import { useState } from "react"
-import { Button, Checkbox, Flex, Stack, Text } from "@chakra-ui/react"
-import { Controller, type Control } from "react-hook-form"
-import { Mail } from "lucide-react"
+import { Button, Flex, Stack, Text } from "@chakra-ui/react"
+import type { Control } from "react-hook-form"
+import { Mail, Printer } from "lucide-react"
 import type { CustomInvoiceDetail } from "@/api/customInvoices"
 import { ConfirmDialog } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
+import { APP_ROUTES } from "@/utils/routes"
 import { formatUtcDate } from "@/utils/utcDates"
 import { useEmailCustomInvoice } from "../hooks/useCustomInvoices"
 import type { CustomInvoiceFormValues } from "../schemas/customInvoice.schemas"
+import { CustomInvoiceEmailOnCreateCheckbox } from "./CustomInvoiceEmailOnCreateCheckbox"
 
 interface CustomInvoiceDeliverySectionProps {
   control: Control<CustomInvoiceFormValues>
@@ -28,38 +30,6 @@ const ACTION_BUTTON_STYLE = {
   w: { base: "full", md: "auto" },
   cursor: "pointer",
 } as const
-
-function EmailOnCreateCheckbox({ control, disabled = false }: Pick<CustomInvoiceDeliverySectionProps, "control" | "disabled">) {
-  const cursor = disabled ? "not-allowed" : "pointer"
-  return (
-    <Controller
-      control={control}
-      name="emailOnCreate"
-      render={({ field }) => (
-        <Checkbox.Root
-          checked={field.value}
-          onCheckedChange={(details) => field.onChange(details.checked === true)}
-          disabled={disabled}
-          alignItems="flex-start"
-          minH="11"
-          py={2}
-          cursor={cursor}
-        >
-          <Checkbox.HiddenInput name={field.name} onBlur={field.onBlur} />
-          <Checkbox.Control borderRadius="6px" mt={0.5} cursor={cursor} />
-          <Stack gap={0.5}>
-            <Checkbox.Label fontSize="sm" fontWeight="700" color="text.primary" cursor={cursor}>
-              Email payable link to buyer now
-            </Checkbox.Label>
-            <Text fontSize="sm" color="text.secondary">
-              The buyer gets an email with a link to pay online.
-            </Text>
-          </Stack>
-        </Checkbox.Root>
-      )}
-    />
-  )
-}
 
 function SentState({ lastSentAtUtc }: { lastSentAtUtc: string | null }) {
   const sentOn = formatUtcDate(lastSentAtUtc)
@@ -127,16 +97,28 @@ function EmailLinkAction({ detail }: { detail: CustomInvoiceDetail }) {
   )
 }
 
+// The editor is not a printable invoice, so Print opens the detail page's print layout in a new tab, which
+// leaves any unsaved edits here untouched.
+function PrintAction({ invoiceUniqueId }: { invoiceUniqueId: string }) {
+  return (
+    <Button asChild {...ACTION_BUTTON_STYLE}>
+      <a href={`${APP_ROUTES.customInvoices.detail(invoiceUniqueId)}?print=1`} target="_blank" rel="noopener noreferrer">
+        <Printer size={16} />
+        Print
+      </a>
+    </Button>
+  )
+}
+
 function SavedInvoiceDelivery({ detail }: { detail: CustomInvoiceDetail }) {
   const canEmailLink = detail.canSend && !CLOSED_STATUSES.includes(detail.invoiceStatus)
   return (
     <>
       <SentState lastSentAtUtc={detail.lastSentAtUtc} />
-      {canEmailLink ? (
-        <Flex direction={{ base: "column", md: "row" }} wrap="wrap" gap={2}>
-          <EmailLinkAction detail={detail} />
-        </Flex>
-      ) : null}
+      <Flex direction={{ base: "column", md: "row" }} wrap="wrap" gap={2}>
+        <PrintAction invoiceUniqueId={detail.invoiceUniqueId} />
+        {canEmailLink ? <EmailLinkAction detail={detail} /> : null}
+      </Flex>
     </>
   )
 }
@@ -151,7 +133,7 @@ export function CustomInvoiceDeliverySection({ control, detail, disabled }: Cust
       <Text fontSize="sm" fontWeight="600" color="text.secondary">
         Delivery
       </Text>
-      {detail ? <SavedInvoiceDelivery detail={detail} /> : <EmailOnCreateCheckbox control={control} disabled={disabled} />}
+      {detail ? <SavedInvoiceDelivery detail={detail} /> : <CustomInvoiceEmailOnCreateCheckbox control={control} disabled={disabled} />}
     </Stack>
   )
 }

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { render, screen, within } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { ChakraProvider } from "@chakra-ui/react"
@@ -64,7 +64,7 @@ const CUSTOM_INVOICE: CustomInvoiceDetail = {
   canSend: true,
 }
 
-function renderPage(overrides: Partial<CustomInvoiceDetail> = {}) {
+function mockDetail(overrides: Partial<CustomInvoiceDetail> = {}) {
   useCustomInvoiceDetailMock.mockReturnValue({
     data: { ...CUSTOM_INVOICE, ...overrides },
     isLoading: false,
@@ -73,21 +73,29 @@ function renderPage(overrides: Partial<CustomInvoiceDetail> = {}) {
     error: null,
     refetch: vi.fn(),
   })
+}
 
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+
+/** The detail page routed at its own URL, with an optional query string such as the editor's `?print=1`. */
+function pageTree(search = "") {
   const detailPath = APP_ROUTES.customInvoices.detail(CUSTOM_INVOICE.invoiceUniqueId)
-
-  return render(
+  return (
     <ChakraProvider value={system}>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[detailPath]}>
+        <MemoryRouter initialEntries={[`${detailPath}${search}`]}>
           <Routes>
             <Route path={APP_ROUTES.customInvoices.detailRoute} element={<CustomInvoiceDetailPage />} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
-    </ChakraProvider>,
+    </ChakraProvider>
   )
+}
+
+function renderPage(overrides: Partial<CustomInvoiceDetail> = {}, search = "") {
+  mockDetail(overrides)
+  return render(pageTree(search))
 }
 
 function printRegion(container: HTMLElement): HTMLElement {
@@ -169,5 +177,47 @@ describe("CustomInvoiceDetailPage print contract", () => {
     const { container } = renderPage({ moduleType: "Membership", entityUniqueId: "type-1", entityName: "Gold Membership" })
 
     expect(within(printRegion(container)).getByText("Membership: Gold Membership")).toBeInTheDocument()
+  })
+})
+
+describe("CustomInvoiceDetailPage print hand-off", () => {
+  const printMock = vi.fn()
+
+  beforeEach(() => {
+    useCustomInvoiceDetailMock.mockReset()
+    printMock.mockReset()
+    vi.stubGlobal("print", printMock)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  /** Print from the editor opens this page with ?print=1, and the dialog opens once the invoice is on the page to print. */
+  it("DetailPage_PrintFlag_OpensPrintDialogOnceAfterLoad", () => {
+    const { rerender } = renderPage({}, "?print=1")
+
+    expect(screen.getByText("Headline sponsorship")).toBeInTheDocument()
+    expect(printMock).toHaveBeenCalledTimes(1)
+
+    mockDetail({ invoiceStatusLabel: "Pending Payment (refreshed)" })
+    rerender(pageTree("?print=1"))
+    expect(printMock).toHaveBeenCalledTimes(1)
+  })
+
+  /** Before the invoice has loaded there is nothing to print, so the dialog waits rather than printing a blank page. */
+  it("DetailPage_PrintFlagWhileLoading_DoesNotPrintYet", () => {
+    useCustomInvoiceDetailMock.mockReturnValue({ data: undefined, isLoading: true, isError: false, isFetching: true, error: null, refetch: vi.fn() })
+    render(pageTree("?print=1"))
+
+    expect(printMock).not.toHaveBeenCalled()
+  })
+
+  /** An ordinary visit to the detail page never pops a print dialog on its own. */
+  it("DetailPage_NoPrintFlag_DoesNotPrint", () => {
+    renderPage()
+
+    expect(screen.getByText("Headline sponsorship")).toBeInTheDocument()
+    expect(printMock).not.toHaveBeenCalled()
   })
 })
