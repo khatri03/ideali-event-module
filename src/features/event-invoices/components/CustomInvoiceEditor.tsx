@@ -10,6 +10,7 @@ import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 import { parseUtcDateTime } from "@/utils/utcDates"
 import type { CustomInvoiceForEdit } from "@/api/customInvoices"
+import { EVENT_INVOICE_STATUS_OPTIONS } from "@/api/eventInvoices"
 import { useCustomInvoiceSubmit } from "../hooks/useCustomInvoiceSubmit"
 import { useEnabledCustomInvoiceModules } from "../hooks/useCustomInvoiceAuthoringOptions"
 import {
@@ -64,6 +65,11 @@ function toFormValues(initial: CustomInvoiceForEdit): CustomInvoiceFormValues {
         ? initial.lineItems.map((line) => ({ description: line.description, amount: line.amount }))
         : [{ description: "", amount: "" }],
   }
+}
+
+function statusLabelFor(initial: CustomInvoiceForEdit | undefined): string {
+  if (!initial) return "Not saved yet"
+  return EVENT_INVOICE_STATUS_OPTIONS.find((option) => option.value === initial.invoiceStatus)?.label ?? initial.invoiceStatus
 }
 
 function EditorCard({ title, children }: { title: string; children: ReactNode }) {
@@ -183,8 +189,9 @@ export function CustomInvoiceEditor({ invoiceUniqueId, initial }: CustomInvoiceE
               register={register}
               errors={errors}
               setValue={setValue}
-              isEditMode={isEditMode}
+              initial={initial}
               isReadOnly={isReadOnly}
+              hasNoEnabledModules={hasNoEnabledModules}
             />
           </EditorCard>
           <EditorCard title="Bill to">
@@ -205,6 +212,7 @@ export function CustomInvoiceEditor({ invoiceUniqueId, initial }: CustomInvoiceE
 
         <CustomInvoiceSummaryPanel
           control={control}
+          statusLabel={statusLabelFor(initial)}
           submitLabel={isEditMode ? "Save changes" : "Create invoice"}
           isPending={isPending}
           canSubmit={!isReadOnly && !hasNoEnabledModules}

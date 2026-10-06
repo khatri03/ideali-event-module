@@ -4,7 +4,8 @@ import { TriangleAlert } from "lucide-react"
 import { Controller, useWatch, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue } from "react-hook-form"
 import { StyledSelect } from "@/components/common"
 import { RequiredFieldLabel } from "@/features/custom-lists"
-import type { CustomInvoiceModule } from "@/api/customInvoices"
+import type { CustomInvoiceForEdit, CustomInvoiceModule } from "@/api/customInvoices"
+import { billedEntityLabel } from "@/utils/customInvoiceEntity"
 import { useActiveInvoiceCategoryOptions } from "../hooks/useCustomInvoiceMutations"
 import { useEnabledCustomInvoiceModules } from "../hooks/useCustomInvoiceAuthoringOptions"
 import type { CustomInvoiceFormValues } from "../schemas/customInvoice.schemas"
@@ -15,8 +16,11 @@ interface CustomInvoiceAboutSectionProps {
   register: UseFormRegister<CustomInvoiceFormValues>
   errors: FieldErrors<CustomInvoiceFormValues>
   setValue: UseFormSetValue<CustomInvoiceFormValues>
-  isEditMode: boolean
+  /** The invoice being edited; absent when creating. Its module and record are fixed and shown read-only. */
+  initial?: CustomInvoiceForEdit
   isReadOnly: boolean
+  /** Custom invoicing is turned on for no module, so there is nothing to create. */
+  hasNoEnabledModules: boolean
 }
 
 function NoModulesEnabledNotice() {
@@ -32,16 +36,35 @@ function NoModulesEnabledNotice() {
   )
 }
 
+function BilledEntityReadOnly({ initial }: { initial: CustomInvoiceForEdit }) {
+  return (
+    <Field.Root readOnly>
+      <Field.Label fontSize="sm" fontWeight="700" color="text.primary">
+        {billedEntityLabel(initial.moduleType)}
+      </Field.Label>
+      <Input
+        readOnly
+        value={initial.entityName.trim() || "This record no longer exists"}
+        minH="11"
+        borderRadius="12px"
+        bg="app.bg"
+        cursor="not-allowed"
+      />
+      <Field.HelperText>What an invoice bills cannot change after it is created.</Field.HelperText>
+    </Field.Root>
+  )
+}
+
 /** What the invoice bills and under which terms: module, billed record, sponsorship type and due date. */
-export function CustomInvoiceAboutSection({ control, register, errors, setValue, isEditMode, isReadOnly }: CustomInvoiceAboutSectionProps) {
+export function CustomInvoiceAboutSection({ control, register, errors, setValue, initial, isReadOnly, hasNoEnabledModules }: CustomInvoiceAboutSectionProps) {
   const modulesQuery = useEnabledCustomInvoiceModules()
   const categoriesQuery = useActiveInvoiceCategoryOptions()
   const moduleType = useWatch({ control, name: "moduleType" }) as CustomInvoiceModule | undefined
 
+  const isEditMode = Boolean(initial)
   const enabledModules = modulesQuery.data ?? []
-  const moduleOptions = enabledModules.map((module) => ({ label: module, value: module }))
+  const moduleOptions = (initial ? [initial.moduleType] : enabledModules).map((module) => ({ label: module, value: module }))
   const onlyModule = !isEditMode && enabledModules.length === 1 ? enabledModules[0] : undefined
-  const hasNoEnabledModules = !isEditMode && modulesQuery.isSuccess && enabledModules.length === 0
 
   // With a single enabled module there is no choice to make, so it is filled in rather than asked for.
   useEffect(() => {
@@ -76,7 +99,11 @@ export function CustomInvoiceAboutSection({ control, register, errors, setValue,
         <Field.ErrorText>{errors.moduleType?.message}</Field.ErrorText>
       </Field.Root>
 
-      <CustomInvoiceEntityPicker key={moduleType ?? "none"} control={control} errors={errors} moduleType={moduleType} disabled={isEditMode || isReadOnly} />
+      {initial ? (
+        <BilledEntityReadOnly initial={initial} />
+      ) : (
+        <CustomInvoiceEntityPicker key={moduleType ?? "none"} control={control} errors={errors} moduleType={moduleType} disabled={isReadOnly} />
+      )}
 
       <Field.Root invalid={Boolean(errors.categoryUniqueId)}>
         <RequiredFieldLabel>Sponsorship type</RequiredFieldLabel>

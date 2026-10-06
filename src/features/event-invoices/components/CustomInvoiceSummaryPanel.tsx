@@ -7,6 +7,8 @@ import { LINE_AMOUNT_PATTERN, type CustomInvoiceFormValues } from "../schemas/cu
 interface CustomInvoiceSummaryPanelProps {
   control: Control<CustomInvoiceFormValues>
   currencySymbol?: string
+  /** Where the invoice stands: "Not saved yet" before the first save, otherwise its saved status. */
+  statusLabel: string
   submitLabel: string
   isPending: boolean
   canSubmit: boolean
@@ -31,8 +33,12 @@ function formatDueDate(dueDate: string | undefined): string {
   return dueDate ? format(parseISO(dueDate), "MMM d, yyyy") : "Not set"
 }
 
-/** The invoice at a glance while it is written: status, what the buyer will owe, when, and the save action. */
-export function CustomInvoiceSummaryPanel({ control, currencySymbol = "$", submitLabel, isPending, canSubmit, cancelLabel, onCancel }: CustomInvoiceSummaryPanelProps) {
+/**
+ * The invoice at a glance while it is written: status, what the buyer will owe, when, and the save action.
+ * Total due sums only amounts that are already valid money, so a half-typed figure never shows NaN; the
+ * sum stays decimal text and never passes through a float.
+ */
+export function CustomInvoiceSummaryPanel({ control, currencySymbol = "$", statusLabel, submitLabel, isPending, canSubmit, cancelLabel, onCancel }: CustomInvoiceSummaryPanelProps) {
   const lineItems = useWatch({ control, name: "lineItems" }) ?? []
   const dueDate = useWatch({ control, name: "dueDate" })
 
@@ -41,17 +47,26 @@ export function CustomInvoiceSummaryPanel({ control, currencySymbol = "$", submi
     .filter((amount) => LINE_AMOUNT_PATTERN.test(amount))
 
   return (
-    <Box borderRadius="20px" bg="card.bg" boxShadow="card" p={{ base: 4, md: 6 }}>
+    <Box
+      as="aside"
+      aria-label="Invoice summary"
+      position={{ base: "static", lg: "sticky" }}
+      top={{ lg: 6 }}
+      borderRadius="20px"
+      bg="card.bg"
+      boxShadow="card"
+      p={{ base: 4, md: 6 }}
+    >
       <Stack gap={4}>
         <Text fontSize="md" fontWeight="800" color="text.primary">
           Summary
         </Text>
-        <SummaryRow label="Status" value="Not saved yet" />
+        <SummaryRow label="Status" value={statusLabel} />
         <Stack gap={1}>
           <Text fontSize="sm" fontWeight="600" color="text.secondary">
             Total due
           </Text>
-          <Text fontSize={{ base: "2xl", md: "3xl" }} fontWeight="900" color="text.primary">
+          <Text fontSize={{ base: "2xl", md: "3xl" }} fontWeight="900" color="text.primary" aria-live="polite" overflowWrap="anywhere">
             {formatCurrency(sumMoney(amounts), currencySymbol)}
           </Text>
         </Stack>

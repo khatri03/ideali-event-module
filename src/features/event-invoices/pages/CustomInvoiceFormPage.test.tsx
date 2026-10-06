@@ -74,7 +74,7 @@ function categoriesResponse() {
   }
 }
 
-function editResponse(invoiceStatus: string, canEdit: boolean) {
+function editResponse(invoiceStatus: string, canEdit: boolean, entityName = "Annual Convention") {
   return {
     data: {
       success: true,
@@ -82,7 +82,7 @@ function editResponse(invoiceStatus: string, canEdit: boolean) {
         InvoiceUniqueId: EDIT_ID,
         ModuleType: "Event",
         EntityUniqueId: "evt-1",
-        EntityName: "Annual Convention",
+        EntityName: entityName,
         CategoryUniqueId: "cat-active",
         DueDateUtc: "2026-12-31T00:00:00Z",
         CompanyName: "Acme Corp",
@@ -318,7 +318,7 @@ describe("CustomInvoiceFormPage", () => {
   })
 
   /** A Paid invoice is fully read-only: the locked banner shows, controls are disabled, and Save is gone. */
-  it("Edit_PaidInvoice_LocksTheForm", async () => {
+  it("FormPage_PaidInvoice_ReadOnlyWithLockBannerAndNoSave", async () => {
     http.get.mockImplementation(serverGet({ edit: () => Promise.resolve(editResponse("Paid", false)) }))
     renderPage({ invoiceUniqueId: EDIT_ID })
 
@@ -386,6 +386,53 @@ describe("CustomInvoiceFormPage", () => {
       await screen.findByText("Custom invoicing is not turned on for any module. Ask your platform admin to turn it on."),
     ).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Create invoice" })).not.toBeInTheDocument()
+  })
+
+  /**
+   * What an invoice bills is fixed once created and the server refuses a change, so edit mode shows the module
+   * and the record by name read-only instead of a live picker that would silently no-op.
+   */
+  it("FormPage_EditMode_ShowsModuleAndEntityReadOnly", async () => {
+    renderPage({ invoiceUniqueId: EDIT_ID })
+    await waitForEditLoaded()
+
+    const moduleControl = screen.getByRole("combobox", { name: "Module" })
+    expect(moduleControl).toBeDisabled()
+    expect(moduleControl).toHaveTextContent("Event")
+    const entity = screen.getByLabelText("Event")
+    expect(entity).toHaveValue("Annual Convention")
+    expect(entity).toHaveAttribute("readonly")
+    expect(screen.queryByPlaceholderText("Search events")).not.toBeInTheDocument()
+  })
+
+  /** A billed record deleted since creation is named as gone rather than left blank, so the field never looks unfilled. */
+  it("FormPage_EditMode_DeletedEntity_ShowsRecordNoLongerExists", async () => {
+    http.get.mockImplementation(serverGet({ edit: () => Promise.resolve(editResponse("PendingPayment", true, "")) }))
+    renderPage({ invoiceUniqueId: EDIT_ID })
+    await waitForEditLoaded()
+
+    expect(screen.getByLabelText("Event")).toHaveValue("This record no longer exists")
+  })
+
+  /** A deleted billed record must not block saving the rest of an editable invoice; the server keeps the binding. */
+  it("FormPage_EditMode_DeletedEntity_StillSaves", async () => {
+    http.get.mockImplementation(serverGet({ edit: () => Promise.resolve(editResponse("PendingPayment", true, "")) }))
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    renderPage({ invoiceUniqueId: EDIT_ID })
+    await waitForEditLoaded()
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }))
+
+    await waitFor(() => expect(http.put).toHaveBeenCalledTimes(1))
+  })
+
+  /** An existing invoice shows its saved status in the summary, never "Not saved yet". */
+  it("FormPage_EditMode_SummaryShowsSavedStatus", async () => {
+    renderPage({ invoiceUniqueId: EDIT_ID })
+    await waitForEditLoaded()
+
+    expect(screen.getByText("Pending Payment")).toBeInTheDocument()
+    expect(screen.queryByText("Not saved yet")).not.toBeInTheDocument()
   })
 
   /** While the edit load is in flight the page shows its skeleton, not an empty or half-built form. */
