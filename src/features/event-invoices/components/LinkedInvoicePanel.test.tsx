@@ -7,13 +7,19 @@ import type { LinkedInvoiceReference } from "@/api/customInvoices"
 import { system } from "@/theme"
 import { LinkedInvoicePanel } from "./LinkedInvoicePanel"
 
-const { useUnlinkCustomInvoiceMock, unlinkMock } = vi.hoisted(() => ({
+const { useUnlinkCustomInvoiceMock, unlinkMock, useLinkCandidatesMock } = vi.hoisted(() => ({
   useUnlinkCustomInvoiceMock: vi.fn(),
   unlinkMock: vi.fn(),
+  useLinkCandidatesMock: vi.fn(),
 }))
 
 vi.mock("../hooks/useCustomInvoices", () => ({
   useUnlinkCustomInvoice: useUnlinkCustomInvoiceMock,
+  useLinkCustomInvoice: () => ({ mutateAsync: vi.fn(), isPending: false, error: null }),
+}))
+
+vi.mock("../hooks/useCustomInvoiceAuthoringOptions", () => ({
+  useCustomInvoiceLinkCandidates: useLinkCandidatesMock,
 }))
 
 const LINKED: LinkedInvoiceReference = {
@@ -50,6 +56,7 @@ describe("LinkedInvoicePanel", () => {
     unlinkMock.mockReset().mockResolvedValue(undefined)
     useUnlinkCustomInvoiceMock.mockReset()
     mockUnlinkState()
+    useLinkCandidatesMock.mockReset().mockReturnValue({ data: undefined, isFetching: false, isError: false, error: null, refetch: vi.fn() })
   })
 
   /** The linked invoice is always a custom invoice, so its number opens the custom invoice's own page with its status beside it. */
@@ -145,5 +152,19 @@ describe("LinkedInvoicePanel", () => {
     const dialog = await screen.findByRole("alertdialog")
 
     expect(within(dialog).getByRole("button", { name: /removing/i })).toBeDisabled()
+  })
+
+  /** The panel's Link invoice dialog only offers invoices of this invoice's own module, excluding itself (D-03). */
+  it("LinkInvoiceAction_OpensThePickerForTheInvoicesOwnModule", async () => {
+    const user = userEvent.setup()
+    renderPanel(null, true)
+
+    await user.click(screen.getByRole("button", { name: "Link invoice" }))
+
+    await waitFor(() =>
+      expect(useLinkCandidatesMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ moduleType: "Membership", excludeInvoiceUniqueId: "invoice-1" }),
+      ),
+    )
   })
 })

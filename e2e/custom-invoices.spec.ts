@@ -23,6 +23,7 @@ const LIST_URL = "/organizer/events/invoices"
 const LIST_API = "**/api/organizer/events/invoices/list**"
 const detailPath = (invoiceUniqueId: string) => `/organizer/custom-invoices/${invoiceUniqueId}`
 const detailApi = (invoiceUniqueId: string) => `**/api/organizer/custom-invoices/${invoiceUniqueId}`
+const LINK_CANDIDATES_API = "**/api/organizer/custom-invoices/link-candidates?**"
 const linkPath = (invoiceUniqueId: string) => `/api/organizer/custom-invoices/${invoiceUniqueId}/link`
 
 type Json = Record<string, unknown>
@@ -88,6 +89,19 @@ const DUE_TODAY_CUSTOM_ROW = listRow({
   dueDateUtc: "2026-09-29T12:00:00Z",
   isOverdue: false,
 })
+const LINK_CANDIDATE: Json = {
+  invoiceUniqueId: CUSTOM_DUE_TODAY_ID,
+  invoiceNo: "INV-C-101",
+  companyName: "Contoso Ltd",
+  buyerFirstName: "Sam",
+  buyerMiddleName: null,
+  buyerLastName: "Lee",
+  buyerName: "Sam Lee",
+  buyerEmail: "sam@contoso.test",
+  invoiceDateUtc: "2026-09-01T12:00:00Z",
+  invoiceStatus: "PendingPayment",
+  invoiceStatusLabel: "Pending Payment",
+}
 const TICKET_ROW = listRow({
   invoiceUniqueId: TICKET_ID,
   invoiceNo: "INV-T-200",
@@ -308,8 +322,8 @@ for (const width of WIDTHS) {
 }
 
 /**
- * UAT 4. Linking ties one sponsorship bill to another. The picker must offer custom invoices only, the request
- * must name the target the organizer picked, the pending state must stop a double submit, and after the refetch
+ * UAT 4. Linking ties one sponsorship bill to another. The picker must ask the server for invoices of the same
+ * module only, leaving the invoice itself out, the request must name the target the organizer picked, the pending state must stop a double submit, and after the refetch
  * both invoices must point at each other - otherwise the other side keeps showing a stale "not linked".
  */
 test("UAT 4: linking a custom invoice sends the picked target and both details show the link", async ({ page }) => {
@@ -319,12 +333,10 @@ test("UAT 4: linking a custom invoice sends the picked target and both details s
   const linkRequests: Request[] = []
 
   await mockShell(page)
-  await mockList(page, (url) => {
-    const search = url.searchParams.get("searchTerm") ?? ""
-    const types = url.searchParams.getAll("invoiceTypes")
-    return [OVERDUE_CUSTOM_ROW, DUE_TODAY_CUSTOM_ROW, TICKET_ROW]
-      .filter((row) => types.length === 0 || types.includes(String(row.invoiceType)))
-      .filter((row) => String(row.invoiceNo).includes(search))
+  await page.route(LINK_CANDIDATES_API, (route) => {
+    const search = new URL(route.request().url()).searchParams.get("searchTerm") ?? ""
+    const rows = [LINK_CANDIDATE].filter((row) => String(row.invoiceNo).includes(search))
+    return route.fulfill({ json: envelope({ pageNo: 1, pageSize: 10, pageCount: 1, totalRecordsCount: rows.length, pageData: rows }) })
   })
   await mockDetail(page, CUSTOM_ID, () =>
     customDetail({ linkedInvoice: isLinked ? { invoiceUniqueId: CUSTOM_DUE_TODAY_ID, invoiceNo: "INV-C-101", invoiceStatusLabel: "Pending Payment" } : null }),
@@ -354,8 +366,8 @@ test("UAT 4: linking a custom invoice sends the picked target and both details s
   const searchRequest = page.waitForRequest((request) => new URL(request.url()).searchParams.get("searchTerm") === "INV-C-101")
   await dialog.getByLabel("Search invoices").fill("INV-C-101")
   const searchParams = new URL((await searchRequest).url()).searchParams
-  expect(searchParams.getAll("invoiceTypes"), "the link picker asked for more than custom invoices").toEqual(["Custom"])
-  await expect(dialog.getByText("INV-T-200")).toHaveCount(0)
+  expect(searchParams.get("moduleType"), "the link picker did not ask for the invoice's own module").toBe("Event")
+  expect(searchParams.get("excludeInvoiceUniqueId"), "the link picker did not leave the invoice itself out").toBe(CUSTOM_ID)
 
   await dialog.getByRole("radio", { name: "Select invoice INV-C-101" }).check()
 
