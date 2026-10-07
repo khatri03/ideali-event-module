@@ -7,7 +7,7 @@ export const cancelInvoiceSchema = z.object({
   cancellationNotes: z
     .string()
     .trim()
-    .min(1, "Enter the reason for cancelling this order.")
+    .min(1, "Enter the reason for cancelling.")
     .max(CANCELLATION_NOTES_MAX, `Keep the reason under ${CANCELLATION_NOTES_MAX} characters.`),
 })
 

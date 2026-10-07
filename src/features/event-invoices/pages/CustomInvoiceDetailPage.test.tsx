@@ -216,7 +216,7 @@ describe("CustomInvoiceDetailPage", () => {
     await user.click(await screen.findByRole("button", { name: /mark as cancelled/i }))
     const dialog = await screen.findByRole("alertdialog")
     await user.type(within(dialog).getByLabelText(/reason for cancelling/i), "Sponsor withdrew.")
-    await user.click(within(dialog).getByRole("button", { name: /^cancel order$/i }))
+    await user.click(within(dialog).getByRole("button", { name: /^cancel invoice$/i }))
 
     await waitFor(() =>
       expect(http.post).toHaveBeenCalledWith(API_ROUTES.customInvoiceCancel(INVOICE_ID), { note: "Sponsor withdrew." }),

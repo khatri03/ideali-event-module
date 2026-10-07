@@ -3,6 +3,7 @@ import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Field, Stack, Text, Textarea } from "@chakra-ui/react"
 import { ConfirmDialog } from "@/components/common"
+import { SUBJECT_COPY, type InvoiceSubject } from "../invoiceSubjectCopy"
 import {
   CANCELLATION_NOTES_MAX,
   cancelInvoiceSchema,
@@ -13,6 +14,8 @@ interface CancelInvoiceDialogProps {
   /** Reactive visibility. The dialog stays mounted between opens so its close transition can run. */
   open: boolean
   invoiceNo: string
+  /** Names what is being cancelled in the dialog's copy; a custom invoice has no seats or tickets. */
+  subject?: InvoiceSubject
   isPending: boolean
   errorMessage: string | null
   onConfirm: (cancellationNotes: string) => void
@@ -23,11 +26,13 @@ interface CancelInvoiceDialogProps {
 export function CancelInvoiceDialog({
   open,
   invoiceNo,
+  subject = "order",
   isPending,
   errorMessage,
   onConfirm,
   onClose,
 }: CancelInvoiceDialogProps) {
+  const copy = SUBJECT_COPY[subject]
   const {
     register,
     handleSubmit,
@@ -50,12 +55,12 @@ export function CancelInvoiceDialog({
   return (
     <ConfirmDialog
       open={open}
-      title="Cancel this order"
+      title={copy.cancelTitle}
       description={
         <Stack gap={4}>
           <Text>
-            Order <strong>{invoiceNo}</strong> will be closed unpaid, the seats it holds released, and the buyer
-            emailed. Its tickets can no longer be sent out. This cannot be undone.
+            {copy.subjectLabel} <strong>{invoiceNo}</strong>{" "}
+            {copy.cancelConsequence} This cannot be undone.
           </Text>
           <Field.Root invalid={Boolean(errors.cancellationNotes)}>
             <Field.Label fontSize="sm" fontWeight="700" color="text.primary">
@@ -66,7 +71,7 @@ export function CancelInvoiceDialog({
               maxLength={CANCELLATION_NOTES_MAX}
               minH="120px"
               resize="vertical"
-              placeholder="Why is this order being cancelled?"
+              placeholder={copy.cancelReasonPlaceholder}
             />
             <Field.HelperText>
               Required. Saved to the invoice notes. {notesLength}/{CANCELLATION_NOTES_MAX} characters
@@ -75,7 +80,7 @@ export function CancelInvoiceDialog({
           </Field.Root>
         </Stack>
       }
-      confirmLabel="Cancel order"
+      confirmLabel={copy.cancelConfirmLabel}
       loadingLabel="Cancelling..."
       tone="destructive"
       errorMessage={errorMessage}

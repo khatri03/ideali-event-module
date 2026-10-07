@@ -670,7 +670,7 @@ for (const width of WIDTHS) {
     await page.getByRole("button", { name: "Mark as cancelled" }).click()
 
     const dialog = page.getByRole("alertdialog")
-    await expect(dialog.getByText("Cancel this order")).toBeVisible()
+    await expect(dialog.getByText("Cancel this invoice")).toBeVisible()
     await expect(dialog).toContainText("will be closed unpaid")
     await expect(dialog).toContainText("This cannot be undone.")
     await settle(dialog)
@@ -683,12 +683,12 @@ for (const width of WIDTHS) {
     const undersized = await findUndersizedTargets(dialog, false)
     expect.soft(undersized, `controls under ${MIN_TOUCH_TARGET_PX}px in the cancel dialog at ${width}px`).toEqual([])
 
-    await dialog.getByRole("button", { name: "Cancel order" }).click()
-    await expect(dialog.getByText("Enter the reason for cancelling this order.")).toBeVisible()
+    await dialog.getByRole("button", { name: "Cancel invoice" }).click()
+    await expect(dialog.getByText("Enter the reason for cancelling.")).toBeVisible()
     expect(cancelRequests, "a cancellation without a reason reached the server").toHaveLength(0)
 
     await dialog.getByLabel("Reason for cancelling").fill(`  ${CANCELLATION_REASON}  `)
-    await dialog.getByRole("button", { name: "Cancel order" }).click()
+    await dialog.getByRole("button", { name: "Cancel invoice" }).click()
 
     await expect(page.getByText("Invoice cancelled.")).toBeVisible()
     await expect(dialog).toBeHidden()

@@ -3,6 +3,7 @@ import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react"
 import { Ban, CheckCircle2, Mail, Send } from "lucide-react"
 import { ConfirmDialog } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
+import { SUBJECT_COPY, type InvoiceSubject } from "../invoiceSubjectCopy"
 import type { InvoiceActionMutation } from "../types"
 import { CancelInvoiceDialog } from "./CancelInvoiceDialog"
 import { InvoiceSettlementActionsMenu } from "./InvoiceSettlementActionsMenu"
@@ -25,16 +26,20 @@ interface InvoiceSettlementActionsProps {
   resendTickets?: InvoiceActionMutation
   /** Offered only by a custom invoice. */
   emailInvoice?: InvoiceActionMutation
+  /** Names the thing being settled in the dialogs; a custom invoice has no seats or tickets to promise. */
+  subject?: InvoiceSubject
   /** "menu" is the compact list-row form; both forms open the same dialogs. */
   variant?: "buttons" | "menu"
   /** Menu form only: opens the invoice from its row. */
   onView?: () => void
 }
 
-const CONFIRM_COPY: Record<ConfirmAction, { title: string; confirmLabel: string; loadingLabel: string }> = {
-  "mark-paid": { title: "Mark this order as paid", confirmLabel: "Mark as paid", loadingLabel: "Settling..." },
-  resend: { title: "Resend all tickets", confirmLabel: "Resend all", loadingLabel: "Sending..." },
-  "email-invoice": { title: "Email invoice to buyer", confirmLabel: "Send invoice", loadingLabel: "Sending..." },
+function confirmCopyFor(subject: InvoiceSubject): Record<ConfirmAction, { title: string; confirmLabel: string; loadingLabel: string }> {
+  return {
+    "mark-paid": { title: SUBJECT_COPY[subject].markPaidTitle, confirmLabel: "Mark as paid", loadingLabel: "Settling..." },
+    resend: { title: "Resend all tickets", confirmLabel: "Resend all", loadingLabel: "Sending..." },
+    "email-invoice": { title: "Email invoice to buyer", confirmLabel: "Send invoice", loadingLabel: "Sending..." },
+  }
 }
 
 const ACTION_BUTTON_PROPS = {
@@ -60,6 +65,7 @@ export function InvoiceSettlementActions({
   cancel: cancelMutation,
   resendTickets,
   emailInvoice,
+  subject = "order",
   variant = "buttons",
   onView,
 }: InvoiceSettlementActionsProps) {
@@ -93,6 +99,8 @@ export function InvoiceSettlementActions({
     (confirmAction === "email-invoice" ? emailMutation : confirmAction === "resend" ? resendMutation : undefined) ??
     markPaid
   const recipientLabel = buyerEmail?.trim() || "the buyer on file"
+  const subjectCopy = SUBJECT_COPY[subject]
+  const confirmCopy = confirmCopyFor(subject)
 
   const runThenClose = async (run: () => Promise<unknown>, close: () => void) => {
     try {
@@ -108,7 +116,7 @@ export function InvoiceSettlementActions({
       {confirmAction ? (
         <ConfirmDialog
           open={isConfirmOpen}
-          title={CONFIRM_COPY[confirmAction].title}
+          title={confirmCopy[confirmAction].title}
           description={
             confirmAction === "resend" ? (
               <Text>Re-email every ticket on this order to the buyer and any attendees with their own address?</Text>
@@ -119,13 +127,13 @@ export function InvoiceSettlementActions({
               </Text>
             ) : (
               <Text>
-                Order <strong>{invoiceNo}</strong> will be recorded as paid in full, the buyer emailed, and
-                any tickets it is owed issued and delivered. This cannot be undone.
+                {subjectCopy.subjectLabel} <strong>{invoiceNo}</strong> {subjectCopy.markPaidConsequence} This
+                cannot be undone.
               </Text>
             )
           }
-          confirmLabel={CONFIRM_COPY[confirmAction].confirmLabel}
-          loadingLabel={CONFIRM_COPY[confirmAction].loadingLabel}
+          confirmLabel={confirmCopy[confirmAction].confirmLabel}
+          loadingLabel={confirmCopy[confirmAction].loadingLabel}
           tone="primary"
           errorMessage={confirmMutation.error ? extractApiError(confirmMutation.error) : null}
           isPending={confirmMutation.isPending}
@@ -138,6 +146,7 @@ export function InvoiceSettlementActions({
         <CancelInvoiceDialog
           open={isCancelOpen}
           invoiceNo={invoiceNo}
+          subject={subject}
           isPending={cancelMutation.isPending}
           errorMessage={cancelMutation.error ? extractApiError(cancelMutation.error) : null}
           onConfirm={(cancellationNotes) =>

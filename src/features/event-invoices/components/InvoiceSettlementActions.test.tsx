@@ -201,7 +201,7 @@ describe("InvoiceSettlementActions", () => {
     const dialog = await screen.findByRole("alertdialog")
     await user.click(within(dialog).getByRole("button", { name: /^cancel order$/i }))
 
-    expect(await within(dialog).findByText("Enter the reason for cancelling this order.")).toBeInTheDocument()
+    expect(await within(dialog).findByText("Enter the reason for cancelling.")).toBeInTheDocument()
     expect(cancelMock).not.toHaveBeenCalled()
   })
 
@@ -302,6 +302,7 @@ function MenuHarness({ state, onView }: { state: Required<Omit<ActionsState, "ca
   return (
     <InvoiceSettlementActions
       variant="menu"
+      subject="invoice"
       invoiceNo="CI-0007"
       {...state}
       markPaid={markPaid}
@@ -363,6 +364,28 @@ describe("InvoiceSettlementActions menu", () => {
     await waitFor(() => expect(markPaidMock).toHaveBeenCalledTimes(1))
   })
 
+  /**
+   * A custom invoice issues no tickets and holds no seats; a dialog that promises either tells the organizer
+   * something false about an action they cannot undo.
+   */
+  it("SettlementMenu_InvoiceDialogs_NeverMentionOrdersTicketsOrSeats", async () => {
+    const user = userEvent.setup()
+    renderMenu()
+
+    await user.click(within(await openMenu(user)).getByRole("menuitem", { name: "Mark as paid" }))
+    const markPaidDialog = await screen.findByRole("alertdialog")
+    expect(within(markPaidDialog).getByText("Mark this invoice as paid")).toBeInTheDocument()
+    expect(markPaidDialog).toHaveTextContent(/Invoice CI-0007 will be recorded as paid in full and the buyer emailed/)
+    expect(markPaidDialog).not.toHaveTextContent(/order|ticket|seat/i)
+    await user.click(within(markPaidDialog).getByRole("button", { name: /^cancel$/i }))
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument())
+
+    await user.click(within(await openMenu(user)).getByRole("menuitem", { name: "Cancel invoice" }))
+    const cancelDialog = await screen.findByRole("alertdialog")
+    expect(within(cancelDialog).getByText("Cancel this invoice")).toBeInTheDocument()
+    expect(cancelDialog).not.toHaveTextContent(/order|ticket|seat/i)
+  })
+
   /** A cancelled invoice still needs a way in from its row, so the trigger stays with View alone. */
   it("SettlementMenu_OnlyView_StillRendersTrigger", async () => {
     const user = userEvent.setup()
@@ -384,7 +407,7 @@ describe("InvoiceSettlementActions menu", () => {
     await user.click(within(menu).getByRole("menuitem", { name: "Cancel invoice" }))
     const dialog = await screen.findByRole("alertdialog")
     await user.type(within(dialog).getByLabelText(/reason for cancelling/i), "Sponsor withdrew.")
-    await user.click(within(dialog).getByRole("button", { name: /^cancel order$/i }))
+    await user.click(within(dialog).getByRole("button", { name: /^cancel invoice$/i }))
 
     await waitFor(() => expect(cancelMock).toHaveBeenCalledWith("Sponsor withdrew."))
   })

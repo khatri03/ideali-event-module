@@ -44,6 +44,32 @@ describe("CancelInvoiceDialog", () => {
     expect(dialog).toHaveTextContent(/cannot be undone/i)
   })
 
+  /**
+   * A custom invoice holds no seats and issues no tickets, so its cancel dialog says what it really does and
+   * labels its button for an invoice; promising released seats would misstate an irreversible action.
+   */
+  it("InvoiceSubject_NamesTheInvoiceAndNeverPromisesSeatsOrTickets", () => {
+    render(
+      <ChakraProvider value={system}>
+        <CancelInvoiceDialog
+          open
+          invoiceNo="CI-0007"
+          subject="invoice"
+          isPending={false}
+          errorMessage={null}
+          onConfirm={vi.fn()}
+          onClose={vi.fn()}
+        />
+      </ChakraProvider>,
+    )
+    const dialog = screen.getByRole("alertdialog")
+
+    expect(within(dialog).getByText("Cancel this invoice")).toBeInTheDocument()
+    expect(dialog).toHaveTextContent(/Invoice CI-0007 will be closed unpaid and the buyer emailed/)
+    expect(dialog).not.toHaveTextContent(/order|ticket|seat/i)
+    expect(within(dialog).getByRole("button", { name: /^cancel invoice$/i })).toBeInTheDocument()
+  })
+
   /** A cancellation with no reason leaves no audit trail, so an empty submit is stopped with a visible reason. */
   it("SubmitWithoutNotes_ShowsAnInlineErrorAndCancelsNothing", async () => {
     const user = userEvent.setup()
@@ -51,7 +77,7 @@ describe("CancelInvoiceDialog", () => {
 
     await user.click(within(dialog).getByRole("button", { name: /^cancel order$/i }))
 
-    expect(await within(dialog).findByText("Enter the reason for cancelling this order.")).toBeInTheDocument()
+    expect(await within(dialog).findByText("Enter the reason for cancelling.")).toBeInTheDocument()
     expect(onConfirm).not.toHaveBeenCalled()
   })
 
@@ -63,7 +89,7 @@ describe("CancelInvoiceDialog", () => {
     await user.type(within(dialog).getByLabelText(/reason for cancelling/i), "    ")
     await user.click(within(dialog).getByRole("button", { name: /^cancel order$/i }))
 
-    expect(await within(dialog).findByText("Enter the reason for cancelling this order.")).toBeInTheDocument()
+    expect(await within(dialog).findByText("Enter the reason for cancelling.")).toBeInTheDocument()
     expect(onConfirm).not.toHaveBeenCalled()
   })
 

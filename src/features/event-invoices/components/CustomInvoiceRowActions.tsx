@@ -14,6 +14,7 @@ export function CustomInvoiceRowActions({ invoice }: { invoice: CustomInvoiceLis
   return (
     <InvoiceSettlementActions
       variant="menu"
+      subject="invoice"
       invoiceNo={invoice.invoiceNo}
       canMarkAsPaid={invoice.canMarkAsPaid}
       canCancel={invoice.canCancel}

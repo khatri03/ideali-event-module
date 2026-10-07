@@ -66,6 +66,7 @@ export default function CustomInvoiceDetailPage() {
         onBack={handleBack}
       />
       <InvoiceSettlementActions
+        subject="invoice"
         invoiceNo={invoice.invoiceNo}
         canMarkAsPaid={invoice.canMarkAsPaid}
         canCancel={invoice.canCancel}
