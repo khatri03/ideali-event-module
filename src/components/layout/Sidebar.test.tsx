@@ -92,21 +92,100 @@ describe("Sidebar", () => {
     expect(navLink("Event Invoices")).toHaveAttribute("href", APP_ROUTES.eventInvoices.list)
   })
 
-  /** CAT-03: the one organizer-wide category pool is reached at its custom-invoices path, not under Events. */
-  it("Sidebar_InvoiceCategoriesItem_PointsAtTheRenamedPath", () => {
+  /** CAT-03, D-05: the organizer-wide category pool sits under the standalone Custom Invoices parent at its own path. */
+  it("Sidebar_CategoriesChild_UnderCustomInvoices_PointsAtTheCategoriesPath", async () => {
     renderSidebarAt(APP_ROUTES.dashboard)
 
-    expect(navLink("Invoice Categories")).toHaveAttribute("href", "/organizer/custom-invoices/categories")
+    await userEvent.click(screen.getByRole("button", { name: /^Custom Invoices$/ }))
+
+    expect(navLink("Categories")).toHaveAttribute("href", "/organizer/custom-invoices/categories")
   })
 
   /**
-   * The categories screen no longer nests under the Event Invoices path, so only its own item may light up
+   * The categories screen does not nest under the Event Invoices path, so only its own child may light up
    * there; two highlighted items would leave the organizer unsure which screen is open.
    */
   it("Sidebar_EventInvoicesItem_IsNotActiveOnTheCategoriesScreen", () => {
     renderSidebarAt(APP_ROUTES.invoiceCategories.list)
 
-    expect(navLink("Invoice Categories")).toHaveAttribute("aria-current", "page")
+    expect(navLink("Categories")).toHaveAttribute("aria-current", "page")
+    expect(navLink("Event Invoices")).not.toHaveAttribute("aria-current")
+  })
+
+  /** D-05: categories moved under Custom Invoices; a second flat entry would offer the same screen twice. */
+  it("Sidebar_MainNav_HasNoInvoiceCategoriesItem", () => {
+    renderSidebarAt(APP_ROUTES.invoiceCategories.list)
+
+    expect(queryNavLink("Invoice Categories")).not.toBeInTheDocument()
+  })
+
+  /** D-04: the standalone parent does not depend on enablement, so it is there while the module list is still loading. */
+  it("Sidebar_StandaloneParent_ShownWhileModulesLoad", () => {
+    givenEnabledModules({ isLoading: true })
+    renderSidebarAt(APP_ROUTES.dashboard)
+
+    expect(screen.getByRole("button", { name: /^Custom Invoices$/ })).toBeInTheDocument()
+  })
+
+  /** D-09: the standalone Invoices child opens the list across every module, with no lock. */
+  it("Sidebar_StandaloneInvoicesChild_OpensTheUnlockedList", async () => {
+    renderSidebarAt(APP_ROUTES.dashboard)
+
+    await userEvent.click(screen.getByRole("button", { name: /^Custom Invoices$/ }))
+
+    expect(navLink("Invoices")).toHaveAttribute("href", "/organizer/custom-invoices/list")
+  })
+
+  /** On the unlocked list, and on an invoice opened from it, the organizer sees the Invoices child as where they are. */
+  it.each([APP_ROUTES.customInvoices.list, APP_ROUTES.customInvoices.detail("inv-1"), APP_ROUTES.customInvoices.edit("inv-1")])(
+    "Sidebar_StandaloneInvoicesChild_IsCurrentOn_%s",
+    (pathname) => {
+      renderSidebarAt(pathname)
+
+      expect(navLink("Invoices")).toHaveAttribute("aria-current", "page")
+    },
+  )
+
+  /** A module-locked list belongs to its module's group; only that group's child is current, never the standalone one. */
+  it("Sidebar_ModuleLockedList_OpensThatModuleGroupAndMarksOnlyItsChild", () => {
+    givenEnabledModules({ data: ["Event", "Membership"] })
+    renderSidebarAt(`${APP_ROUTES.customInvoices.list}?moduleType=Membership`)
+
+    const currentLinks = screen.getAllByRole("link").filter((link) => link.getAttribute("aria-current") === "page")
+    expect(currentLinks.map((link) => link.getAttribute("href"))).toEqual([
+      "/organizer/custom-invoices/list?moduleType=Membership",
+    ])
+  })
+
+  /** D-02: a module with custom invoicing off has no group of its own in this app, so nothing for it is offered. */
+  it("Sidebar_DisabledMembership_ShowsNoMembershipGroup", () => {
+    givenEnabledModules({ data: ["Event"] })
+    renderSidebarAt(APP_ROUTES.dashboard)
+
+    expect(screen.queryByRole("button", { name: /^Membership$/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /^Donation$/ })).not.toBeInTheDocument()
+  })
+
+  /** D-03: Membership has no page in this app, so its header only expands the group and never navigates. */
+  it("Sidebar_MembershipHeader_IsAToggleNotALink", async () => {
+    givenEnabledModules({ data: ["Membership"] })
+    renderSidebarAt(APP_ROUTES.dashboard)
+
+    expect(queryNavLink("Membership")).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: /^Membership$/ }))
+
+    expect(navLink("Custom Invoices")).toHaveAttribute("href", "/organizer/custom-invoices/list?moduleType=Membership")
+  })
+
+  /** D-08: Event Invoices lists registration invoices only, so it must not light up on any custom invoice screen. */
+  it.each([
+    APP_ROUTES.customInvoices.list,
+    `${APP_ROUTES.customInvoices.list}?moduleType=Event`,
+    APP_ROUTES.customInvoices.detail("inv-1"),
+  ])("Sidebar_EventInvoicesItem_IsNotCurrentOn_%s", (pathname) => {
+    givenEnabledModules({ data: ["Event"] })
+    renderSidebarAt(pathname)
+
     expect(navLink("Event Invoices")).not.toHaveAttribute("aria-current")
   })
 

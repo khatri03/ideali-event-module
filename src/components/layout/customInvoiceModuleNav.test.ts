@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest"
-import { CUSTOM_INVOICE_MODULE_NAV, isGroupVisible, isModuleChildActive } from "./customInvoiceModuleNav"
+import {
+  CUSTOM_INVOICE_MODULE_NAV,
+  isGroupVisible,
+  isModuleChildActive,
+  isStandaloneInvoicesActive,
+} from "./customInvoiceModuleNav"
 
 const LIST = "/organizer/custom-invoices/list"
 const NEW = "/organizer/custom-invoices/new"
@@ -46,4 +51,34 @@ describe("isGroupVisible", () => {
     expect(isGroupVisible(entryFor(moduleType), true)).toBe(true)
     expect(isGroupVisible(entryFor(moduleType), false)).toBe(false)
   })
+})
+
+describe("isStandaloneInvoicesActive", () => {
+  /** The unlocked list and any invoice opened by id belong to the standalone Invoices child. */
+  it.each([
+    [LIST, ""],
+    [NEW, ""],
+    ["/organizer/custom-invoices/abc-123", ""],
+    ["/organizer/custom-invoices/abc-123/edit", ""],
+  ])("isStandaloneInvoicesActive_UnlockedCustomInvoiceRoute_IsActive_%s", (pathname, search) => {
+    expect(isStandaloneInvoicesActive(pathname, search)).toBe(true)
+  })
+
+  /** A user-edited lock that names no real module is ignored, so the screen still counts as the unlocked list. */
+  it("isStandaloneInvoicesActive_UnknownModuleParam_IsActive", () => {
+    expect(isStandaloneInvoicesActive(LIST, "?moduleType=Sponsorship")).toBe(true)
+  })
+
+  /** A module-locked screen belongs to the module child; marking both would show two current pages. */
+  it("isStandaloneInvoicesActive_ModuleLocked_IsNotActive", () => {
+    expect(isStandaloneInvoicesActive(LIST, "?moduleType=Event")).toBe(false)
+  })
+
+  /** Categories has its own child, and screens outside custom invoices belong to other items. */
+  it.each(["/organizer/custom-invoices/categories", "/organizer/events/invoices", "/organizer/custom-invoices"])(
+    "isStandaloneInvoicesActive_OtherRoute_IsNotActive_%s",
+    (pathname) => {
+      expect(isStandaloneInvoicesActive(pathname, "")).toBe(false)
+    },
+  )
 })

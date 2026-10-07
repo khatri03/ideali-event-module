@@ -19,16 +19,17 @@ interface NavGroupProps {
   children?: ReactNode
 }
 
-function GroupHeaderContent({
+/** The row shared by top-level items and group headers; `trailing` holds a group's chevron. */
+export function NavItemContent({
   label,
   icon: Icon,
   isActive,
-  chevron,
+  trailing,
 }: {
   label: string
   icon: LucideIcon
   isActive: boolean
-  chevron: ReactNode
+  trailing?: ReactNode
 }) {
   return (
     <Flex
@@ -59,7 +60,7 @@ function GroupHeaderContent({
       >
         {label}
       </Text>
-      {chevron}
+      {trailing}
     </Flex>
   )
 }
@@ -71,7 +72,7 @@ export function NavGroup({ label, icon, isOpen, onToggle, to, isActive = false, 
       {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
     </Box>
   ) : null
-  const content = <GroupHeaderContent label={label} icon={icon} isActive={isActive} chevron={chevron} />
+  const content = <NavItemContent label={label} icon={icon} isActive={isActive} trailing={chevron} />
 
   return (
     <Box>

@@ -32,3 +32,15 @@ export function isModuleChildActive(moduleType: CustomInvoiceModule, pathname: s
 export function isGroupVisible(entry: ModuleNavEntry, isEnabled: boolean): boolean {
   return Boolean(entry.landingPath) || isEnabled
 }
+
+const CUSTOM_INVOICES_ROOT = "/organizer/custom-invoices/"
+
+/** True on any organizer custom invoice screen that is not categories and not locked to a module. */
+export function isStandaloneInvoicesActive(pathname: string, search: string): boolean {
+  return (
+    pathname.startsWith(CUSTOM_INVOICES_ROOT) &&
+    pathname !== APP_ROUTES.invoiceCategories.list &&
+    !pathname.startsWith(`${APP_ROUTES.invoiceCategories.list}/`) &&
+    moduleFromSearch(search) === undefined
+  )
+}
