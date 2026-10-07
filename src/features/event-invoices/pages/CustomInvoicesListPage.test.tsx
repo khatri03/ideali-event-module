@@ -8,7 +8,14 @@ import { CustomInvoicesListPage } from "./CustomInvoicesListPage"
 
 const { useCustomInvoiceListMock } = vi.hoisted(() => ({ useCustomInvoiceListMock: vi.fn() }))
 
-vi.mock("../hooks/useCustomInvoiceList", () => ({ useCustomInvoiceList: useCustomInvoiceListMock }))
+vi.mock("../hooks/useCustomInvoiceList", () => ({
+  useCustomInvoiceList: useCustomInvoiceListMock,
+  useCustomInvoiceListFilterOptions: () => ({ data: { moduleTypes: ["Event"], categories: [] } }),
+}))
+
+vi.mock("../hooks/useCustomInvoiceAuthoringOptions", () => ({
+  useEnabledCustomInvoiceModules: () => ({ data: ["Event", "Membership"] }),
+}))
 
 /** A pending, past-due Donation invoice: the row the derived Overdue status exists for. */
 function buildRow(overrides: Partial<CustomInvoiceListItem> = {}): CustomInvoiceListItem {

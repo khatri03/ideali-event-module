@@ -348,6 +348,21 @@ const listRowSchema = z
 /** One row of the cross-module custom invoice list; amounts are decimal text, never float. */
 export type CustomInvoiceListItem = z.infer<typeof listRowSchema>
 
+// A module this client does not know yet is dropped from the filter rather than failing the whole list.
+const listFilterOptionsSchema = z.object({
+  moduleTypes: z
+    .array(z.string())
+    .nullish()
+    .transform((modules) => CUSTOM_INVOICE_MODULES.filter((moduleType) => (modules ?? []).includes(moduleType))),
+  categories: z
+    .array(z.object({ uniqueId: z.string().min(1), name: z.string(), isActive: flag() }))
+    .nullish()
+    .transform((categories) => categories ?? []),
+})
+
+/** The modules that have invoices and every category, including inactive ones still on old invoices. */
+export type CustomInvoiceListFilterOptions = z.infer<typeof listFilterOptionsSchema>
+
 export async function createCustomInvoice(payload: CustomInvoiceWritePayload): Promise<string> {
   const response = await client.post<unknown>(API_ROUTES.customInvoiceCreate, payload)
   return createdInvoiceIdSchema.parse(parseServicePayload(response.data))
@@ -453,6 +468,11 @@ export async function fetchCustomInvoiceList(query: CustomInvoiceListQuery): Pro
   const response = await client.get<unknown>(API_ROUTES.customInvoiceList, { params })
   const parsed = pageSchema(listRowSchema).parse(parseServicePayload(response.data))
   return toPage(parsed, (row: CustomInvoiceListItem) => row, query.page, query.pageSize)
+}
+
+export async function fetchCustomInvoiceListFilterOptions(): Promise<CustomInvoiceListFilterOptions> {
+  const response = await client.get<unknown>(API_ROUTES.customInvoiceListFilterOptions)
+  return listFilterOptionsSchema.parse(parseServicePayload(response.data))
 }
 
 /**

@@ -7,6 +7,7 @@ import {
   fetchActiveInvoiceCategoryOptions,
   fetchCustomInvoiceEntityOptions,
   fetchCustomInvoiceList,
+  fetchCustomInvoiceListFilterOptions,
   fetchCustomInvoiceLinkCandidates,
   fetchEnabledCustomInvoiceModules,
   fetchCustomInvoiceDetail,
@@ -529,5 +530,32 @@ describe("fetchCustomInvoiceList", () => {
     )
 
     await expect(fetchCustomInvoiceList(QUERY)).rejects.toThrow()
+  })
+})
+
+describe("fetchCustomInvoiceListFilterOptions", () => {
+  /** Modules come back in module order and one this client does not know is dropped rather than failing the filter bar. */
+  it("fetchCustomInvoiceListFilterOptions_KeepsKnownModulesInModuleOrder", async () => {
+    getMock.mockResolvedValue(
+      envelope({
+        ModuleTypes: ["Donation", "Gala", "Event"],
+        Categories: [{ UniqueId: "cat-1", Name: "Gold Sponsor", IsActive: false }],
+      }),
+    )
+
+    const options = await fetchCustomInvoiceListFilterOptions()
+
+    expect(getMock.mock.calls[0][0]).toBe(API_ROUTES.customInvoiceListFilterOptions)
+    expect(options).toEqual({
+      moduleTypes: ["Event", "Donation"],
+      categories: [{ uniqueId: "cat-1", name: "Gold Sponsor", isActive: false }],
+    })
+  })
+
+  /** A category without an id cannot be filtered on, so the payload is refused at the boundary. */
+  it("fetchCustomInvoiceListFilterOptions_CategoryWithoutId_Throws", async () => {
+    getMock.mockResolvedValue(envelope({ ModuleTypes: [], Categories: [{ Name: "Gold Sponsor" }] }))
+
+    await expect(fetchCustomInvoiceListFilterOptions()).rejects.toThrow()
   })
 })
