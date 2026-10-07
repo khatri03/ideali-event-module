@@ -15,9 +15,9 @@ const INVOICE: EventInvoiceListItem = {
   buyerEmail: "ada@example.com",
   invoiceStatus: "PendingPayment",
   invoiceStatusLabel: "Pending Payment",
-  invoiceType: "Custom",
-  dueDateUtc: "2026-06-01T00:00:00Z",
-  companyName: "Northwind Traders",
+  invoiceType: "Regular",
+  dueDateUtc: null,
+  companyName: null,
   isOverdue: false,
   canMarkAsPaid: false,
   canCancel: false,
@@ -35,7 +35,6 @@ const INVOICE: EventInvoiceListItem = {
 async function openMenu(overrides: Partial<EventInvoiceListItem> = {}) {
   const handlers = {
     onOpenDetail: vi.fn(),
-    onEdit: vi.fn(),
     onMarkPaid: vi.fn(),
     onCancel: vi.fn(),
     onSend: vi.fn(),
@@ -62,18 +61,9 @@ describe("EventInvoiceRowActionsMenu", () => {
     expect(onOpenDetail).toHaveBeenCalledWith(expect.objectContaining({ invoiceUniqueId: "invoice-1" }))
   })
 
-  /** Edit is offered when the server marks the invoice editable, and it opens that invoice's form. */
-  it("CanEdit_ShowsEdit_AndFiresHandler", async () => {
-    const { onEdit } = await openMenu({ canEdit: true })
-
-    await userEvent.click(await screen.findByText("Edit"))
-
-    expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ invoiceUniqueId: "invoice-1" }))
-  })
-
-  /** Edit is offered only when the server marks the invoice editable, so a paid invoice can never be reopened from the list. */
-  it("CannotEdit_HidesEdit", async () => {
-    await openMenu({ canEdit: false })
+  /** Registration orders are never edited from Event Invoices, so Edit is absent even if a row reports itself editable. */
+  it("RowActionsMenu_EvenWhenCanEdit_OffersNoEdit", async () => {
+    await openMenu({ canEdit: true })
 
     expect(await screen.findByText("View")).toBeTruthy()
     expect(screen.queryByText("Edit")).toBeNull()
@@ -134,7 +124,7 @@ describe("EventInvoiceRowActionsMenu", () => {
   })
 
   /**
-   * An order with no tickets - every custom invoice - never offers the resend, because the delivery job would
+   * An order with no tickets never offers the resend, because the delivery job would
    * find nothing to mail while the organizer is told it was sent.
    */
   it("CanSendButNoTickets_HidesResendTickets", async () => {

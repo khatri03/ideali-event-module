@@ -33,18 +33,6 @@ const INVOICE: EventInvoiceListItem = {
   ticketCount: 1,
 }
 
-const CUSTOM_OVERDUE_INVOICE: EventInvoiceListItem = {
-  ...INVOICE,
-  invoiceUniqueId: "invoice-2",
-  invoiceNo: "INV-2002",
-  invoiceStatus: "PendingPayment",
-  invoiceStatusLabel: "Pending Payment",
-  invoiceType: "Custom",
-  dueDateUtc: "2026-01-01T00:00:00Z",
-  companyName: "Northwind Traders",
-  isOverdue: true,
-}
-
 function TableFor({ invoices }: { invoices: EventInvoiceListItem[] }) {
   return (
     <EventInvoiceTable
@@ -54,7 +42,6 @@ function TableFor({ invoices }: { invoices: EventInvoiceListItem[] }) {
       isFetching={false}
       onSortChange={vi.fn()}
       onOpenDetail={vi.fn()}
-      onEdit={vi.fn()}
       onMarkPaid={vi.fn()}
       onCancel={vi.fn()}
       onSend={vi.fn()}
@@ -73,6 +60,14 @@ function renderTable(invoices: EventInvoiceListItem[] = [INVOICE]) {
 }
 
 describe("EventInvoiceTable", () => {
+  /** Event Invoices lists registration orders only, so no row carries the Custom marker or a due date column. */
+  it("EventInvoiceTable_RegistrationOnly_HasNoCustomMarkerOrDueDateColumn", () => {
+    renderTable()
+
+    expect(screen.queryByText("Custom")).toBeNull()
+    expect(screen.queryByRole("columnheader", { name: /Due date/i })).toBeNull()
+  })
+
   /** A ticket order's number is a real link to the Event invoice detail, so it opens in a new tab or by keyboard. */
   it("ListRow_TicketOrderNumber_OpensTheEventInvoiceDetailRoute", () => {
     renderTable()
@@ -80,15 +75,8 @@ describe("EventInvoiceTable", () => {
     expect(screen.getByRole("link", { name: "INV-1001" })).toHaveAttribute("href", "/organizer/events/invoices/invoice-1")
   })
 
-  /** A custom row's number opens the custom invoice's own page, the only route that still serves it. */
-  it("ListRow_CustomInvoiceNumber_OpensTheCustomInvoiceDetailRoute", () => {
-    renderTable([CUSTOM_OVERDUE_INVOICE])
-
-    expect(screen.getByRole("link", { name: "INV-2002" })).toHaveAttribute("href", "/organizer/custom-invoices/invoice-2")
-  })
-
-  /** Opening a custom row carries the list URL along, so back from its detail returns to the same filtered list. */
-  it("ListRow_CustomInvoiceNumber_KeepsTheListReturnState", async () => {
+  /** Opening a row carries the list URL along, so back from its detail returns to the same filtered list. */
+  it("ListRow_InvoiceNumber_KeepsTheListReturnState", async () => {
     function DetailProbe() {
       const location = useLocation()
       return <div data-testid="return-to">{(location.state as { returnTo?: string } | null)?.returnTo}</div>
@@ -97,53 +85,27 @@ describe("EventInvoiceTable", () => {
       <ChakraProvider value={system}>
         <MemoryRouter initialEntries={["/organizer/events/invoices?statuses=PendingPayment"]}>
           <Routes>
-            <Route path="/organizer/events/invoices" element={<TableFor invoices={[CUSTOM_OVERDUE_INVOICE]} />} />
-            <Route path="/organizer/custom-invoices/:invoiceUniqueId" element={<DetailProbe />} />
+            <Route path="/organizer/events/invoices" element={<TableFor invoices={[INVOICE]} />} />
+            <Route path="/organizer/events/invoices/:invoiceUniqueId" element={<DetailProbe />} />
           </Routes>
         </MemoryRouter>
       </ChakraProvider>,
     )
 
-    await userEvent.click(screen.getByRole("link", { name: "INV-2002" }))
+    await userEvent.click(screen.getByRole("link", { name: "INV-1001" }))
 
     expect(screen.getByTestId("return-to")).toHaveTextContent("/organizer/events/invoices?statuses=PendingPayment")
   })
 
-  /** Only a custom invoice carries the Custom marker, so ticket orders are never mistaken for sponsor billing. */
-  it("CustomInvoice_ShowsCustomMarker_TicketInvoiceDoesNot", () => {
-    renderTable([CUSTOM_OVERDUE_INVOICE, INVOICE])
-
-    const markers = screen.getAllByText("Custom")
-
-    expect(markers).toHaveLength(1)
-  })
-
-  /**
-   * The overdue state is spoken, not only shown: the pill's text reads "Overdue, due ..." so a screen-reader
-   * user hears what a sighted user sees from its colour and icon.
-   */
-  it("OverdueCustomInvoice_AnnouncesOverdueWithItsDueDate", () => {
-    renderTable([CUSTOM_OVERDUE_INVOICE])
-
-    expect(screen.getByText("Overdue, due").parentElement).toHaveTextContent("Overdue, due Jan 1, 2026")
-  })
-
-  /** An invoice that is not overdue shows its due date without any overdue wording, visible or spoken. */
-  it("NonOverdueInvoice_HasNoOverduePill", () => {
-    renderTable([{ ...CUSTOM_OVERDUE_INVOICE, isOverdue: false }])
-
-    expect(screen.getByText("Jan 1, 2026")).toBeInTheDocument()
-    expect(screen.queryByText(/Overdue/)).toBeNull()
-  })
 })
 
 describe("EventInvoiceTable scroll container", () => {
   /**
-   * The table's scroll box is a positioned ancestor, so the overdue pill's absolutely positioned screen-reader
-   * text is clipped by it; otherwise that text escapes the box and scrolls the whole page sideways on a phone.
+   * The table's scroll box is a positioned ancestor, so absolutely positioned screen-reader text is clipped by it;
+   * otherwise that text escapes the box and scrolls the whole page sideways on a phone.
    */
-  it("ScrollContainer_IsPositioned_SoHiddenOverdueTextStaysInsideIt", () => {
-    renderTable([CUSTOM_OVERDUE_INVOICE])
+  it("ScrollContainer_IsPositioned_SoHiddenTextStaysInsideIt", () => {
+    renderTable([INVOICE])
 
     const scrollContainer = screen.getByRole("table").parentElement as HTMLElement
 
@@ -153,9 +115,9 @@ describe("EventInvoiceTable scroll container", () => {
 })
 
 describe("EventInvoiceTable buyer cell", () => {
-  /** A custom invoice bills a company, so its row leads with that company and still names the contact under it. */
-  it("CustomInvoiceWithCompany_ShowsCompanyAboveTheContactPerson", () => {
-    renderTable([CUSTOM_OVERDUE_INVOICE])
+  /** An order billed to a company leads with that company and still names the contact under it. */
+  it("InvoiceWithCompany_ShowsCompanyAboveTheContactPerson", () => {
+    renderTable([{ ...INVOICE, companyName: "Northwind Traders" }])
 
     const company = screen.getByText("Northwind Traders")
     const contact = screen.getByText("Sohail Ahmed")

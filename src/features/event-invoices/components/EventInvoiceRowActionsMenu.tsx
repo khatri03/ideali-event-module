@@ -1,11 +1,10 @@
 import { Button, Menu, Portal, Text } from "@chakra-ui/react"
-import { Ban, CheckCircle2, Eye, MoreHorizontal, Pencil, Send } from "lucide-react"
+import { Ban, CheckCircle2, Eye, MoreHorizontal, Send } from "lucide-react"
 import type { EventInvoiceListItem } from "@/api/eventInvoices"
 
 interface EventInvoiceRowActionsMenuProps {
   invoice: EventInvoiceListItem
   onOpenDetail: (invoice: EventInvoiceListItem) => void
-  onEdit: (invoice: EventInvoiceListItem) => void
   onMarkPaid: (invoice: EventInvoiceListItem) => void
   onCancel: (invoice: EventInvoiceListItem) => void
   onSend: (invoice: EventInvoiceListItem) => void
@@ -26,7 +25,6 @@ const ITEM_STYLE = {
 export function EventInvoiceRowActionsMenu({
   invoice,
   onOpenDetail,
-  onEdit,
   onMarkPaid,
   onCancel,
   onSend,
@@ -70,15 +68,6 @@ export function EventInvoiceRowActionsMenu({
                 View
               </Text>
             </Menu.Item>
-
-            {invoice.canEdit ? (
-              <Menu.Item value="edit-invoice" {...ITEM_STYLE} _hover={{ bg: "app.bg" }} onClick={() => onEdit(invoice)}>
-                <Pencil size={14} />
-                <Text as="span" flex="1" textAlign="left">
-                  Edit
-                </Text>
-              </Menu.Item>
-            ) : null}
 
             {invoice.canMarkAsPaid ? (
               <Menu.Item value="mark-paid" {...ITEM_STYLE} _hover={{ bg: "app.bg" }} onClick={() => onMarkPaid(invoice)}>

@@ -1,12 +1,10 @@
-import { Box, Button, Heading, Stack, Text } from "@chakra-ui/react"
-import { useNavigate, useSearchParams } from "react-router-dom"
-import { Plus, Receipt } from "lucide-react"
-import { APP_ROUTES } from "@/utils/routes"
+import { Box, Heading, Stack, Text } from "@chakra-ui/react"
+import { useSearchParams } from "react-router-dom"
+import { Receipt } from "lucide-react"
 import { EventInvoiceManager } from "../components/EventInvoiceManager"
 
 export function EventInvoicesPage() {
   const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
   const eventUniqueId = searchParams.get("eventUniqueId")?.trim() ?? ""
 
   return (
@@ -35,21 +33,6 @@ export function EventInvoicesPage() {
               method, then open one to see its line items, attendees, issued tickets and payment history.
             </Text>
           </Box>
-
-          <Button
-            w={{ base: "full", md: "auto" }}
-            minH="11"
-            px={6}
-            borderRadius="14px"
-            fontWeight="700"
-            bg="linear-gradient(135deg, #7551FF 0%, #422AFB 100%)"
-            color="white"
-            cursor="pointer"
-            onClick={() => navigate(APP_ROUTES.customInvoices.new)}
-          >
-            <Plus size={16} />
-            New custom invoice
-          </Button>
         </Stack>
       </Box>
 

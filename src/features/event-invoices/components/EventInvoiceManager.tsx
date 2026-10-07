@@ -13,7 +13,6 @@ import {
 } from "../hooks/useEventInvoices"
 import { useInvoiceListReturnState } from "../hooks/useInvoiceListReturnState"
 import { DEFAULT_PAGE_SIZE } from "../constants"
-import { invoiceDetailPath } from "../invoiceRoutes"
 import { CancelInvoiceDialog } from "./CancelInvoiceDialog"
 import { EventInvoiceFilterBar, type EventInvoiceDraftFilters } from "./EventInvoiceFilterBar"
 import { EventInvoiceTable } from "./EventInvoiceTable"
@@ -24,23 +23,12 @@ const EMPTY_DRAFT: EventInvoiceDraftFilters = {
   sessionUniqueIds: [],
   statuses: [],
   paymentMethods: [],
-  invoiceTypes: [],
-  overdueOnly: false,
   invoiceDateFrom: "",
   invoiceDateTo: "",
 }
 
-const DEFAULT_FILTERS: EventInvoiceFilters = {
-  eventUniqueIds: [],
-  sessionUniqueIds: [],
-  statuses: [],
-  paymentMethods: [],
-  invoiceTypes: [],
-  overdueOnly: false,
-  invoiceDateFrom: null,
-  invoiceDateTo: null,
-  searchTerm: "",
-}
+/** Custom invoices have their own list, so this page only ever asks for registration (ticket) invoices. */
+const REGISTRATION_INVOICE_TYPES = ["Regular"] as const
 
 function toFilters(draft: EventInvoiceDraftFilters): EventInvoiceFilters {
   return {
@@ -48,8 +36,8 @@ function toFilters(draft: EventInvoiceDraftFilters): EventInvoiceFilters {
     sessionUniqueIds: draft.sessionUniqueIds,
     statuses: draft.statuses,
     paymentMethods: draft.paymentMethods,
-    invoiceTypes: draft.invoiceTypes,
-    overdueOnly: draft.overdueOnly,
+    invoiceTypes: [...REGISTRATION_INVOICE_TYPES],
+    overdueOnly: false,
     invoiceDateFrom: draft.invoiceDateFrom || null,
     invoiceDateTo: draft.invoiceDateTo || null,
     searchTerm: draft.searchTerm,
@@ -105,8 +93,6 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
     appliedFilters.sessionUniqueIds.length > 0 ||
     appliedFilters.statuses.length > 0 ||
     appliedFilters.paymentMethods.length > 0 ||
-    appliedFilters.invoiceTypes.length > 0 ||
-    appliedFilters.overdueOnly ||
     Boolean(appliedFilters.invoiceDateFrom) ||
     Boolean(appliedFilters.invoiceDateTo)
 
@@ -117,7 +103,7 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
 
   function handleClearFilters() {
     setDraft(EMPTY_DRAFT)
-    setAppliedFilters(DEFAULT_FILTERS)
+    setAppliedFilters(toFilters(EMPTY_DRAFT))
     setPage(1)
   }
 
@@ -133,11 +119,7 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
   }
 
   function handleOpenDetail(invoice: EventInvoiceListItem) {
-    navigate(invoiceDetailPath(invoice), { state: returnState })
-  }
-
-  function handleEdit(invoice: EventInvoiceListItem) {
-    navigate(APP_ROUTES.customInvoices.edit(invoice.invoiceUniqueId), { state: returnState })
+    navigate(APP_ROUTES.eventInvoices.detail(invoice.invoiceUniqueId), { state: returnState })
   }
 
   function handleCloseResend() {
@@ -210,7 +192,6 @@ export function EventInvoiceManager({ initialEventUniqueId = "" }: EventInvoiceM
           isFetching={invoicesQuery.isFetching}
           onSortChange={handleSortChange}
           onOpenDetail={handleOpenDetail}
-          onEdit={handleEdit}
           onMarkPaid={setMarkPaidTarget}
           onCancel={setCancelTarget}
           onSend={setResendTarget}
