@@ -291,7 +291,7 @@ const detailSchema = z.object({
   canEditBuyer: dual(z.boolean()),
 })
 
-const pageSchema = <T extends z.ZodTypeAny>(item: T) =>
+export const pageSchema = <T extends z.ZodTypeAny>(item: T) =>
   z.object({
     PageNo: dual(integer()),
     pageNo: dual(integer()),
@@ -657,7 +657,7 @@ function normalizeDetail(raw: z.infer<typeof detailSchema>): EventInvoiceDetail 
   }
 }
 
-function toPage<S, T>(
+export function toPage<S, T>(
   parsed: z.infer<ReturnType<typeof pageSchema>>,
   normalize: (item: S) => T,
   pageNo: number,
@@ -674,7 +674,7 @@ function toPage<S, T>(
   }
 }
 
-function appendArrayParams(params: URLSearchParams, key: string, values: string[]) {
+export function appendArrayParams(params: URLSearchParams, key: string, values: string[]) {
   values.forEach((value) => params.append(key, value))
 }
 

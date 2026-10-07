@@ -61,6 +61,7 @@ import { SessionListPage, SessionWizardLayout, SessionWizardStepPage } from "./f
 import {
   CustomInvoiceDetailPage,
   CustomInvoiceFormPage,
+  CustomInvoicesListPage,
   EventInvoiceDetailPage,
   EventInvoicesPage,
 } from "./features/event-invoices"
@@ -182,6 +183,7 @@ export default function App() {
           <Route path={APP_ROUTES.eventCheckInRoute} element={<EventCheckInPage />} />
           <Route path={APP_ROUTES.invoiceCategories.list} element={<InvoiceCategoriesPage />} />
           <Route path={APP_ROUTES.eventInvoices.list} element={<EventInvoicesPage />} />
+          <Route path={APP_ROUTES.customInvoices.list} element={<CustomInvoicesListPage />} />
           <Route path={APP_ROUTES.customInvoices.new} element={<CustomInvoiceFormPage />} />
           <Route path={APP_ROUTES.customInvoices.editRoute} element={<CustomInvoiceFormPage />} />
           <Route path={APP_ROUTES.customInvoices.detailRoute} element={<CustomInvoiceDetailPage />} />

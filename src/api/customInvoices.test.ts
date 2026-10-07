@@ -6,6 +6,7 @@ import {
   ENTITY_OPTIONS_PAGE_SIZE,
   fetchActiveInvoiceCategoryOptions,
   fetchCustomInvoiceEntityOptions,
+  fetchCustomInvoiceList,
   fetchCustomInvoiceLinkCandidates,
   fetchEnabledCustomInvoiceModules,
   fetchCustomInvoiceDetail,
@@ -449,5 +450,84 @@ describe("fetchCustomInvoiceLinkCandidates", () => {
     await expect(
       fetchCustomInvoiceLinkCandidates({ moduleType: "Event", searchTerm: "", pageNo: 1, pageSize: 20 }),
     ).rejects.toThrow()
+  })
+})
+
+describe("fetchCustomInvoiceList", () => {
+  const LIST_ROW = {
+    InvoiceUniqueId: "inv-7",
+    InvoiceNo: "CI-0007",
+    ModuleType: "Donation",
+    EntityName: "Spring Appeal",
+    CompanyName: "Acme Corp",
+    BuyerName: "Jane Doe",
+    BuyerEmail: "jane@acme.test",
+    CategoryName: "Gold Sponsor",
+    DueDateUtc: "2026-11-01T00:00:00Z",
+    InvoiceDateUtc: "2026-10-01T00:00:00Z",
+    TotalAmount: 1250.5,
+    CurrencySymbol: "$",
+    InvoiceStatus: "PendingPayment",
+    IsOverdue: true,
+    StatusLabel: "Overdue",
+    CanMarkAsPaid: true,
+    CanCancel: true,
+    CanSend: false,
+  }
+
+  const QUERY = { statuses: [], searchTerm: "", page: 1, pageSize: 20 }
+
+  /** Every filter and the paging travel in one request, statuses repeated, so the server filters, counts and pages together. */
+  it("fetchCustomInvoiceList_SendsFiltersStatusesAndPagingInOneRequest", async () => {
+    getMock.mockResolvedValue(envelope({ PageNo: 2, PageSize: 20, PageCount: 3, TotalRecordsCount: 41, PageData: [LIST_ROW] }))
+
+    const page = await fetchCustomInvoiceList({
+      moduleType: "Donation",
+      categoryUniqueId: "cat-1",
+      statuses: ["Paid", "Overdue"],
+      searchTerm: " acme ",
+      page: 2,
+      pageSize: 20,
+    })
+
+    const [url, config] = getMock.mock.calls[0]
+    expect(url).toBe(API_ROUTES.customInvoiceList)
+    const params = config.params as URLSearchParams
+    expect(params.getAll("statuses")).toEqual(["Paid", "Overdue"])
+    expect(params.get("moduleType")).toBe("Donation")
+    expect(params.get("categoryUniqueId")).toBe("cat-1")
+    expect(params.get("searchTerm")).toBe("acme")
+    expect(params.get("pageNo")).toBe("2")
+    expect(params.get("pageSize")).toBe("20")
+    expect(page).toMatchObject({ total: 41, page: 2, pageSize: 20, totalPages: 3 })
+  })
+
+  /** No filter means none is sent, so the server returns every module and status rather than matching an empty value. */
+  it("fetchCustomInvoiceList_NoFilters_OmitsOptionalParameters", async () => {
+    getMock.mockResolvedValue(envelope({ PageNo: 1, PageSize: 20, PageCount: 0, TotalRecordsCount: 0, PageData: [] }))
+
+    await fetchCustomInvoiceList({ ...QUERY, searchTerm: "   " })
+
+    const params = getMock.mock.calls[0][1].params as URLSearchParams
+    expect(Object.fromEntries(params)).toEqual({ pageNo: "1", pageSize: "20" })
+  })
+
+  /** Money stays decimal text end to end, so the client never does float arithmetic on a total. */
+  it("fetchCustomInvoiceList_Amount_StaysAString", async () => {
+    getMock.mockResolvedValue(envelope({ PageNo: 1, PageSize: 20, PageCount: 1, TotalRecordsCount: 1, PageData: [LIST_ROW] }))
+
+    const page = await fetchCustomInvoiceList(QUERY)
+
+    expect(page.items[0].totalAmount).toBe("1250.5")
+    expect(page.items[0]).toMatchObject({ moduleType: "Donation", isOverdue: true, statusLabel: "Overdue", canSend: false })
+  })
+
+  /** A row naming a module the client does not know is refused at the boundary instead of rendering. */
+  it("fetchCustomInvoiceList_MalformedRow_Throws", async () => {
+    getMock.mockResolvedValue(
+      envelope({ PageNo: 1, PageSize: 20, PageCount: 1, TotalRecordsCount: 1, PageData: [{ ...LIST_ROW, ModuleType: "Bogus" }] }),
+    )
+
+    await expect(fetchCustomInvoiceList(QUERY)).rejects.toThrow()
   })
 })

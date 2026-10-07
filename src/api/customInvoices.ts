@@ -1,12 +1,16 @@
 import { z } from "zod"
 import { client } from "@/api/client"
 import {
+  appendArrayParams,
   invoiceNoteSchema,
   normalizeInvoiceNote,
   normalizePaymentAttempt,
+  pageSchema,
   paymentAttemptSchema,
+  toPage,
   type EventInvoiceNote,
   type EventInvoicePaymentAttempt,
+  type Page,
 } from "@/api/eventInvoices"
 import { parseServicePayload } from "@/api/serviceResponse"
 import { API_ROUTES } from "@/utils/routes"
@@ -15,6 +19,28 @@ export const CUSTOM_INVOICE_MODULES = ["Event", "Membership", "Donation"] as con
 
 /** The modules a custom invoice can bill a record of. */
 export type CustomInvoiceModule = (typeof CUSTOM_INVOICE_MODULES)[number]
+
+/** Overdue is derived on the server (awaiting payment and past due), so it never overlaps Pending Payment. */
+export const CUSTOM_INVOICE_LIST_STATUSES = ["Paid", "PendingPayment", "Overdue", "Cancelled"] as const
+
+export type CustomInvoiceListStatus = (typeof CUSTOM_INVOICE_LIST_STATUSES)[number]
+
+export const CUSTOM_INVOICE_LIST_STATUS_LABELS: Record<CustomInvoiceListStatus, string> = {
+  Paid: "Paid",
+  PendingPayment: "Pending Payment",
+  Overdue: "Overdue",
+  Cancelled: "Cancelled",
+}
+
+export interface CustomInvoiceListQuery {
+  moduleType?: CustomInvoiceModule
+  categoryUniqueId?: string
+  /** Empty means every status. */
+  statuses: CustomInvoiceListStatus[]
+  searchTerm: string
+  page: number
+  pageSize: number
+}
 
 /** The body of both create and update; on update the invoice is named in the URL. */
 export interface CustomInvoiceWritePayload {
@@ -295,6 +321,33 @@ const linkCandidatesPageSchema = z.object({
   ),
 })
 
+const listRowSchema = z
+  .object({
+    invoiceUniqueId: z.string().min(1),
+    invoiceNo: z.string(),
+    moduleType: z.enum(CUSTOM_INVOICE_MODULES),
+    /** Empty when the billed record no longer exists. */
+    entityName: text(),
+    companyName: text(),
+    buyerName: text(),
+    buyerEmail: text(),
+    categoryName: text(),
+    dueDateUtc: text(),
+    invoiceDateUtc: text(),
+    totalAmount: money(),
+    currencySymbol: z.string().nullish().transform((value) => value || "$"),
+    invoiceStatus: z.string(),
+    isOverdue: flag(),
+    statusLabel: text(),
+    canMarkAsPaid: flag(),
+    canCancel: flag(),
+    canSend: flag(),
+  })
+  .transform((row) => ({ ...row, statusLabel: row.statusLabel || row.invoiceStatus }))
+
+/** One row of the cross-module custom invoice list; amounts are decimal text, never float. */
+export type CustomInvoiceListItem = z.infer<typeof listRowSchema>
+
 export async function createCustomInvoice(payload: CustomInvoiceWritePayload): Promise<string> {
   const response = await client.post<unknown>(API_ROUTES.customInvoiceCreate, payload)
   return createdInvoiceIdSchema.parse(parseServicePayload(response.data))
@@ -386,6 +439,20 @@ export async function fetchCustomInvoiceLinkCandidates({
     total: page.totalRecordsCount,
     totalPages: page.pageCount,
   }
+}
+
+/** One page of the organizer's custom invoices across modules, filtered, counted and paged on the server. */
+export async function fetchCustomInvoiceList(query: CustomInvoiceListQuery): Promise<Page<CustomInvoiceListItem>> {
+  const params = new URLSearchParams({ pageNo: String(query.page), pageSize: String(query.pageSize) })
+  if (query.moduleType) params.set("moduleType", query.moduleType)
+  if (query.categoryUniqueId) params.set("categoryUniqueId", query.categoryUniqueId)
+  appendArrayParams(params, "statuses", query.statuses)
+  const searchTerm = query.searchTerm.trim()
+  if (searchTerm) params.set("searchTerm", searchTerm)
+
+  const response = await client.get<unknown>(API_ROUTES.customInvoiceList, { params })
+  const parsed = pageSchema(listRowSchema).parse(parseServicePayload(response.data))
+  return toPage(parsed, (row: CustomInvoiceListItem) => row, query.page, query.pageSize)
 }
 
 /**
