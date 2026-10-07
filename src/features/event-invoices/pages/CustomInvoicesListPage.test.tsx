@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { MemoryRouter } from "react-router-dom"
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
 import { ChakraProvider } from "@chakra-ui/react"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { system } from "@/theme"
+import { APP_ROUTES } from "@/utils/routes"
 import type { CustomInvoiceListItem } from "@/api/customInvoices"
 import { CustomInvoicesListPage } from "./CustomInvoicesListPage"
 
@@ -70,12 +72,24 @@ function tableRow(invoiceNo: string) {
   return within(screen.getByRole("table")).getByRole("link", { name: invoiceNo }).closest("tr") as HTMLElement
 }
 
+/** Stands in for the detail page and shows the return path the row handed it. */
+function DetailStub() {
+  const location = useLocation()
+  return <p>Detail of {location.pathname} back to {(location.state as { returnTo?: string } | null)?.returnTo}</p>
+}
+
 function renderAt(path = "/organizer/custom-invoices/list") {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   return render(
     <ChakraProvider value={system}>
-      <MemoryRouter initialEntries={[path]}>
-        <CustomInvoicesListPage />
-      </MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route path={APP_ROUTES.customInvoices.list} element={<CustomInvoicesListPage />} />
+            <Route path={APP_ROUTES.customInvoices.detailRoute} element={<DetailStub />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
     </ChakraProvider>,
   )
 }
@@ -118,6 +132,21 @@ describe("CustomInvoicesListPage rows", () => {
 
     const row = tableRow("CI-0007")
     expect(within(row).getByText("No longer available")).toBeInTheDocument()
+  })
+
+  /** View in a row's menu opens that invoice's detail and remembers the filtered list to come back to. */
+  it("ListPage_RowMenu_ViewOpensTheDetailPage", async () => {
+    const user = userEvent.setup()
+    givenRows([buildRow()])
+
+    renderAt("/organizer/custom-invoices/list?status=Overdue")
+
+    await user.click(within(tableRow("CI-0007")).getByRole("button", { name: "Actions for invoice CI-0007" }))
+    await user.click(await screen.findByRole("menuitem", { name: "View" }))
+
+    expect(
+      await screen.findByText("Detail of /organizer/custom-invoices/inv-7 back to /organizer/custom-invoices/list?status=Overdue"),
+    ).toBeInTheDocument()
   })
 })
 

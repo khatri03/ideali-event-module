@@ -293,3 +293,114 @@ describe("InvoiceSettlementActions", () => {
   })
 })
 
+/** A list row's menu over real mutations, the way CustomInvoiceRowActions hands them in. */
+function MenuHarness({ state, onView }: { state: Required<Omit<ActionsState, "canResendTickets">>; onView: () => void }) {
+  const markPaid = useMutation({ mutationFn: () => markPaidMock() })
+  const cancel = useMutation({ mutationFn: (notes: string) => cancelMock(notes) })
+  const emailInvoice = useMutation({ mutationFn: () => emailMock() })
+
+  return (
+    <InvoiceSettlementActions
+      variant="menu"
+      invoiceNo="CI-0007"
+      {...state}
+      markPaid={markPaid}
+      cancel={cancel}
+      emailInvoice={emailInvoice}
+      onView={onView}
+    />
+  )
+}
+
+function renderMenu({ canMarkAsPaid = true, canCancel = true, canEmailInvoice = true, buyerEmail = "sponsor@example.com" }: ActionsState = {}) {
+  const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+  const onView = vi.fn()
+  render(
+    <ChakraProvider value={system}>
+      <QueryClientProvider client={queryClient}>
+        <MenuHarness state={{ canMarkAsPaid, canCancel, canEmailInvoice, buyerEmail }} onView={onView} />
+      </QueryClientProvider>
+    </ChakraProvider>,
+  )
+  return { onView }
+}
+
+async function openMenu(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "Actions for invoice CI-0007" }))
+  return screen.findByRole("menu")
+}
+
+describe("InvoiceSettlementActions menu", () => {
+  beforeEach(() => {
+    markPaidMock.mockReset().mockResolvedValue(undefined)
+    cancelMock.mockReset().mockResolvedValue(undefined)
+    emailMock.mockReset().mockResolvedValue(undefined)
+  })
+
+  /** A paid invoice can still be opened and its link re-sent, but never settled or cancelled again. */
+  it("SettlementMenu_PaidInvoice_OffersOnlyViewAndEmailLink", async () => {
+    const user = userEvent.setup()
+    renderMenu({ canMarkAsPaid: false, canCancel: false, canEmailInvoice: true })
+
+    const menu = await openMenu(user)
+
+    const labels = within(menu).getAllByRole("menuitem").map((item) => item.textContent)
+    expect(labels).toEqual(["View", "Email link"])
+  })
+
+  /** Settling from a row goes through the same irreversible-action confirmation as the detail page. */
+  it("SettlementMenu_MarkPaidItem_OpensTheSameConfirmDialog", async () => {
+    const user = userEvent.setup()
+    renderMenu()
+
+    const menu = await openMenu(user)
+    await user.click(within(menu).getByRole("menuitem", { name: "Mark as paid" }))
+
+    const dialog = await screen.findByRole("alertdialog")
+    expect(within(dialog).getByText("CI-0007")).toBeInTheDocument()
+    expect(markPaidMock).not.toHaveBeenCalled()
+    await user.click(within(dialog).getByRole("button", { name: /^mark as paid$/i }))
+    await waitFor(() => expect(markPaidMock).toHaveBeenCalledTimes(1))
+  })
+
+  /** A cancelled invoice still needs a way in from its row, so the trigger stays with View alone. */
+  it("SettlementMenu_OnlyView_StillRendersTrigger", async () => {
+    const user = userEvent.setup()
+    const { onView } = renderMenu({ canMarkAsPaid: false, canCancel: false, canEmailInvoice: false })
+
+    const menu = await openMenu(user)
+    const items = within(menu).getAllByRole("menuitem")
+    expect(items.map((item) => item.textContent)).toEqual(["View"])
+    await user.click(items[0])
+    expect(onView).toHaveBeenCalledTimes(1)
+  })
+
+  /** Cancelling from a row demands the same recorded reason as the detail page before anything is sent. */
+  it("SettlementMenu_CancelItem_SendsTheEnteredReason", async () => {
+    const user = userEvent.setup()
+    renderMenu()
+
+    const menu = await openMenu(user)
+    await user.click(within(menu).getByRole("menuitem", { name: "Cancel invoice" }))
+    const dialog = await screen.findByRole("alertdialog")
+    await user.type(within(dialog).getByLabelText(/reason for cancelling/i), "Sponsor withdrew.")
+    await user.click(within(dialog).getByRole("button", { name: /^cancel order$/i }))
+
+    await waitFor(() => expect(cancelMock).toHaveBeenCalledWith("Sponsor withdrew."))
+  })
+})
+
+describe("InvoiceSettlementActions buttons", () => {
+  /** The detail page keeps showing no empty button row for an invoice that admits no action. */
+  it("SettlementButtons_NothingAllowed_RendersNothing", () => {
+    const markPaid = { mutateAsync: vi.fn(), reset: vi.fn(), isPending: false, error: null }
+    const { container } = render(
+      <ChakraProvider value={system}>
+        <InvoiceSettlementActions invoiceNo="CI-1" canMarkAsPaid={false} canCancel={false} markPaid={markPaid} cancel={markPaid} onView={vi.fn()} />
+      </ChakraProvider>,
+    )
+
+    expect(container).toBeEmptyDOMElement()
+  })
+})
+

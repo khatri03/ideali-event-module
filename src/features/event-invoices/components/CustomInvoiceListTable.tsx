@@ -5,6 +5,7 @@ import { EMPTY_VALUE, formatCurrency } from "@/utils/format"
 import { formatUtcDate } from "@/utils/utcDates"
 import { STICKY_HEADER_CSS, TABLE_MAX_HEIGHT } from "../constants"
 import { CustomInvoiceListStatusBadge, CustomInvoiceNumberLink, CustomInvoiceRecordName } from "./CustomInvoiceListCells"
+import { CustomInvoiceRowActions } from "./CustomInvoiceRowActions"
 import { InvoiceBuyerCell } from "./InvoiceBuyerCell"
 import { TableBodySkeleton } from "./TableBodySkeleton"
 
@@ -13,7 +14,8 @@ interface CustomInvoiceListTableProps {
   isLoading: boolean
 }
 
-const COLUMNS: { label: string; align?: "center" | "right" }[] = [
+const COLUMNS: { label: string; align?: "center" | "right"; width?: string }[] = [
+  { label: "Actions", align: "center", width: "1%" },
   { label: "Invoice No." },
   { label: "Module" },
   { label: "For" },
@@ -27,6 +29,9 @@ const COLUMNS: { label: string; align?: "center" | "right" }[] = [
 function CustomInvoiceListRow({ invoice }: { invoice: CustomInvoiceListItem }) {
   return (
     <Table.Row _hover={{ bg: "app.bg" }} transition="background 0.15s">
+      <Table.Cell px={4} py={4} textAlign="center">
+        <CustomInvoiceRowActions invoice={invoice} />
+      </Table.Cell>
       <Table.Cell px={4} py={4}>
         <CustomInvoiceNumberLink invoiceUniqueId={invoice.invoiceUniqueId} invoiceNo={invoice.invoiceNo} />
       </Table.Cell>
@@ -79,7 +84,7 @@ export function CustomInvoiceListTable({ invoices, isLoading }: CustomInvoiceLis
         <Table.Header>
           <Table.Row bg="app.bg">
             {COLUMNS.map((column) => (
-              <Table.ColumnHeader key={column.label} px={4} py={3} textAlign={column.align}>
+              <Table.ColumnHeader key={column.label} px={4} py={3} textAlign={column.align} w={column.width}>
                 <Text fontSize="xs" fontWeight="700" color="text.secondary" textTransform="uppercase" letterSpacing="0.06em">
                   {column.label}
                 </Text>

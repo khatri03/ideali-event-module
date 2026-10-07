@@ -5,6 +5,7 @@ import { ConfirmDialog } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
 import type { InvoiceActionMutation } from "../types"
 import { CancelInvoiceDialog } from "./CancelInvoiceDialog"
+import { InvoiceSettlementActionsMenu } from "./InvoiceSettlementActionsMenu"
 
 type ConfirmAction = "mark-paid" | "resend" | "email-invoice"
 
@@ -24,6 +25,16 @@ interface InvoiceSettlementActionsProps {
   resendTickets?: InvoiceActionMutation
   /** Offered only by a custom invoice. */
   emailInvoice?: InvoiceActionMutation
+  /** "menu" is the compact list-row form; both forms open the same dialogs. */
+  variant?: "buttons" | "menu"
+  /** Menu form only: opens the invoice from its row. */
+  onView?: () => void
+}
+
+const CONFIRM_COPY: Record<ConfirmAction, { title: string; confirmLabel: string; loadingLabel: string }> = {
+  "mark-paid": { title: "Mark this order as paid", confirmLabel: "Mark as paid", loadingLabel: "Settling..." },
+  resend: { title: "Resend all tickets", confirmLabel: "Resend all", loadingLabel: "Sending..." },
+  "email-invoice": { title: "Email invoice to buyer", confirmLabel: "Send invoice", loadingLabel: "Sending..." },
 }
 
 const ACTION_BUTTON_PROPS = {
@@ -49,6 +60,8 @@ export function InvoiceSettlementActions({
   cancel: cancelMutation,
   resendTickets,
   emailInvoice,
+  variant = "buttons",
+  onView,
 }: InvoiceSettlementActionsProps) {
   // `confirmAction` names which confirmation to show and is sticky across a close - only the open flags
   // drive visibility, so each dialog stays mounted after its first use and Ark's own close transition
@@ -59,7 +72,8 @@ export function InvoiceSettlementActions({
   const resendMutation = canResendTickets ? resendTickets : undefined
   const emailMutation = canEmailInvoice ? emailInvoice : undefined
 
-  if (!canMarkAsPaid && !canCancel && !resendMutation && !emailMutation) {
+  const isMenu = variant === "menu"
+  if (!canMarkAsPaid && !canCancel && !resendMutation && !emailMutation && !(isMenu && onView)) {
     return null
   }
 
@@ -87,6 +101,67 @@ export function InvoiceSettlementActions({
     } catch {
       // Kept open so the dialog's own error banner stays on screen with the failed action in view.
     }
+  }
+
+  const dialogs = (
+    <>
+      {confirmAction ? (
+        <ConfirmDialog
+          open={isConfirmOpen}
+          title={CONFIRM_COPY[confirmAction].title}
+          description={
+            confirmAction === "resend" ? (
+              <Text>Re-email every ticket on this order to the buyer and any attendees with their own address?</Text>
+            ) : confirmAction === "email-invoice" ? (
+              <Text>
+                Invoice <strong>{invoiceNo}</strong> and its online payable link will be emailed to{" "}
+                <strong>{recipientLabel}</strong>.
+              </Text>
+            ) : (
+              <Text>
+                Order <strong>{invoiceNo}</strong> will be recorded as paid in full, the buyer emailed, and
+                any tickets it is owed issued and delivered. This cannot be undone.
+              </Text>
+            )
+          }
+          confirmLabel={CONFIRM_COPY[confirmAction].confirmLabel}
+          loadingLabel={CONFIRM_COPY[confirmAction].loadingLabel}
+          tone="primary"
+          errorMessage={confirmMutation.error ? extractApiError(confirmMutation.error) : null}
+          isPending={confirmMutation.isPending}
+          onConfirm={() => runThenClose(() => confirmMutation.mutateAsync(), () => setIsConfirmOpen(false))}
+          onClose={() => setIsConfirmOpen(false)}
+        />
+      ) : null}
+
+      {canCancel ? (
+        <CancelInvoiceDialog
+          open={isCancelOpen}
+          invoiceNo={invoiceNo}
+          isPending={cancelMutation.isPending}
+          errorMessage={cancelMutation.error ? extractApiError(cancelMutation.error) : null}
+          onConfirm={(cancellationNotes) =>
+            runThenClose(() => cancelMutation.mutateAsync(cancellationNotes), () => setIsCancelOpen(false))
+          }
+          onClose={() => setIsCancelOpen(false)}
+        />
+      ) : null}
+    </>
+  )
+
+  if (isMenu) {
+    return (
+      <>
+        <InvoiceSettlementActionsMenu
+          invoiceNo={invoiceNo}
+          onView={onView}
+          onMarkPaid={canMarkAsPaid ? () => openConfirm("mark-paid") : undefined}
+          onCancel={canCancel ? openCancel : undefined}
+          onEmailInvoice={emailMutation ? () => openConfirm("email-invoice") : undefined}
+        />
+        {dialogs}
+      </>
+    )
   }
 
   return (
@@ -121,55 +196,7 @@ export function InvoiceSettlementActions({
             </Button>
           ) : null}
 
-          {confirmAction ? (
-            <ConfirmDialog
-              open={isConfirmOpen}
-              title={
-                confirmAction === "resend"
-                  ? "Resend all tickets"
-                  : confirmAction === "email-invoice"
-                    ? "Email invoice to buyer"
-                    : "Mark this order as paid"
-              }
-              description={
-                confirmAction === "resend" ? (
-                  <Text>Re-email every ticket on this order to the buyer and any attendees with their own address?</Text>
-                ) : confirmAction === "email-invoice" ? (
-                  <Text>
-                    Invoice <strong>{invoiceNo}</strong> and its online payable link will be emailed to{" "}
-                    <strong>{recipientLabel}</strong>.
-                  </Text>
-                ) : (
-                  <Text>
-                    Order <strong>{invoiceNo}</strong> will be recorded as paid in full, the buyer emailed, and
-                    any tickets it is owed issued and delivered. This cannot be undone.
-                  </Text>
-                )
-              }
-              confirmLabel={
-                confirmAction === "resend" ? "Resend all" : confirmAction === "email-invoice" ? "Send invoice" : "Mark as paid"
-              }
-              loadingLabel={confirmAction === "mark-paid" ? "Settling..." : "Sending..."}
-              tone="primary"
-              errorMessage={confirmMutation.error ? extractApiError(confirmMutation.error) : null}
-              isPending={confirmMutation.isPending}
-              onConfirm={() => runThenClose(() => confirmMutation.mutateAsync(), () => setIsConfirmOpen(false))}
-              onClose={() => setIsConfirmOpen(false)}
-            />
-          ) : null}
-
-          {canCancel ? (
-            <CancelInvoiceDialog
-              open={isCancelOpen}
-              invoiceNo={invoiceNo}
-              isPending={cancelMutation.isPending}
-              errorMessage={cancelMutation.error ? extractApiError(cancelMutation.error) : null}
-              onConfirm={(cancellationNotes) =>
-                runThenClose(() => cancelMutation.mutateAsync(cancellationNotes), () => setIsCancelOpen(false))
-              }
-              onClose={() => setIsCancelOpen(false)}
-            />
-          ) : null}
+          {dialogs}
         </Stack>
       </Flex>
     </Box>

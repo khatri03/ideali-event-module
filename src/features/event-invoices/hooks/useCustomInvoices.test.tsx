@@ -75,7 +75,7 @@ describe("useCustomInvoiceDetail", () => {
 })
 
 describe("custom invoice actions", () => {
-  /** Settling changes the invoice's status and its row, so its detail and the Event Invoices list both refresh. */
+  /** Settling changes the invoice's status and its row, so its detail and both invoice lists refresh. */
   it.each([
     ["mark paid", "Invoice marked as paid.", () => useMarkCustomInvoiceAsPaid("invoice-1").mutateAsync],
     [
@@ -102,8 +102,21 @@ describe("custom invoice actions", () => {
 
     expect(toastMock).toHaveBeenCalledWith({ type: "success", title })
     await waitFor(() =>
-      expect(invalidatedKeys(invalidateSpy)).toEqual([["custom-invoice-detail", "invoice-1"], ["event-invoices"]]),
+      expect(invalidatedKeys(invalidateSpy)).toEqual([["custom-invoice-detail", "invoice-1"], ["event-invoices"], ["custom-invoices", "list"]]),
     )
+  })
+
+  /**
+   * A row settled from the custom invoice list must leave that list, whatever its filters, showing the new status;
+   * otherwise the organizer sees a Paid invoice still offering Mark as paid until a reload.
+   */
+  it("refreshInvoices_AfterSettlement_InvalidatesTheCustomInvoiceList", async () => {
+    const { wrapper, invalidateSpy } = createObservedClient()
+    const { result } = renderHook(() => useMarkCustomInvoiceAsPaid("invoice-1"), { wrapper })
+
+    await result.current.mutateAsync()
+
+    await waitFor(() => expect(invalidatedKeys(invalidateSpy)).toContainEqual(["custom-invoices", "list"]))
   })
 
   /** Emailing a custom invoice reports invoice language, never the ticket-resend copy that has nothing to send. */
@@ -146,6 +159,7 @@ describe("custom invoice link mutations", () => {
         ["custom-invoice-detail", "invoice-1"],
         ["custom-invoice-detail", "invoice-2"],
         ["event-invoices"],
+        ["custom-invoices", "list"],
       ]),
     )
   })
@@ -177,6 +191,7 @@ describe("custom invoice link mutations", () => {
         ["custom-invoice-detail", "invoice-1"],
         ["custom-invoice-detail", "invoice-2"],
         ["event-invoices"],
+        ["custom-invoices", "list"],
       ]),
     )
   })

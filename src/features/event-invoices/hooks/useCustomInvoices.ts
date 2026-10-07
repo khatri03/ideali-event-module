@@ -13,10 +13,11 @@ import { extractApiError, isNotFoundError } from "@/utils/errors"
 
 const detailKey = (invoiceUniqueId: string) => ["custom-invoice-detail", invoiceUniqueId]
 
-/** Every write changes what the detail shows and may change the row in the Event Invoices list behind it. */
+/** Every write changes what the detail shows and may change the invoice's row in either list behind it. */
 function refreshInvoices(queryClient: QueryClient, invoiceUniqueIds: string[]) {
   invoiceUniqueIds.forEach((invoiceUniqueId) => queryClient.invalidateQueries({ queryKey: detailKey(invoiceUniqueId) }))
   queryClient.invalidateQueries({ queryKey: ["event-invoices"] })
+  queryClient.invalidateQueries({ queryKey: ["custom-invoices", "list"] })
 }
 
 function useCustomInvoiceAction<TVariables = void>(

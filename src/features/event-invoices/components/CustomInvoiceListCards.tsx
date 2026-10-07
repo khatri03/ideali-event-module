@@ -5,6 +5,7 @@ import { TextPill } from "@/components/common"
 import { EMPTY_VALUE, formatCurrency } from "@/utils/format"
 import { formatUtcDate } from "@/utils/utcDates"
 import { CustomInvoiceListStatusBadge, CustomInvoiceNumberLink, CustomInvoiceRecordName } from "./CustomInvoiceListCells"
+import { CustomInvoiceRowActions } from "./CustomInvoiceRowActions"
 import { InvoiceBuyerCell } from "./InvoiceBuyerCell"
 
 interface CustomInvoiceListCardsProps {
@@ -27,13 +28,14 @@ function CardField({ label, children }: { label: string; children: ReactNode }) 
 function CustomInvoiceListCard({ invoice }: { invoice: CustomInvoiceListItem }) {
   return (
     <Box as="li" listStyleType="none" border="1px solid" borderColor="border.subtle" bg="card.bg" borderRadius="16px" p={4}>
-      <Flex justify="space-between" align="flex-start" gap={3} wrap="wrap">
+      <Flex justify="space-between" align="flex-start" gap={3}>
         <CustomInvoiceNumberLink invoiceUniqueId={invoice.invoiceUniqueId} invoiceNo={invoice.invoiceNo} />
+        <CustomInvoiceRowActions invoice={invoice} />
+      </Flex>
+      <Flex mt={2} gap={2} align="center" wrap="wrap">
+        <TextPill colorPalette="brand">{invoice.moduleType}</TextPill>
         <CustomInvoiceListStatusBadge invoiceStatus={invoice.invoiceStatus} isOverdue={invoice.isOverdue} statusLabel={invoice.statusLabel} />
       </Flex>
-      <Box mt={2}>
-        <TextPill colorPalette="brand">{invoice.moduleType}</TextPill>
-      </Box>
       <Stack mt={4} gap={3}>
         <CardField label="For">
           <CustomInvoiceRecordName entityName={invoice.entityName} />
