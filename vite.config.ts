@@ -35,6 +35,13 @@ export default defineConfig(({ mode }) => {
       environment: "happy-dom",
       include: ["src/**/*.test.{ts,tsx}"],
       setupFiles: ["./src/test/setup.ts"],
+      // zag's outside-click wait rejects with AbortError when a test unmounts a still-open Chakra overlay. The
+      // rejection is internal to the library and no assertion depends on it; every other unhandled error still fails the run.
+      onUnhandledError(error) {
+        const isZagAbortOnUnmount =
+          error.name === "AbortError" && error.message === "Promise aborted" && (error.stack ?? "").includes("@zag-js/dom-query")
+        return isZagAbortOnUnmount ? false : undefined
+      },
       env: {
         VITE_BUYER_APP_BASE_URL: "https://pay.example.test",
       },
@@ -54,6 +61,9 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       open: true,
       host: "localhost",
+      // The test runner writes traces and screenshots here while the dev server is up; watching them crashes the
+      // server with EBUSY and reloads open pages mid-test.
+      watch: { ignored: ["**/scripts/test-runs/**"] },
       https: {
         key: fs.readFileSync("./ssl/key.pem"),
         cert: fs.readFileSync("./ssl/cert.pem"),
