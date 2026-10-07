@@ -26,7 +26,14 @@ const sessionResponse = {
   },
 }
 
+/** The invoice number on Event Invoices is a real link, so it opens the registration detail and survives open-in-new-tab. */
 test("invoice number is a real link and opens invoice detail", async ({ page }) => {
+  // An unmocked call reaching a running API answers 401 and the client logs the session out, so every API path
+  // not mocked below answers 404 instead. Matched on the path prefix so Vite's /src/api/*.ts modules still load.
+  await page.route((url) => url.pathname.startsWith("/api/"), (route) => route.fulfill({ status: 404, json: { title: "Not mocked", status: 404 } }))
+  await page.route("**/api/organizer/custom-invoices/enabled-modules", (route) =>
+    route.fulfill({ json: { success: true, message: null, timestamp: "2026-08-11T10:00:00Z", data: ["Event"] } }),
+  )
   await page.route("**/api/identity/account/session", (route) => route.fulfill({ json: sessionResponse }))
   await page.route("**/api/alert-inbox/**", (route) =>
     route.fulfill({ json: { success: true, data: null, message: null, timestamp: "2026-08-11T10:00:00Z" } }),
@@ -116,5 +123,5 @@ test("invoice number is a real link and opens invoice detail", async ({ page }) 
   await link.click()
 
   await expect(page).toHaveURL(`/organizer/events/invoices/${INVOICE_ID}`)
-  await expect(page.getByText("INV-2001")).toBeVisible()
+  await expect(page.getByText("INV-2001", { exact: true })).toBeVisible()
 })
