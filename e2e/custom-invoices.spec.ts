@@ -4,9 +4,8 @@ import { findHorizontalPageOverflow, findUndersizedTargets, MIN_TOUCH_TARGET_PX 
 /**
  * Phase 03 and 04 UAT for custom invoices, driven against mocked API responses because the check is about
  * what the organizer sees and sends, not about the server. Every width in the project's responsive range is
- * walked, since the organizer works these screens from a phone as often as from a desk. The list still lives
- * under Event Invoices, which carries custom rows beside ticket orders; everything past the list runs on the
- * custom-invoice routes.
+ * walked, since the organizer works these screens from a phone as often as from a desk. Custom invoices are
+ * listed on their own cross-module list; Event Invoices is still mocked for the ticket-order resend check.
  */
 
 const WIDTHS = [320, 375, 768, 1024, 1440, 1920] as const
@@ -21,6 +20,8 @@ const TICKET_ID = "70000000-0000-4000-8000-000000000200"
 
 const LIST_URL = "/organizer/events/invoices"
 const LIST_API = "**/api/organizer/events/invoices/list**"
+const CUSTOM_LIST_URL = "/organizer/custom-invoices/list"
+const CUSTOM_LIST_PATH = "/api/organizer/custom-invoices/list"
 const detailPath = (invoiceUniqueId: string) => `/organizer/custom-invoices/${invoiceUniqueId}`
 const detailApi = (invoiceUniqueId: string) => `**/api/organizer/custom-invoices/${invoiceUniqueId}`
 const LINK_CANDIDATES_API = "**/api/organizer/custom-invoices/link-candidates?**"
@@ -119,6 +120,30 @@ const TICKET_ROW = listRow({
   ticketCount: 2,
 })
 
+/** A row of the cross-module custom invoice list, built from the same invoice an Event Invoices row describes. */
+function customListRow(row: Json): Json {
+  return {
+    invoiceUniqueId: row.invoiceUniqueId,
+    invoiceNo: row.invoiceNo,
+    moduleType: "Event",
+    entityName: row.eventName,
+    companyName: row.companyName,
+    buyerName: row.buyerName,
+    buyerEmail: row.buyerEmail,
+    categoryName: "Gold Sponsorship",
+    dueDateUtc: row.dueDateUtc,
+    invoiceDateUtc: row.invoiceDateUtc,
+    totalAmount: row.totalAmount,
+    currencySymbol: row.currencySymbol,
+    invoiceStatus: row.invoiceStatus,
+    isOverdue: row.isOverdue,
+    statusLabel: row.isOverdue ? "Overdue" : row.invoiceStatusLabel,
+    canMarkAsPaid: row.canMarkAsPaid,
+    canCancel: row.canCancel,
+    canSend: row.canSend,
+  }
+}
+
 /** A page of list rows in the server's paging envelope; the total comes from the server, never the client. */
 function listPage(rows: Json[]) {
   return envelope({ pageData: rows, totalRecordsCount: rows.length, pageNo: 1, pageSize: 20, pageCount: 1 })
@@ -213,6 +238,17 @@ async function mockList(page: Page, rowsFor: (url: URL) => Json[]) {
   await page.route(LIST_API, (route) => route.fulfill({ json: listPage(rowsFor(new URL(route.request().url()))) }))
 }
 
+/** Serves the custom invoice list by the request's own query, so a filter is proven to reach the server. */
+async function mockCustomList(page: Page, rowsFor: (url: URL) => Json[]) {
+  await page.route("**/api/organizer/custom-invoices/enabled-modules", (route) => route.fulfill({ json: envelope(["Event"]) }))
+  await page.route("**/api/organizer/custom-invoices/filter-options", (route) =>
+    route.fulfill({ json: envelope({ moduleTypes: ["Event"], categories: [] }) }),
+  )
+  await page.route(`**${CUSTOM_LIST_PATH}?**`, (route) =>
+    route.fulfill({ json: listPage(rowsFor(new URL(route.request().url())).map(customListRow)) }),
+  )
+}
+
 /** Serves one invoice's detail; the resolver runs per request so a refetch can observe state a mutation changed. */
 async function mockDetail(page: Page, invoiceUniqueId: string, resolve: () => Json) {
   await page.route(detailApi(invoiceUniqueId), (route) =>
@@ -265,10 +301,17 @@ async function settle(target: Locator) {
     .toBe(0)
 }
 
-/** Opens the list at a width and waits for the rows, so assertions never race the first fetch. */
+/** Opens Event Invoices at a width and waits for the ticket order, so assertions never race the first fetch. */
 async function openList(page: Page, width: number) {
   await page.setViewportSize({ width, height: VIEWPORT_HEIGHT })
   await page.goto(LIST_URL)
+  await expect(page.getByRole("link", { name: "INV-T-200" })).toBeVisible({ timeout: 30_000 })
+}
+
+/** Opens the custom invoice list at a width and waits for the rows, so assertions never race the first fetch. */
+async function openCustomList(page: Page, width: number) {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT })
+  await page.goto(CUSTOM_LIST_URL)
   await expect(page.getByRole("link", { name: "INV-C-100" })).toBeVisible({ timeout: 30_000 })
 }
 
@@ -281,43 +324,48 @@ async function openDetail(page: Page, invoiceUniqueId: string, invoiceNo: string
 
 const rowFor = (page: Page, invoiceNo: string) => page.getByRole("row").filter({ hasText: invoiceNo })
 
+/** The table row from tablet width up, the card below it; whichever form the organizer actually sees. */
+const customEntryFor = (page: Page, invoiceNo: string, width: number) =>
+  width >= 768 ? rowFor(page, invoiceNo) : page.getByRole("listitem").filter({ hasText: invoiceNo })
+
 for (const width of WIDTHS) {
   /**
-   * UAT 2. The list is how an organizer spots which sponsor owes money; at any width the page must not
-   * slide sideways, the wide table must scroll in its own box, and a custom row must read as custom with
-   * its company and due date, flagged when the server says it is overdue.
+   * UAT 2. The custom invoice list is how an organizer spots which sponsor owes money; at any width the page
+   * must not slide sideways, the wide table must scroll in its own box, and each invoice must show its
+   * company and the server's verdict on whether it is overdue, so a due-today invoice is not flagged early.
    */
-  test(`UAT 2: the invoice list marks custom and overdue rows without page overflow at ${width}px`, async ({ page }) => {
+  test(`UAT 2: the custom invoice list marks overdue invoices without page overflow at ${width}px`, async ({ page }) => {
     await mockShell(page)
-    await mockList(page, () => [OVERDUE_CUSTOM_ROW, DUE_TODAY_CUSTOM_ROW, TICKET_ROW])
-    await openList(page, width)
+    await mockCustomList(page, () => [OVERDUE_CUSTOM_ROW, DUE_TODAY_CUSTOM_ROW])
+    await openCustomList(page, width)
 
-    expect.soft(await findHorizontalPageOverflow(page), "the invoice list scrolls the page sideways").toEqual([])
+    expect.soft(await findHorizontalPageOverflow(page), "the custom invoice list scrolls the page sideways").toEqual([])
 
-    const tableBox = page.getByRole("table").locator("xpath=ancestor::div[1]")
-    expect(await tableBox.evaluate((element) => getComputedStyle(element).overflowX)).toMatch(/auto|scroll/)
+    if (width >= 768) {
+      const tableBox = page.getByRole("table").locator("xpath=ancestor::div[1]")
+      expect(await tableBox.evaluate((element) => getComputedStyle(element).overflowX)).toMatch(/auto|scroll/)
+    }
 
-    const newInvoiceButton = page.getByRole("button", { name: "New custom invoice" })
-    await expect.soft(newInvoiceButton, "the list offers no way to start a custom invoice").toBeVisible()
-    expect.soft((await newInvoiceButton.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX)
+    const newInvoice = page.getByRole("link", { name: "New Invoice" })
+    await expect.soft(newInvoice, "the list offers no way to start a custom invoice").toBeVisible()
+    expect.soft((await newInvoice.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX)
 
-    const overdueRow = rowFor(page, "INV-C-100")
-    await expect(overdueRow.getByText("Custom", { exact: true })).toBeVisible()
-    await expect(overdueRow.getByText("Sep 10, 2026")).toBeVisible()
-    await expect(overdueRow.getByText("Overdue, due")).toBeAttached()
-    await expect.soft(overdueRow.getByText("Northwind Traders"), "a custom row does not name the billed company").toBeVisible()
+    const overdueEntry = customEntryFor(page, "INV-C-100", width)
+    await expect(overdueEntry.getByText("Overdue", { exact: true })).toBeVisible()
+    await expect(overdueEntry.getByText("Sep 10, 2026")).toBeVisible()
+    await expect.soft(overdueEntry.getByText("Northwind Traders"), "an invoice does not name the billed company").toBeVisible()
 
-    await expect(rowFor(page, "INV-C-101").getByText("Overdue, due")).toHaveCount(0)
-    await expect(rowFor(page, "INV-T-200").getByText("Custom", { exact: true })).toHaveCount(0)
+    const dueTodayEntry = customEntryFor(page, "INV-C-101", width)
+    await expect(dueTodayEntry.getByText("Pending Payment", { exact: true })).toBeVisible()
+    await expect(dueTodayEntry.getByText("Overdue", { exact: true })).toHaveCount(0)
 
-    await expect(page.getByRole("link", { name: "INV-C-100" })).toHaveAttribute("href", detailPath(CUSTOM_ID))
-    await expect(page.getByRole("link", { name: "INV-T-200" })).toHaveAttribute("href", `/organizer/events/invoices/${TICKET_ID}`)
+    await expect(page.getByRole("link", { name: "INV-C-100" })).toHaveAttribute("href", `${detailPath(CUSTOM_ID)}/edit`)
 
     if (SCREENSHOT_WIDTHS.includes(width)) {
       await page.screenshot({ path: `${SCREENSHOT_DIR}/list-${width}.png`, fullPage: true })
     }
 
-    const undersized = await findUndersizedTargets(page.getByRole("heading", { name: "Event Invoices" }), true)
+    const undersized = await findUndersizedTargets(page.getByRole("heading", { name: "Custom Invoices" }), true)
     expect.soft(undersized, `controls under ${MIN_TOUCH_TARGET_PX}px on the list at ${width}px`).toEqual([])
   })
 
@@ -481,19 +529,20 @@ test("UAT 5: removing a link names the consequence, sends DELETE and brings back
 /**
  * UAT 6. A custom invoice issues no tickets, so offering "Resend tickets" on it promises an email that has
  * nothing to send; a ticket order the server lets resend must still offer it, and the resend must queue.
+ * Custom invoices now list on their own screen, so their row menu is checked there.
  */
 test("UAT 6: resend tickets is offered only on an invoice that has tickets", async ({ page }) => {
   await mockShell(page)
-  await mockList(page, () => [OVERDUE_CUSTOM_ROW, TICKET_ROW])
+  await mockCustomList(page, () => [OVERDUE_CUSTOM_ROW])
+  await mockList(page, () => [TICKET_ROW])
   await page.route(`**/api/organizer/events/invoices/${TICKET_ID}/resend`, (route) => route.fulfill({ json: envelope(true) }))
-  await openList(page, 1440)
 
+  await openCustomList(page, 1440)
   await page.getByRole("button", { name: "Actions for invoice INV-C-100" }).click()
   await expect(page.getByRole("menuitem", { name: "View" })).toBeVisible()
-  await expect(page.getByRole("menuitem", { name: "Resend tickets" })).toHaveCount(0)
-  await page.keyboard.press("Escape")
-  await expect(page.getByRole("menuitem", { name: "View" })).toBeHidden()
+  await expect(page.getByRole("menuitem", { name: /resend/i })).toHaveCount(0)
 
+  await openList(page, 1440)
   await page.getByRole("button", { name: "Actions for invoice INV-T-200" }).click()
   await expect(page.getByRole("menuitem", { name: "Resend tickets" })).toBeVisible()
 
@@ -563,33 +612,31 @@ test("UAT 7: a paid custom invoice offers no Edit", async ({ page }) => {
 })
 
 /**
- * UAT 8. The whole "Overdue only" line is the control an organizer taps, not just the knob; applying it must
- * put the filter on the server request, and the pill must follow the server's overdue verdict so the
- * due-today boundary stays the server's call rather than the browser clock's.
+ * UAT 8. The Overdue chip must put the filter on the server request, and the list must show what the server
+ * returns for it, so the due-today boundary stays the server's call rather than the browser clock's.
  */
-test("UAT 8: tapping the Overdue only text toggles the filter and the list follows the server's overdue flag", async ({ page }) => {
+test("UAT 8: the Overdue chip sends statuses=Overdue and the list follows the server's rows", async ({ page }) => {
   await mockShell(page)
-  await mockList(page, (url) =>
-    url.searchParams.get("overdueOnly") === "true" ? [OVERDUE_CUSTOM_ROW] : [OVERDUE_CUSTOM_ROW, DUE_TODAY_CUSTOM_ROW, TICKET_ROW],
+  await mockCustomList(page, (url) =>
+    url.searchParams.getAll("statuses").includes("Overdue") ? [OVERDUE_CUSTOM_ROW] : [OVERDUE_CUSTOM_ROW, DUE_TODAY_CUSTOM_ROW],
   )
-  await openList(page, 1440)
+  await openCustomList(page, 1440)
 
-  await expect(rowFor(page, "INV-C-100").getByText("Overdue, due")).toBeAttached()
-  await expect(rowFor(page, "INV-C-101").getByText("Overdue, due")).toHaveCount(0)
+  await expect(rowFor(page, "INV-C-100").getByText("Overdue", { exact: true })).toBeVisible()
+  await expect(rowFor(page, "INV-C-101").getByText("Pending Payment", { exact: true })).toBeVisible()
 
-  const overdueSwitch = page.locator('[data-scope="switch"][data-part="root"]').filter({ hasText: "Overdue only" })
-  await expect(overdueSwitch).not.toHaveAttribute("data-state", "checked")
-  await page.getByText("Overdue only", { exact: true }).click()
-  await expect(overdueSwitch).toHaveAttribute("data-state", "checked")
-
-  const filteredRequest = page.waitForRequest(
-    (request) => request.url().includes("/invoices/list") && new URL(request.url()).searchParams.get("overdueOnly") === "true",
-  )
-  await page.getByRole("button", { name: "Apply" }).click()
+  const overdueChip = page.getByRole("group", { name: "Status" }).getByRole("button", { name: "Overdue", exact: true })
+  await expect(overdueChip).toHaveAttribute("aria-pressed", "false")
+  const filteredRequest = page.waitForRequest((request) => {
+    const url = new URL(request.url())
+    return url.pathname === CUSTOM_LIST_PATH && url.searchParams.getAll("statuses").join() === "Overdue"
+  })
+  await overdueChip.click()
   await filteredRequest
+  await expect(overdueChip).toHaveAttribute("aria-pressed", "true")
 
   await expect(rowFor(page, "INV-C-101")).toHaveCount(0)
-  await expect(rowFor(page, "INV-C-100").getByText("Overdue, due")).toBeAttached()
+  await expect(rowFor(page, "INV-C-100").getByText("Overdue", { exact: true })).toBeVisible()
 })
 
 const PHASE_04_SCREENSHOT_DIR = "test-results/uat-04"
