@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { ChakraProvider } from "@chakra-ui/react"
@@ -7,6 +7,19 @@ import { system } from "@/theme"
 import type { AuthUser } from "@/types"
 import { APP_ROUTES } from "@/utils/routes"
 import { Sidebar } from "./Sidebar"
+
+const enabledModules = vi.hoisted(() => ({ useEnabledCustomInvoiceModules: vi.fn() }))
+
+vi.mock("@/features/event-invoices", () => enabledModules)
+
+/** Puts the enabled-modules request into one of its states: loaded with a module list, still loading, or failed. */
+function givenEnabledModules(state: { data?: string[]; isLoading?: boolean; isError?: boolean }) {
+  enabledModules.useEnabledCustomInvoiceModules.mockReturnValue({
+    data: state.data,
+    isLoading: state.isLoading ?? false,
+    isError: state.isError ?? false,
+  })
+}
 
 const ORGANIZER: AuthUser = {
   id: "user-1",
@@ -35,9 +48,50 @@ function renderSidebarAt(pathname: string, currentUser: AuthUser = ORGANIZER) {
 }
 
 const navLink = (label: string) => screen.getByRole("link", { name: new RegExp(`^${label}$`) })
+const queryNavLink = (label: string) => screen.queryByRole("link", { name: new RegExp(`^${label}$`) })
 const CUSTOM_INVOICING_MODULES = "Custom Invoicing Modules"
 
 describe("Sidebar", () => {
+  beforeEach(() => {
+    givenEnabledModules({ data: [] })
+  })
+
+  /** D-01: an organizer with Event invoicing on reaches the Event-locked invoice list from the Events group. */
+  it("Sidebar_EventEnabled_ShowsCustomInvoicesChildUnderEventsOpeningTheLockedList", async () => {
+    givenEnabledModules({ data: ["Event"] })
+    renderSidebarAt(APP_ROUTES.dashboard)
+
+    await userEvent.click(navLink("Events"))
+
+    expect(navLink("Custom Invoices")).toHaveAttribute("href", "/organizer/custom-invoices/list?moduleType=Event")
+  })
+
+  /** D-03: Events keeps its own page; turning it into a group must not take away the link to the events list. */
+  it("Sidebar_EventsHeader_NavigatesToEventsPage", () => {
+    givenEnabledModules({ data: ["Event"] })
+    renderSidebarAt(APP_ROUTES.dashboard)
+
+    expect(navLink("Events")).toHaveAttribute("href", APP_ROUTES.events)
+  })
+
+  /** D-04: until the enabled modules are known the sidebar offers no module child, rather than one that may be refused. */
+  it("Sidebar_EnabledModulesLoading_ShowsNoModuleChild", () => {
+    givenEnabledModules({ isLoading: true })
+    renderSidebarAt(`${APP_ROUTES.customInvoices.list}?moduleType=Event`)
+
+    expect(queryNavLink("Custom Invoices")).not.toBeInTheDocument()
+  })
+
+  /** D-04: a failed enabled-modules request hides module children but must not take the rest of the navigation down. */
+  it("Sidebar_EnabledModulesFailed_ShowsNoModuleChildAndKeepsNav", () => {
+    givenEnabledModules({ isError: true })
+    renderSidebarAt(`${APP_ROUTES.customInvoices.list}?moduleType=Event`)
+
+    expect(queryNavLink("Custom Invoices")).not.toBeInTheDocument()
+    expect(navLink("Events")).toHaveAttribute("href", APP_ROUTES.events)
+    expect(navLink("Event Invoices")).toHaveAttribute("href", APP_ROUTES.eventInvoices.list)
+  })
+
   /** CAT-03: the one organizer-wide category pool is reached at its custom-invoices path, not under Events. */
   it("Sidebar_InvoiceCategoriesItem_PointsAtTheRenamedPath", () => {
     renderSidebarAt(APP_ROUTES.dashboard)

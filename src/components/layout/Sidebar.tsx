@@ -26,6 +26,10 @@ import { auth } from "@/lib/auth"
 import { queryClient } from "@/lib/queryClient"
 import { APP_ROUTES } from "@/utils/routes"
 import type { AuthUser } from "@/types"
+import type { CustomInvoiceModule } from "@/api/customInvoices"
+import { useEnabledCustomInvoiceModules } from "@/features/event-invoices"
+import { NavChildLink, NavGroup } from "./SidebarNavGroup"
+import { CUSTOM_INVOICE_MODULE_NAV, isGroupVisible, isModuleChildActive, type ModuleNavEntry } from "./customInvoiceModuleNav"
 
 const SIDEBAR_W = "260px"
 const GRADIENT = "linear-gradient(160deg, #7551FF 0%, #5A3FCC 45%, #422AFB 100%)"
@@ -37,7 +41,6 @@ interface NavItem {
   roles: string[]
   /** Base path used for the active check when the section has child routes (create/edit). Defaults to `path`. */
   matchPath?: string
-  badge?: string
 }
 
 interface SidebarProps {
@@ -46,14 +49,16 @@ interface SidebarProps {
   onNavigate?: () => void
 }
 
-const mainNav: NavItem[] = [
+const leadingNav: NavItem[] = [
   {
     label: "Dashboard",
     icon: <LayoutDashboard size={17} />,
     path: APP_ROUTES.dashboard,
     roles: ["Organizer", "Admin"],
   },
-  { label: "Events", icon: <Zap size={17} />, path: APP_ROUTES.events, badge: "12", roles: ["Organizer", "Admin"] },
+]
+
+const trailingNav: NavItem[] = [
   { label: "Sessions", icon: <CalendarRange size={17} />, path: APP_ROUTES.sessionWizard.list, roles: ["Organizer", "Admin"] },
   {
     label: "Event Invoices",
@@ -106,7 +111,11 @@ function hasAnyRole(roles: string[], allowedRoles: string[]) {
   return allowedRoles.some((allowedRole) => roles.some((role) => role.toLowerCase() === allowedRole.toLowerCase()))
 }
 
-function NavSection({
+function isOnOrUnder(pathname: string, basePath: string) {
+  return pathname === basePath || pathname.startsWith(`${basePath}/`)
+}
+
+function NavItemLinks({
   items,
   currentRoles,
   onNavigate,
@@ -116,17 +125,11 @@ function NavSection({
   onNavigate?: () => void
 }) {
   const { pathname } = useLocation()
-  const visibleItems = items.filter((item) => hasAnyRole(currentRoles, item.roles))
 
-  if (visibleItems.length === 0) {
-    return null
-  }
-
-  return (
-    <VStack gap={0.5} align="stretch" mb={6}>
-      {visibleItems.map((item) => {
-        const matchPath = item.matchPath ?? item.path
-        const isActive = pathname === matchPath || pathname.startsWith(`${matchPath}/`)
+  return items
+    .filter((item) => hasAnyRole(currentRoles, item.roles))
+    .map((item) => {
+        const isActive = isOnOrUnder(pathname, item.matchPath ?? item.path)
         return (
           <NavLink key={item.path} to={item.path} style={{ textDecoration: "none" }} onClick={onNavigate}>
             <Flex
@@ -164,30 +167,101 @@ function NavSection({
               >
                 {item.label}
               </Text>
-              {item.badge && (
-                <Flex
-                  align="center"
-                  justify="center"
-                  borderRadius="full"
-                  px={1.5}
-                  h="18px"
-                  minW="18px"
-                  fontSize="10px"
-                  fontWeight="800"
-                  bg={isActive ? "#7551FF" : "rgba(255,255,255,0.2)"}
-                  color={isActive ? "white" : "rgba(255,255,255,0.9)"}
-                  transition="all 0.18s"
-                >
-                  {item.badge}
-                </Flex>
-              )}
             </Flex>
           </NavLink>
         )
-      })}
+      })
+}
+
+function NavSection({
+  items,
+  currentRoles,
+  onNavigate,
+}: {
+  items: NavItem[]
+  currentRoles: string[]
+  onNavigate?: () => void
+}) {
+  if (!items.some((item) => hasAnyRole(currentRoles, item.roles))) {
+    return null
+  }
+
+  return (
+    <VStack gap={0.5} align="stretch" mb={6}>
+      <NavItemLinks items={items} currentRoles={currentRoles} onNavigate={onNavigate} />
     </VStack>
   )
 }
+
+function ModuleNavGroup({
+  entry,
+  isEnabled,
+  isManualOpen,
+  onOpenChange,
+  onNavigate,
+}: {
+  entry: ModuleNavEntry
+  isEnabled: boolean
+  isManualOpen: boolean
+  onOpenChange: (isOpen: boolean) => void
+  onNavigate?: () => void
+}) {
+  const { pathname, search } = useLocation()
+  const isChildActive = isModuleChildActive(entry.moduleType, pathname, search)
+  const isOpen = isManualOpen || isChildActive
+
+  return (
+    <NavGroup
+      label={entry.label}
+      icon={entry.icon}
+      isOpen={isOpen}
+      // A group with its own page opens when its header is followed; one without a page just toggles.
+      onToggle={() => onOpenChange(entry.landingPath ? true : !isOpen)}
+      to={entry.landingPath}
+      isActive={entry.landingPath ? isOnOrUnder(pathname, entry.landingPath) : false}
+      onNavigate={onNavigate}
+    >
+      {isEnabled ? (
+        <NavChildLink
+          to={APP_ROUTES.customInvoices.listForModule(entry.moduleType)}
+          label="Custom Invoices"
+          isActive={isChildActive}
+          onNavigate={onNavigate}
+        />
+      ) : null}
+    </NavGroup>
+  )
+}
+
+function ModuleNavGroups({
+  entries,
+  enabledModules,
+  manualOpenModules,
+  onOpenChange,
+  onNavigate,
+}: {
+  entries: readonly ModuleNavEntry[]
+  enabledModules: readonly CustomInvoiceModule[]
+  manualOpenModules: Partial<Record<CustomInvoiceModule, boolean>>
+  onOpenChange: (moduleType: CustomInvoiceModule, isOpen: boolean) => void
+  onNavigate?: () => void
+}) {
+  return entries
+    .filter((entry) => isGroupVisible(entry, enabledModules.includes(entry.moduleType)))
+    .map((entry) => (
+      <ModuleNavGroup
+        key={entry.moduleType}
+        entry={entry}
+        isEnabled={enabledModules.includes(entry.moduleType)}
+        isManualOpen={manualOpenModules[entry.moduleType] ?? false}
+        onOpenChange={(isOpen) => onOpenChange(entry.moduleType, isOpen)}
+        onNavigate={onNavigate}
+      />
+    ))
+}
+
+const NO_MODULES: readonly CustomInvoiceModule[] = []
+const PAGED_MODULE_NAV = CUSTOM_INVOICE_MODULE_NAV.filter((entry) => entry.landingPath)
 
 function SettingsSection({
   isOpen,
@@ -549,7 +623,10 @@ export function Sidebar({ currentUser, variant = "desktop", onNavigate }: Sideba
   const [isSettingsManualOpen, setIsSettingsManualOpen] = useState(false)
   const [isAdminManualOpen, setIsAdminManualOpen] = useState(false)
   const [isMemberManualOpen, setIsMemberManualOpen] = useState(false)
+  const [manualOpenModules, setManualOpenModules] = useState<Partial<Record<CustomInvoiceModule, boolean>>>({})
   const hasOrganizerAccess = hasAnyRole(currentUser.roles, ["Organizer", "Admin"])
+  // Loading or failed both mean no module children; the rest of the nav must keep working (D-04).
+  const enabledModules = useEnabledCustomInvoiceModules({ enabled: hasOrganizerAccess }).data ?? NO_MODULES
   const isAdmin = hasAnyRole(currentUser.roles, ["Admin"])
   const isMember = hasAnyRole(currentUser.roles, ["Member"])
   const isSettingsRouteActive = pathname === APP_ROUTES.settings
@@ -566,6 +643,10 @@ export function Sidebar({ currentUser, variant = "desktop", onNavigate }: Sideba
     (path) => pathname === path || pathname.startsWith(`${path}/`),
   )
   const isMemberOpen = isMemberManualOpen || isMemberRouteActive
+
+  function handleModuleOpenChange(moduleType: CustomInvoiceModule, isOpen: boolean) {
+    setManualOpenModules((current) => ({ ...current, [moduleType]: isOpen }))
+  }
 
   async function handleSignOut() {
     try {
@@ -643,7 +724,19 @@ export function Sidebar({ currentUser, variant = "desktop", onNavigate }: Sideba
 
       {/* Nav */}
       <Box flex={1} px={2} position="relative" zIndex={1}>
-        <NavSection items={mainNav} currentRoles={currentUser.roles} onNavigate={onNavigate} />
+        {hasOrganizerAccess ? (
+          <VStack gap={0.5} align="stretch" mb={6}>
+            <NavItemLinks items={leadingNav} currentRoles={currentUser.roles} onNavigate={onNavigate} />
+            <ModuleNavGroups
+              entries={PAGED_MODULE_NAV}
+              enabledModules={enabledModules}
+              manualOpenModules={manualOpenModules}
+              onOpenChange={handleModuleOpenChange}
+              onNavigate={onNavigate}
+            />
+            <NavItemLinks items={trailingNav} currentRoles={currentUser.roles} onNavigate={onNavigate} />
+          </VStack>
+        ) : null}
         <NavSection items={managementNav} currentRoles={currentUser.roles} onNavigate={onNavigate} />
         <SettingsSection
           pathname={pathname}

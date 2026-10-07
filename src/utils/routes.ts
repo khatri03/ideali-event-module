@@ -147,7 +147,12 @@ export const APP_ROUTES = {
     detail: (invoiceUniqueId: string) => `/organizer/events/invoices/${invoiceUniqueId}`,
   },
   customInvoices: {
+    list: "/organizer/custom-invoices/list",
+    listForModule: (moduleType: string) =>
+      `/organizer/custom-invoices/list?moduleType=${encodeURIComponent(moduleType)}`,
     new: "/organizer/custom-invoices/new",
+    newForModule: (moduleType: string) =>
+      `/organizer/custom-invoices/new?moduleType=${encodeURIComponent(moduleType)}`,
     editRoute: "/organizer/custom-invoices/:invoiceUniqueId/edit",
     edit: (invoiceUniqueId: string) => `/organizer/custom-invoices/${invoiceUniqueId}/edit`,
     detailRoute: "/organizer/custom-invoices/:invoiceUniqueId",
@@ -402,6 +407,8 @@ export const API_ROUTES = {
   invoiceCategoryDetail: (uniqueId: string) => `/api/organizer/custom-invoices/categories/${uniqueId}`,
   customInvoiceCreate: "/api/organizer/custom-invoices",
   customInvoiceEnabledModules: "/api/organizer/custom-invoices/enabled-modules",
+  customInvoiceList: "/api/organizer/custom-invoices/list",
+  customInvoiceListFilterOptions: "/api/organizer/custom-invoices/filter-options",
   customInvoiceEntityOptions: "/api/organizer/custom-invoices/entity-options",
   customInvoiceLinkCandidates: "/api/organizer/custom-invoices/link-candidates",
   customInvoiceUpdate: (invoiceUniqueId: string) => `/api/organizer/custom-invoices/${invoiceUniqueId}`,

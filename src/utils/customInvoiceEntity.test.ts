@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { billedEntityLabel, billedEntityPlural, formatBilledEntity } from "./customInvoiceEntity"
+import { billedEntityLabel, billedEntityPlural, formatBilledEntity, parseCustomInvoiceModule } from "./customInvoiceEntity"
 
 describe("formatBilledEntity", () => {
   /** Each module is named with the entity picker's label, so a Donation invoice reads as a campaign, not a "Donation". */
@@ -41,5 +41,22 @@ describe("billedEntityPlural", () => {
     ["Donation", "campaigns"],
   ] as const)("billedEntityPlural_%s_Returns%s", (moduleType, expected) => {
     expect(billedEntityPlural(moduleType)).toBe(expected)
+  })
+})
+
+describe("parseCustomInvoiceModule", () => {
+  /** A module-locked link must lock the screen to exactly the module it names. */
+  it.each(["Event", "Membership", "Donation"] as const)("parseCustomInvoiceModule_KnownModule_ReturnsIt_%s", (moduleType) => {
+    expect(parseCustomInvoiceModule(moduleType)).toBe(moduleType)
+  })
+
+  /** The param is user-editable; a typo or a different casing must leave the screen unlocked instead of guessing. */
+  it.each(["event", "EVENT", "Sponsorship", " Event", ""])("parseCustomInvoiceModule_UnknownOrDifferentCase_ReturnsUndefined_%j", (value) => {
+    expect(parseCustomInvoiceModule(value)).toBeUndefined()
+  })
+
+  /** No param means the screen opened without a lock. */
+  it.each([null, undefined])("parseCustomInvoiceModule_Missing_ReturnsUndefined_%j", (value) => {
+    expect(parseCustomInvoiceModule(value)).toBeUndefined()
   })
 })

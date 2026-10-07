@@ -7,11 +7,15 @@ import {
   type CustomInvoiceModule,
 } from "@/api/customInvoices"
 
-/** The modules custom invoicing is turned on for; the module control offers nothing else. */
-export function useEnabledCustomInvoiceModules() {
+/**
+ * The modules custom invoicing is turned on for; the module control offers nothing else.
+ * Pass `enabled: false` for sessions without organizer access so they never call an organizer endpoint.
+ */
+export function useEnabledCustomInvoiceModules({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ["organizer", "custom-invoices", "enabled-modules"],
     queryFn: fetchEnabledCustomInvoiceModules,
+    enabled,
   })
 }
 

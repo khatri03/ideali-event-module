@@ -1,4 +1,7 @@
-import type { CustomInvoiceModule } from "@/api/customInvoices"
+import { CUSTOM_INVOICE_MODULES, type CustomInvoiceModule } from "@/api/customInvoices"
+
+/** Query param that locks the custom invoice list and editor to one module. */
+export const CUSTOM_INVOICE_MODULE_PARAM = "moduleType"
 
 const BILLED_ENTITY_LABELS: Record<CustomInvoiceModule, string> = {
   Event: "Event",
@@ -30,4 +33,12 @@ export function billedEntityPlural(moduleType: CustomInvoiceModule): string {
 export function formatBilledEntity(moduleType: CustomInvoiceModule, entityName: string | null): string {
   const name = entityName?.trim() ?? ""
   return name ? `${billedEntityLabel(moduleType)}: ${name}` : ""
+}
+
+/**
+ * Reads a module from a user-editable query value. Only an exact module name is accepted;
+ * anything else is ignored so the screen falls back to its unlocked state.
+ */
+export function parseCustomInvoiceModule(value: string | null | undefined): CustomInvoiceModule | undefined {
+  return CUSTOM_INVOICE_MODULES.find((moduleType) => moduleType === value)
 }
