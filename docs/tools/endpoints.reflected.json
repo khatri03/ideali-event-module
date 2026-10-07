@@ -1,5 +1,5 @@
 {
-  "Total": 710,
+  "Total": 712,
   "Controllers": [
     {
       "Area": "Admin",
@@ -10562,6 +10562,17 @@
         },
         {
           "Verb": "GET",
+          "Path": "/api/organizer/custom-invoices/filter-options",
+          "Name": "GetListFilterOptions",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "event:invoice:view",
+          "Flags": [],
+          "Parameters": []
+        },
+        {
+          "Verb": "GET",
           "Path": "/api/organizer/custom-invoices/link-candidates",
           "Name": "SearchLinkCandidates",
           "Anonymous": false,
@@ -10573,6 +10584,23 @@
             {
               "Source": "Query",
               "Type": "CustomInvoiceLinkCandidatesRequest",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/custom-invoices/list",
+          "Name": "GetList",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "event:invoice:view",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Query",
+              "Type": "CustomInvoiceListRequest",
               "Name": "request"
             }
           ]

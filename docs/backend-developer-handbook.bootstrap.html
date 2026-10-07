@@ -63,7 +63,7 @@
 <nav class="navbar navbar-expand bg-body-tertiary border-bottom sticky-top">
   <div class="container doc-shell">
     <span class="navbar-brand fw-semibold mb-0">Ideali Backend — Developer Handbook</span>
-    <span class="ms-auto badge text-bg-secondary">710 endpoints · 113 controllers</span>
+    <span class="ms-auto badge text-bg-secondary">712 endpoints · 113 controllers</span>
   </div>
 </nav>
 
@@ -2184,7 +2184,7 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
                     <td><a href="#area-organizer">Organizer — the tenant's own back office</a></td>
                     <td><code>/api/organizer</code> <code>/quickbooks/integration</code></td>
                     <td class="text-end">36</td>
-                    <td class="text-end">237</td>
+                    <td class="text-end">239</td>
                   </tr>
                   <tr>
                     <td><a href="#area-event">Event — the public ticket-buying journey</a></td>
@@ -2249,7 +2249,7 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
               <tr class="table-light fw-semibold">
                 <td>Total</td><td></td>
                 <td class="text-end">113</td>
-                <td class="text-end">710</td>
+                <td class="text-end">712</td>
               </tr>
             </tbody>
           </table>
@@ -2600,7 +2600,7 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
         </article>
       </section>
       <section id="area-organizer">
-        <h2>Organizer — the tenant's own back office <span class="badge text-bg-secondary align-middle fs-6">237</span></h2>
+        <h2>Organizer — the tenant's own back office <span class="badge text-bg-secondary align-middle fs-6">239</span></h2>
         <p class="lead-sm">The largest area by far. Everything an organizer configures for themselves: profile, sub-profiles, venues, sessions, events, polls, payment accounts, tax items, discount coupons, seating charts, contact sync and QuickBooks. Almost all of it requires a signed-in organizer whose account subscribes to the relevant module.</p>
         
         <article id="c-organizer-chargerulecontroller" class="card mb-4 endpoint">
@@ -2949,7 +2949,7 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
           <div class="card-header endpoint-head">
             <span class="fw-semibold">CustomInvoiceController</span>
             <code class="path text-body-secondary">/api/organizer/custom-invoices</code>
-            <span class="badge text-bg-secondary ms-auto">13 endpoints</span>
+            <span class="badge text-bg-secondary ms-auto">15 endpoints</span>
           </div>
           <div class="card-body">
             
@@ -3052,10 +3052,24 @@ $b = New-Object byte[] 48; ([System.Security.Cryptography.RNGCryptoServiceProvid
               </tr>
               <tr>
                 <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/organizer/custom-invoices/filter-options</code><div class="action-doc">Reads the choices the custom invoice list's filters offer: the modules the signed-in organizer has invoices in and the organizer's categories. Gated by the same permission as the list it serves. Cancels the request. The module and category filter options.</div></td>
+                <td>Get List Filter Options</td>
+                <td><span class="badge text-bg-light border access-policy" title="Authorization policy">event:invoice:view</span></td>
+                <td class="small"><span class="text-body-secondary">—</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
                 <td><code class="path">/api/organizer/custom-invoices/link-candidates</code><div class="action-doc">Searches the signed-in organizer's custom invoices of one module that an invoice may link to, one page at a time, newest first, as the editor's link picker asks for them. The module, the search term, the page and the invoice being edited, if any. Cancels the request. One page of link candidates with the total count, or a failure when the module is missing.</div></td>
                 <td>Search Link Candidates</td>
                 <td><span class="badge text-bg-light border access-policy" title="Authorization policy">custom-invoice:link</span></td>
                 <td class="small"><span class="param-source">query</span> <code>request</code><span class="text-body-secondary"> : CustomInvoiceLinkCandidatesRequest</span></td>
+              </tr>
+              <tr>
+                <td class="text-nowrap"><span class="badge badge-method text-bg-primary">GET</span></td>
+                <td><code class="path">/api/organizer/custom-invoices/list</code><div class="action-doc">Lists the signed-in organizer's custom invoices of every module, newest first, filtered, counted and paged on the server. Gated by the existing invoice list permission, so no new key needs seeding. The module, category, statuses, search term and page. Cancels the request. One page of invoices with the total count.</div></td>
+                <td>Get List</td>
+                <td><span class="badge text-bg-light border access-policy" title="Authorization policy">event:invoice:view</span></td>
+                <td class="small"><span class="param-source">query</span> <code>request</code><span class="text-body-secondary"> : CustomInvoiceListRequest</span></td>
               </tr>
                 </tbody>
               </table>
@@ -10342,7 +10356,7 @@ dotnet test ./tests/Ideas.API.Tests/Ideas.API.Tests.csproj \
 <footer class="border-top py-4">
   <div class="container doc-shell text-body-secondary small">
     Ideali backend handbook · generated from the compiled controllers of <code>Ideas.API</code> ·
-    710 endpoints across 113 controllers.
+    712 endpoints across 113 controllers.
   </div>
 </footer>
 
