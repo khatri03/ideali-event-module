@@ -17,7 +17,10 @@ const TONE_TOKENS: Record<StatusTone, { bg: string; fg: string }> = {
   neutral: { bg: "status.neutral.bg", fg: "status.neutral.fg" },
 }
 
-const STATUS_PRESENTATION: Record<EventInvoiceStatus, StatusPresentation> = {
+/** "Overdue" is not stored; the custom invoice list derives it from Pending Payment past its due date. */
+type BadgeStatus = EventInvoiceStatus | "Overdue"
+
+const STATUS_PRESENTATION: Record<BadgeStatus, StatusPresentation> = {
   Paid: { tone: "success", icon: CheckCircle2 },
   PendingPayment: { tone: "warning", icon: Clock },
   PartiallyPaid: { tone: "warning", icon: Clock },
@@ -26,6 +29,7 @@ const STATUS_PRESENTATION: Record<EventInvoiceStatus, StatusPresentation> = {
   Refund: { tone: "info", icon: RotateCcw },
   PartiallyRefunded: { tone: "info", icon: RotateCcw },
   AdjustedInSystem: { tone: "info", icon: Scale },
+  Overdue: { tone: "error", icon: AlertTriangle },
 }
 
 const UNKNOWN_STATUS: StatusPresentation = { tone: "neutral", icon: Scale }
@@ -33,7 +37,7 @@ const UNKNOWN_STATUS: StatusPresentation = { tone: "neutral", icon: Scale }
 /** The map is exhaustive over the statuses the client knows; this only covers a server that has shipped
  * a new one ahead of the frontend, which must still render rather than crash. */
 function presentationFor(status: string): StatusPresentation {
-  return STATUS_PRESENTATION[status as EventInvoiceStatus] ?? UNKNOWN_STATUS
+  return STATUS_PRESENTATION[status as BadgeStatus] ?? UNKNOWN_STATUS
 }
 
 export interface EventInvoiceStatusBadgeProps {

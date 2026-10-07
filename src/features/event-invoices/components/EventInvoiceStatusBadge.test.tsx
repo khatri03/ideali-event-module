@@ -52,4 +52,12 @@ describe("EventInvoiceStatusBadge", () => {
     expect(view.tone).toBe("neutral")
     expect(screen.getByText("Some Future Status")).toBeInTheDocument()
   })
+
+  /** A past-due invoice reads as Overdue in the error tone, so it stands apart from one still within its terms. */
+  it("StatusBadge_Overdue_UsesErrorToneAndLabel", () => {
+    const overdue = renderBadge("Overdue", "Overdue")
+
+    expect(overdue.tone).toBe("error")
+    expect(screen.getByText("Overdue")).toBeInTheDocument()
+  })
 })
