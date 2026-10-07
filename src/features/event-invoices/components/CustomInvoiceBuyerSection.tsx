@@ -5,6 +5,7 @@ import { type FieldErrors, type UseFormRegister, type UseFormSetValue } from "re
 import { RequiredFieldLabel } from "@/features/custom-lists"
 import { useDebounce } from "@/hooks/useDebounce"
 import { extractApiError } from "@/utils/errors"
+import type { CustomInvoiceModule } from "@/api/customInvoices"
 import { useCustomInvoiceBuyerMemberOptions } from "../hooks/useCustomInvoiceMutations"
 import type { CustomInvoiceFormValues } from "../schemas/customInvoice.schemas"
 
@@ -15,6 +16,8 @@ interface CustomInvoiceBuyerSectionProps {
   errors: FieldErrors<CustomInvoiceFormValues>
   setValue: UseFormSetValue<CustomInvoiceFormValues>
   disabled?: boolean
+  /** The module being billed. An Event invoice bills a sponsor or partner, who need not be a member, so the member picker is not offered there. */
+  moduleType?: CustomInvoiceModule
   /** Name and email were copied from a linked invoice and must not drift from it (D-12). */
   isNameAndEmailLocked?: boolean
 }
@@ -84,12 +87,16 @@ export function CustomInvoiceBuyerSection({
   errors,
   setValue,
   disabled = false,
+  moduleType,
   isNameAndEmailLocked = false,
 }: CustomInvoiceBuyerSectionProps) {
-  const isSourceLocked = disabled || isNameAndEmailLocked
-  const lockedProps = isNameAndEmailLocked ? LOCKED_INPUT_PROPS : {}
   const [source, setSource] = useState<BuyerSource>("manual")
   const [searchTerm, setSearchTerm] = useState("")
+  const [pickedMemberName, setPickedMemberName] = useState<string | null>(null)
+  const isMemberPickOffered = moduleType !== "Event"
+  const isSourceLocked = disabled || isNameAndEmailLocked
+  const isNameAndEmailReadOnly = isNameAndEmailLocked || (source === "member" && pickedMemberName !== null)
+  const lockedProps = isNameAndEmailReadOnly ? LOCKED_INPUT_PROPS : {}
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
   const membersQuery = useCustomInvoiceBuyerMemberOptions(source === "member" ? debouncedSearchTerm : "")
 
@@ -98,6 +105,7 @@ export function CustomInvoiceBuyerSection({
 
   function handleSourceChange(next: BuyerSource) {
     setSource(next)
+    setPickedMemberName(null)
     if (next === "manual") {
       setValue("memberUniqueId", "", { shouldDirty: true })
     }
@@ -109,6 +117,12 @@ export function CustomInvoiceBuyerSection({
     setValue("firstName", firstName, { shouldDirty: true })
     setValue("lastName", lastName, { shouldDirty: true, shouldValidate: true })
     setValue("email", member.email ?? "", { shouldDirty: true, shouldValidate: true })
+    setPickedMemberName(member.fullName)
+  }
+
+  function handleSearchChange(value: string) {
+    setSearchTerm(value)
+    setPickedMemberName(null)
   }
 
   return (
@@ -120,12 +134,14 @@ export function CustomInvoiceBuyerSection({
           label="Enter manually"
           onClick={() => handleSourceChange("manual")}
         />
-        <SourceButton
-          isActive={source === "member"}
-          disabled={isSourceLocked}
-          label="Existing member"
-          onClick={() => handleSourceChange("member")}
-        />
+        {isMemberPickOffered ? (
+          <SourceButton
+            isActive={source === "member"}
+            disabled={isSourceLocked}
+            label="Existing member"
+            onClick={() => handleSourceChange("member")}
+          />
+        ) : null}
       </HStack>
 
       {source === "member" && !isSourceLocked ? (
@@ -136,7 +152,7 @@ export function CustomInvoiceBuyerSection({
             </Box>
             <Input
               value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
+              onChange={(event) => handleSearchChange(event.target.value)}
               placeholder="Search members by name or email"
               aria-label="Search members"
               minH="11"
@@ -156,6 +172,10 @@ export function CustomInvoiceBuyerSection({
           ) : hasSearched && members.length === 0 ? (
             <Text fontSize="sm" color="text.secondary">
               No members match this search.
+            </Text>
+          ) : pickedMemberName ? (
+            <Text fontSize="sm" color="text.secondary" role="status">
+              Buyer details copied from <strong>{pickedMemberName}</strong>. Search again to pick someone else.
             </Text>
           ) : members.length > 0 ? (
             <Stack gap={2} maxH="240px" overflowY="auto" border="1px solid" borderColor="border.subtle" borderRadius="14px" p={2}>
@@ -189,10 +209,12 @@ export function CustomInvoiceBuyerSection({
         </Stack>
       ) : null}
 
-      {isNameAndEmailLocked ? (
+      {isNameAndEmailReadOnly ? (
         <Flex align="center" gap={2} color="text.secondary">
           <Lock size={14} aria-hidden="true" />
-          <Text fontSize="sm">Locked while this invoice is linked.</Text>
+          <Text fontSize="sm">
+            {isNameAndEmailLocked ? "Locked while this invoice is linked." : "Name and email come from the member. Search again to pick someone else."}
+          </Text>
         </Flex>
       ) : null}
 

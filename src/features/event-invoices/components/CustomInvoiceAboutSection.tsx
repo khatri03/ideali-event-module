@@ -80,6 +80,7 @@ export function CustomInvoiceAboutSection({ control, register, errors, setValue,
     if (next === moduleType) return
     setValue("moduleType", next as CustomInvoiceModule, { shouldDirty: true, shouldValidate: true })
     setValue("entityUniqueId", "", { shouldDirty: true })
+    setValue("memberUniqueId", "", { shouldDirty: true })
     // Link candidates belong to one module, so a picked invoice from the old module cannot stay linked.
     clearInvoiceLink(setValue)
   }

@@ -172,6 +172,7 @@ export function CustomInvoiceEditor({ invoiceUniqueId, initial, detail }: Custom
   })
   const notes = useWatch({ control, name: "specialNotes" }) ?? ""
   const emailOnCreate = useWatch({ control, name: "emailOnCreate" })
+  const moduleType = useWatch({ control, name: "moduleType" })
   const linkToExisting = useWatch({ control, name: "linkToExisting" })
   const linkedInvoiceUniqueId = useWatch({ control, name: "linkedInvoiceUniqueId" })
 
@@ -215,10 +216,12 @@ export function CustomInvoiceEditor({ invoiceUniqueId, initial, detail }: Custom
               disabled={isReadOnly}
             />
             <CustomInvoiceBuyerSection
+              key={moduleType === "Event" ? "sponsor-only" : "member-or-sponsor"}
               register={register}
               errors={errors}
               setValue={setValue}
               disabled={isReadOnly}
+              moduleType={moduleType}
               isNameAndEmailLocked={linkToExisting && Boolean(linkedInvoiceUniqueId)}
             />
           </EditorCard>

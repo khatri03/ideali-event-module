@@ -48,11 +48,12 @@ function emptyMemberOptionsResponse() {
 }
 
 interface HarnessProps {
+  moduleType?: "Event" | "Membership" | "Donation"
   disabled?: boolean
   isNameAndEmailLocked?: boolean
 }
 
-function Harness({ disabled = false, isNameAndEmailLocked = false }: HarnessProps) {
+function Harness({ moduleType = "Membership", disabled = false, isNameAndEmailLocked = false }: HarnessProps) {
   const {
     register,
     setValue,
@@ -61,7 +62,7 @@ function Harness({ disabled = false, isNameAndEmailLocked = false }: HarnessProp
   } = useForm<CustomInvoiceFormValues>({
     resolver: zodResolver(customInvoiceSchema),
     defaultValues: {
-      moduleType: "Event",
+      moduleType,
       entityUniqueId: "evt-1",
       categoryUniqueId: "cat-1",
       dueDate: "2026-12-31",
@@ -83,6 +84,7 @@ function Harness({ disabled = false, isNameAndEmailLocked = false }: HarnessProp
         errors={errors}
         setValue={setValue}
         disabled={disabled}
+        moduleType={moduleType}
         isNameAndEmailLocked={isNameAndEmailLocked}
       />
       <button type="submit">Save</button>
@@ -146,6 +148,59 @@ describe("CustomInvoiceBuyerSection", () => {
     // Still editable after a pick - the organizer types the company the member option cannot supply.
     fireEvent.change(screen.getByLabelText(/Company name/i), { target: { value: "Acme Corp" } })
     expect(screen.getByLabelText(/Company name/i)).toHaveValue("Acme Corp")
+  })
+
+  /** A pick closes the result list and says whose details were copied, so the organizer is not left looking at an open list. */
+  it("PickingMember_ClosesTheListAndNamesWhoWasPicked", async () => {
+    const user = userEvent.setup()
+    renderHarness()
+
+    await user.click(screen.getByRole("tab", { name: "Existing member" }))
+    fireEvent.change(screen.getByLabelText("Search members"), { target: { value: "Jane" } })
+    fireEvent.click(await screen.findByText("Jane Doe"))
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Buyer details copied from Jane Doe")
+    expect(screen.queryByRole("button", { name: /Jane Doe/ })).not.toBeInTheDocument()
+  })
+
+  /** Typing a new search after a pick brings the results back so someone else can be chosen. */
+  it("SearchingAgainAfterAPick_ShowsTheResultsAgain", async () => {
+    const user = userEvent.setup()
+    renderHarness()
+
+    await user.click(screen.getByRole("tab", { name: "Existing member" }))
+    fireEvent.change(screen.getByLabelText("Search members"), { target: { value: "Jane" } })
+    fireEvent.click(await screen.findByText("Jane Doe"))
+    await screen.findByRole("status")
+
+    fireEvent.change(screen.getByLabelText("Search members"), { target: { value: "Jan" } })
+
+    expect(await screen.findByRole("button", { name: /Jane Doe/ })).toBeInTheDocument()
+    expect(screen.queryByRole("status")).not.toBeInTheDocument()
+  })
+
+  /** After a member pick the name and email belong to that member; the invoice cannot name one member and bill another person. */
+  it("PickingMember_LocksNameAndEmailButLeavesCompanyAndPhoneOpen", async () => {
+    const user = userEvent.setup()
+    renderHarness()
+
+    await user.click(screen.getByRole("tab", { name: "Existing member" }))
+    fireEvent.change(screen.getByLabelText("Search members"), { target: { value: "Jane" } })
+    fireEvent.click(await screen.findByText("Jane Doe"))
+
+    await waitFor(() => expect(screen.getByLabelText(/Email address/i)).toHaveAttribute("readonly"))
+    expect(screen.getByLabelText(/First name/i)).toHaveAttribute("readonly")
+    expect(screen.getByLabelText(/Last name/i)).toHaveAttribute("readonly")
+    expect(screen.getByLabelText(/Company name/i)).not.toHaveAttribute("readonly")
+    expect(screen.getByLabelText(/Cell phone/i)).not.toHaveAttribute("readonly")
+  })
+
+  /** An Event invoice bills a sponsor or partner who need not be a member, so only manual entry is offered. */
+  it("EventModule_OffersManualEntryOnly", () => {
+    renderHarness({ moduleType: "Event" })
+
+    expect(screen.queryByRole("tab", { name: "Existing member" })).not.toBeInTheDocument()
+    expect(screen.getByRole("tab", { name: "Enter manually" })).toHaveAttribute("aria-selected", "true")
   })
 
   /** No match returns the plain empty line rather than a stale list. */
