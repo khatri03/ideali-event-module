@@ -173,4 +173,13 @@ describe("EventInvoicesPage", () => {
 
     expect(screen.getByTestId("current-path")).toHaveTextContent("/organizer/custom-invoices/invoice-2")
   })
+
+  /** An organizer can only author a custom invoice if the list offers a way in; the editor has no other entry point. */
+  it("NewCustomInvoiceButton_OpensTheEditorForANewInvoice", async () => {
+    renderListWithRoutes()
+
+    await userEvent.click(screen.getByRole("button", { name: /new custom invoice/i }))
+
+    expect(screen.getByTestId("current-path")).toHaveTextContent("/organizer/custom-invoices/new")
+  })
 })

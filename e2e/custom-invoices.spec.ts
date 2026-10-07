@@ -297,6 +297,10 @@ for (const width of WIDTHS) {
     const tableBox = page.getByRole("table").locator("xpath=ancestor::div[1]")
     expect(await tableBox.evaluate((element) => getComputedStyle(element).overflowX)).toMatch(/auto|scroll/)
 
+    const newInvoiceButton = page.getByRole("button", { name: "New custom invoice" })
+    await expect.soft(newInvoiceButton, "the list offers no way to start a custom invoice").toBeVisible()
+    expect.soft((await newInvoiceButton.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX)
+
     const overdueRow = rowFor(page, "INV-C-100")
     await expect(overdueRow.getByText("Custom", { exact: true })).toBeVisible()
     await expect(overdueRow.getByText("Sep 10, 2026")).toBeVisible()
