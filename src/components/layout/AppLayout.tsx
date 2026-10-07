@@ -58,7 +58,7 @@ export function AppLayout() {
   }
 
   return (
-    <Flex minH="100dvh" overflow="hidden" bg="app.bg">
+    <Flex h="100dvh" overflow="hidden" bg="app.bg">
       <Box display={{ base: "none", lg: "block" }}>
         <Sidebar currentUser={currentUser} />
       </Box>
