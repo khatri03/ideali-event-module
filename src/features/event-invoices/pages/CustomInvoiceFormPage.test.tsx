@@ -157,11 +157,12 @@ function conflictError(title: string): AxiosError {
   })
 }
 
-function renderPage(options?: { invoiceUniqueId?: string }) {
+function renderPage(options?: { invoiceUniqueId?: string; search?: string }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const initialPath = options?.invoiceUniqueId
+  const basePath = options?.invoiceUniqueId
     ? APP_ROUTES.customInvoices.edit(options.invoiceUniqueId)
     : APP_ROUTES.customInvoices.new
+  const initialPath = `${basePath}${options?.search ?? ""}`
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
@@ -512,14 +513,78 @@ describe("CustomInvoiceFormPage", () => {
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(APP_ROUTES.customInvoices.detail(EDIT_ID)))
   })
 
-  /** Cancelling an untouched new invoice goes straight back to the Event Invoices list, with nothing to discard. */
-  it("Cancel_ReturnsToTheEventInvoicesList", async () => {
+  /** Cancelling an untouched new invoice goes straight back to the custom invoices list, with nothing to discard. */
+  it("Cancel_ReturnsToTheCustomInvoicesList", async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 })
     renderPage()
 
     await user.click(screen.getByRole("button", { name: "Cancel" }))
 
-    expect(navigateMock).toHaveBeenCalledWith(APP_ROUTES.eventInvoices.list)
+    expect(navigateMock).toHaveBeenCalledWith(APP_ROUTES.customInvoices.list)
+  })
+
+  /** A new invoice opened from a module's list returns to that same module-locked list, not the cross-module one (D-11). */
+  it("FormPage_CancelFromLockedNew_ReturnsToLockedList", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    renderPage({ search: "?moduleType=Event" })
+    await screen.findByText("Opened from Event custom invoices.")
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }))
+
+    expect(navigateMock).toHaveBeenCalledWith(APP_ROUTES.customInvoices.listForModule("Event"))
+  })
+
+  /** Opened from a module's list, the form presets that module and locks it so the invoice cannot land in another module (D-11). */
+  it("FormPage_LockParamForEnabledModule_PresetsAndLocksModule", async () => {
+    renderPage({ search: "?moduleType=Membership" })
+
+    expect(await screen.findByText("Opened from Membership custom invoices.")).toBeInTheDocument()
+    const moduleControl = screen.getByRole("combobox", { name: "Module" })
+    expect(moduleControl).toBeDisabled()
+    expect(moduleControl).toHaveTextContent("Membership")
+  })
+
+  /** A lock naming a module the organizer cannot create for is ignored, so the URL cannot force a module onto the form (D-11). */
+  it("FormPage_LockParamForDisabledModule_LeavesModuleFree", async () => {
+    renderPage({ search: "?moduleType=Donation" })
+
+    const moduleControl = screen.getByRole("combobox", { name: "Module" })
+    await waitFor(() => expect(moduleControl).toBeEnabled())
+    expect(moduleControl).toHaveTextContent("Select a module")
+    expect(screen.queryByText(/Opened from/)).not.toBeInTheDocument()
+  })
+
+  /** An unrecognised lock value is ignored rather than breaking the form or preselecting anything (D-11). */
+  it("FormPage_UnknownLockParam_LeavesModuleFree", async () => {
+    renderPage({ search: "?moduleType=bogus" })
+
+    const moduleControl = screen.getByRole("combobox", { name: "Module" })
+    await waitFor(() => expect(moduleControl).toBeEnabled())
+    expect(moduleControl).toHaveTextContent("Select a module")
+  })
+
+  /** An existing invoice keeps its own module; a lock param on the edit URL must not override or relabel it. */
+  it("FormPage_EditMode_IgnoresLockParam", async () => {
+    renderPage({ invoiceUniqueId: EDIT_ID, search: "?moduleType=Membership" })
+    await waitForEditLoaded()
+
+    expect(screen.getByRole("combobox", { name: "Module" })).toHaveTextContent("Event")
+    expect(screen.queryByText(/Opened from/)).not.toBeInTheDocument()
+  })
+
+  /** A locked create saves under the locked module, so the invoice appears in the list it was started from. */
+  it("FormPage_LockedSave_SendsLockedModule", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    renderPage({ search: "?moduleType=Membership" })
+    await screen.findByText("Opened from Membership custom invoices.")
+    await pickEntity(user, "Membership", "Gol", "Gold")
+    await pickOption(user, "Sponsorship type", "Gold Sponsor")
+    fillBuyerAndCharges()
+
+    await user.click(screen.getByRole("button", { name: CREATE_ACTION }))
+
+    await waitFor(() => expect(http.post).toHaveBeenCalled())
+    expect(http.post.mock.calls[0][1]).toMatchObject({ moduleType: "Membership", entityUniqueId: "mem-gold" })
   })
 
   /** Leaving with typed but unsaved changes asks first, so a stray click does not throw the work away. */

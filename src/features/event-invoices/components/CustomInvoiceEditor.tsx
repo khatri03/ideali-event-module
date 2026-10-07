@@ -9,7 +9,7 @@ import { ConfirmDialog } from "@/components/common"
 import { extractApiError } from "@/utils/errors"
 import { APP_ROUTES } from "@/utils/routes"
 import { parseUtcDateTime } from "@/utils/utcDates"
-import type { CustomInvoiceDetail, CustomInvoiceForEdit } from "@/api/customInvoices"
+import type { CustomInvoiceDetail, CustomInvoiceForEdit, CustomInvoiceModule } from "@/api/customInvoices"
 import { useCustomInvoiceSubmit } from "../hooks/useCustomInvoiceSubmit"
 import { useEnabledCustomInvoiceModules } from "../hooks/useCustomInvoiceAuthoringOptions"
 import {
@@ -143,6 +143,8 @@ interface CustomInvoiceEditorProps {
   initial?: CustomInvoiceForEdit
   /** The saved invoice as its detail reports it, for the summary's status, link and delivery. Edit mode only. */
   detail?: CustomInvoiceDetail
+  /** The module the create form was opened for; it is preset and locked when the organizer can create for it. */
+  lockedModuleType?: CustomInvoiceModule
 }
 
 /**
@@ -151,7 +153,7 @@ interface CustomInvoiceEditorProps {
  * (`canEdit` false) every control is read-only behind a locked banner with no Save; the server enforces the
  * same lock.
  */
-export function CustomInvoiceEditor({ invoiceUniqueId, initial, detail }: CustomInvoiceEditorProps) {
+export function CustomInvoiceEditor({ invoiceUniqueId, initial, detail, lockedModuleType }: CustomInvoiceEditorProps) {
   const navigate = useNavigate()
   const isEditMode = Boolean(invoiceUniqueId)
   const isReadOnly = initial?.canEdit === false
@@ -177,7 +179,11 @@ export function CustomInvoiceEditor({ invoiceUniqueId, initial, detail }: Custom
   const linkedInvoiceUniqueId = useWatch({ control, name: "linkedInvoiceUniqueId" })
 
   function leave() {
-    navigate(invoiceUniqueId ? APP_ROUTES.customInvoices.detail(invoiceUniqueId) : APP_ROUTES.eventInvoices.list)
+    if (invoiceUniqueId) {
+      navigate(APP_ROUTES.customInvoices.detail(invoiceUniqueId))
+      return
+    }
+    navigate(lockedModuleType ? APP_ROUTES.customInvoices.listForModule(lockedModuleType) : APP_ROUTES.customInvoices.list)
   }
 
   function handleCancel() {
@@ -205,6 +211,7 @@ export function CustomInvoiceEditor({ invoiceUniqueId, initial, detail }: Custom
               initial={initial}
               isReadOnly={isReadOnly}
               hasNoEnabledModules={hasNoEnabledModules}
+              lockedModuleType={lockedModuleType}
             />
           </EditorCard>
           <EditorCard title="Bill to">

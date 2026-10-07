@@ -21,6 +21,8 @@ interface CustomInvoiceAboutSectionProps {
   isReadOnly: boolean
   /** Custom invoicing is turned on for no module, so there is nothing to create. */
   hasNoEnabledModules: boolean
+  /** The module the create form was opened for. Honoured only when it is enabled; ignored in edit mode. */
+  lockedModuleType?: CustomInvoiceModule
 }
 
 function NoModulesEnabledNotice() {
@@ -55,8 +57,27 @@ function BilledEntityReadOnly({ initial }: { initial: CustomInvoiceForEdit }) {
   )
 }
 
+function ModuleHelperText({ lockedModule, onlyModule }: { lockedModule?: CustomInvoiceModule; onlyModule?: CustomInvoiceModule }) {
+  if (lockedModule) {
+    return <Field.HelperText>{`Opened from ${lockedModule} custom invoices.`}</Field.HelperText>
+  }
+  if (onlyModule) {
+    return <Field.HelperText>{`Custom invoicing is only turned on for ${onlyModule}.`}</Field.HelperText>
+  }
+  return null
+}
+
 /** What the invoice bills and under which terms: module, billed record, sponsorship type and due date. */
-export function CustomInvoiceAboutSection({ control, register, errors, setValue, initial, isReadOnly, hasNoEnabledModules }: CustomInvoiceAboutSectionProps) {
+export function CustomInvoiceAboutSection({
+  control,
+  register,
+  errors,
+  setValue,
+  initial,
+  isReadOnly,
+  hasNoEnabledModules,
+  lockedModuleType,
+}: CustomInvoiceAboutSectionProps) {
   const modulesQuery = useEnabledCustomInvoiceModules()
   const categoriesQuery = useActiveInvoiceCategoryOptions()
   const moduleType = useWatch({ control, name: "moduleType" }) as CustomInvoiceModule | undefined
@@ -65,13 +86,16 @@ export function CustomInvoiceAboutSection({ control, register, errors, setValue,
   const enabledModules = modulesQuery.data ?? []
   const moduleOptions = (initial ? [initial.moduleType] : enabledModules).map((module) => ({ label: module, value: module }))
   const onlyModule = !isEditMode && enabledModules.length === 1 ? enabledModules[0] : undefined
+  // A lock for a module the organizer cannot create for is dropped; the server refuses that create anyway.
+  const effectiveLock = !isEditMode && lockedModuleType && enabledModules.includes(lockedModuleType) ? lockedModuleType : undefined
+  const presetModule = effectiveLock ?? onlyModule
 
-  // With a single enabled module there is no choice to make, so it is filled in rather than asked for.
+  // A locked or single enabled module leaves no choice to make, so it is filled in rather than asked for.
   useEffect(() => {
-    if (onlyModule && !moduleType) {
-      setValue("moduleType", onlyModule)
+    if (presetModule && !moduleType) {
+      setValue("moduleType", presetModule)
     }
-  }, [onlyModule, moduleType, setValue])
+  }, [presetModule, moduleType, setValue])
 
   const categoryOptions = (categoriesQuery.data ?? []).map((category) => ({ label: category.name, value: category.uniqueId }))
   const hasNoActiveCategories = categoriesQuery.isSuccess && categoryOptions.length === 0
@@ -94,11 +118,11 @@ export function CustomInvoiceAboutSection({ control, register, errors, setValue,
           options={moduleOptions}
           value={moduleType ?? ""}
           onChange={handleModuleChange}
-          disabled={isEditMode || isReadOnly || modulesQuery.isLoading || Boolean(onlyModule) || hasNoEnabledModules}
+          disabled={isEditMode || isReadOnly || modulesQuery.isLoading || Boolean(presetModule) || hasNoEnabledModules}
           placeholder={modulesQuery.isLoading ? "Loading modules..." : "Select a module"}
           ariaLabel="Module"
         />
-        {onlyModule ? <Field.HelperText>{`Custom invoicing is only turned on for ${onlyModule}.`}</Field.HelperText> : null}
+        <ModuleHelperText lockedModule={effectiveLock} onlyModule={onlyModule} />
         <Field.ErrorText>{errors.moduleType?.message}</Field.ErrorText>
       </Field.Root>
 

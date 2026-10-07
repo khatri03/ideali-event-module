@@ -22,7 +22,7 @@ import "@/styles/print.css"
 /** A ticket order's detail. Custom invoices open on their own page at /organizer/custom-invoices/:id. */
 export default function EventInvoiceDetailPage() {
   const { invoiceUniqueId = "" } = useParams()
-  const handleBack = useBackToInvoiceList()
+  const handleBack = useBackToInvoiceList(APP_ROUTES.eventInvoices.list)
   const detailQuery = useEventInvoiceDetail(invoiceUniqueId)
   const markPaid = useMarkEventInvoiceAsPaid(invoiceUniqueId)
   const cancel = useCancelEventInvoice(invoiceUniqueId)

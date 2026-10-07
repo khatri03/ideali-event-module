@@ -1,5 +1,4 @@
 import { useLocation, useNavigate } from "react-router-dom"
-import { APP_ROUTES } from "@/utils/routes"
 
 export interface InvoiceListReturnState {
   returnTo: string
@@ -27,10 +26,10 @@ export function readReturnTo(state: unknown): string | null {
   return isInAppPath ? candidate : null
 }
 
-/** Back from an invoice detail: the list it was opened from, or the plain Event Invoices list. */
-export function useBackToInvoiceList(): () => void {
+/** Back from an invoice detail: the list it was opened from, or `fallbackPath` when none was recorded. */
+export function useBackToInvoiceList(fallbackPath: string): () => void {
   const navigate = useNavigate()
   const location = useLocation()
-  const returnTo = readReturnTo(location.state) ?? APP_ROUTES.eventInvoices.list
+  const returnTo = readReturnTo(location.state) ?? fallbackPath
   return () => navigate(returnTo)
 }

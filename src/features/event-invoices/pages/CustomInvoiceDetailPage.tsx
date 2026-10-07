@@ -37,7 +37,7 @@ function usePrintOnceLoaded(isLoaded: boolean) {
  */
 export default function CustomInvoiceDetailPage() {
   const { invoiceUniqueId = "" } = useParams()
-  const handleBack = useBackToInvoiceList()
+  const handleBack = useBackToInvoiceList(APP_ROUTES.customInvoices.list)
   const detailQuery = useCustomInvoiceDetail(invoiceUniqueId)
   const { markPaid, cancel, emailInvoice, addNote } = useCustomInvoiceDetailActions(invoiceUniqueId)
   const invoice = detailQuery.data

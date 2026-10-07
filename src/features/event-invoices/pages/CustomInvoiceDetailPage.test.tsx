@@ -97,7 +97,7 @@ function renderPage({ returnTo }: { returnTo?: unknown } = {}) {
         >
           <CurrentPath />
           <Routes>
-            <Route path={APP_ROUTES.eventInvoices.list} element={<div>Invoice list</div>} />
+            <Route path={APP_ROUTES.customInvoices.list} element={<div>Invoice list</div>} />
             <Route path={APP_ROUTES.customInvoices.detailRoute} element={<CustomInvoiceDetailPage />} />
           </Routes>
         </MemoryRouter>
@@ -309,12 +309,12 @@ describe("CustomInvoiceDetailPage", () => {
   /** Back returns to the filtered list the invoice was opened from. */
   it("CustomDetail_OpenedFromAFilteredList_ReturnsToThatSameList", async () => {
     const user = userEvent.setup()
-    renderPage({ returnTo: "/organizer/events/invoices?invoiceTypes=Custom" })
+    renderPage({ returnTo: "/organizer/custom-invoices/list?moduleType=Event&status=Paid" })
 
     await screen.findByText("Northwind Traders")
     await user.click(screen.getByRole("button", { name: /back to invoices/i }))
 
-    expect(screen.getByTestId("current-path")).toHaveTextContent("/organizer/events/invoices?invoiceTypes=Custom")
+    expect(screen.getByTestId("current-path")).toHaveTextContent("/organizer/custom-invoices/list?moduleType=Event&status=Paid")
   })
 
   /** A history state pointing off-site is refused in favour of the list, so back can never become an open redirect. */
@@ -325,6 +325,17 @@ describe("CustomInvoiceDetailPage", () => {
     await screen.findByText("Northwind Traders")
     await user.click(screen.getByRole("button", { name: /back to invoices/i }))
 
-    expect(screen.getByTestId("current-path")).toHaveTextContent(APP_ROUTES.eventInvoices.list)
+    expect(screen.getByTestId("current-path")).toHaveTextContent(APP_ROUTES.customInvoices.list)
+  })
+
+  /** A custom invoice opened without a recorded list (a deep link) backs out to the custom invoices list, where it lives. */
+  it("DetailPage_NoReturnTo_BackGoesToCustomInvoicesList", async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await screen.findByText("Northwind Traders")
+    await user.click(screen.getByRole("button", { name: /back to invoices/i }))
+
+    expect(screen.getByTestId("current-path")).toHaveTextContent(APP_ROUTES.customInvoices.list)
   })
 })
