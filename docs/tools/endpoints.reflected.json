@@ -1,5 +1,5 @@
 {
-  "Total": 705,
+  "Total": 710,
   "Controllers": [
     {
       "Area": "Admin",
@@ -615,6 +615,49 @@
               "Source": "Body",
               "Type": "OrgAllowedOriginDto",
               "Name": "model"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Admin",
+      "Name": "CustomInvoicingModulesController",
+      "BaseRoute": "/api/admin/custom-invoicing-modules",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "AdminModuleAccess, AdminModuleAccess",
+      "Actions": [
+        {
+          "Verb": "GET",
+          "Path": "/api/admin/custom-invoicing-modules",
+          "Name": "GetModules",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "AdminModuleAccess, AdminModuleAccess",
+          "Flags": [],
+          "Parameters": []
+        },
+        {
+          "Verb": "PUT",
+          "Path": "/api/admin/custom-invoicing-modules/{moduleType}",
+          "Name": "SetEnabled",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "AdminModuleAccess, AdminModuleAccess",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "",
+              "Type": "EnumModule",
+              "Name": "moduleType"
+            },
+            {
+              "Source": "Body",
+              "Type": "SetCustomInvoicingModuleRequest",
+              "Name": "request"
             }
           ]
         }
@@ -10499,6 +10542,61 @@
               "Name": "invoiceUniqueId"
             }
           ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/custom-invoices/entity-options",
+          "Name": "SearchEntities",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "custom-invoice:create",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Query",
+              "Type": "CustomInvoiceEntityOptionsRequest",
+              "Name": "request"
+            }
+          ]
+        },
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/custom-invoices/link-candidates",
+          "Name": "SearchLinkCandidates",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "custom-invoice:link",
+          "Flags": [],
+          "Parameters": [
+            {
+              "Source": "Query",
+              "Type": "CustomInvoiceLinkCandidatesRequest",
+              "Name": "request"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Area": "Organizer",
+      "Name": "CustomInvoiceEnabledModulesController",
+      "BaseRoute": "/api/organizer/custom-invoices/enabled-modules",
+      "Anonymous": false,
+      "Roles": "",
+      "Policy": "OrganizerModuleAccess",
+      "Actions": [
+        {
+          "Verb": "GET",
+          "Path": "/api/organizer/custom-invoices/enabled-modules",
+          "Name": "Get",
+          "Anonymous": false,
+          "RequiresAuth": true,
+          "Roles": "",
+          "Policy": "OrganizerModuleAccess",
+          "Flags": [],
+          "Parameters": []
         }
       ]
     },
