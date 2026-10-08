@@ -812,7 +812,7 @@ export const SessionTicketPricePeriodsSection = forwardRef<
                   </Box>
 
                   <Text fontSize="xs" color="gray.600" mt={-1}>
-                    UTC dates recommended
+                    Times are in the event's time zone, or UTC until the event has one
                   </Text>
                 </Stack>
 

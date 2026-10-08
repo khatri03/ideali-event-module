@@ -454,7 +454,7 @@ function EventDateTimeEditor({
           Dates & Time
         </Text>
         <Text fontSize="sm" color="text.secondary">
-          Choose when the event and booking windows start and end. UTC Date/Time recommended.
+          Choose when the event and booking windows start and end. Times are in the event's time zone, or UTC until the event has one.
         </Text>
 
         <Stack gap={5} maxW="760px">

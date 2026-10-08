@@ -1376,7 +1376,7 @@ function SessionDatesTimeEditor({
           Dates & Time
         </Text>
         <Text fontSize="sm" color="text.secondary">
-          Choose when booking opens and closes, then define the session start and end times. UTC Date/Time recommended.
+          Choose when booking opens and closes, then define the session start and end times. Times are in the event's time zone, or UTC until the event has one.
         </Text>
       </Stack>
 
@@ -1495,7 +1495,7 @@ function SessionDatesTimeEditor({
       </Stack>
 
       <Text fontSize="sm" color="text.secondary">
-        Choose when booking opens and closes, and when the session runs. UTC Date/Time recommended.
+        Choose when booking opens and closes, and when the session runs. Times are in the event's time zone, or UTC until the event has one.
       </Text>
     </SessionStepShell>
   )
@@ -1680,7 +1680,7 @@ function SessionBookingEditor({
       ) : null}
 
       <Text fontSize="sm" color="text.secondary">
-        Choose when booking opens and closes for this session. UTC Date/Time recommended.
+        Choose when booking opens and closes for this session. Times are in the event's time zone, or UTC until the event has one.
       </Text>
     </SessionStepShell>
   )
@@ -1795,7 +1795,7 @@ function SessionDurationEditor({
       ) : null}
 
       <Text fontSize="sm" color="text.secondary">
-        Choose when this session starts and ends. UTC Date/Time recommended.
+        Choose when this session starts and ends. Times are in the event's time zone, or UTC until the event has one.
       </Text>
     </SessionStepShell>
   )
