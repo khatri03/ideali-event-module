@@ -3,21 +3,12 @@ import { Controller, useFormContext, useWatch } from "react-hook-form"
 import { Badge, Box, Button, Dialog, Field, Flex, Table, Text } from "@chakra-ui/react"
 import { Check, Plus, Trash2 } from "lucide-react"
 import ReactSelect, { components, type MultiValue, type MultiValueRemoveProps, type OptionProps, type StylesConfig } from "react-select"
-import { useEventChargeRuleOptions } from "../hooks/useEventChargeRuleOptions"
+import { useEventChargeRuleOptions, type EventChargeRuleOption } from "../hooks/useEventChargeRuleOptions"
 import { ChargeRuleDialog } from "@/features/charge-rules/components/ChargeRuleDialog"
 import type { OrganizerChargeRuleInput } from "@/api/chargeRules"
 import type { EventWizardValues } from "../schemas/eventWizard.schemas"
 
-interface ChargeRuleSelectOption {
-  value: string
-  label: string
-  description: string
-  name: string
-  chargeKind: string
-  calculationType: string
-  valueAmount: number
-  isActive: boolean
-}
+type ChargeRuleSelectOption = EventChargeRuleOption
 
 function ChargeRuleSelectOptionItem(props: OptionProps<ChargeRuleSelectOption, true>) {
   return (

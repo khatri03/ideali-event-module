@@ -229,8 +229,11 @@ export function AlertComposer({ uniqueId }: AlertComposerProps) {
     })
   }
 
-  function handleAudienceChange(details: { value: AudienceTab }) {
-    setValue("targetMode", details.value, { shouldValidate: true })
+  function handleAudienceChange(details: { value: string }) {
+    const audience = AUDIENCE_TABS.find((tab) => tab.value === details.value)
+    if (audience) {
+      setValue("targetMode", audience.value, { shouldValidate: true })
+    }
   }
 
   if (isEditMode && alertQuery.isLoading) {

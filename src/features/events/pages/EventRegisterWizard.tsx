@@ -1067,7 +1067,7 @@ function AttendeeTicketCard({
           <Flex justify='space-between' gap={4} align={{ base: 'start', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
             <Stack gap={1} minW={0}>
               <HStack gap={2} align='baseline' flexWrap='wrap' minW={0}>
-                <Text fontSize='sm' fontWeight='800' color='gray.900' lineHeight='1.4' noOfLines={1}>
+                <Text fontSize='sm' fontWeight='800' color='gray.900' lineHeight='1.4' lineClamp={1}>
                   {group.ticketName}
                 </Text>
                 <Text fontSize='sm' color='gray.600' lineHeight='1.4' whiteSpace='nowrap'>
@@ -3178,7 +3178,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
                                             <Flex key={ticket.ticket.uniqueId} justify='space-between' gap={4} align='center' bg='white' borderWidth='1px' borderColor='gray.200' borderRadius='14px' px={4} py={3}>
                                               <Stack gap={0.5} minW={0}>
                                                 <HStack gap={2} align='baseline' flexWrap='wrap' minW={0}>
-                                                  <Text fontWeight='700' color='gray.900' noOfLines={1}>
+                                                  <Text fontWeight='700' color='gray.900' lineClamp={1}>
                                                     {ticket.ticket.name}
                                                   </Text>
                                                   <Text fontSize='sm' fontWeight='400' color='gray.600' whiteSpace='nowrap'>

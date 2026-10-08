@@ -17,7 +17,7 @@ const CHARGE_RULE_OPTIONS_PAGE_SIZE = 1000
 export function useEventChargeRuleOptions() {
   return useQuery({
     queryKey: ["charge-rules", { pageNo: 1, pageSize: CHARGE_RULE_OPTIONS_PAGE_SIZE, purpose: "event-advanced-settings" }],
-    queryFn: async () => {
+    queryFn: async (): Promise<EventChargeRuleOption[]> => {
       const page = await fetchOrganizerChargeRules(1, CHARGE_RULE_OPTIONS_PAGE_SIZE)
 
       return page.items.map((item) => ({

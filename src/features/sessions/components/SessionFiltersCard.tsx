@@ -24,61 +24,66 @@ interface SelectOption {
   value: string
 }
 
-const filterMultiSelectStyles: StylesConfig<SelectOption, true> = {
-  control: (base, state) => ({
-    ...base,
-    minHeight: 44,
-    width: "100%",
-    borderRadius: 16,
-    borderColor: state.isFocused ? "#7551FF" : "#E2E8F0",
-    boxShadow: state.isFocused ? "0 0 0 3px rgba(117, 81, 255, 0.15)" : "none",
-    backgroundColor: "#fff",
-  }),
-  container: (base) => ({
-    ...base,
-    width: "100%",
-  }),
-  valueContainer: (base) => ({
-    ...base,
-    flex: 1,
-    minWidth: 0,
-  }),
-  input: (base) => ({
-    ...base,
-    width: "100%",
-  }),
-  menu: (base) => ({
-    ...base,
-    zIndex: 40,
-    borderRadius: 14,
-  }),
-  multiValue: (base) => ({
-    ...base,
-    borderRadius: 999,
-    backgroundColor: "rgba(117, 81, 255, 0.12)",
-    border: "1px solid rgba(117, 81, 255, 0.18)",
-    margin: "2px",
-  }),
-  multiValueLabel: (base) => ({
-    ...base,
-    fontSize: 12,
-    fontWeight: 700,
-    color: "#422AFB",
-    paddingLeft: "8px",
-    paddingRight: "4px",
-  }),
-  multiValueRemove: (base) => ({
-    ...base,
-    borderRadius: 999,
-    color: "#7551FF",
-    paddingLeft: "4px",
-    paddingRight: "8px",
-    ":hover": {
-      backgroundColor: "rgba(117, 81, 255, 0.18)",
+function createFilterSelectStyles<IsMulti extends boolean>(): StylesConfig<SelectOption, IsMulti> {
+  return {
+    control: (base, state) => ({
+      ...base,
+      minHeight: 44,
+      width: "100%",
+      borderRadius: 16,
+      borderColor: state.isFocused ? "#7551FF" : "#E2E8F0",
+      boxShadow: state.isFocused ? "0 0 0 3px rgba(117, 81, 255, 0.15)" : "none",
+      backgroundColor: "#fff",
+    }),
+    container: (base) => ({
+      ...base,
+      width: "100%",
+    }),
+    valueContainer: (base) => ({
+      ...base,
+      flex: 1,
+      minWidth: 0,
+    }),
+    input: (base) => ({
+      ...base,
+      width: "100%",
+    }),
+    menu: (base) => ({
+      ...base,
+      zIndex: 40,
+      borderRadius: 14,
+    }),
+    multiValue: (base) => ({
+      ...base,
+      borderRadius: 999,
+      backgroundColor: "rgba(117, 81, 255, 0.12)",
+      border: "1px solid rgba(117, 81, 255, 0.18)",
+      margin: "2px",
+    }),
+    multiValueLabel: (base) => ({
+      ...base,
+      fontSize: 12,
+      fontWeight: 700,
       color: "#422AFB",
-    },
-  }),
+      paddingLeft: "8px",
+      paddingRight: "4px",
+    }),
+    multiValueRemove: (base) => ({
+      ...base,
+      borderRadius: 999,
+      color: "#7551FF",
+      paddingLeft: "4px",
+      paddingRight: "8px",
+      ":hover": {
+        backgroundColor: "rgba(117, 81, 255, 0.18)",
+        color: "#422AFB",
+      },
+    }),
+  }
 }
+
+const filterMultiSelectStyles = createFilterSelectStyles<true>()
+const filterSingleSelectStyles = createFilterSelectStyles<false>()
 
 function CheckboxOption(props: OptionProps<SelectOption, true>) {
   return (
@@ -385,7 +390,7 @@ export function SessionFiltersCard({
                       }))
                     }
                     placeholder={isLoading ? "Loading seat options..." : "Select seat options"}
-                    styles={filterMultiSelectStyles}
+                    styles={filterSingleSelectStyles}
                     components={{ Option: SingleSelectOption }}
                     isDisabled={isLoading || isError}
                   />

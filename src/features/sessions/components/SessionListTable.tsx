@@ -1,5 +1,5 @@
 import { format } from "date-fns"
-import { Box, Badge, Button, Flex, HStack, Menu, Portal, Skeleton, SkeletonText, Table, Text } from "@chakra-ui/react"
+import { Box, Badge, Button, Flex, HStack, Menu, Portal, Skeleton, SkeletonText, Table, Text, chakra } from "@chakra-ui/react"
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpDown, CalendarDays, Eye, MapPin, MoreHorizontal, PencilLine } from "lucide-react"
 import { type SessionListItem } from "@/api/sessions"
 
@@ -226,11 +226,11 @@ export function SessionListTable({
                     <Flex justify="center">
                       <Menu.Root positioning={{ placement: "bottom-start" }}>
                         <Menu.Trigger asChild>
-                          <Box as="button" type="button" aria-label={`Actions for ${session.name}`} cursor="pointer" {...actionButtonStyles}>
+                          <chakra.button type="button" aria-label={`Actions for ${session.name}`} cursor="pointer" {...actionButtonStyles}>
                             <Flex align="center" justify="center" w="full" h="full">
                               <MoreHorizontal size={18} aria-hidden="true" />
                             </Flex>
-                          </Box>
+                          </chakra.button>
                         </Menu.Trigger>
                         <Portal>
                           <Menu.Positioner>

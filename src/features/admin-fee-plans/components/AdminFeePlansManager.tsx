@@ -23,6 +23,7 @@ import {
   Switch,
   Table,
   Text,
+  chakra,
 } from "@chakra-ui/react"
 import { ArrowDown, ArrowUp, ArrowUpDown, Check, CheckCircle2, Layers3, MoreHorizontal, PencilLine, Plus, Trash2, UserRound } from "lucide-react"
 import ReactSelect, {
@@ -1692,9 +1693,8 @@ export function AdminFeePlansManager() {
                                 const moduleId = moduleIds[index]
 
                                 return (
-                                  <Box
+                                  <chakra.button
                                     key={`${plan.uniqueId}-${moduleId ?? moduleName}-${index}`}
-                                    as="button"
                                     type="button"
                                     onClick={() => {
                                       if (moduleId) {
@@ -1741,7 +1741,7 @@ export function AdminFeePlansManager() {
                                         <Trash2 size={11} />
                                       </Box>
                                     ) : null}
-                                  </Box>
+                                  </chakra.button>
                                 )
                               })}
                             </Flex>
