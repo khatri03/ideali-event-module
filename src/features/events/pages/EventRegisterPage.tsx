@@ -30,6 +30,7 @@ interface EventRegistrationViewModel {
   location: string
   locationMapUrl: string | null
   organizer: string
+  organizerLogoUrl: string | null
   registrationStatus: string
   registrationBlockedReason: string | null
   canRegister: boolean
@@ -362,6 +363,7 @@ function mapRegistrationToViewModel(registration: EventRegistrationResponse): Ev
     location: registration.venueName ?? 'Venue not set',
     locationMapUrl: registration.venueMapUrl,
     organizer: registration.organizerName ?? 'Event registration',
+    organizerLogoUrl: resolveAssetUrl(registration.organizerLogoUrl),
     registrationStatus: registration.registrationStatus,
     registrationBlockedReason: registration.registrationBlockedReason ?? null,
     canRegister: registration.canRegister,

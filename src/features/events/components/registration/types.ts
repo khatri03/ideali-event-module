@@ -143,6 +143,7 @@ export interface EventRegisterWizardEvent {
   location: string
   locationMapUrl: string | null
   organizer: string
+  organizerLogoUrl: string | null
   timeZone: string | null
   registrationStatus: string
   canRegister: boolean

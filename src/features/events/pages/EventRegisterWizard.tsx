@@ -1063,6 +1063,7 @@ export function EventRegisterWizard({ event, formAccent, onBack }: { event: Even
             <EventHeroCard
               title={event.title}
               organizer={event.organizer}
+              organizerLogoUrl={event.organizerLogoUrl}
               summary={currentEvent.summary ?? null}
               startDate={event.startDate}
               endDate={event.endDate}

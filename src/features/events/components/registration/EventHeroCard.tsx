@@ -2,12 +2,14 @@ import type { ReactNode } from "react"
 import { Box, Flex, HStack, Heading, Link, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { CalendarDays, ChevronRight, ExternalLink, MapPin } from "lucide-react"
 import { AutoImageCarousel } from "@/features/events/components/registration/AutoImageCarousel"
+import { OrganizerByline } from "@/features/events/components/registration/OrganizerByline"
 import type { getSessionBannerSlides } from "@/features/events/utils/ticketSelection"
 import { formatRegistrationDateTime } from "@/features/events/utils/registrationFormat"
 
 interface EventHeroCardProps {
   title: string
   organizer: string
+  organizerLogoUrl: string | null
   summary: string | null
   startDate: string | null
   endDate: string | null
@@ -62,6 +64,7 @@ function FactValue({ children }: { children: ReactNode }) {
 export function EventHeroCard({
   title,
   organizer,
+  organizerLogoUrl,
   summary,
   startDate,
   endDate,
@@ -119,14 +122,7 @@ export function EventHeroCard({
                 >
                   {title}
                 </Heading>
-                <Text fontSize={{ base: "sm", md: "md" }} color="gray.700" lineHeight="1.7">
-                  <Text as="span" fontWeight="400">
-                    By:
-                  </Text>{" "}
-                  <Text as="span" fontWeight="700" color="gray.900">
-                    {organizer}
-                  </Text>
-                </Text>
+                <OrganizerByline organizer={organizer} logoUrl={organizerLogoUrl} />
                 {summary ? (
                   <Text fontSize="sm" color="gray.600" lineHeight="1.7">
                     {summary}
