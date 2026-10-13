@@ -10,7 +10,8 @@ export type EventCategory =
   | "other"
 
 export type EventStatus = "draft" | "published" | "ongoing" | "completed" | "cancelled"
-export type EventVisibility = "Public" | "Member" | "Invitation"
+export const EVENT_VISIBILITIES = ["Public", "Member", "Invitation", "Organizer"] as const
+export type EventVisibility = (typeof EVENT_VISIBILITIES)[number]
 
 export interface EventSession {
   title: string

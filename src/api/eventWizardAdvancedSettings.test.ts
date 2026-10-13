@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { fetchEventWizardAdvancedSettings, updateEventWizardAdvancedSettings } from "./events"
+import {
+  fetchEventWizardAdvancedSettings,
+  fetchEventWizardVisibilityOptions,
+  updateEventWizardAdvancedSettings,
+} from "./events"
 
 const { getMock, postMock } = vi.hoisted(() => ({ getMock: vi.fn(), postMock: vi.fn() }))
 
@@ -37,7 +41,64 @@ describe("fetchEventWizardAdvancedSettings", () => {
   })
 })
 
+describe("fetchEventWizardVisibilityOptions", () => {
+  /**
+   * The organizer-only choice must survive response validation, otherwise the whole advanced
+   * settings step fails to load as soon as the backend offers it.
+   */
+  it("OffersTheOrganizerOnlyChoice", async () => {
+    getMock.mockResolvedValue({
+      data: [
+        { value: "Public", label: "Public", description: "Anyone can view and register for the event." },
+        { value: "Organizer", label: "Organizer Only", description: "Only the organizer can view and register for the event." },
+      ],
+    })
+
+    const options = await fetchEventWizardVisibilityOptions()
+
+    expect(options.map((option) => option.value)).toEqual(["Public", "Organizer"])
+    expect(options[1].label).toBe("Organizer Only")
+  })
+
+  /**
+   * A value the app does not know must be rejected at the boundary rather than rendered as a
+   * choice the organizer could save and the backend would refuse.
+   */
+  it("RejectsAnUnknownVisibilityValue", async () => {
+    getMock.mockResolvedValue({
+      data: [{ value: "Everyone", label: "Everyone", description: "Not a real choice." }],
+    })
+
+    await expect(fetchEventWizardVisibilityOptions()).rejects.toThrow()
+  })
+})
+
 describe("updateEventWizardAdvancedSettings", () => {
+  /**
+   * Saving organizer-only visibility must round-trip, so reopening the step shows the choice the
+   * organizer saved instead of failing validation.
+   */
+  it("SavesTheOrganizerOnlyVisibility", async () => {
+    postMock.mockResolvedValue({
+      data: { purchaseTimeLimit: 20, visibility: "Organizer", applyPaymentMethodCharges: false },
+    })
+
+    const result = await updateEventWizardAdvancedSettings(EVENT_ID, {
+      purchaseTimeLimit: 20,
+      visibility: "Organizer",
+      chargeRuleUniqueIds: [],
+      applyPaymentMethodCharges: false,
+      blockEntryUntilPaid: false,
+    })
+
+    expect(postMock).toHaveBeenCalledWith(
+      expect.stringContaining("advanced-settings"),
+      expect.objectContaining({ visibility: "Organizer" }),
+      { params: { stepNo: 14 } },
+    )
+    expect(result.visibility).toBe("Organizer")
+  })
+
   it("sends the opt-in with the step payload", async () => {
     postMock.mockResolvedValue({ data: { purchaseTimeLimit: 20, visibility: "Public", applyPaymentMethodCharges: true } })
 

@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { client } from "@/api/client"
 import type { PaginatedResponse, ServiceResponse } from "@/api/types"
+import { EVENT_VISIBILITIES } from "@/types"
 import type { AppEvent, EventCategory, EventStatus, EventVisibility } from "@/types"
 import { API_ROUTES } from "@/utils/routes"
 
@@ -53,7 +54,7 @@ const appEventSchema = z
     attendees: z.number(),
     organizer: z.string(),
     coverColor: z.string(),
-    visibility: z.enum(["Public", "Member", "Invitation"]).optional(),
+    visibility: z.enum(EVENT_VISIBILITIES).optional(),
     price: z.number(),
     currency: z.string(),
     tags: z.array(z.string()),
@@ -477,7 +478,7 @@ const eventWizardDateTimeAutofillResponseSchema = z.object({
   bookingEndDate: z.string().nullable().optional(),
 })
 
-const eventVisibilityValueSchema = z.enum(["Public", "Member", "Invitation"])
+const eventVisibilityValueSchema = z.enum(EVENT_VISIBILITIES)
 
 const eventVisibilityOptionSchema = z.object({
   value: eventVisibilityValueSchema,

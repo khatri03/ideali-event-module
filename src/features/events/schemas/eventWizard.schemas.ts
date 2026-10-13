@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { EVENT_VISIBILITIES } from "@/types"
 
 const eventSessionSchema = z.object({
   title: z.string().trim().min(1, "Session name is required"),
@@ -6,7 +7,7 @@ const eventSessionSchema = z.object({
   endsAt: z.string().min(1, "Session end time is required"),
 })
 
-const eventVisibilitySchema = z.enum(["Public", "Member", "Invitation"])
+const eventVisibilitySchema = z.enum(EVENT_VISIBILITIES)
 
 export const eventWizardSchema = z.object({
   name: z.string().trim().min(1, "Event name is required").max(120, "Keep the event name under 120 characters"),
