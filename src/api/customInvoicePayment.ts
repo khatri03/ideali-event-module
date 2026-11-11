@@ -52,3 +52,9 @@ export async function startCustomInvoicePayment(invoiceUniqueId: string): Promis
 
   return started.data
 }
+
+/** Rechecks Stripe on the server so a successful card or wallet payment settles before the webhook arrives. */
+export async function confirmCustomInvoicePayment(invoiceUniqueId: string): Promise<void> {
+  const response = await client.post<unknown>(API_ROUTES.customInvoicePayConfirm(invoiceUniqueId))
+  assertSuccess(response.data, PAYMENT_START_FAILED_MESSAGE)
+}

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { fetchCustomInvoicePaySummary, startCustomInvoicePayment } from "@/api/customInvoicePayment"
+import { confirmCustomInvoicePayment, fetchCustomInvoicePaySummary, startCustomInvoicePayment } from "@/api/customInvoicePayment"
 
 const customInvoicePayKey = (invoiceUniqueId: string) => ["custom-invoice-pay", invoiceUniqueId]
 
@@ -19,5 +19,11 @@ export function useStartCustomInvoicePayment(invoiceUniqueId: string) {
   return useMutation({
     mutationFn: () => startCustomInvoicePayment(invoiceUniqueId),
     onSettled: () => queryClient.invalidateQueries({ queryKey: customInvoicePayKey(invoiceUniqueId) }),
+  })
+}
+
+export function useConfirmCustomInvoicePayment(invoiceUniqueId: string) {
+  return useMutation({
+    mutationFn: () => confirmCustomInvoicePayment(invoiceUniqueId),
   })
 }

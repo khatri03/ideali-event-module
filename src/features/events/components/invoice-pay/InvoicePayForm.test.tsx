@@ -21,6 +21,7 @@ const INVOICE_UNIQUE_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7"
 
 function renderForm() {
   const onStartPayment = vi.fn<() => Promise<{ clientSecret: string }>>().mockResolvedValue({ clientSecret: "pi_1_secret_2" })
+  const onConfirmPayment = vi.fn<() => Promise<void>>().mockResolvedValue(undefined)
   const onPaid = vi.fn()
 
   render(
@@ -30,12 +31,13 @@ function renderForm() {
         currencyCode="USD"
         invoiceUniqueId={INVOICE_UNIQUE_ID}
         onStartPayment={onStartPayment}
+        onConfirmPayment={onConfirmPayment}
         onPaid={onPaid}
       />
     </ChakraProvider>,
   )
 
-  return { onStartPayment, onPaid }
+  return { onStartPayment, onConfirmPayment, onPaid }
 }
 
 async function payAs(name: string) {
@@ -60,13 +62,14 @@ describe("InvoicePayForm", () => {
     const calls: string[] = []
     elementsMock.submit.mockImplementation(async () => { calls.push("submit"); return {} })
     stripeMock.confirmPayment.mockImplementation(async () => { calls.push("confirm"); return {} })
-    const { onStartPayment, onPaid } = renderForm()
+    const { onStartPayment, onConfirmPayment, onPaid } = renderForm()
     onStartPayment.mockImplementation(async () => { calls.push("start"); return { clientSecret: "pi_1_secret_2" } })
+    onConfirmPayment.mockImplementation(async () => { calls.push("settle") })
 
     await payAs("  Aisha Khan  ")
 
     await waitFor(() => expect(onPaid).toHaveBeenCalledTimes(1))
-    expect(calls).toEqual(["submit", "start", "confirm"])
+    expect(calls).toEqual(["submit", "start", "confirm", "settle"])
     expect(stripeMock.confirmPayment).toHaveBeenCalledWith({
       elements: elementsMock,
       clientSecret: "pi_1_secret_2",

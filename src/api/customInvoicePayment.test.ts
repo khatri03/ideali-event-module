@@ -2,6 +2,7 @@ import { AxiosError, AxiosHeaders } from "axios"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   fetchCustomInvoicePaySummary,
+  confirmCustomInvoicePayment,
   PAYMENT_START_FAILED_MESSAGE,
   startCustomInvoicePayment,
 } from "./customInvoicePayment"
@@ -165,5 +166,15 @@ describe("startCustomInvoicePayment", () => {
     const failure = await startCustomInvoicePayment(INVOICE_ID).catch((error: unknown) => error)
 
     expect(extractApiError(failure)).toBe(PAYMENT_START_FAILED_MESSAGE)
+  })
+})
+
+describe("confirmCustomInvoicePayment", () => {
+  it("PostsWithoutABodyToConfirmThePayment", async () => {
+    postMock.mockResolvedValue({ data: { success: true, data: null } })
+
+    await confirmCustomInvoicePayment(INVOICE_ID)
+
+    expect(postMock).toHaveBeenCalledWith("/api/custom-invoices/invoice-1/pay/confirm")
   })
 })

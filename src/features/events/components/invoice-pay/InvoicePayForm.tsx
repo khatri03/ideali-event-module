@@ -16,15 +16,16 @@ interface InvoicePayFormProps {
   invoiceUniqueId: string
   /** Asks the server for the invoice's PaymentIntent; a retry after a decline gets the same one back. */
   onStartPayment: () => Promise<{ clientSecret: string }>
+  onConfirmPayment: () => Promise<void>
   onPaid: () => void
 }
 
 /**
  * The confirm half of Stripe's deferred intent flow for a custom invoice. Must render inside
  * RegistrationStripeProvider. The client secret lives only inside one submit and is handed straight
- * to Stripe.js; settling the invoice is left to the payment webhook.
+ * to Stripe.js; the server then verifies the result with Stripe before showing the receipt.
  */
-export function InvoicePayForm({ amount, currencyCode, invoiceUniqueId, onStartPayment, onPaid }: InvoicePayFormProps) {
+export function InvoicePayForm({ amount, currencyCode, invoiceUniqueId, onStartPayment, onConfirmPayment, onPaid }: InvoicePayFormProps) {
   const stripe = useStripe()
   const elements = useElements()
   const isPayingRef = useRef(false)
@@ -74,6 +75,7 @@ export function InvoicePayForm({ amount, currencyCode, invoiceUniqueId, onStartP
       })
       if (confirmError) return confirmError.message ?? "The payment could not be completed."
 
+      await onConfirmPayment()
       onPaid()
       return null
     } catch (error) {

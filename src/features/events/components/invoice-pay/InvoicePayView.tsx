@@ -11,6 +11,7 @@ import { InvoicePayStatusCard } from "./InvoicePayStatusCard"
 import { InvoicePayFormSkeleton, InvoicePaySummaryCardSkeleton } from "./InvoicePaySummaryCard.skeleton"
 
 type StartPayment = () => Promise<{ clientSecret: string }>
+type ConfirmPayment = () => Promise<void>
 
 interface InvoicePayViewProps {
   invoiceUniqueId: string
@@ -21,6 +22,7 @@ interface InvoicePayViewProps {
   isRetrying: boolean
   onRetry: () => void
   onStartPayment: StartPayment
+  onConfirmPayment: ConfirmPayment
 }
 
 interface PaymentReceipt {
@@ -29,7 +31,7 @@ interface PaymentReceipt {
 }
 
 /** Picks the one state a buyer sees. Only a Payable invoice with a payment account ever renders the card form. */
-export function InvoicePayView({ invoiceUniqueId, summary, isLoading, isError, isRetrying, onRetry, onStartPayment }: InvoicePayViewProps) {
+export function InvoicePayView({ invoiceUniqueId, summary, isLoading, isError, isRetrying, onRetry, onStartPayment, onConfirmPayment }: InvoicePayViewProps) {
   // Kept apart from the summary: a refetch after the webhook settles would otherwise report the amount as zero.
   const [receipt, setReceipt] = useState<PaymentReceipt | null>(null)
 
@@ -73,6 +75,7 @@ export function InvoicePayView({ invoiceUniqueId, summary, isLoading, isError, i
       paymentAccountUniqueId={summary.paymentAccountUniqueId}
       invoiceUniqueId={invoiceUniqueId}
       onStartPayment={onStartPayment}
+      onConfirmPayment={onConfirmPayment}
       onPaid={() =>
         setReceipt({ invoiceNo: summary.invoiceNo, amount: formatAmount(summary.outstandingAmount, summary.currencyCode) })
       }
@@ -120,10 +123,11 @@ interface PayableInvoiceProps {
   paymentAccountUniqueId: string
   invoiceUniqueId: string
   onStartPayment: StartPayment
+  onConfirmPayment: ConfirmPayment
   onPaid: () => void
 }
 
-function PayableInvoice({ summary, paymentAccountUniqueId, invoiceUniqueId, onStartPayment, onPaid }: PayableInvoiceProps) {
+function PayableInvoice({ summary, paymentAccountUniqueId, invoiceUniqueId, onStartPayment, onConfirmPayment, onPaid }: PayableInvoiceProps) {
   // Same query key as RegistrationStripeProvider, so this read costs no second request.
   const credentials = useStripeCredentials(paymentAccountUniqueId)
 
@@ -152,6 +156,7 @@ function PayableInvoice({ summary, paymentAccountUniqueId, invoiceUniqueId, onSt
               currencyCode={summary.currencyCode}
               invoiceUniqueId={invoiceUniqueId}
               onStartPayment={onStartPayment}
+              onConfirmPayment={onConfirmPayment}
               onPaid={onPaid}
             />
           </RegistrationStripeProvider>

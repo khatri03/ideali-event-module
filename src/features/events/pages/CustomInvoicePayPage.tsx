@@ -1,7 +1,7 @@
 import { Box, Container } from "@chakra-ui/react"
 import { useParams } from "react-router-dom"
 import { InvoicePayView } from "@/features/events/components/invoice-pay/InvoicePayView"
-import { useCustomInvoicePaySummary, useStartCustomInvoicePayment } from "@/features/events/hooks/useCustomInvoicePay"
+import { useConfirmCustomInvoicePayment, useCustomInvoicePaySummary, useStartCustomInvoicePayment } from "@/features/events/hooks/useCustomInvoicePay"
 import "@/styles/print.css"
 
 /** Public: the buyer pays an organizer's custom invoice with the shared link alone, signed in or not. */
@@ -9,6 +9,7 @@ export function CustomInvoicePayPage() {
   const { invoiceUniqueId = "" } = useParams<{ invoiceUniqueId: string }>()
   const summaryQuery = useCustomInvoicePaySummary(invoiceUniqueId)
   const startPayment = useStartCustomInvoicePayment(invoiceUniqueId)
+  const confirmPayment = useConfirmCustomInvoicePayment(invoiceUniqueId)
 
   return (
     <Box
@@ -29,6 +30,7 @@ export function CustomInvoicePayPage() {
           isRetrying={summaryQuery.isFetching}
           onRetry={() => void summaryQuery.refetch()}
           onStartPayment={startPayment.mutateAsync}
+          onConfirmPayment={confirmPayment.mutateAsync}
         />
       </Container>
     </Box>

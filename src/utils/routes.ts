@@ -205,6 +205,7 @@ export const API_ROUTES = {
   eventTicketView: (ticketUniqueId: string) => `/api/events/tickets/${ticketUniqueId}/view`,
   eventOrderStatus: (orderUniqueId: string) => `/api/events/orders/${orderUniqueId}`,
   customInvoicePay: (invoiceUniqueId: string) => `/api/custom-invoices/${invoiceUniqueId}/pay`,
+  customInvoicePayConfirm: (invoiceUniqueId: string) => `/api/custom-invoices/${invoiceUniqueId}/pay/confirm`,
   eventWizardProgress: (id: string) => `/api/organizer/events/${id}/wizard-progress`,
   eventWizardNameCreate: "/api/organizer/events/name",
   eventWizardSkip: (id: string) => `/api/organizer/events/${id}/skip`,

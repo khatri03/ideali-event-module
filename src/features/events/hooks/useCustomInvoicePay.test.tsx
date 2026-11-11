@@ -2,10 +2,11 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { renderHook, waitFor } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { useCustomInvoicePaySummary, useStartCustomInvoicePayment } from "./useCustomInvoicePay"
+import { useConfirmCustomInvoicePayment, useCustomInvoicePaySummary, useStartCustomInvoicePayment } from "./useCustomInvoicePay"
 
 const payApiMocks = vi.hoisted(() => ({
   fetchCustomInvoicePaySummary: vi.fn(),
+  confirmCustomInvoicePayment: vi.fn(),
   startCustomInvoicePayment: vi.fn(),
 }))
 
@@ -27,6 +28,7 @@ function createHarness() {
 describe("useCustomInvoicePay", () => {
   beforeEach(() => {
     payApiMocks.fetchCustomInvoicePaySummary.mockReset()
+    payApiMocks.confirmCustomInvoicePayment.mockReset()
     payApiMocks.startCustomInvoicePayment.mockReset()
   })
 
@@ -76,5 +78,16 @@ describe("useCustomInvoicePay", () => {
     await expect(result.current.mutateAsync()).rejects.toThrow("This invoice has already been paid.")
 
     await waitFor(() => expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: SUMMARY_KEY }))
+  })
+
+  it("Confirm_Succeeds_WithoutRefetchingTheSummary", async () => {
+    payApiMocks.confirmCustomInvoicePayment.mockResolvedValue(undefined)
+    const { invalidateSpy, wrapper } = createHarness()
+
+    const { result } = renderHook(() => useConfirmCustomInvoicePayment(INVOICE_UNIQUE_ID), { wrapper })
+    await result.current.mutateAsync()
+
+    expect(payApiMocks.confirmCustomInvoicePayment).toHaveBeenCalledWith(INVOICE_UNIQUE_ID)
+    expect(invalidateSpy).not.toHaveBeenCalled()
   })
 })

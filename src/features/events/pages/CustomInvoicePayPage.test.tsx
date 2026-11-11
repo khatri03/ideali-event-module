@@ -11,7 +11,7 @@ import { APP_ROUTES } from "@/utils/routes"
 import { CustomInvoicePayPage } from "./CustomInvoicePayPage"
 
 const { payApiMocks, fetchStripePublicCredentialsMock, stripeMock, elementsMock } = vi.hoisted(() => ({
-  payApiMocks: { fetchCustomInvoicePaySummary: vi.fn(), startCustomInvoicePayment: vi.fn() },
+  payApiMocks: { fetchCustomInvoicePaySummary: vi.fn(), startCustomInvoicePayment: vi.fn(), confirmCustomInvoicePayment: vi.fn() },
   fetchStripePublicCredentialsMock: vi.fn(),
   stripeMock: { confirmPayment: vi.fn() },
   elementsMock: { submit: vi.fn() },
@@ -70,6 +70,7 @@ describe("CustomInvoicePayPage", () => {
   beforeEach(() => {
     payApiMocks.fetchCustomInvoicePaySummary.mockReset().mockResolvedValue(buildSummary())
     payApiMocks.startCustomInvoicePayment.mockReset().mockResolvedValue({ clientSecret: "pi_1_secret_2", paymentIntentId: "pi_1" })
+    payApiMocks.confirmCustomInvoicePayment.mockReset().mockResolvedValue(undefined)
     fetchStripePublicCredentialsMock.mockReset().mockResolvedValue({ publishableKey: "pk_test_1", stripeAccount: "acct_1" })
     stripeMock.confirmPayment.mockReset().mockResolvedValue({})
     elementsMock.submit.mockReset().mockResolvedValue({})
@@ -171,6 +172,7 @@ describe("CustomInvoicePayPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Payment received" })).toBeInTheDocument()
     expect(screen.getByText("Thank you. Your payment of USD$1,250.00 for invoice INV-2041 went through.")).toBeInTheDocument()
+    expect(payApiMocks.confirmCustomInvoicePayment).toHaveBeenCalledWith(INVOICE_UNIQUE_ID)
     await waitFor(() => expect(cardHolderField()).not.toBeInTheDocument())
   })
 
